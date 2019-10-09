@@ -1,0 +1,25 @@
+server:
+  port: 8091
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+application:
+  joark-url: "/joark/save"
+  joark-host: "http://localhost:8092"
+  kafka:
+    bootstrap-servers: localhost:9092
+
+
+
+---
+spring:
+  profiles: docker
+
+application:
+  joark-host: "http://joark-mock:8092"
+  kafka:
+    bootstrap-servers: kafka-broker:29092
