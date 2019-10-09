@@ -8,11 +8,12 @@
 		<version>2.2.0.RC1</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>no.nav.soknad.archiving</groupId>
-	<artifactId>joark-archiver</artifactId>
+
+	<groupId>no.nav.soknad.arkivering</groupId>
+	<artifactId>soknadsarkiverer</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>joark-archiver</name>
-	<description>Demo project for Spring Boot</description>
+	<name>soknadsarkiverer</name>
+	<description>Arkiverer soknader</description>
 
 	<properties>
 		<java.version>1.8</java.version>

@@ -1,4 +1,4 @@
-package no.nav.soknad.archiving.joarkarchiver.config
+package no.nav.soknad.arkivering.soknadsarkiverer.config
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.stereotype.Component

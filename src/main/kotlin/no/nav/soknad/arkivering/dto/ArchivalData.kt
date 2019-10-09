@@ -1,3 +1,3 @@
-package no.nav.soknad.archiving.dto
+package no.nav.soknad.arkivering.dto
 
 data class ArchivalData(val id: String, val message: String)

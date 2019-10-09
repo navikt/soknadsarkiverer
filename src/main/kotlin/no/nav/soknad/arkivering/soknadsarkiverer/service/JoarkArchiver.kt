@@ -1,7 +1,7 @@
-package no.nav.soknad.archiving.joarkarchiver.service
+package no.nav.soknad.arkivering.soknadsarkiverer.service
 
-import no.nav.soknad.archiving.dto.ArchivalData
-import no.nav.soknad.archiving.joarkarchiver.config.ApplicationProperties
+import no.nav.soknad.arkivering.dto.ArchivalData
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate

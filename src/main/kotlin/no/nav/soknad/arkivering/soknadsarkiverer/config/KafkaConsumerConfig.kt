@@ -1,6 +1,6 @@
-package no.nav.soknad.archiving.joarkarchiver.config
+package no.nav.soknad.arkivering.soknadsarkiverer.config
 
-import no.nav.soknad.archiving.dto.ArchivalData
+import no.nav.soknad.arkivering.dto.ArchivalData
 import org.apache.kafka.clients.consumer.ConsumerConfig.*
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.springframework.context.annotation.Bean
@@ -16,7 +16,7 @@ class KafkaConsumerConfig(private val applicationProperties: ApplicationProperti
 
 	@Bean
 	fun consumerConfigs() = HashMap<String, Any>().also {
-			it[GROUP_ID_CONFIG] = "joark-archiver"
+			it[GROUP_ID_CONFIG] = "soknadsarkiverer"
 			it[BOOTSTRAP_SERVERS_CONFIG] = applicationProperties.kafka.bootstrapServers
 			it[KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
 			it[VALUE_DESERIALIZER_CLASS_CONFIG] = JsonDeserializer::class.java

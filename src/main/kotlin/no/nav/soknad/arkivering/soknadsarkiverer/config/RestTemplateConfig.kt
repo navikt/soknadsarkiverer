@@ -1,4 +1,4 @@
-package no.nav.soknad.archiving.joarkarchiver.config
+package no.nav.soknad.arkivering.soknadsarkiverer.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.beans.factory.annotation.Autowired

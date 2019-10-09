@@ -1,8 +1,8 @@
-package no.nav.soknad.archiving.joarkarchiver.kafka
+package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
 import com.nhaarman.mockitokotlin2.*
-import no.nav.soknad.archiving.dto.ArchivalData
-import no.nav.soknad.archiving.joarkarchiver.service.JoarkArchiver
+import no.nav.soknad.arkivering.dto.ArchivalData
+import no.nav.soknad.arkivering.soknadsarkiverer.service.JoarkArchiver
 import org.junit.jupiter.api.Test
 
 class KafkaConsumerTests {

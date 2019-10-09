@@ -1,7 +1,7 @@
-package no.nav.soknad.archiving.joarkarchiver.kafka
+package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
-import no.nav.soknad.archiving.dto.ArchivalData
-import no.nav.soknad.archiving.joarkarchiver.service.JoarkArchiver
+import no.nav.soknad.arkivering.dto.ArchivalData
+import no.nav.soknad.arkivering.soknadsarkiverer.service.JoarkArchiver
 import org.slf4j.LoggerFactory
 import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.stereotype.Service
