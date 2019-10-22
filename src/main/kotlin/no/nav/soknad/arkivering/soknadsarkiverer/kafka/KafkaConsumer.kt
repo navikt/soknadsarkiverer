@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service
 class KafkaConsumer(private val joarkArchiver: JoarkArchiver) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	@KafkaListener(topics = ["archival"])
+	@KafkaListener(topics = ["privat-soknadInnsendt-sendsoknad-v1-q0"])
 	fun receiveFromKafka(archivalData: ArchivalData) {
 		logger.info("Received message: '$archivalData'")
 		joarkArchiver.archive(archivalData)

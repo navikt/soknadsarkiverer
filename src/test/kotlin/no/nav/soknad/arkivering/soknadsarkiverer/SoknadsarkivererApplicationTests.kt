@@ -5,7 +5,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.kafka.test.context.EmbeddedKafka
 
 @SpringBootTest
-@EmbeddedKafka(topics = ["archival"])
+@EmbeddedKafka(topics = ["privat-soknadInnsendt-sendsoknad-v1-q0"])
 class SoknadsarkivererApplicationTests {
 
 	@Test

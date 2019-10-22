@@ -7,6 +7,7 @@ import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import no.nav.soknad.arkivering.dto.ArchivalData
 import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaHost
 import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaPort
+import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaTopic
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.StringSerializer
@@ -25,7 +26,7 @@ import java.util.concurrent.TimeUnit
 
 @SpringBootTest
 @EnableKafka
-@EmbeddedKafka(topics = ["archival"], brokerProperties = ["listeners=PLAINTEXT://$kafkaHost:$kafkaPort", "port=$kafkaPort"])
+@EmbeddedKafka(topics = [kafkaTopic], brokerProperties = ["listeners=PLAINTEXT://$kafkaHost:$kafkaPort", "port=$kafkaPort"])
 class IntegrationTests {
 
 	@Autowired
@@ -49,7 +50,7 @@ class IntegrationTests {
 		mockJoarkIsWorking()
 		val archivalData = ArchivalData("id", "message")
 
-		kafkaTemplate.send("archival", "key", archivalData)
+		kafkaTemplate.send(kafkaTopic, "key", archivalData)
 
 		verifyWiremockRequests(1, applicationProperties.joarkUrl, RequestMethod.POST)
 	}
@@ -94,8 +95,9 @@ class IntegrationTests {
 	private final fun kafkaTemplate() = KafkaTemplate(producerFactory())
 
 	companion object {
+		const val kafkaTopic = "privat-soknadInnsendt-sendsoknad-v1-q0"
 		const val kafkaHost = "localhost"
 		const val kafkaPort = 3333
-		const val joarkPort = 8092
+		const val joarkPort = 2908
 	}
 }
