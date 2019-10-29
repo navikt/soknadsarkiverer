@@ -66,8 +66,8 @@ class IntegrationTests {
 		while (System.currentTimeMillis() < startTime + timeout) {
 			val matches = wiremockServer.countRequestsMatching(requestPattern)
 
-			if (matches.count != expectedCount) {
-				return
+			if (matches.count == expectedCount) {
+				break
 			}
 			TimeUnit.MILLISECONDS.sleep(50)
 		}

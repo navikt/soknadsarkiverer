@@ -8,7 +8,7 @@ class FileStorageRetrievingService {
 
 	fun getFilesFromFileStorage(archivalData: ArchivalData): List<ByteArray> {
 
-		// TODO: fetch from file storage. Until then: Just return something in the mean time
+		// TODO: fetch from file storage. Until that is in place: Just return something in the mean time
 		return listOf(archivalData.message.toByteArray())
 	}
 }

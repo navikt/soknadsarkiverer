@@ -9,17 +9,16 @@ management:
 
 spring:
   kafka:
-    consumer:
-      group-id: myGroup
-    streams:
-      application-id: apabepa
     bootstrap-servers: localhost:9092
+    consumer:
+      group-id: soknadsarkiverer
+    streams:
+      application-id: soknadsarkiverer
 
 application:
-  joark-url: "/joark/save"
-  joark-host: "http://localhost:8092"
-  kafka:
-    bootstrap-servers: localhost:9092
+  kafka-topic: privat-soknadInnsendt-sendsoknad-v1-q0
+  joark-host: http://localhost:8092
+  joark-url: /joark/save
 
 
 
@@ -30,15 +29,4 @@ spring:
     bootstrap-servers: kafka-broker:29092
 
 application:
-  joark-host: "http://joark-mock:8092"
-  kafka:
-    bootstrap-servers: kafka-broker:29092
-
-
-
----
-spring:
-  profiles: test
-  kafka:
-    listener:
-      missing-topics-fatal: false
+  joark-host: http://joark-mock:8092
