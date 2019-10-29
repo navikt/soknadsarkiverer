@@ -7,6 +7,14 @@ management:
       exposure:
         include: "*"
 
+spring:
+  kafka:
+    consumer:
+      group-id: myGroup
+    streams:
+      application-id: apabepa
+    bootstrap-servers: localhost:9092
+
 application:
   joark-url: "/joark/save"
   joark-host: "http://localhost:8092"
@@ -18,8 +26,19 @@ application:
 ---
 spring:
   profiles: docker
+  kafka:
+    bootstrap-servers: kafka-broker:29092
 
 application:
   joark-host: "http://joark-mock:8092"
   kafka:
     bootstrap-servers: kafka-broker:29092
+
+
+
+---
+spring:
+  profiles: test
+  kafka:
+    listener:
+      missing-topics-fatal: false

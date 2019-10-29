@@ -1,6 +1,9 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
-import com.nhaarman.mockitokotlin2.*
+import com.nhaarman.mockitokotlin2.eq
+import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.times
+import com.nhaarman.mockitokotlin2.verify
 import no.nav.soknad.arkivering.dto.ArchivalData
 import no.nav.soknad.arkivering.soknadsarkiverer.service.JoarkArchiver
 import org.junit.jupiter.api.Test

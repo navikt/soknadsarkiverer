@@ -3,6 +3,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service
 import no.nav.soknad.arkivering.dto.ArchivalData
 import no.nav.soknad.arkivering.dto.JoarkData
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
+import no.nav.soknad.arkivering.soknadsarkiverer.converter.MessageConverter
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
@@ -16,19 +17,11 @@ class JoarkArchiver(private val restTemplate: RestTemplate,
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	fun archive(archivalData: ArchivalData) {
-		val attachedFiles = getFilesFromFileStorage(archivalData)
-		val joarkData = createJoarkData(archivalData, attachedFiles)
+		val joarkData = MessageConverter().createJoarkData(archivalData, FileStorageRetrievingService().getFilesFromFileStorage(archivalData))
 		putDataInJoark(joarkData)
 	}
 
-	private fun getFilesFromFileStorage(archivalData: ArchivalData): List<ByteArray> {
-		// TODO: fetch from file storage
-		return listOf(archivalData.message.toByteArray()) // Just return something in the mean time
-	}
-
-	private fun createJoarkData(archivalData: ArchivalData, attachedFiles: List<ByteArray>) = JoarkData(archivalData.id, archivalData.message, attachedFiles)
-
-	private fun putDataInJoark(joarkData: JoarkData) {
+	fun putDataInJoark(joarkData: JoarkData) {
 		try {
 			logger.info("Sending to Joark: '$joarkData'")
 			val url = applicationProperties.joarkHost + applicationProperties.joarkUrl
