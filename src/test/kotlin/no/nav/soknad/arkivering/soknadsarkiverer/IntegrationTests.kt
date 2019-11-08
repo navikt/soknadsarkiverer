@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.http.RequestMethod
@@ -20,7 +21,6 @@ import org.springframework.kafka.annotation.EnableKafka
 import org.springframework.kafka.core.DefaultKafkaProducerFactory
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.core.ProducerFactory
-import org.springframework.kafka.support.serializer.JsonSerializer
 import org.springframework.kafka.test.context.EmbeddedKafka
 import org.springframework.test.context.ActiveProfiles
 import java.util.concurrent.TimeUnit
@@ -33,6 +33,7 @@ class IntegrationTests {
 
 	@Autowired
 	private lateinit var applicationProperties: ApplicationProperties
+	private val objectMapper = ObjectMapper()
 	private val wiremockServer = WireMockServer(joarkPort)
 	private val kafkaTemplate = kafkaTemplate()
 
@@ -52,9 +53,38 @@ class IntegrationTests {
 		mockJoarkIsWorking()
 		val archivalData = ArchivalData("id", "message")
 
-		kafkaTemplate.send(kafkaTopic, "key", archivalData)
+		putDataOnKafkaTopic(archivalData)
 
 		verifyWiremockRequests(1, applicationProperties.joarkUrl, RequestMethod.POST)
+	}
+
+	@Test
+	fun `Sending in invalid json will fail`() {
+		val invalidData = "this is not json"
+
+		putDataOnKafkaTopic(invalidData)
+
+		//TODO: Test that there is a message on retry topic
+	}
+
+	@Test
+	fun `Failing to send to Joark will put event on retry topic`() {
+		mockJoarkIsDown()
+		val archivalData = ArchivalData("id", "message")
+
+		putDataOnKafkaTopic(archivalData)
+
+		//TODO: Test that there is a message on retry topic
+	}
+
+
+
+	private fun putDataOnKafkaTopic(archivalData: ArchivalData) {
+		putDataOnKafkaTopic(objectMapper.writeValueAsString(archivalData))
+	}
+
+	private fun putDataOnKafkaTopic(data: String) {
+		kafkaTemplate.send(kafkaTopic, "key", data)
 	}
 
 
@@ -78,6 +108,10 @@ class IntegrationTests {
 		mockJoark(200)
 	}
 
+	private fun mockJoarkIsDown() {
+		mockJoark(404)
+	}
+
 	private fun mockJoark(statusCode: Int) {
 		wiremockServer.stubFor(
 			post(urlEqualTo(applicationProperties.joarkUrl))
@@ -85,11 +119,11 @@ class IntegrationTests {
 	}
 
 
-	private fun producerFactory(): ProducerFactory<String, ArchivalData> {
+	private fun producerFactory(): ProducerFactory<String, String> {
 		val configProps = HashMap<String, Any>().also {
 			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = "$kafkaHost:$kafkaPort"
 			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
-			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = JsonSerializer::class.java
+			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 		}
 		return DefaultKafkaProducerFactory(configProps)
 	}
