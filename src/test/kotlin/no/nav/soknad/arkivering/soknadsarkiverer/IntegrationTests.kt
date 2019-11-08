@@ -70,7 +70,7 @@ class IntegrationTests {
 	@Test
 	fun `Failing to send to Joark will put event on retry topic`() {
 		mockJoarkIsDown()
-		val archivalData = ArchivalData("id", "message")
+		val archivalData = ArchivalData("id2", "message")
 
 		putDataOnKafkaTopic(archivalData)
 

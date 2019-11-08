@@ -19,13 +19,11 @@ import org.apache.kafka.streams.kstream.Consumed
 import org.apache.kafka.streams.processor.ProcessorContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.kafka.annotation.EnableKafka
 import org.springframework.kafka.annotation.EnableKafkaStreams
 import org.springframework.kafka.support.serializer.JsonDeserializer
 import java.util.*
 
 @EnableKafkaStreams
-@EnableKafka
 @Configuration
 class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 													val fileStorageRetrievingService: FileStorageRetrievingService,
@@ -34,13 +32,11 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 
 	@Bean
 	fun consumerConfigs() = Properties().also {
-		it[ConsumerConfig.GROUP_ID_CONFIG] = "soknadsarkiverer"
-		it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = "localhost:9092"
 		it[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
 		it[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = JsonDeserializer::class.java
 
-		it[StreamsConfig.APPLICATION_ID_CONFIG] = "default"
-		it[StreamsConfig.NUM_STREAM_THREADS_CONFIG] = 1
+		it[StreamsConfig.APPLICATION_ID_CONFIG] = "soknadsarkiverer"
+		it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = applicationProperties.kafkaBootstrapServers
 		it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = KafkaExceptionHandler::class.java
 		it[StreamsConfig.DEFAULT_PRODUCTION_EXCEPTION_HANDLER_CLASS_CONFIG] = KafkaExceptionHandler::class.java
 	}
@@ -73,11 +69,13 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationExceptionHandler, ProductionExceptionHandler {
 	override fun handle(record: ProducerRecord<ByteArray, ByteArray>?, exception: Exception?): ProductionExceptionHandler.ProductionExceptionHandlerResponse {
 		println("Exception from kafka production")
+		// TODO: What if we can't produce to retry topic?
 		return ProductionExceptionHandler.ProductionExceptionHandlerResponse.CONTINUE
 	}
 
 	override fun handle(context: ProcessorContext?, record: ConsumerRecord<ByteArray, ByteArray>?, exception: Exception?): DeserializationExceptionHandler.DeserializationHandlerResponse {
 		println("Exception from kafka deserialization")
+		// TODO: Put on DLQ
 		return DeserializationExceptionHandler.DeserializationHandlerResponse.CONTINUE
 	}
 
@@ -85,6 +83,7 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 	}
 
 	override fun uncaughtException(t: Thread, e: Throwable) {
+		// TODO: Put on retry topic
 		println("uncaughtException '$e'")
 	}
 }

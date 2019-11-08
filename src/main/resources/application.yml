@@ -9,13 +9,11 @@ management:
 
 spring:
   kafka:
-    bootstrap-servers: localhost:9092
-    consumer:
-      group-id: soknadsarkiverer
     streams:
       application-id: soknadsarkiverer
 
 application:
+  kafka-bootstrap-servers: localhost:9092
   kafka-topic: privat-soknadInnsendt-sendsoknad-v1-q0
   joark-host: http://localhost:8092
   joark-url: /joark/save
@@ -25,8 +23,7 @@ application:
 ---
 spring:
   profiles: docker
-  kafka:
-    bootstrap-servers: kafka-broker:29092
 
 application:
+  kafka-bootstrap-servers: kafka-broker:29092
   joark-host: http://joark-mock:8092
