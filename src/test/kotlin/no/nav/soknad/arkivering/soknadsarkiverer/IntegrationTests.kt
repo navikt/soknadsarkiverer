@@ -33,22 +33,19 @@ import org.springframework.kafka.test.EmbeddedKafkaBroker
 import org.springframework.kafka.test.context.EmbeddedKafka
 import org.springframework.kafka.test.utils.ContainerTestUtils
 import org.springframework.kafka.test.utils.KafkaTestUtils
-import org.springframework.test.annotation.DirtiesContext
-import org.springframework.test.annotation.DirtiesContext.MethodMode.BEFORE_METHOD
 import org.springframework.test.context.ActiveProfiles
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
 @ActiveProfiles("test")
 @SpringBootTest
-@DirtiesContext(methodMode = BEFORE_METHOD)
 @EnableKafka
 @EmbeddedKafka(topics = [kafkaTopic], brokerProperties = ["listeners=PLAINTEXT://$kafkaHost:$kafkaPort", "port=$kafkaPort"])
 class IntegrationTests {
 
 	@Autowired
 	private lateinit var applicationProperties: ApplicationProperties
-	private val dlqKafkaBroker = EmbeddedKafkaBroker(1, true, kafkaDlqTopic)
+	private lateinit var dlqKafkaBroker: EmbeddedKafkaBroker
 	private val objectMapper = ObjectMapper()
 	private val wiremockServer = WireMockServer(joarkPort)
 	private val kafkaTemplate = kafkaTemplate()
@@ -152,16 +149,11 @@ class IntegrationTests {
 
 
 	private fun setupDlqListener() {
+		val kafkaDlqTopic = applicationProperties.kafkaDeadLetterTopic
+		dlqKafkaBroker = EmbeddedKafkaBroker(1, true, kafkaDlqTopic)
 		dlqKafkaBroker.kafkaPorts(kafkaPort)
 		dlqKafkaBroker.brokerListProperty("listeners=PLAINTEXT://$kafkaHost:$kafkaPort")
 		val consumerProperties = KafkaTestUtils.consumerProps("sender", "false", dlqKafkaBroker)
-//			.also {
-//				it[ConsumerConfig.CLIENT_ID_CONFIG] = "integrationtest" + Random(71).nextInt()
-//			it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = "${kafkaHost}:${kafkaPort}"
-//			it[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = ByteArrayDeserializer::class.java
-//			it[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = ByteArrayDeserializer::class.java
-//			it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = LogAndContinueExceptionHandler::class.java
-//		}
 
 		val consumer = DefaultKafkaConsumerFactory<ByteArray, ByteArray>(consumerProperties)
 		consumer.setKeyDeserializer(ByteArrayDeserializer())
@@ -182,7 +174,6 @@ class IntegrationTests {
 
 	companion object {
 		const val kafkaTopic = "privat-soknadInnsendt-sendsoknad-v1-q0"
-		const val kafkaDlqTopic = "dlq"
 		const val kafkaHost = "localhost"
 		const val kafkaPort = 3333
 		const val joarkPort = 2908

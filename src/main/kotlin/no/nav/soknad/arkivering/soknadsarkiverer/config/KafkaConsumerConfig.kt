@@ -34,9 +34,8 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 
 	@Bean
 	fun kafkaConfig() = Properties().also {
-//		it[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
-//		it[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = JsonDeserializer::class.java
-
+		it[RETRY_TOPIC] = applicationProperties.kafkaRetryTopic
+		it[DEAD_LETTER_TOPIC] = applicationProperties.kafkaDeadLetterTopic
 		it[StreamsConfig.APPLICATION_ID_CONFIG] = "soknadsarkiverer"
 		it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = applicationProperties.kafkaBootstrapServers
 		it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = KafkaExceptionHandler::class.java
@@ -80,21 +79,28 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 
 	@Bean
 	fun kafkaExceptionHandler() = KafkaExceptionHandler()
+
+	companion object {
+		const val DEAD_LETTER_TOPIC = "dead-letter.topic"
+		const val RETRY_TOPIC = "retry.topic"
+	}
 }
 
 class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationExceptionHandler {
-	private val topic = "dlq"
+	private lateinit var deadLetterTopic: String
+	private lateinit var bootstrapServer: String
+
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	override fun handle(context: ProcessorContext, record: ConsumerRecord<ByteArray, ByteArray>, exception: Exception): DeserializationExceptionHandler.DeserializationHandlerResponse {
 		logger.error("Exception when deserializing Kafka message", exception)
 
 		try {
-			val metadata = kafkaProducer().use { it.send(ProducerRecord(topic, record.key(), record.value())).get(1000, TimeUnit.MILLISECONDS) }
+			val metadata = kafkaProducer().use { it.send(ProducerRecord(deadLetterTopic, record.key(), record.value())).get(1000, TimeUnit.MILLISECONDS) }
 			logger.info("Put message on DLQ on offset ${metadata.offset()}")
 
 		} catch (e: Exception) {
-			logger.error("Exception when trying to message that could not be deserialised to topic '$topic'", exception)
+			logger.error("Exception when trying to message that could not be deserialised to topic '$deadLetterTopic'", exception)
 			return DeserializationExceptionHandler.DeserializationHandlerResponse.FAIL
 		}
 
@@ -102,6 +108,18 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 	}
 
 	override fun configure(configs: MutableMap<String, *>) {
+		deadLetterTopic = getConfigForKey(configs, KafkaConsumerConfig.DEAD_LETTER_TOPIC).toString()
+		bootstrapServer = getConfigForKey(configs, StreamsConfig.BOOTSTRAP_SERVERS_CONFIG).toString()
+	}
+
+	private fun getConfigForKey(configs: MutableMap<String, *>, key: String): Any? {
+		if (configs.containsKey(key)) {
+			return configs[key]
+		} else {
+			val msg = "Could not find key '${key}' in configuration! Won't be able to put event on DLQ"
+			logger.error(msg)
+			throw Exception(msg)
+		}
 	}
 
 	override fun uncaughtException(t: Thread, e: Throwable) {
@@ -110,12 +128,11 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 	}
 
 
-	@Bean
-	fun kafkaProducer() = KafkaProducer<ByteArray, ByteArray>(kafkaConfigMap())
+	private fun kafkaProducer() = KafkaProducer<ByteArray, ByteArray>(kafkaConfigMap())
 
 	private fun kafkaConfigMap(): MutableMap<String, Any> {
 		return HashMap<String, Any>().also {
-			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = "localhost:3333"
+			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = bootstrapServer
 			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = ByteArraySerializer::class.java
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = ByteArraySerializer::class.java
 		}
