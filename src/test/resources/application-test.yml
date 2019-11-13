@@ -1,3 +1,20 @@
 application:
   kafka-bootstrap-servers: localhost:3333
   joark-host: http://localhost:2908
+
+
+spring:
+  embedded:
+    kafka:
+      brokers: localhost:3333
+
+  kafka:
+    bootstrap-servers: localhost:3333
+    listener:
+      missing-topics-fatal: false
+    producer:
+      bootstrap-servers: localhost:3333
+    streams:
+      bootstrap-servers: localhost:3333
+    consumer:
+      bootstrap-servers: localhost:3333
