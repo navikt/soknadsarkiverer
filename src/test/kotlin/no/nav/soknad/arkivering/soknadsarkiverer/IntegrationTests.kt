@@ -10,13 +10,10 @@ import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafk
 import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaPort
 import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaTopic
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
-import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
-import org.apache.kafka.streams.StreamsConfig
-import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
@@ -41,7 +38,6 @@ import org.springframework.test.annotation.DirtiesContext.MethodMode.BEFORE_METH
 import org.springframework.test.context.ActiveProfiles
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
-import kotlin.random.Random
 
 @ActiveProfiles("test")
 @SpringBootTest
@@ -68,6 +64,7 @@ class IntegrationTests {
 	@AfterEach
 	fun teardown() {
 		wiremockServer.stop()
+		container.stop()
 	}
 
 
