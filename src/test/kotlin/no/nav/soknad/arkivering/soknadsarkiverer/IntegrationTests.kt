@@ -8,6 +8,7 @@ import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import no.nav.soknad.arkivering.dto.ArchivalData
 import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaHost
 import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaPort
+import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaRetryTropic
 import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaTopic
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -40,7 +41,7 @@ import java.util.concurrent.TimeUnit
 @ActiveProfiles("test")
 @SpringBootTest
 @EnableKafka
-@EmbeddedKafka(topics = [kafkaTopic], brokerProperties = ["listeners=PLAINTEXT://$kafkaHost:$kafkaPort", "port=$kafkaPort"])
+@EmbeddedKafka(topics = [kafkaTopic, kafkaRetryTropic], brokerProperties = ["listeners=PLAINTEXT://$kafkaHost:$kafkaPort", "port=$kafkaPort"])
 class IntegrationTests {
 
 	@Autowired
@@ -174,6 +175,7 @@ class IntegrationTests {
 
 	companion object {
 		const val kafkaTopic = "privat-soknadInnsendt-sendsoknad-v1-q0"
+		const val kafkaRetryTropic = "privat-retry-soknadInnsendt-sendsoknad-v1-q0"
 		const val kafkaHost = "localhost"
 		const val kafkaPort = 3333
 		const val joarkPort = 2908

@@ -13,7 +13,6 @@ import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.StreamsConfig
-import org.apache.kafka.streams.Topology
 import org.apache.kafka.streams.errors.DeserializationExceptionHandler
 import org.apache.kafka.streams.kstream.Consumed
 import org.apache.kafka.streams.kstream.KStream
@@ -21,6 +20,7 @@ import org.apache.kafka.streams.processor.ProcessorContext
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.DependsOn
 import org.springframework.kafka.annotation.EnableKafkaStreams
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -32,7 +32,6 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 													val messageConverter: MessageConverter,
 													val joarkArchiver: JoarkArchiver) {
 
-	@Bean
 	fun kafkaConfig() = Properties().also {
 		it[RETRY_TOPIC] = applicationProperties.kafkaRetryTopic
 		it[DEAD_LETTER_TOPIC] = applicationProperties.kafkaDeadLetterTopic
@@ -41,35 +40,35 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 		it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = KafkaExceptionHandler::class.java
 	}
 
-	@Bean
-	fun mainTopology(streamsBuilder: StreamsBuilder): Topology {
-		kafkaStreamTopology(streamsBuilder)
-//		kafkaRetryTopology(streamsBuilder)
-		return streamsBuilder.build()
+	@Bean("mainTopology")
+	fun kafkaStreamTopology(streamsBuilder: StreamsBuilder): KStream<String, ArchivalData> {
+		val topic = applicationProperties.kafkaTopic
+		val kStream = streamsBuilder.stream<String, ArchivalData>(topic, Consumed.with(Serdes.String(), ArchivalDataSerde()))
+		setupTopology(kStream)
+		return kStream
 	}
 
-	fun kafkaStreamTopology(streamsBuilder: StreamsBuilder) {
-		val stream = streamsBuilder.stream<String, ArchivalData>(applicationProperties.kafkaTopic, Consumed.with(Serdes.String(), ArchivalDataSerde()))
-		setupTopology(stream)
-	}
-
-	fun kafkaRetryTopology(streamsBuilder: StreamsBuilder) {
-		val stream = streamsBuilder.stream<String, ArchivalData>("retry", Consumed.with(Serdes.String(), ArchivalDataSerde()))
-		setupTopology(stream)
-	}
-
-	private fun setupTopology(ksteam: KStream<String, ArchivalData>) {
-
-//		streamsBuilder.stream<String, ArchivalData>(topic, Consumed.with(Serdes.String(), ArchivalDataSerde()))
+	@Bean("retryTopology")
+	fun kafkaRetryTopology(streamsBuilder: StreamsBuilder): KStream<String, ArchivalData> {
+		val topic = applicationProperties.kafkaRetryTopic
+		val kStream = streamsBuilder.stream<String, ArchivalData>(topic, Consumed.with(Serdes.String(), ArchivalDataSerde()))
 //		.peek( sleep())
-		ksteam
+		setupTopology(kStream)
+		return kStream
+	}
+
+	private fun setupTopology(kstream: KStream<String, ArchivalData>) {
+
+		kstream
 			.mapValues { archivalData -> archivalData to fileStorageRetrievingService.getFilesFromFileStorage(archivalData) }
 			.mapValues { (archivalData, files) -> messageConverter.createJoarkData(archivalData, files) }
 			.foreach { _, joarkData -> joarkArchiver.putDataInJoark(joarkData) }
 	}
 
 	@Bean
-	fun kStream(topology: Topology, kafkaExceptionHandler: KafkaExceptionHandler): KafkaStreams {
+	@DependsOn(value = ["mainTopology", "retryTopology"])
+	fun kStream(streamsBuilder: StreamsBuilder, kafkaExceptionHandler: KafkaExceptionHandler): KafkaStreams {
+		val topology = streamsBuilder.build()
 		val kafkaStreams = KafkaStreams(topology, kafkaConfig())
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler)
 		kafkaStreams.start()
