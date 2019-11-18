@@ -18,7 +18,6 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -46,23 +45,32 @@ class IntegrationTests {
 
 	@Autowired
 	private lateinit var applicationProperties: ApplicationProperties
-	private lateinit var dlqKafkaBroker: EmbeddedKafkaBroker
 	private val objectMapper = ObjectMapper()
 	private val wiremockServer = WireMockServer(joarkPort)
 	private val kafkaTemplate = kafkaTemplate()
 	private val consumedDlqRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
-	private lateinit var container: KafkaMessageListenerContainer<ByteArray, ByteArray>
+	private val consumedRetryRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
+	private lateinit var dlqContainer: KafkaMessageListenerContainer<ByteArray, ByteArray>
+	private lateinit var retryContainer: KafkaMessageListenerContainer<ByteArray, ByteArray>
+	private lateinit var kafkaBroker: EmbeddedKafkaBroker
 
 	@BeforeEach
 	fun setup() {
 		wiremockServer.start()
+
+		kafkaBroker = EmbeddedKafkaBroker(1, true, kafkaRetryTropic, applicationProperties.kafkaDeadLetterTopic)
+		kafkaBroker.kafkaPorts(kafkaPort)
+		kafkaBroker.brokerListProperty("listeners=PLAINTEXT://$kafkaHost:$kafkaPort")
+
 		setupDlqListener()
+		setupRetryListener()
 	}
 
 	@AfterEach
 	fun teardown() {
 		wiremockServer.stop()
-		container.stop()
+		dlqContainer.stop()
+		retryContainer.stop()
 	}
 
 
@@ -86,7 +94,6 @@ class IntegrationTests {
 		assertNotNull(receivedRecord)
 	}
 
-	@Disabled
 	@Test
 	fun `Failing to send to Joark will put event on retry topic`() {
 		mockJoarkIsDown()
@@ -95,6 +102,8 @@ class IntegrationTests {
 		putDataOnKafkaTopic(archivalData)
 
 		//TODO: Test that there is a message on retry topic
+		val receivedRecord = consumedRetryRecords.poll(30, TimeUnit.SECONDS)
+		assertNotNull(receivedRecord)
 	}
 
 
@@ -151,26 +160,33 @@ class IntegrationTests {
 
 	private fun setupDlqListener() {
 		val kafkaDlqTopic = applicationProperties.kafkaDeadLetterTopic
-		dlqKafkaBroker = EmbeddedKafkaBroker(1, true, kafkaDlqTopic)
-		dlqKafkaBroker.kafkaPorts(kafkaPort)
-		dlqKafkaBroker.brokerListProperty("listeners=PLAINTEXT://$kafkaHost:$kafkaPort")
-		val consumerProperties = KafkaTestUtils.consumerProps("sender", "false", dlqKafkaBroker)
+		val msgListener = MessageListener<ByteArray, ByteArray> { record -> consumedDlqRecords.add(record) }
+
+		dlqContainer = setupKafkaListener(kafkaDlqTopic, msgListener)
+	}
+
+	private fun setupRetryListener() {
+		val kafkaDlqTopic = applicationProperties.kafkaRetryTopic
+		val msgListener = MessageListener<ByteArray, ByteArray> { record -> consumedRetryRecords.add(record) }
+
+		retryContainer = setupKafkaListener(kafkaDlqTopic, msgListener)
+	}
+
+	private fun setupKafkaListener(topic: String, msgListener: MessageListener<ByteArray, ByteArray>): KafkaMessageListenerContainer<ByteArray, ByteArray> {
+		val consumerProperties = KafkaTestUtils.consumerProps("sender", "false", kafkaBroker)
 
 		val consumer = DefaultKafkaConsumerFactory<ByteArray, ByteArray>(consumerProperties)
 		consumer.setKeyDeserializer(ByteArrayDeserializer())
 		consumer.setValueDeserializer(ByteArrayDeserializer())
 
-		val msgListener = MessageListener<ByteArray, ByteArray> { record ->
-			consumedDlqRecords.add(record)
-		}
-
-		val containerProperties = ContainerProperties(kafkaDlqTopic)
+		val containerProperties = ContainerProperties(topic)
 		containerProperties.isMissingTopicsFatal = false
-		container = KafkaMessageListenerContainer(consumer, containerProperties)
+		val container = KafkaMessageListenerContainer(consumer, containerProperties)
 		container.setupMessageListener(msgListener)
 		container.start()
 
-		ContainerTestUtils.waitForAssignment(container, dlqKafkaBroker.partitionsPerTopic)
+		ContainerTestUtils.waitForAssignment(container, kafkaBroker.partitionsPerTopic)
+		return container
 	}
 
 	companion object {
