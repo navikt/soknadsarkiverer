@@ -1,3 +1,4 @@
 application:
   kafka-bootstrap-servers: ${spring.embedded.kafka.brokers}
-  joark-host: http://localhost:2908
+  joark-port: 2908
+  joark-host: http://localhost:${application.joark-port}

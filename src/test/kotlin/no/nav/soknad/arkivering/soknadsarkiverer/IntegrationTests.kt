@@ -6,9 +6,6 @@ import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.http.RequestMethod
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import no.nav.soknad.arkivering.dto.ArchivalData
-import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaDlqTopic
-import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaRetryTropic
-import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaTopic
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -19,6 +16,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.beans.factory.getBean
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.ApplicationContext
@@ -40,8 +38,11 @@ import java.util.concurrent.TimeUnit
 
 @ActiveProfiles("test")
 @SpringBootTest
-@EmbeddedKafka(topics = [kafkaTopic, kafkaDlqTopic, kafkaRetryTropic])
+@EmbeddedKafka(topics = ["\${application.kafka-topic}", "\${application.kafka-retry-topic}", "\${application.kafka-dead-letter-topic}"])
 class IntegrationTests {
+
+	@Value("\${application.joark-port}")
+	private lateinit var joarkPort: String
 
 	@Autowired
 	private lateinit var applicationProperties: ApplicationProperties
@@ -50,13 +51,14 @@ class IntegrationTests {
 
 	private lateinit var kafkaBroker: EmbeddedKafkaBroker
 	private lateinit var kafkaTemplate: KafkaTemplate<String, String>
+	private lateinit var wiremockServer: WireMockServer
 	private val objectMapper = ObjectMapper()
-	private val wiremockServer = WireMockServer(joarkPort)
 	private val consumedDlqRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
 	private val consumedRetryRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
 
 	@BeforeEach
 	fun setup() {
+		wiremockServer = WireMockServer(joarkPort.toInt())
 		wiremockServer.start()
 
 		kafkaBroker = applicationContext.getBean()
@@ -113,7 +115,7 @@ class IntegrationTests {
 	}
 
 	private fun putDataOnKafkaTopic(data: String) {
-		kafkaTemplate.send(kafkaTopic, "key", data)
+		kafkaTemplate.send(applicationProperties.kafkaTopic, "key", data)
 	}
 
 	private fun verifyWiremockRequests(expectedCount: Int, url: String, requestMethod: RequestMethod) {
@@ -186,12 +188,5 @@ class IntegrationTests {
 		container.start()
 
 		ContainerTestUtils.waitForAssignment(container, kafkaBroker.partitionsPerTopic)
-	}
-
-	companion object {
-		const val kafkaTopic = "privat-soknadInnsendt-sendsoknad-v1-q0"
-		const val kafkaRetryTropic = "privat-retry-soknadInnsendt-sendsoknad-v1-q0"
-		const val kafkaDlqTopic = "privat-dlq-soknadInnsendt-sendsoknad-v1-q0"
-		const val joarkPort = 2908
 	}
 }

@@ -7,7 +7,7 @@ import org.springframework.test.context.ActiveProfiles
 
 @ActiveProfiles("test")
 @SpringBootTest
-@EmbeddedKafka(topics = ["privat-soknadInnsendt-sendsoknad-v1-q0"])
+@EmbeddedKafka(topics = ["\${application.kafka-topic}"])
 class SoknadsarkivererApplicationTests {
 
 	@Test
