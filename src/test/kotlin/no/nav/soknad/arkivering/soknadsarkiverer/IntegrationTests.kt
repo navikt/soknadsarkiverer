@@ -6,8 +6,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.http.RequestMethod
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import no.nav.soknad.arkivering.dto.ArchivalData
-import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaHost
-import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaPort
+import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaDlqTopic
 import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaRetryTropic
 import no.nav.soknad.arkivering.soknadsarkiverer.IntegrationTests.Companion.kafkaTopic
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
@@ -20,8 +19,9 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.getBean
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.kafka.annotation.EnableKafka
+import org.springframework.context.ApplicationContext
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.core.DefaultKafkaProducerFactory
 import org.springframework.kafka.core.KafkaTemplate
@@ -33,34 +33,34 @@ import org.springframework.kafka.test.EmbeddedKafkaBroker
 import org.springframework.kafka.test.context.EmbeddedKafka
 import org.springframework.kafka.test.utils.ContainerTestUtils
 import org.springframework.kafka.test.utils.KafkaTestUtils
+import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
 @ActiveProfiles("test")
 @SpringBootTest
-@EnableKafka
-@EmbeddedKafka(topics = [kafkaTopic, kafkaRetryTropic], brokerProperties = ["listeners=PLAINTEXT://$kafkaHost:$kafkaPort", "port=$kafkaPort"])
+@EmbeddedKafka(topics = [kafkaTopic, kafkaDlqTopic, kafkaRetryTropic])
 class IntegrationTests {
 
 	@Autowired
 	private lateinit var applicationProperties: ApplicationProperties
+	@Autowired
+	private lateinit var applicationContext: ApplicationContext
+
+	private lateinit var kafkaBroker: EmbeddedKafkaBroker
+	private lateinit var kafkaTemplate: KafkaTemplate<String, String>
 	private val objectMapper = ObjectMapper()
 	private val wiremockServer = WireMockServer(joarkPort)
-	private val kafkaTemplate = kafkaTemplate()
 	private val consumedDlqRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
 	private val consumedRetryRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
-	private lateinit var dlqContainer: KafkaMessageListenerContainer<ByteArray, ByteArray>
-	private lateinit var retryContainer: KafkaMessageListenerContainer<ByteArray, ByteArray>
-	private lateinit var kafkaBroker: EmbeddedKafkaBroker
 
 	@BeforeEach
 	fun setup() {
 		wiremockServer.start()
 
-		kafkaBroker = EmbeddedKafkaBroker(1, true, kafkaRetryTropic, applicationProperties.kafkaDeadLetterTopic)
-		kafkaBroker.kafkaPorts(kafkaPort)
-		kafkaBroker.brokerListProperty("listeners=PLAINTEXT://$kafkaHost:$kafkaPort")
+		kafkaBroker = applicationContext.getBean()
+		kafkaTemplate = kafkaTemplate()
 
 		setupDlqListener()
 		setupRetryListener()
@@ -69,12 +69,11 @@ class IntegrationTests {
 	@AfterEach
 	fun teardown() {
 		wiremockServer.stop()
-		dlqContainer.stop()
-		retryContainer.stop()
 	}
 
 
 	@Test
+	@DirtiesContext
 	fun `Putting messages on Kafka will cause a rest call to Joark`() {
 		mockJoarkIsWorking()
 		val archivalData = ArchivalData("id", "message")
@@ -85,6 +84,7 @@ class IntegrationTests {
 	}
 
 	@Test
+	@DirtiesContext
 	fun `Sending in invalid json will produce event on DLQ`() {
 		val invalidData = "this is not json"
 
@@ -95,13 +95,13 @@ class IntegrationTests {
 	}
 
 	@Test
+	@DirtiesContext
 	fun `Failing to send to Joark will put event on retry topic`() {
 		mockJoarkIsDown()
 		val archivalData = ArchivalData("id2", "message")
 
 		putDataOnKafkaTopic(archivalData)
 
-		//TODO: Test that there is a message on retry topic
 		val receivedRecord = consumedRetryRecords.poll(30, TimeUnit.SECONDS)
 		assertNotNull(receivedRecord)
 	}
@@ -148,7 +148,7 @@ class IntegrationTests {
 
 	private fun producerFactory(): ProducerFactory<String, String> {
 		val configProps = HashMap<String, Any>().also {
-			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = "$kafkaHost:$kafkaPort"
+			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaBroker.brokersAsString
 			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 		}
@@ -162,17 +162,17 @@ class IntegrationTests {
 		val kafkaDlqTopic = applicationProperties.kafkaDeadLetterTopic
 		val msgListener = MessageListener<ByteArray, ByteArray> { record -> consumedDlqRecords.add(record) }
 
-		dlqContainer = setupKafkaListener(kafkaDlqTopic, msgListener)
+		setupKafkaListener(kafkaDlqTopic, msgListener)
 	}
 
 	private fun setupRetryListener() {
 		val kafkaDlqTopic = applicationProperties.kafkaRetryTopic
 		val msgListener = MessageListener<ByteArray, ByteArray> { record -> consumedRetryRecords.add(record) }
 
-		retryContainer = setupKafkaListener(kafkaDlqTopic, msgListener)
+		setupKafkaListener(kafkaDlqTopic, msgListener)
 	}
 
-	private fun setupKafkaListener(topic: String, msgListener: MessageListener<ByteArray, ByteArray>): KafkaMessageListenerContainer<ByteArray, ByteArray> {
+	private fun setupKafkaListener(topic: String, msgListener: MessageListener<ByteArray, ByteArray>) {
 		val consumerProperties = KafkaTestUtils.consumerProps("sender", "false", kafkaBroker)
 
 		val consumer = DefaultKafkaConsumerFactory<ByteArray, ByteArray>(consumerProperties)
@@ -186,14 +186,12 @@ class IntegrationTests {
 		container.start()
 
 		ContainerTestUtils.waitForAssignment(container, kafkaBroker.partitionsPerTopic)
-		return container
 	}
 
 	companion object {
 		const val kafkaTopic = "privat-soknadInnsendt-sendsoknad-v1-q0"
 		const val kafkaRetryTropic = "privat-retry-soknadInnsendt-sendsoknad-v1-q0"
-		const val kafkaHost = "localhost"
-		const val kafkaPort = 3333
+		const val kafkaDlqTopic = "privat-dlq-soknadInnsendt-sendsoknad-v1-q0"
 		const val joarkPort = 2908
 	}
 }
