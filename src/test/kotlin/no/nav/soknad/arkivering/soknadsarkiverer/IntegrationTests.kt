@@ -5,6 +5,7 @@ import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.http.RequestMethod
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
+import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import no.nav.soknad.arkivering.dto.ArchivalData
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -78,11 +79,11 @@ class IntegrationTests {
 	@DirtiesContext
 	fun `Putting messages on Kafka will cause a rest call to Joark`() {
 		mockJoarkIsWorking()
-		val archivalData = ArchivalData("id", "message")
 
-		putDataOnKafkaTopic(archivalData)
+		putDataOnKafkaTopic(ArchivalData("id0", "message0"))
+		putDataOnKafkaTopic(ArchivalData("id1", "message1"))
 
-		verifyWiremockRequests(1, applicationProperties.joarkUrl, RequestMethod.POST)
+		verifyWiremockRequests(2, applicationProperties.joarkUrl, RequestMethod.POST)
 	}
 
 	@Test
@@ -92,22 +93,45 @@ class IntegrationTests {
 
 		putDataOnKafkaTopic(invalidData)
 
-		val receivedRecord = consumedDlqRecords.poll(30, TimeUnit.SECONDS)
-		assertNotNull(receivedRecord)
+		assertNotNull(consumedDlqRecords.poll(30, TimeUnit.SECONDS))
 	}
 
 	@Test
 	@DirtiesContext
 	fun `Failing to send to Joark will put event on retry topic`() {
 		mockJoarkIsDown()
-		val archivalData = ArchivalData("id2", "message")
+		val archivalData = ArchivalData("id", "message")
 
 		putDataOnKafkaTopic(archivalData)
 
-		val receivedRecord = consumedRetryRecords.poll(30, TimeUnit.SECONDS)
-		assertNotNull(receivedRecord)
+		assertNotNull(consumedRetryRecords.poll(30, TimeUnit.SECONDS))
 	}
 
+	@Test
+	@DirtiesContext
+	fun `Poison pill followed by proper message -- One message on DLQ, one to Joark`() {
+		mockJoarkIsWorking()
+		val invalidData = "this is not json"
+		putDataOnKafkaTopic(invalidData)
+
+		val archivalData = ArchivalData("id", "message")
+		putDataOnKafkaTopic(archivalData)
+
+		assertNotNull(consumedDlqRecords.poll(30, TimeUnit.SECONDS))
+		verifyWiremockRequests(1, applicationProperties.joarkUrl, RequestMethod.POST)
+	}
+
+	@Test
+	@DirtiesContext
+	fun `First attempt to Joark fails, the second suceeds`() {
+		mockJoarkRespondsAfterAttempts(2)
+
+		val archivalData = ArchivalData("id", "message")
+		putDataOnKafkaTopic(archivalData)
+
+		assertNotNull(consumedRetryRecords.poll(30, TimeUnit.SECONDS))
+		verifyWiremockRequests(2, applicationProperties.joarkUrl, RequestMethod.POST)
+	}
 
 
 	private fun putDataOnKafkaTopic(archivalData: ArchivalData) {
@@ -140,6 +164,22 @@ class IntegrationTests {
 
 	private fun mockJoarkIsDown() {
 		mockJoark(404)
+	}
+
+	private fun mockJoarkRespondsAfterAttempts(attempts: Int) {
+
+		val stateNames = listOf(STARTED).plus ((0..attempts).map { "iteration_$it" })
+		for (attempt in (0 until stateNames.size - 1)) {
+			wiremockServer.stubFor(
+				post(urlEqualTo(applicationProperties.joarkUrl))
+					.inScenario("integrationTest").whenScenarioStateIs(stateNames[attempt])
+					.willReturn(aResponse().withStatus(404))
+					.willSetStateTo(stateNames[attempt + 1]))
+		}
+		wiremockServer.stubFor(
+			post(urlEqualTo(applicationProperties.joarkUrl))
+				.inScenario("integrationTest").whenScenarioStateIs(stateNames.last())
+				.willReturn(aResponse().withStatus(200)))
 	}
 
 	private fun mockJoark(statusCode: Int) {

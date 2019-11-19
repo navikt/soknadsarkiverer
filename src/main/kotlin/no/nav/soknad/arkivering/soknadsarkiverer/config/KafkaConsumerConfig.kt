@@ -4,9 +4,9 @@ import no.nav.soknad.arkivering.dto.ArchivalData
 import no.nav.soknad.arkivering.soknadsarkiverer.converter.MessageConverter
 import no.nav.soknad.arkivering.soknadsarkiverer.service.FileStorageRetrievingService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.JoarkArchiver
-import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.KafkaStreams
+import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.kstream.Consumed
@@ -35,15 +35,30 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 	private fun setupTopology(kstream: KStream<String, ArchivalData>) {
 
 		kstream
-			.mapValues { archivalData -> w { archivalData to fileStorageRetrievingService.getFilesFromFileStorage(archivalData) } }
-			.mapValues { (archivalData, files) -> w { messageConverter.createJoarkData(archivalData, files) } }
-			.foreach { _, joarkData -> w { joarkArchiver.putDataInJoark(joarkData) } }
+			.map { key, archivalData           -> KeyValue(KafkaMsg(key, archivalData), archivalData) }
+			.map { orig, archivalData          -> w(orig) { archivalData to fileStorageRetrievingService.getFilesFromFileStorage(archivalData) } }
+			.map { orig, (archivalData, files) -> w(orig) { messageConverter.createJoarkData(archivalData, files) } }
+			.foreach { orig, joarkData         -> w(orig) { joarkArchiver.putDataInJoark(joarkData) } }
+	}
+
+	/**
+	 * This wrapper will execute the given lambda. If anything goes wrong and we get an exception,
+	 * the Kafka record will be put into the exception, so that the exception handler can access the
+	 * record and put it on the retry topic.
+	 */
+	private fun <T> w(originalMessage: KafkaMsg, function: () -> T): KeyValue<KafkaMsg, T> {
+		try {
+			return KeyValue(originalMessage, function.invoke())
+		} catch (e: Exception) {
+			throw SoknadsArkivererException(originalMessage, e)
+		}
 	}
 
 	@Bean("mainTopology")
 	fun kafkaStreamTopology(streamsBuilder: StreamsBuilder): KStream<String, ArchivalData> {
 		val topic = applicationProperties.kafkaTopic
 		val kStream = streamsBuilder.stream<String, ArchivalData>(topic, Consumed.with(Serdes.String(), ArchivalDataSerde()))
+		kStream.peek { key, value -> println("Received main event with key='$key' and value='$value'") }
 		setupTopology(kStream)
 		return kStream
 	}
@@ -52,24 +67,10 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 	fun kafkaRetryTopology(streamsBuilder: StreamsBuilder): KStream<String, ArchivalData> {
 		val topic = applicationProperties.kafkaRetryTopic
 		val kStream = streamsBuilder.stream<String, ArchivalData>(topic, Consumed.with(Serdes.String(), ArchivalDataSerde()))
+		kStream.peek { key, value -> println("Received retry event with key='$key' and value='$value'") }
 		// TODO: Implement backoff strategy
 		setupTopology(kStream)
 		return kStream
-	}
-
-	/**
-	 * This wrapper will execute the given lambda. If anything goes wrong and we get an exception,
-	 * the Kafka record will be put into the exception, so that the exception handler can access the
-	 * record and put it on the retry topic.
-	 */
-	fun <T> w(f: () -> T): T {
-		try {
-			return f.invoke()
-		} catch (e: Exception) {
-			//TODO: Proper record
-			val record = ConsumerRecord(applicationProperties.kafkaTopic, 0, 0, "key".toByteArray(), "value".toByteArray())
-			throw SoknadsArkivererException(record, e)
-		}
 	}
 
 	@Bean
@@ -95,3 +96,5 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 		const val RETRY_TOPIC = "retry.topic"
 	}
 }
+
+data class KafkaMsg(val key: String, val value: ArchivalData)

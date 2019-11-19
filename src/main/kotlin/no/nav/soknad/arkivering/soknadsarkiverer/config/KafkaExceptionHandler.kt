@@ -6,6 +6,7 @@ import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.serialization.ByteArraySerializer
+import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.errors.DeserializationExceptionHandler
 import org.apache.kafka.streams.errors.DeserializationExceptionHandler.DeserializationHandlerResponse
@@ -22,16 +23,16 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 
-	private fun putDataOnTopic(record: ConsumerRecord<ByteArray, ByteArray>, topic: String): RecordMetadata {
-		return kafkaProducer().use { it.send(ProducerRecord(topic, record.key(), record.value())).get(1000, TimeUnit.MILLISECONDS) }
+	private fun putDataOnTopic(topic: String, key: ByteArray, value: ByteArray): RecordMetadata {
+		return kafkaProducer().use { it.send(ProducerRecord(topic, key, value)).get(1000, TimeUnit.MILLISECONDS) }
 	}
 
 	override fun handle(context: ProcessorContext, record: ConsumerRecord<ByteArray, ByteArray>, exception: Exception): DeserializationHandlerResponse {
 		logger.error("Exception when deserializing Kafka message", exception)
 
 		try {
-			val metadata = putDataOnTopic(record, deadLetterTopic)
-			logger.info("Put message on DLQ on offset ${metadata.offset()}")
+			putDataOnTopic(deadLetterTopic, record.key(), record.value())
+			logger.info("Put message on DLQ")
 
 		} catch (e: Exception) {
 			logger.error("Exception when trying to message that could not be deserialised to topic '$deadLetterTopic'", exception)
@@ -45,7 +46,10 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 		if (e is SoknadsArkivererException) {
 			try {
 				val payload = e.payload
-				putDataOnTopic(payload, retryTopic)
+				val key = Serdes.String().serializer().serialize(retryTopic, payload.key)
+				val value = ArchivalDataSerde().serializer().serialize(retryTopic, payload.value)
+
+				putDataOnTopic(retryTopic, key, value)
 
 			} catch (exception: Exception) {
 				logger.error("Failed to put message on retry topic!", exception) //TODO: wat do.
@@ -83,4 +87,4 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 	}
 }
 
-class SoknadsArkivererException(val payload: ConsumerRecord<ByteArray, ByteArray>, val e: Exception) : Exception()
+class SoknadsArkivererException(val payload: KafkaMsg, val e: Exception) : Exception()
