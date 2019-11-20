@@ -42,21 +42,16 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 		return DeserializationHandlerResponse.CONTINUE
 	}
 
+	fun retry(event: KafkaMsg) {
+		val key = Serdes.String().serializer().serialize(retryTopic, event.key)
+		val value = ArchivalDataSerde().serializer().serialize(retryTopic, event.value)
+
+		putDataOnTopic(retryTopic, key, value)
+		logger.info("Sent message to retry topic $retryTopic")
+	}
+
 	override fun uncaughtException(t: Thread, e: Throwable) {
-		if (e is SoknadsArkivererException) {
-			try {
-				val payload = e.payload
-				val key = Serdes.String().serializer().serialize(retryTopic, payload.key)
-				val value = ArchivalDataSerde().serializer().serialize(retryTopic, payload.value)
-
-				putDataOnTopic(retryTopic, key, value)
-
-			} catch (exception: Exception) {
-				logger.error("Failed to put message on retry topic!", exception) //TODO: wat do.
-			}
-		} else {
-			logger.error("Uncaught exception '$e'")
-		}
+		logger.error("Uncaught exception '$e'")
 	}
 
 	override fun configure(configs: Map<String, *>) {
@@ -86,5 +81,3 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 		}
 	}
 }
-
-class SoknadsArkivererException(val payload: KafkaMsg, val e: Exception) : Exception()

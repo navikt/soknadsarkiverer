@@ -45,6 +45,8 @@ class IntegrationTests {
 	@Value("\${application.joark-port}")
 	private lateinit var joarkPort: String
 
+	private val timeout = 30L
+
 	@Autowired
 	private lateinit var applicationProperties: ApplicationProperties
 	@Autowired
@@ -93,7 +95,7 @@ class IntegrationTests {
 
 		putDataOnKafkaTopic(invalidData)
 
-		assertNotNull(consumedDlqRecords.poll(30, TimeUnit.SECONDS))
+		assertNotNull(consumedDlqRecords.poll(timeout, TimeUnit.SECONDS))
 	}
 
 	@Test
@@ -104,32 +106,29 @@ class IntegrationTests {
 
 		putDataOnKafkaTopic(archivalData)
 
-		assertNotNull(consumedRetryRecords.poll(30, TimeUnit.SECONDS))
+		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 	}
 
 	@Test
 	@DirtiesContext
 	fun `Poison pill followed by proper message -- One message on DLQ, one to Joark`() {
 		mockJoarkIsWorking()
-		val invalidData = "this is not json"
-		putDataOnKafkaTopic(invalidData)
 
-		val archivalData = ArchivalData("id", "message")
-		putDataOnKafkaTopic(archivalData)
+		putDataOnKafkaTopic("this is not json")
+		putDataOnKafkaTopic(ArchivalData("id", "message"))
 
-		assertNotNull(consumedDlqRecords.poll(30, TimeUnit.SECONDS))
+		assertNotNull(consumedDlqRecords.poll(timeout, TimeUnit.SECONDS))
 		verifyWiremockRequests(1, applicationProperties.joarkUrl, RequestMethod.POST)
 	}
 
 	@Test
 	@DirtiesContext
-	fun `First attempt to Joark fails, the second suceeds`() {
+	fun `First attempt to Joark fails, the second succeeds`() {
 		mockJoarkRespondsAfterAttempts(2)
 
-		val archivalData = ArchivalData("id", "message")
-		putDataOnKafkaTopic(archivalData)
+		putDataOnKafkaTopic(ArchivalData("id", "message"))
 
-		assertNotNull(consumedRetryRecords.poll(30, TimeUnit.SECONDS))
+		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 		verifyWiremockRequests(2, applicationProperties.joarkUrl, RequestMethod.POST)
 	}
 
@@ -145,9 +144,8 @@ class IntegrationTests {
 	private fun verifyWiremockRequests(expectedCount: Int, url: String, requestMethod: RequestMethod) {
 		val requestPattern = RequestPatternBuilder.newRequestPattern(requestMethod, urlEqualTo(url)).build()
 		val startTime = System.currentTimeMillis()
-		val timeout = 10 * 1000
 
-		while (System.currentTimeMillis() < startTime + timeout) {
+		while (System.currentTimeMillis() < startTime + timeout*1000) {
 			val matches = wiremockServer.countRequestsMatching(requestPattern)
 
 			if (matches.count == expectedCount) {
