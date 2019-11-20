@@ -124,7 +124,7 @@ class IntegrationTests {
 	@Test
 	@DirtiesContext
 	fun `First attempt to Joark fails, the second succeeds`() {
-		mockJoarkRespondsAfterAttempts(2)
+		mockJoarkRespondsAfterAttempts(1)
 
 		putDataOnKafkaTopic(ArchivalData("id", "message"))
 
@@ -166,7 +166,7 @@ class IntegrationTests {
 
 	private fun mockJoarkRespondsAfterAttempts(attempts: Int) {
 
-		val stateNames = listOf(STARTED).plus ((0..attempts).map { "iteration_$it" })
+		val stateNames = listOf(STARTED).plus ((0 until attempts).map { "iteration_$it" })
 		for (attempt in (0 until stateNames.size - 1)) {
 			wiremockServer.stubFor(
 				post(urlEqualTo(applicationProperties.joarkUrl))
