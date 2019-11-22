@@ -32,7 +32,7 @@ fun verifyMockedPostRequests(expectedCount: Int, url: String) = verifyMockedRequ
 fun verifyMockedRequests(expectedCount: Int, url: String, requestMethod: RequestMethod) {
 	val requestPattern = RequestPatternBuilder.newRequestPattern(requestMethod, WireMock.urlMatching(url)).build()
 	val startTime = System.currentTimeMillis()
-	val timeout = 50*1000
+	val timeout = 30*1000
 
 	while (System.currentTimeMillis() < startTime + timeout) {
 		val matches = wiremockServer.countRequestsMatching(requestPattern)
