@@ -1,11 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.WireMock.*
-import com.github.tomakehurst.wiremock.http.RequestMethod
-import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
-import com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED
 import no.nav.soknad.arkivering.dto.ArchivalData
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -36,14 +31,15 @@ import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import kotlin.collections.set
 
 @ActiveProfiles("test")
 @SpringBootTest
 @EmbeddedKafka(topics = ["\${application.kafka-topic}", "\${application.kafka-retry-topic}", "\${application.kafka-dead-letter-topic}"])
 class IntegrationTests {
 
-	@Value("\${application.joark-port}")
-	private lateinit var joarkPort: String
+	@Value("\${application.mocked-port-for-external-services}")
+	private val portToExternalServices: Int? = null
 
 	private val timeout = 30L
 
@@ -54,15 +50,13 @@ class IntegrationTests {
 
 	private lateinit var kafkaBroker: EmbeddedKafkaBroker
 	private lateinit var kafkaTemplate: KafkaTemplate<String, String>
-	private lateinit var wiremockServer: WireMockServer
 	private val objectMapper = ObjectMapper()
 	private val consumedDlqRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
 	private val consumedRetryRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
 
 	@BeforeEach
 	fun setup() {
-		wiremockServer = WireMockServer(joarkPort.toInt())
-		wiremockServer.start()
+		setupMockedServices(portToExternalServices!!, applicationProperties.joarkUrl, applicationProperties.filestorageUrl)
 
 		kafkaBroker = applicationContext.getBean()
 		kafkaTemplate = kafkaTemplate()
@@ -73,19 +67,20 @@ class IntegrationTests {
 
 	@AfterEach
 	fun teardown() {
-		wiremockServer.stop()
+		stopMockedServices()
 	}
 
 
 	@Test
 	@DirtiesContext
-	fun `Putting messages on Kafka will cause a rest call to Joark`() {
+	fun `Putting messages on Kafka will cause rest calls to Joark`() {
+		mockFilestorageIsWorking()
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic(ArchivalData("id0", "message0"))
 		putDataOnKafkaTopic(ArchivalData("id1", "message1"))
 
-		verifyWiremockRequests(2, applicationProperties.joarkUrl, RequestMethod.POST)
+		verifyMockedPostRequests(2, applicationProperties.joarkUrl)
 	}
 
 	@Test
@@ -101,10 +96,21 @@ class IntegrationTests {
 	@Test
 	@DirtiesContext
 	fun `Failing to send to Joark will put event on retry topic`() {
+		mockFilestorageIsWorking()
 		mockJoarkIsDown()
-		val archivalData = ArchivalData("id", "message")
 
-		putDataOnKafkaTopic(archivalData)
+		putDataOnKafkaTopic(ArchivalData("id", "message"))
+
+		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
+	}
+
+	@Test
+	@DirtiesContext
+	fun `Failing to get files from Filestroage will put event on retry topic`() {
+		mockFilestorageIsDown()
+		mockJoarkIsWorking()
+
+		putDataOnKafkaTopic(ArchivalData("id", "message"))
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 	}
@@ -112,24 +118,26 @@ class IntegrationTests {
 	@Test
 	@DirtiesContext
 	fun `Poison pill followed by proper message -- One message on DLQ, one to Joark`() {
+		mockFilestorageIsWorking()
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic("this is not json")
 		putDataOnKafkaTopic(ArchivalData("id", "message"))
 
 		assertNotNull(consumedDlqRecords.poll(timeout, TimeUnit.SECONDS))
-		verifyWiremockRequests(1, applicationProperties.joarkUrl, RequestMethod.POST)
+		verifyMockedPostRequests(1, applicationProperties.joarkUrl)
 	}
 
 	@Test
 	@DirtiesContext
 	fun `First attempt to Joark fails, the second succeeds`() {
+		mockFilestorageIsWorking()
 		mockJoarkRespondsAfterAttempts(1)
 
 		putDataOnKafkaTopic(ArchivalData("id", "message"))
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
-		verifyWiremockRequests(2, applicationProperties.joarkUrl, RequestMethod.POST)
+		verifyMockedPostRequests(2, applicationProperties.joarkUrl)
 	}
 
 
@@ -141,50 +149,6 @@ class IntegrationTests {
 		kafkaTemplate.send(applicationProperties.kafkaTopic, "key", data)
 	}
 
-	private fun verifyWiremockRequests(expectedCount: Int, url: String, requestMethod: RequestMethod) {
-		val requestPattern = RequestPatternBuilder.newRequestPattern(requestMethod, urlEqualTo(url)).build()
-		val startTime = System.currentTimeMillis()
-
-		while (System.currentTimeMillis() < startTime + timeout*1000) {
-			val matches = wiremockServer.countRequestsMatching(requestPattern)
-
-			if (matches.count == expectedCount) {
-				break
-			}
-			TimeUnit.MILLISECONDS.sleep(50)
-		}
-		wiremockServer.verify(expectedCount, postRequestedFor(urlMatching(applicationProperties.joarkUrl)))
-	}
-
-	private fun mockJoarkIsWorking() {
-		mockJoark(200)
-	}
-
-	private fun mockJoarkIsDown() {
-		mockJoark(404)
-	}
-
-	private fun mockJoarkRespondsAfterAttempts(attempts: Int) {
-
-		val stateNames = listOf(STARTED).plus ((0 until attempts).map { "iteration_$it" })
-		for (attempt in (0 until stateNames.size - 1)) {
-			wiremockServer.stubFor(
-				post(urlEqualTo(applicationProperties.joarkUrl))
-					.inScenario("integrationTest").whenScenarioStateIs(stateNames[attempt])
-					.willReturn(aResponse().withStatus(404))
-					.willSetStateTo(stateNames[attempt + 1]))
-		}
-		wiremockServer.stubFor(
-			post(urlEqualTo(applicationProperties.joarkUrl))
-				.inScenario("integrationTest").whenScenarioStateIs(stateNames.last())
-				.willReturn(aResponse().withStatus(200)))
-	}
-
-	private fun mockJoark(statusCode: Int) {
-		wiremockServer.stubFor(
-			post(urlEqualTo(applicationProperties.joarkUrl))
-				.willReturn(aResponse().withStatus(statusCode)))
-	}
 
 	private fun producerFactory(): ProducerFactory<String, String> {
 		val configProps = HashMap<String, Any>().also {
@@ -199,17 +163,17 @@ class IntegrationTests {
 
 
 	private fun setupDlqListener() {
-		val kafkaDlqTopic = applicationProperties.kafkaDeadLetterTopic
+		val topic = applicationProperties.kafkaDeadLetterTopic
 		val msgListener = MessageListener<ByteArray, ByteArray> { record -> consumedDlqRecords.add(record) }
 
-		setupKafkaListener(kafkaDlqTopic, msgListener)
+		setupKafkaListener(topic, msgListener)
 	}
 
 	private fun setupRetryListener() {
-		val kafkaDlqTopic = applicationProperties.kafkaRetryTopic
+		val topic = applicationProperties.kafkaRetryTopic
 		val msgListener = MessageListener<ByteArray, ByteArray> { record -> consumedRetryRecords.add(record) }
 
-		setupKafkaListener(kafkaDlqTopic, msgListener)
+		setupKafkaListener(topic, msgListener)
 	}
 
 	private fun setupKafkaListener(topic: String, msgListener: MessageListener<ByteArray, ByteArray>) {

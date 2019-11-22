@@ -12,4 +12,6 @@ class ApplicationProperties {
 	lateinit var kafkaDeadLetterTopic: String
 	lateinit var joarkHost: String
 	lateinit var joarkUrl: String
+	lateinit var filestorageHost: String
+	lateinit var filestorageUrl: String
 }

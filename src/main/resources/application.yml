@@ -22,6 +22,9 @@ application:
   joark-host: http://localhost:8092
   joark-url: /joark/save
 
+  filestorage-host: http://localhost:9042
+  filestorage-url: /filer?uuids=
+
 
 
 ---
@@ -31,3 +34,4 @@ spring:
 application:
   kafka-bootstrap-servers: kafka-broker:29092
   joark-host: http://joark-mock:8092
+  filestorage-host: http://soknadsfillager:9042
