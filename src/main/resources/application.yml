@@ -7,11 +7,6 @@ management:
       exposure:
         include: "*"
 
-spring:
-  kafka:
-    streams:
-      application-id: soknadsarkiverer
-
 application:
   kafka-bootstrap-servers: localhost:9092
 

@@ -5,19 +5,15 @@ import no.nav.soknad.arkivering.soknadsarkiverer.converter.MessageConverter
 import no.nav.soknad.arkivering.soknadsarkiverer.service.FileStorageRetrievingService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.JoarkArchiver
 import org.apache.kafka.common.serialization.Serdes
-import org.apache.kafka.streams.KafkaStreams
-import org.apache.kafka.streams.KeyValue
-import org.apache.kafka.streams.StreamsBuilder
-import org.apache.kafka.streams.StreamsConfig
+import org.apache.kafka.streams.*
 import org.apache.kafka.streams.kstream.Consumed
 import org.apache.kafka.streams.kstream.KStream
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.kafka.annotation.EnableKafkaStreams
 import java.util.*
+import java.util.concurrent.TimeUnit
 
-@EnableKafkaStreams
 @Configuration
 class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 													val fileStorageRetrievingService: FileStorageRetrievingService,
@@ -26,10 +22,10 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	fun kafkaConfig() = Properties().also {
+	fun kafkaConfig(applicationId: String) = Properties().also {
 		it[RETRY_TOPIC] = applicationProperties.kafkaRetryTopic
 		it[DEAD_LETTER_TOPIC] = applicationProperties.kafkaDeadLetterTopic
-		it[StreamsConfig.APPLICATION_ID_CONFIG] = "soknadsarkiverer"
+		it[StreamsConfig.APPLICATION_ID_CONFIG] = applicationId
 		it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = applicationProperties.kafkaBootstrapServers
 		it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = KafkaExceptionHandler::class.java
 	}
@@ -69,45 +65,49 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 		return KeyValue(KafkaMsgWrapper.None, null)
 	}
 
-	fun kafkaStreamTopology(streamsBuilder: StreamsBuilder): KStream<KafkaMsgWrapper.Value<KafkaMsg>, ArchivalData> {
+	fun kafkaStreamTopology(): Topology {
 		val topic = applicationProperties.kafkaTopic
 
+		val streamsBuilder = StreamsBuilder()
 		val kStream = streamsBuilder.stream<String, ArchivalData>(topic, Consumed.with(Serdes.String(), ArchivalDataSerde()))
 			.peek { key, archivalData -> logger.info("Received main event with key='$key' and value='$archivalData'") }
 			.map { key, archivalData  -> KeyValue(KafkaMsgWrapper.Value(KafkaMsg(key, archivalData)), archivalData) }
 
 		setupTopology(kStream)
-		return kStream
+		return streamsBuilder.build()
 	}
 
-	fun kafkaRetryTopology(streamsBuilder: StreamsBuilder): KStream<KafkaMsgWrapper.Value<KafkaMsg>, ArchivalData> {
+	fun kafkaRetryTopology(): Topology {
 		val topic = applicationProperties.kafkaRetryTopic
 
+		val streamsBuilder = StreamsBuilder()
 		val kStream = streamsBuilder.stream<String, ArchivalData>(topic, Consumed.with(Serdes.String(), ArchivalDataSerde()))
+			.peek { _, _ -> TimeUnit.SECONDS.sleep(1) }
 			.peek { key, archivalData -> logger.info("Received retry event with key='$key' and value='$archivalData'") }
 			.map { key, archivalData  -> KeyValue(KafkaMsgWrapper.Value(KafkaMsg(key, archivalData)), archivalData) }
 		// TODO: Implement backoff strategy
 
 		setupTopology(kStream)
-		return kStream
+		return streamsBuilder.build()
 	}
 
 	@Bean
-	fun kStream(streamsBuilder: StreamsBuilder, kafkaExceptionHandler: KafkaExceptionHandler): KafkaStreams {
-		kafkaStreamTopology(streamsBuilder)
-		kafkaRetryTopology(streamsBuilder)
-		val topology = streamsBuilder.build()
-		val kafkaStreams = KafkaStreams(topology, kafkaConfig())
-		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler)
+	fun mainKafkaStream() = setupKafkaStreams(kafkaStreamTopology(), "soknadsarkiverer-main")
+
+	@Bean
+	fun retryKafkaStream() = setupKafkaStreams(kafkaRetryTopology(), "soknadsarkiverer-retry")
+
+	private fun setupKafkaStreams(topology: Topology, applicationId: String): KafkaStreams {
+		val kafkaStreams = KafkaStreams(topology, kafkaConfig(applicationId))
+		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
 		kafkaStreams.start()
 		Runtime.getRuntime().addShutdownHook(Thread(kafkaStreams::close))
 		return kafkaStreams
 	}
 
-	@Bean
 	fun kafkaExceptionHandler(): KafkaExceptionHandler {
 		val handler = KafkaExceptionHandler()
-		handler.configure(kafkaConfig().map { (k, v) -> k.toString() to v.toString() }.toMap())
+		handler.configure(kafkaConfig("soknadsarkiverer-exception").map { (k, v) -> k.toString() to v.toString() }.toMap())
 		return handler
 	}
 
