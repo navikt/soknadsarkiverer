@@ -51,7 +51,7 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 	}
 
 	override fun uncaughtException(t: Thread, e: Throwable) {
-		logger.error("Uncaught exception '$e'")
+		logger.error("Uncaught exception", e)
 	}
 
 	override fun configure(configs: Map<String, *>) {
