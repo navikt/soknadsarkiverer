@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.beans.factory.getBean
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.ApplicationContext
+import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.core.DefaultKafkaProducerFactory
 import org.springframework.kafka.core.KafkaTemplate
@@ -30,6 +32,7 @@ import org.springframework.kafka.test.utils.KafkaTestUtils
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import kotlin.collections.set
 
@@ -51,6 +54,7 @@ class IntegrationTests {
 	private lateinit var kafkaBroker: EmbeddedKafkaBroker
 	private lateinit var kafkaTemplate: KafkaTemplate<String, String>
 	private val objectMapper = ObjectMapper()
+	private val consumedMainRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
 	private val consumedDlqRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
 	private val consumedRetryRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
 
@@ -61,6 +65,7 @@ class IntegrationTests {
 		kafkaBroker = applicationContext.getBean()
 		kafkaTemplate = kafkaTemplate()
 
+		setupMainListener()
 		setupDlqListener()
 		setupRetryListener()
 	}
@@ -73,7 +78,7 @@ class IntegrationTests {
 
 	@Test
 	@DirtiesContext
-	fun `Putting messages on Kafka will cause rest calls to Joark`() {
+	fun `Putting events on Kafka will cause rest calls to Joark`() {
 		mockFilestorageIsWorking()
 		mockJoarkIsWorking()
 
@@ -106,7 +111,7 @@ class IntegrationTests {
 
 	@Test
 	@DirtiesContext
-	fun `Failing to get files from Filestroage will put event on retry topic`() {
+	fun `Failing to get files from Filestorage will put event on retry topic`() {
 		mockFilestorageIsDown()
 		mockJoarkIsWorking()
 
@@ -117,7 +122,7 @@ class IntegrationTests {
 
 	@Test
 	@DirtiesContext
-	fun `Poison pill followed by proper message -- One message on DLQ, one to Joark`() {
+	fun `Poison pill followed by proper event -- One event on DLQ, one to Joark`() {
 		mockFilestorageIsWorking()
 		mockJoarkIsWorking()
 
@@ -138,6 +143,67 @@ class IntegrationTests {
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 		verifyMockedPostRequests(2, applicationProperties.joarkUrl)
+	}
+
+	@Test
+	@DirtiesContext
+	fun `Put event on retry topic, then send another event on main topic -- one topic should not lock the other`() {
+
+		// This test uses semaphores to guard in which order things happen.
+		// First an event is produced to the main topic, but the Filestorage is set to fail the event so that it
+		// ends up on the retry topic. When it is read and the application tries to access the Filestorage a second
+		// time, two things will happen:
+		// * A semaphore is released so that a second event is sent to the main topic.
+		// * It will wait for a different semaphore to release, and will be stuck until then.
+		// When the second event to the main topic is read, the Filestorage will work, and once it reaches Joark,
+		// it will release the semaphore that the first event is waiting for. That event will then continue executing
+		// and end up in Joark.
+		//
+		// The purpose of this test is to make sure that events from both the main and retry topics can be read
+		// simultaneously. We do not wish for the application to be stuck processing only one topic at the time.
+
+		val continueProcessingFirstMessageLock = Semaphore(0)
+		val sendSecondMessageLock = Semaphore(0)
+		val lockingService = MockLockingServices(continueProcessingFirstMessageLock, sendSecondMessageLock)
+
+		stopMockedServices()
+		setupMockedServices(portToExternalServices!!, applicationProperties.joarkUrl, applicationProperties.filestorageUrl,
+			lockingService::giveFilestorageResponse, lockingService::giveJoarkResponse)
+
+		putDataOnKafkaTopic(ArchivalData("id0", "first"))
+		sendSecondMessageLock.acquire() // Will only proceed from here once the lock is released
+		putDataOnKafkaTopic(ArchivalData("id1", "second"))
+
+		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
+		assertNotNull(consumedMainRecords.poll(timeout, TimeUnit.SECONDS))
+		verifyMockedPostRequests(2, applicationProperties.joarkUrl)
+		verifyMockedGetRequests(3, applicationProperties.filestorageUrl.replace("?", "\\?") + ".*")
+	}
+
+	class MockLockingServices(private val continueProcessingFirstMessageLock: Semaphore, private val sendSecondMessageLock: Semaphore) {
+		private var filestorageRequestCount = 0
+
+		fun giveFilestorageResponse(): ResponseMocker {
+			filestorageRequestCount++
+
+			if (filestorageRequestCount == 1) {
+				return ResponseMocker().withStatus(HttpStatus.NOT_FOUND)
+
+			} else if (filestorageRequestCount == 2) {
+				sendSecondMessageLock.release()
+				continueProcessingFirstMessageLock.acquire()
+			}
+
+			return ResponseMocker()
+				.withStatus(HttpStatus.OK)
+				.withHeader("Content-Type", MediaType.APPLICATION_OCTET_STREAM_VALUE)
+				.withBody("apabepa".toByteArray())
+		}
+
+		fun giveJoarkResponse(): ResponseMocker {
+			continueProcessingFirstMessageLock.release()
+			return ResponseMocker().withStatus(HttpStatus.OK)
+		}
 	}
 
 
@@ -162,6 +228,13 @@ class IntegrationTests {
 	private final fun kafkaTemplate() = KafkaTemplate(producerFactory())
 
 
+	private fun setupMainListener() {
+		val topic = applicationProperties.kafkaTopic
+		val msgListener = MessageListener<ByteArray, ByteArray> { record -> consumedMainRecords.add(record) }
+
+		setupKafkaListener(topic, msgListener)
+	}
+
 	private fun setupDlqListener() {
 		val topic = applicationProperties.kafkaDeadLetterTopic
 		val msgListener = MessageListener<ByteArray, ByteArray> { record -> consumedDlqRecords.add(record) }
@@ -177,7 +250,7 @@ class IntegrationTests {
 	}
 
 	private fun setupKafkaListener(topic: String, msgListener: MessageListener<ByteArray, ByteArray>) {
-		val consumerProperties = KafkaTestUtils.consumerProps("sender", "false", kafkaBroker)
+		val consumerProperties = KafkaTestUtils.consumerProps("integration-test-listener", "false", kafkaBroker)
 
 		val consumer = DefaultKafkaConsumerFactory<ByteArray, ByteArray>(consumerProperties)
 		consumer.setKeyDeserializer(ByteArrayDeserializer())

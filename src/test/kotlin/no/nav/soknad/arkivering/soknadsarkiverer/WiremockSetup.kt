@@ -1,8 +1,15 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
 import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder
 import com.github.tomakehurst.wiremock.client.WireMock
+import com.github.tomakehurst.wiremock.common.FileSource
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration
+import com.github.tomakehurst.wiremock.extension.Parameters
+import com.github.tomakehurst.wiremock.extension.ResponseDefinitionTransformer
+import com.github.tomakehurst.wiremock.http.Request
 import com.github.tomakehurst.wiremock.http.RequestMethod
+import com.github.tomakehurst.wiremock.http.ResponseDefinition
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import com.github.tomakehurst.wiremock.stubbing.Scenario
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -27,6 +34,7 @@ fun stopMockedServices() {
 	wiremockServer.stop()
 }
 
+fun verifyMockedGetRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.GET)
 fun verifyMockedPostRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.POST)
 
 fun verifyMockedRequests(expectedCount: Int, url: String, requestMethod: RequestMethod) {
@@ -89,4 +97,60 @@ fun mockFilestorageIsDown() {
 		WireMock.get(WireMock.urlMatching(filestorageUrl.replace("?", "\\?") + ".*"))
 			.willReturn(WireMock.aResponse()
 				.withStatus(HttpStatus.SERVICE_UNAVAILABLE.value())))
+}
+
+
+fun setupMockedServices(port: Int, urlJoark: String, urlFilestorage: String,
+												filestorageResponder: () -> ResponseMocker, joarkResponder: () -> ResponseMocker) {
+
+	joarkUrl = urlJoark
+	filestorageUrl = urlFilestorage
+
+	val wiremockConfig = WireMockConfiguration()
+		.port(port)
+		.extensions(SoknadsarkivererResponseDefinitionTransformer(filestorageResponder, joarkResponder))
+	wiremockServer = WireMockServer(wiremockConfig)
+	wiremockServer.start()
+}
+
+class SoknadsarkivererResponseDefinitionTransformer(private val filestorageResponder: () -> ResponseMocker,
+																										private val joarkResponder: () -> ResponseMocker)
+	: ResponseDefinitionTransformer() {
+
+	override fun getName() = "SoknadsarkivererResponseDefinitionTransformer"
+
+	override fun transform(request: Request, responseDefinition: ResponseDefinition, files: FileSource, parameters: Parameters): ResponseDefinition {
+
+		val responseMocker = when {
+				request.url.startsWith(filestorageUrl) -> filestorageResponder.invoke()
+				request.url.startsWith(joarkUrl) -> joarkResponder.invoke()
+				else -> ResponseMocker().withStatus(HttpStatus.OK)
+		}
+
+		return responseMocker.build()
+	}
+}
+
+/**
+ * This wrapper exists to avoid leaking Wiremock specifics into other classes
+ */
+class ResponseMocker {
+	private val builder = ResponseDefinitionBuilder()
+
+	fun withStatus(status: HttpStatus): ResponseMocker {
+		builder.withStatus(status.value())
+		return this
+	}
+
+	fun withBody(body: ByteArray): ResponseMocker {
+		builder.withBody(body)
+		return this
+	}
+
+	fun withHeader(key: String, value: String): ResponseMocker {
+		builder.withHeader(key, value)
+		return this
+	}
+
+	internal fun build(): ResponseDefinition = builder.build()
 }
