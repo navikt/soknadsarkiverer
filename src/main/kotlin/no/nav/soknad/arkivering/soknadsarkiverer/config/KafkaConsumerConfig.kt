@@ -4,15 +4,16 @@ import no.nav.soknad.arkivering.dto.ArchivalData
 import no.nav.soknad.arkivering.soknadsarkiverer.converter.MessageConverter
 import no.nav.soknad.arkivering.soknadsarkiverer.service.FileStorageRetrievingService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.JoarkArchiver
+import org.apache.kafka.common.serialization.IntegerDeserializer
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.*
-import org.apache.kafka.streams.kstream.Consumed
-import org.apache.kafka.streams.kstream.KStream
+import org.apache.kafka.streams.kstream.*
+import org.apache.kafka.streams.processor.ProcessorContext
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import java.time.Duration
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 @Configuration
 class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
@@ -25,6 +26,7 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 	fun kafkaConfig(applicationId: String) = Properties().also {
 		it[RETRY_TOPIC] = applicationProperties.kafkaRetryTopic
 		it[DEAD_LETTER_TOPIC] = applicationProperties.kafkaDeadLetterTopic
+		it[KAFKA_MAX_RETRY_COUNT] = applicationProperties.kafkaMaxRetryCount
 		it[StreamsConfig.APPLICATION_ID_CONFIG] = applicationId
 		it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = applicationProperties.kafkaBootstrapServers
 		it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = KafkaExceptionHandler::class.java
@@ -70,8 +72,8 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 
 		val streamsBuilder = StreamsBuilder()
 		val kStream = streamsBuilder.stream<String, ArchivalData>(topic, Consumed.with(Serdes.String(), ArchivalDataSerde()))
-			.peek { key, archivalData -> logger.info("Received main event with key='$key' and value='$archivalData'") }
-			.map { key, archivalData  -> KeyValue(KafkaMsgWrapper.Value(KafkaMsg(key, archivalData)), archivalData) }
+			.transform(TransformerSupplier { WrapperProcessor() })
+			.peek { kafkaMsg, _ -> logger.info("Received main event: ${kafkaMsg.t}") }
 
 		setupTopology(kStream)
 		return streamsBuilder.build()
@@ -81,11 +83,16 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 		val topic = applicationProperties.kafkaRetryTopic
 
 		val streamsBuilder = StreamsBuilder()
-		val kStream = streamsBuilder.stream<String, ArchivalData>(topic, Consumed.with(Serdes.String(), ArchivalDataSerde()))
-			.peek { _, _ -> TimeUnit.SECONDS.sleep(1) }
-			.peek { key, archivalData -> logger.info("Received retry event with key='$key' and value='$archivalData'") }
-			.map { key, archivalData  -> KeyValue(KafkaMsgWrapper.Value(KafkaMsg(key, archivalData)), archivalData) }
-		// TODO: Implement backoff strategy
+		val windowedStream = streamsBuilder.stream<String, ArchivalData>(topic, Consumed.with(Serdes.String(), ArchivalDataSerde()))
+			.groupBy { key, value -> KeyValue(key, value) }
+			.windowedBy(TimeWindows.of(Duration.ofSeconds(1L)))
+			.count()
+			.toStream()
+
+		val kStream = windowedStream
+			.map { key, _ -> KeyValue(key.key().key, key.key().value) }
+			.transform(TransformerSupplier { WrapperProcessor() })
+			.peek { kafkaMsg, _ -> logger.info("Received retry event: ${kafkaMsg.t}") }
 
 		setupTopology(kStream)
 		return streamsBuilder.build()
@@ -111,13 +118,43 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 		return handler
 	}
 
+	class WrapperProcessor : Transformer<String, ArchivalData, KeyValue<KafkaMsgWrapper.Value<KafkaMsg>, ArchivalData>> {
+		private lateinit var context: ProcessorContext
+
+		override fun init(context: ProcessorContext) {
+			this.context = context
+		}
+
+		override fun transform(key: String, value: ArchivalData): KeyValue<KafkaMsgWrapper.Value<KafkaMsg>, ArchivalData> {
+			val retryCount = getRetryCount()
+			return KeyValue(KafkaMsgWrapper.Value(KafkaMsg(key, value, retryCount)), value)
+		}
+
+		private fun getRetryCount(): Int {
+			return context.headers()
+				.filter { it.key() == RETRY_COUNT_HEADER }
+				.map { it.value() }
+				.map { IntegerDeserializer().deserialize("", it) }
+				.getOrElse(0) { 0 }
+		}
+
+		override fun close() {
+		}
+	}
+
 	companion object {
 		const val DEAD_LETTER_TOPIC = "dead-letter.topic"
 		const val RETRY_TOPIC = "retry.topic"
+		const val RETRY_COUNT_HEADER = "retry-count"
+		const val KAFKA_MAX_RETRY_COUNT = "kafka-max-retry-count"
 	}
 }
 
-data class KafkaMsg(val key: String, val value: ArchivalData)
+data class KafkaMsg(val key: String, val value: ArchivalData, val retryCount: Int = 0) {
+	override fun toString(): String {
+		return "[KafkaMsg - key: '$key', retryCount: '$retryCount', value: '$value']"
+	}
+}
 
 sealed class KafkaMsgWrapper<out T> {
 	object None : KafkaMsgWrapper<Nothing>()

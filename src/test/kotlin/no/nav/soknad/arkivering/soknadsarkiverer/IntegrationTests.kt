@@ -147,6 +147,31 @@ class IntegrationTests {
 
 	@Test
 	@DirtiesContext
+	fun `First attempt to Joark fails, the fourth succeeds`() {
+		mockFilestorageIsWorking()
+		mockJoarkRespondsAfterAttempts(3)
+
+		putDataOnKafkaTopic(ArchivalData("id", "message"))
+
+		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
+		verifyMockedPostRequests(4, applicationProperties.joarkUrl)
+	}
+
+	@Test
+	@DirtiesContext
+	fun `Joark is down -- message ends up on DLQ`() {
+		mockFilestorageIsWorking()
+		mockJoarkIsDown()
+
+		putDataOnKafkaTopic(ArchivalData("id", "message"))
+
+		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
+		assertNotNull(consumedDlqRecords.poll(timeout, TimeUnit.SECONDS))
+		verifyMockedPostRequests(5, applicationProperties.joarkUrl)
+	}
+
+	@Test
+	@DirtiesContext
 	fun `Put event on retry topic, then send another event on main topic -- one topic should not lock the other`() {
 
 		// This test uses semaphores to guard in which order things happen.

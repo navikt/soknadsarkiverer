@@ -14,6 +14,8 @@ application:
   kafka-retry-topic: privat-retry-soknadInnsendt-sendsoknad-v1-q0
   kafka-dead-letter-topic: privat-dlq-soknadInnsendt-sendsoknad-v1-q0
 
+  kafka-max-retry-count: 20
+
   joark-host: http://localhost:8092
   joark-url: /joark/save
 

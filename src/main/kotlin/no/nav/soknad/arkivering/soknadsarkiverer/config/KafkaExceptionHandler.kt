@@ -1,11 +1,15 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
+import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaConsumerConfig.Companion.RETRY_COUNT_HEADER
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
+import org.apache.kafka.common.header.Headers
+import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.ByteArraySerializer
+import org.apache.kafka.common.serialization.IntegerSerializer
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.errors.DeserializationExceptionHandler
@@ -19,19 +23,21 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 	private lateinit var retryTopic: String
 	private lateinit var deadLetterTopic: String
 	private lateinit var bootstrapServer: String
+	private var kafkaMaxRetryCount: Int = 0
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 
-	private fun putDataOnTopic(topic: String, key: ByteArray, value: ByteArray): RecordMetadata {
-		return kafkaProducer().use { it.send(ProducerRecord(topic, key, value)).get(1000, TimeUnit.MILLISECONDS) }
+	private fun putDataOnTopic(topic: String, key: ByteArray, value: ByteArray, headers: Headers): RecordMetadata {
+		val partition = 0 // TODO: What partiton?
+		return kafkaProducer().use { it.send(ProducerRecord(topic, partition, null, key, value, headers)).get(1000, TimeUnit.MILLISECONDS) }
 	}
 
 	override fun handle(context: ProcessorContext, record: ConsumerRecord<ByteArray, ByteArray>, exception: Exception): DeserializationHandlerResponse {
 		logger.error("Exception when deserializing Kafka message", exception)
 
 		try {
-			putDataOnTopic(deadLetterTopic, record.key(), record.value())
+			putDataOnTopic(deadLetterTopic, record.key(), record.value(), RecordHeaders())
 			logger.info("Put message on DLQ")
 
 		} catch (e: Exception) {
@@ -46,8 +52,13 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 		val key = Serdes.String().serializer().serialize(retryTopic, event.key)
 		val value = ArchivalDataSerde().serializer().serialize(retryTopic, event.value)
 
-		putDataOnTopic(retryTopic, key, value)
-		logger.info("Sent message to retry topic $retryTopic")
+		val retryCount = event.retryCount + 1
+		val headers = RecordHeaders().add(RETRY_COUNT_HEADER, IntegerSerializer().serialize("", retryCount))
+
+		val topic = if (retryCount < kafkaMaxRetryCount) retryTopic else deadLetterTopic
+
+		putDataOnTopic(topic, key, value, headers)
+		logger.info("Sent message to retry topic $topic")
 	}
 
 	override fun uncaughtException(t: Thread, e: Throwable) {
@@ -58,6 +69,7 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 		retryTopic = getConfigForKey(configs, KafkaConsumerConfig.RETRY_TOPIC).toString()
 		deadLetterTopic = getConfigForKey(configs, KafkaConsumerConfig.DEAD_LETTER_TOPIC).toString()
 		bootstrapServer = getConfigForKey(configs, StreamsConfig.BOOTSTRAP_SERVERS_CONFIG).toString()
+		kafkaMaxRetryCount = Integer.parseInt(getConfigForKey(configs, KafkaConsumerConfig.KAFKA_MAX_RETRY_COUNT).toString())
 	}
 
 	private fun getConfigForKey(configs: Map<String, *>, key: String): Any? {
