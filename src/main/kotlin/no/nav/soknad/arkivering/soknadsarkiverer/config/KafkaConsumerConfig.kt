@@ -8,7 +8,15 @@ import org.apache.kafka.common.serialization.IntegerDeserializer
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.*
 import org.apache.kafka.streams.kstream.*
+import org.apache.kafka.streams.processor.Processor
 import org.apache.kafka.streams.processor.ProcessorContext
+import org.apache.kafka.streams.processor.ProcessorSupplier
+import org.apache.kafka.streams.processor.PunctuationType
+import org.apache.kafka.streams.processor.Punctuator
+import org.apache.kafka.streams.state.KeyValueStore
+import org.apache.kafka.streams.state.StoreBuilder
+import org.apache.kafka.streams.state.Stores
+import org.apache.kafka.streams.state.internals.RocksDbKeyValueBytesStoreSupplier
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -70,9 +78,12 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 	fun kafkaStreamTopology(): Topology {
 		val topic = applicationProperties.kafkaTopic
 
+		val stateStore = Stores
+			.keyValueStoreBuilder(RocksDbKeyValueBytesStoreSupplier("bepa", true), Serdes.String(), ArchivalDataSerde())
+
 		val streamsBuilder = StreamsBuilder()
 		val kStream = streamsBuilder.stream<String, ArchivalData>(topic, Consumed.with(Serdes.String(), ArchivalDataSerde()))
-			.transform(TransformerSupplier { WrapperProcessor() })
+			.transform(TransformerSupplier { WrapperTransformer(stateStore) })
 			.peek { kafkaMsg, _ -> logger.info("Received main event: ${kafkaMsg.t}") }
 
 		setupTopology(kStream)
@@ -82,19 +93,21 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 	fun kafkaRetryTopology(): Topology {
 		val topic = applicationProperties.kafkaRetryTopic
 
+		val stateStore = Stores
+			.keyValueStoreBuilder(RocksDbKeyValueBytesStoreSupplier("apa", true), Serdes.String(), ArchivalDataSerde())
 		val streamsBuilder = StreamsBuilder()
-		val windowedStream = streamsBuilder.stream<String, ArchivalData>(topic, Consumed.with(Serdes.String(), ArchivalDataSerde()))
-			.groupBy { key, value -> KeyValue(key, value) }
-			.windowedBy(TimeWindows.of(Duration.ofSeconds(1L)))
-			.count()
-			.toStream()
 
-		val kStream = windowedStream
-			.map { key, _ -> KeyValue(key.key().key, key.key().value) }
-			.transform(TransformerSupplier { WrapperProcessor() })
+		val kStream = streamsBuilder.stream<String, ArchivalData>(topic, Consumed.with(Serdes.String(), ArchivalDataSerde()))
+			.transform(TransformerSupplier { WrapperTransformer(stateStore) })
 			.peek { kafkaMsg, _ -> logger.info("Received retry event: ${kafkaMsg.t}") }
 
-		setupTopology(kStream)
+			.map { msg, archivalData  -> w(msg) { archivalData to fileStorageRetrievingService.getFilesFromFileStorage(archivalData) } }
+			.map { msg, dataAndFiles  -> w(msg) { messageConverter.createJoarkData(dataAndFiles?.first!!, dataAndFiles.second) } }
+			.map { msg, joarkData -> w(msg) { joarkArchiver.putDataInJoark(joarkData!!) } }
+
+			.process(ProcessorSupplier { WrapperTransformer(stateStore) })
+
+//		setupTopology(kStream)
 		return streamsBuilder.build()
 	}
 
@@ -118,15 +131,30 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 		return handler
 	}
 
-	class WrapperProcessor : Transformer<String, ArchivalData, KeyValue<KafkaMsgWrapper.Value<KafkaMsg>, ArchivalData>> {
+	class WrapperTransformer(private val stateStore: StoreBuilder<KeyValueStore<String, ArchivalData>>) :
+			Transformer<String, ArchivalData, KeyValue<KafkaMsgWrapper.Value<KafkaMsg>, ArchivalData>>,
+			Processor<KafkaMsgWrapper<KafkaMsg>, Unit> {
+
 		private lateinit var context: ProcessorContext
+		private lateinit var store: KeyValueStore<String, ArchivalData>
 
 		override fun init(context: ProcessorContext) {
 			this.context = context
+			this.store = stateStore.build()
+
+			context.schedule(Duration.ofSeconds(30), PunctuationType.WALL_CLOCK_TIME)
+				{ _ -> store.all().forEach { context.forward(it.key, it.value) } }
+		}
+
+		override fun process(key: KafkaMsgWrapper<KafkaMsg>, value: Unit) {
+			if (key is KafkaMsgWrapper.Value) { // Enter only if an exception has not occurred on a previous step in the topology
+				store.delete(key.t.key)
+			}
 		}
 
 		override fun transform(key: String, value: ArchivalData): KeyValue<KafkaMsgWrapper.Value<KafkaMsg>, ArchivalData> {
 			val retryCount = getRetryCount()
+			store.put(key, value)
 			return KeyValue(KafkaMsgWrapper.Value(KafkaMsg(key, value, retryCount)), value)
 		}
 
