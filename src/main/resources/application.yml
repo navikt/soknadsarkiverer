@@ -20,6 +20,13 @@ application:
   filestorage-host: http://localhost:9042
   filestorage-url: /filer?uuids=
 
+  kafka-max-retry-count: 20
+  kafka-retry-sleeptime:
+    - 5
+    - 25
+    - 60
+    - 120
+    - 600
 
 
 ---

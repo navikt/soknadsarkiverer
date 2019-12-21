@@ -14,4 +14,6 @@ class ApplicationProperties {
 	lateinit var joarkUrl: String
 	lateinit var filestorageHost: String
 	lateinit var filestorageUrl: String
+	lateinit var kafkaRetrySleepTime: List<Int>
+	var kafkaMaxRetryCount: Int? = null
 }
