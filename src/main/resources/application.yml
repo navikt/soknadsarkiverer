@@ -18,7 +18,7 @@ application:
   joark-url: /joark/save
 
   filestorage-host: http://localhost:9042
-  filestorage-url: /filer?uuids=
+  filestorage-url: /filer?ids=
 
   kafka-max-retry-count: 20
   kafka-retry-sleeptime:

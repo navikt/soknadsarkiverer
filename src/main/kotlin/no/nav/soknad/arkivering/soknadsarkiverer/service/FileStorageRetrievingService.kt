@@ -1,26 +1,29 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import no.nav.soknad.arkivering.dto.ArchivalData
+import no.nav.soknad.arkivering.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpHeaders
-import org.springframework.http.MediaType
-import org.springframework.http.converter.ByteArrayHttpMessageConverter
+import org.springframework.core.ParameterizedTypeReference
+import org.springframework.http.HttpMethod
+import org.springframework.http.RequestEntity
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
-import kotlin.ByteArray
+import java.net.URI
 
 @Service
 class FileStorageRetrievingService(private val restTemplate: RestTemplate,
 																	 private val applicationProperties: ApplicationProperties) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	fun getFilesFromFileStorage(archivalData: ArchivalData): List<ByteArray> {
+	fun getFilesFromFileStorage(archivalData: ArchivalData): List<FilElementDto> {
 		try {
-			logger.info("Getting data from file storage: '$archivalData'")
 			val url = applicationProperties.filestorageHost + applicationProperties.filestorageUrl + archivalData.message
+			logger.info("Getting data from file storage via: '$url'")
 
-			return getFiles(url)
+			val files = getFiles(url)
+			logger.info("Received: $files")
+			return files
 
 		} catch (e: Exception) {
 			logger.error("Error retrieving files from file storage", e)
@@ -28,17 +31,13 @@ class FileStorageRetrievingService(private val restTemplate: RestTemplate,
 		}
 	}
 
-	private fun getFiles(url: String): List<ByteArray> {
-		val headers = HttpHeaders()
-		headers.contentType = MediaType.APPLICATION_JSON
-		headers.accept = listOf(MediaType.APPLICATION_OCTET_STREAM)
+	private fun getFiles(url: String): List<FilElementDto> {
+		val request = RequestEntity<Any>(HttpMethod.GET, URI(url))
 
-		restTemplate.messageConverters.add(ByteArrayHttpMessageConverter())
+		val response = restTemplate.exchange(request, typeRef<List<FilElementDto>>()).body
 
-		val response = restTemplate.getForEntity(url, ByteArray::class.java).body
-		return if (response != null) {
-			listOf(response) //TODO: Handle properly
-		} else
-			throw Exception("Received no files")
+		return response ?: throw Exception("Received no files")
 	}
 }
+
+inline fun <reified T : Any> typeRef(): ParameterizedTypeReference<T> = object : ParameterizedTypeReference<T>() {}

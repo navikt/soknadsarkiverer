@@ -221,8 +221,8 @@ class IntegrationTests {
 
 			return ResponseMocker()
 				.withStatus(HttpStatus.OK)
-				.withHeader("Content-Type", MediaType.APPLICATION_OCTET_STREAM_VALUE)
-				.withBody("apabepa".toByteArray())
+				.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+				.withBody(createFilestorageResponse())
 		}
 
 		fun giveJoarkResponse(): ResponseMocker {
