@@ -18,7 +18,7 @@ class FileStorageRetrievingService(private val restTemplate: RestTemplate,
 
 	fun getFilesFromFileStorage(archivalData: ArchivalData): List<FilElementDto> {
 		try {
-			val url = applicationProperties.filestorageHost + applicationProperties.filestorageUrl + archivalData.message
+			val url = applicationProperties.filestorageHost + applicationProperties.filestorageUrl + archivalData.id
 			logger.info("Getting data from file storage via: '$url'")
 
 			val files = getFiles(url)
