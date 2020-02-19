@@ -1,7 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
-import no.nav.soknad.arkivering.dto.ArchivalData
 import no.nav.soknad.arkivering.dto.FilElementDto
+import no.nav.soknad.arkivering.dto.SoknadMottattDto
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
 import org.slf4j.LoggerFactory
 import org.springframework.core.ParameterizedTypeReference
@@ -16,9 +16,9 @@ class FileStorageRetrievingService(private val restTemplate: RestTemplate,
 																	 private val applicationProperties: ApplicationProperties) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	fun getFilesFromFileStorage(archivalData: ArchivalData): List<FilElementDto> {
+	fun getFilesFromFileStorage(data: SoknadMottattDto): List<FilElementDto> {
 		try {
-			val url = applicationProperties.filestorageHost + applicationProperties.filestorageUrl + archivalData.id
+			val url = applicationProperties.filestorageHost + applicationProperties.filestorageUrl + data.eksternReferanseId
 			logger.info("Getting data from file storage via: '$url'")
 
 			val files = getFiles(url)
