@@ -1,7 +1,8 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import no.nav.soknad.arkivering.dto.ArchivalData
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import no.nav.soknad.arkivering.dto.SoknadMottattDto
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -31,6 +32,7 @@ import org.springframework.kafka.test.utils.ContainerTestUtils
 import org.springframework.kafka.test.utils.KafkaTestUtils
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
+import java.time.LocalDateTime
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
@@ -53,10 +55,11 @@ class IntegrationTests {
 
 	private lateinit var kafkaBroker: EmbeddedKafkaBroker
 	private lateinit var kafkaTemplate: KafkaTemplate<String, String>
-	private val objectMapper = ObjectMapper()
 	private val consumedMainRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
 	private val consumedDlqRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
 	private val consumedRetryRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
+
+	private val objectMapper = ObjectMapper().also { it.registerModule(JavaTimeModule()) }
 
 	@BeforeEach
 	fun setup() {
@@ -78,12 +81,12 @@ class IntegrationTests {
 
 	@Test
 	@DirtiesContext
-	fun `Putting events on Kafka will cause rest calls to Joark`() {
+	fun `Happy case - Putting events on Kafka will cause rest calls to Joark`() {
 		mockFilestorageIsWorking()
 		mockJoarkIsWorking()
 
-		putDataOnKafkaTopic(ArchivalData("id0", "message0"))
-		putDataOnKafkaTopic(ArchivalData("id1", "message1"))
+		putDataOnKafkaTopic(createRequestData("id0"))
+		putDataOnKafkaTopic(createRequestData("id1"))
 
 		verifyMockedPostRequests(2, applicationProperties.joarkUrl)
 	}
@@ -104,7 +107,7 @@ class IntegrationTests {
 		mockFilestorageIsWorking()
 		mockJoarkIsDown()
 
-		putDataOnKafkaTopic(ArchivalData("id", "message"))
+		putDataOnKafkaTopic(createRequestData("id"))
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 	}
@@ -115,7 +118,7 @@ class IntegrationTests {
 		mockFilestorageIsDown()
 		mockJoarkIsWorking()
 
-		putDataOnKafkaTopic(ArchivalData("id", "message"))
+		putDataOnKafkaTopic(createRequestData("id"))
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 	}
@@ -127,7 +130,7 @@ class IntegrationTests {
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic("this is not json")
-		putDataOnKafkaTopic(ArchivalData("id", "message"))
+		putDataOnKafkaTopic(createRequestData("id"))
 
 		assertNotNull(consumedDlqRecords.poll(timeout, TimeUnit.SECONDS))
 		verifyMockedPostRequests(1, applicationProperties.joarkUrl)
@@ -139,7 +142,7 @@ class IntegrationTests {
 		mockFilestorageIsWorking()
 		mockJoarkRespondsAfterAttempts(1)
 
-		putDataOnKafkaTopic(ArchivalData("id", "message"))
+		putDataOnKafkaTopic(createRequestData("id"))
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 		verifyMockedPostRequests(2, applicationProperties.joarkUrl)
@@ -151,7 +154,7 @@ class IntegrationTests {
 		mockFilestorageIsWorking()
 		mockJoarkRespondsAfterAttempts(3)
 
-		putDataOnKafkaTopic(ArchivalData("id", "message"))
+		putDataOnKafkaTopic(createRequestData("id"))
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 		verifyMockedPostRequests(4, applicationProperties.joarkUrl)
@@ -163,7 +166,7 @@ class IntegrationTests {
 		mockFilestorageIsWorking()
 		mockJoarkIsDown()
 
-		putDataOnKafkaTopic(ArchivalData("id", "message"))
+		putDataOnKafkaTopic(createRequestData("id"))
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 		assertNotNull(consumedDlqRecords.poll(timeout, TimeUnit.SECONDS))
@@ -195,9 +198,9 @@ class IntegrationTests {
 		setupMockedServices(portToExternalServices!!, applicationProperties.joarkUrl, applicationProperties.filestorageUrl,
 			lockingService::giveFilestorageResponse, lockingService::giveJoarkResponse)
 
-		putDataOnKafkaTopic(ArchivalData("id0", "first"))
+		putDataOnKafkaTopic(createRequestData("id0"))
 		sendSecondMessageLock.acquire() // Will only proceed from here once the lock is released
-		putDataOnKafkaTopic(ArchivalData("id1", "second"))
+		putDataOnKafkaTopic(createRequestData("id1"))
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 		assertNotNull(consumedMainRecords.poll(timeout, TimeUnit.SECONDS))
@@ -232,8 +235,8 @@ class IntegrationTests {
 	}
 
 
-	private fun putDataOnKafkaTopic(archivalData: ArchivalData) {
-		putDataOnKafkaTopic(objectMapper.writeValueAsString(archivalData))
+	private fun putDataOnKafkaTopic(data: SoknadMottattDto) {
+		putDataOnKafkaTopic(objectMapper.writeValueAsString(data))
 	}
 
 	private fun putDataOnKafkaTopic(data: String) {
@@ -289,4 +292,7 @@ class IntegrationTests {
 
 		ContainerTestUtils.waitForAssignment(container, kafkaBroker.partitionsPerTopic)
 	}
+
+	private fun createRequestData(eksternReferanseId: String) =
+		SoknadMottattDto(eksternReferanseId, "personId", "FNR", "tema", LocalDateTime.now(), emptyList())
 }

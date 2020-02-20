@@ -50,7 +50,7 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 
 	fun retry(event: KafkaMsg) {
 		val key = Serdes.String().serializer().serialize(retryTopic, event.key)
-		val value = ArchivalDataSerde().serializer().serialize(retryTopic, event.value)
+		val value = SoknadMottattDtoSerde().serializer().serialize(retryTopic, event.value)
 
 		val retryCount = event.retryCount + 1
 		val headers = RecordHeaders().add(RETRY_COUNT_HEADER, IntegerSerializer().serialize("", retryCount))

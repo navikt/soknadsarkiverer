@@ -1,6 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
-import no.nav.soknad.arkivering.dto.ArchivalData
+import no.nav.soknad.arkivering.dto.SoknadMottattDto
 import no.nav.soknad.arkivering.soknadsarkiverer.converter.MessageConverter
 import no.nav.soknad.arkivering.soknadsarkiverer.service.FileStorageRetrievingService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.JoarkArchiver
@@ -35,10 +35,10 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 		it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = KafkaExceptionHandler::class.java
 	}
 
-	private fun setupTopology(kstream: KStream<KafkaMsgWrapper.Value<KafkaMsg>, ArchivalData>) {
+	private fun setupTopology(kstream: KStream<KafkaMsgWrapper.Value<KafkaMsg>, SoknadMottattDto>) {
 
 		kstream
-			.map { msg, archivalData  -> w(msg) { archivalData to fileStorageRetrievingService.getFilesFromFileStorage(archivalData) } }
+			.map { msg, requestData   -> w(msg) { requestData to fileStorageRetrievingService.getFilesFromFileStorage(requestData) } }
 			.map { msg, dataAndFiles  -> w(msg) { messageConverter.createJoarkData(dataAndFiles?.first!!, dataAndFiles.second) } }
 			.foreach { msg, joarkData -> w(msg) { joarkArchiver.putDataInJoark(joarkData!!) } }
 	}
@@ -74,7 +74,7 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 		val topic = applicationProperties.kafkaTopic
 
 		val streamsBuilder = StreamsBuilder()
-		val kStream = streamsBuilder.stream<String, ArchivalData>(topic, Consumed.with(Serdes.String(), ArchivalDataSerde()))
+		val kStream = streamsBuilder.stream<String, SoknadMottattDto>(topic, Consumed.with(Serdes.String(), SoknadMottattDtoSerde()))
 			.transform(TransformerSupplier { WrapperTransformer() })
 			.peek { kafkaMsg, _ -> logger.info("Received main event: ${kafkaMsg.t}") }
 
@@ -86,7 +86,7 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 		val topic = applicationProperties.kafkaRetryTopic
 
 		val streamsBuilder = StreamsBuilder()
-		val kStream = streamsBuilder.stream<String, ArchivalData>(topic, Consumed.with(Serdes.String(), ArchivalDataSerde()))
+		val kStream = streamsBuilder.stream<String, SoknadMottattDto>(topic, Consumed.with(Serdes.String(), SoknadMottattDtoSerde()))
 			.transform(TransformerSupplier { WrapperTransformer() })
 			.peek { kafkaMsg, _ -> logger.info("Received retry event: ${kafkaMsg.t}") }
 			.peek { kafkaMsg, _ -> backoff(kafkaMsg) }
@@ -119,13 +119,11 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 		return kafkaStreams
 	}
 
-	fun kafkaExceptionHandler(): KafkaExceptionHandler {
-		val handler = KafkaExceptionHandler()
-		handler.configure(kafkaConfig("soknadsarkiverer-exception").map { (k, v) -> k.toString() to v.toString() }.toMap())
-		return handler
+	fun kafkaExceptionHandler() = KafkaExceptionHandler().also {
+		it.configure(kafkaConfig("soknadsarkiverer-exception").map { (k, v) -> k.toString() to v.toString() }.toMap())
 	}
 
-	class WrapperTransformer : Transformer<String, ArchivalData, KeyValue<KafkaMsgWrapper.Value<KafkaMsg>, ArchivalData>> {
+	class WrapperTransformer : Transformer<String, SoknadMottattDto, KeyValue<KafkaMsgWrapper.Value<KafkaMsg>, SoknadMottattDto>> {
 
 		private lateinit var context: ProcessorContext
 
@@ -133,7 +131,7 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 			this.context = context
 		}
 
-		override fun transform(key: String, value: ArchivalData): KeyValue<KafkaMsgWrapper.Value<KafkaMsg>, ArchivalData> {
+		override fun transform(key: String, value: SoknadMottattDto): KeyValue<KafkaMsgWrapper.Value<KafkaMsg>, SoknadMottattDto> {
 			val retryCount = getRetryCount()
 			return KeyValue(KafkaMsgWrapper.Value(KafkaMsg(key, value, retryCount)), value)
 		}
@@ -158,7 +156,7 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 	}
 }
 
-data class KafkaMsg(val key: String, val value: ArchivalData, val retryCount: Int = 0) {
+data class KafkaMsg(val key: String, val value: SoknadMottattDto, val retryCount: Int = 0) {
 	override fun toString(): String {
 		return "[KafkaMsg - key: '$key', retryCount: '$retryCount', value: '$value']"
 	}

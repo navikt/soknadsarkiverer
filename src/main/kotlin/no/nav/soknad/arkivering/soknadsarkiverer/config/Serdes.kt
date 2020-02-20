@@ -1,23 +1,25 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.databind.ObjectMapper
-import no.nav.soknad.arkivering.dto.ArchivalData
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
+import no.nav.soknad.arkivering.dto.SoknadMottattDto
 import org.apache.kafka.common.serialization.Deserializer
 import org.apache.kafka.common.serialization.Serde
 import org.apache.kafka.common.serialization.Serializer
 
-class ArchivalDataSerde : Serde<ArchivalData> {
+class SoknadMottattDtoSerde : Serde<SoknadMottattDto> {
 	override fun configure(configs: MutableMap<String, *>?, isKey: Boolean) {}
 	override fun close() {}
-	override fun deserializer(): Deserializer<ArchivalData> = ArchivalDataDeserializer()
-	override fun serializer(): Serializer<ArchivalData> = ArchivalDataSerializer()
+	override fun deserializer(): Deserializer<SoknadMottattDto> = SoknadMottattDtoDeserializer()
+	override fun serializer(): Serializer<SoknadMottattDto> = SoknadMottattDtoSerializer()
 }
 
-class ArchivalDataSerializer : Serializer<ArchivalData> {
-	override fun serialize(topic: String, data: ArchivalData?): ByteArray? {
+class SoknadMottattDtoSerializer : Serializer<SoknadMottattDto> {
+	override fun serialize(topic: String, data: SoknadMottattDto?): ByteArray? {
 		if (data == null)
 			return null
-		val objectMapper = ObjectMapper()
 		return objectMapper.writeValueAsBytes(data)
 	}
 
@@ -25,14 +27,18 @@ class ArchivalDataSerializer : Serializer<ArchivalData> {
 	override fun configure(configs: MutableMap<String, *>?, isKey: Boolean) {}
 }
 
-class ArchivalDataDeserializer : Deserializer<ArchivalData> {
-	override fun deserialize(topic: String, data: ByteArray?): ArchivalData? {
+class SoknadMottattDtoDeserializer : Deserializer<SoknadMottattDto> {
+	override fun deserialize(topic: String, data: ByteArray?): SoknadMottattDto? {
 		if (data == null)
 			return null
-		val objectMapper = ObjectMapper()
-		return objectMapper.readValue(data, ArchivalData::class.java)
+		return objectMapper.readValue(data, SoknadMottattDto::class.java)
 	}
 
 	override fun close() {}
 	override fun configure(configs: MutableMap<String, *>?, isKey: Boolean) {}
+}
+
+val objectMapper = ObjectMapper().also {
+	it.registerModule(ParameterNamesModule(JsonCreator.Mode.PROPERTIES))
+	it.registerModule(JavaTimeModule())
 }
