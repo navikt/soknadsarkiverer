@@ -1,4 +1,4 @@
-package no.nav.soknad.arkivering.dto
+package no.nav.soknad.arkivering.soknadsarkiverer.dto
 
 data class FilElementDto(val uuid: String, val fil: ByteArray?) {
 	override fun equals(other: Any?): Boolean {

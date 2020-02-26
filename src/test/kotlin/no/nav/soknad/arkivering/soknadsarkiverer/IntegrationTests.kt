@@ -1,9 +1,8 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import no.nav.soknad.arkivering.dto.SoknadMottattDto
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AvroSerializer
+import no.nav.soknad.soknadarkivering.avroschemas.Soknadarkivschema
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
@@ -33,6 +32,7 @@ import org.springframework.kafka.test.utils.KafkaTestUtils
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
@@ -54,12 +54,10 @@ class IntegrationTests {
 	private lateinit var applicationContext: ApplicationContext
 
 	private lateinit var kafkaBroker: EmbeddedKafkaBroker
-	private lateinit var kafkaTemplate: KafkaTemplate<String, String>
+	private lateinit var kafkaTemplate: KafkaTemplate<String, Soknadarkivschema>
 	private val consumedMainRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
 	private val consumedDlqRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
 	private val consumedRetryRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
-
-	private val objectMapper = ObjectMapper().also { it.registerModule(JavaTimeModule()) }
 
 	@BeforeEach
 	fun setup() {
@@ -94,7 +92,7 @@ class IntegrationTests {
 	@Test
 	@DirtiesContext
 	fun `Sending in invalid json will produce event on DLQ`() {
-		val invalidData = "this is not json"
+		val invalidData = "this string is not deserializable"
 
 		putDataOnKafkaTopic(invalidData)
 
@@ -129,7 +127,7 @@ class IntegrationTests {
 		mockFilestorageIsWorking()
 		mockJoarkIsWorking()
 
-		putDataOnKafkaTopic("this is not json")
+		putDataOnKafkaTopic("this is not deserializable")
 		putDataOnKafkaTopic(createRequestData("id"))
 
 		assertNotNull(consumedDlqRecords.poll(timeout, TimeUnit.SECONDS))
@@ -235,20 +233,28 @@ class IntegrationTests {
 	}
 
 
-	private fun putDataOnKafkaTopic(data: SoknadMottattDto) {
-		putDataOnKafkaTopic(objectMapper.writeValueAsString(data))
-	}
-
-	private fun putDataOnKafkaTopic(data: String) {
+	private fun putDataOnKafkaTopic(data: Soknadarkivschema) {
 		kafkaTemplate.send(applicationProperties.kafkaTopic, "key", data)
 	}
 
-
-	private fun producerFactory(): ProducerFactory<String, String> {
+	private fun putDataOnKafkaTopic(data: String) {
 		val configProps = HashMap<String, Any>().also {
 			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaBroker.brokersAsString
 			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
+		}
+		val producerFactory = DefaultKafkaProducerFactory<String, String>(configProps)
+
+		val kt = KafkaTemplate(producerFactory)
+		kt.send(applicationProperties.kafkaTopic, "key", data)
+	}
+
+
+	private fun producerFactory(): ProducerFactory<String, Soknadarkivschema> {
+		val configProps = HashMap<String, Any>().also {
+			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaBroker.brokersAsString
+			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
+			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = AvroSerializer::class.java
 		}
 		return DefaultKafkaProducerFactory(configProps)
 	}
@@ -294,5 +300,6 @@ class IntegrationTests {
 	}
 
 	private fun createRequestData(eksternReferanseId: String) =
-		SoknadMottattDto(eksternReferanseId, "personId", "FNR", "tema", LocalDateTime.now(), emptyList())
+		Soknadarkivschema(eksternReferanseId, "personId", "FNR", "tema",
+			LocalDateTime.now().toEpochSecond(ZoneOffset.UTC), emptyList())
 }

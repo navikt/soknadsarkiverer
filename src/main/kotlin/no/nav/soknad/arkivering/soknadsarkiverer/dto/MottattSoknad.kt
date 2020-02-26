@@ -1,12 +1,10 @@
-package no.nav.soknad.arkivering.dto
+package no.nav.soknad.arkivering.soknadsarkiverer.dto
 
+import no.nav.soknad.soknadarkivering.avroschemas.MottattDokument
 import java.time.LocalDateTime
 
-data class SoknadMottattDto(val eksternReferanseId: String, val personId: String, val idType: String, val tema: String,
-														val innsendtDato: LocalDateTime, val mottatteDokumenter: List<MottattDokumentDto>)
-
 data class JoarkData(val eksternReferanseId: String, val personId: String, val idType: String, val tema: String,
-										 val innsendtDato: LocalDateTime, val mottatteDokumenter: List<MottattDokumentDto>,
+										 val innsendtDato: LocalDateTime, val mottatteDokumenter: List<MottattDokument>,
 										 val attachedFiles: List<FilElementDto>)
 
 data class MottattDokumentDto(var skjemaNummer: String, var erHovedSkjema: Boolean?,
