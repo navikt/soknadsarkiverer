@@ -29,8 +29,12 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 
 
 	private fun putDataOnTopic(topic: String, key: ByteArray, value: ByteArray, headers: Headers): RecordMetadata {
-		val partition = 0 // TODO: What partiton?
-		return kafkaProducer().use { it.send(ProducerRecord(topic, partition, null, key, value, headers)).get(1000, TimeUnit.MILLISECONDS) }
+		val producerRecord = ProducerRecord(topic, key, value)
+		headers.forEach { h -> producerRecord.headers().add(h) }
+
+		return kafkaProducer().use {
+			it.send(producerRecord).get(1000, TimeUnit.MILLISECONDS) // Blocking call
+		}
 	}
 
 	override fun handle(context: ProcessorContext, record: ConsumerRecord<ByteArray, ByteArray>, exception: Exception): DeserializationHandlerResponse {
