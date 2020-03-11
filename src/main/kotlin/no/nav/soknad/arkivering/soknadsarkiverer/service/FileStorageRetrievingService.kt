@@ -19,8 +19,8 @@ class FileStorageRetrievingService(private val restTemplate: RestTemplate,
 	fun getFilesFromFileStorage(data: Soknadarkivschema): List<FilElementDto> {
 		try {
 			val ids = data.getMottatteDokumenter()
-				.joinToString { it.getMottatteVarianter().joinToString { variant -> variant.getUuid() } }
-				.replace(" ", "")
+				.flatMap { it.getMottatteVarianter().map { variant -> variant.getUuid() } }
+				.joinToString(",")
 
 			val url = applicationProperties.filestorageHost + applicationProperties.filestorageUrl + ids
 			logger.info("Getting data from file storage via: '$url'")
