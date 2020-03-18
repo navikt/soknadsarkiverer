@@ -16,7 +16,7 @@
 	<description>Arkiverer soknader</description>
 
 	<properties>
-		<arkivering-schemas.version>3042b411</arkivering-schemas.version>
+		<arkivering-schemas.version>7b655c0d</arkivering-schemas.version>
 		<confluent.version>5.3.0</confluent.version>
 		<avro.version>1.9.2</avro.version>
 		<mockito-kotlin.version>2.2.0</mockito-kotlin.version>

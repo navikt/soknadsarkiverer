@@ -17,7 +17,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
-import java.util.*
 import java.util.concurrent.TimeUnit
 
 
@@ -86,12 +85,12 @@ fun mockJoark(statusCode: Int) {
 			.willReturn(WireMock.aResponse().withStatus(statusCode)))
 }
 
-fun mockFilestorageIsWorking() {
+fun mockFilestorageIsWorking(uuid: String) {
 	wiremockServer.stubFor(
 		WireMock.get(WireMock.urlMatching(filestorageUrl.replace("?", "\\?") + ".*"))
 			.willReturn(WireMock.aResponse()
 				.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-				.withBody(createFilestorageResponse())
+				.withBody(createFilestorageResponse(uuid))
 				.withStatus(HttpStatus.OK.value())))
 }
 
@@ -116,7 +115,7 @@ fun setupMockedServices(port: Int, urlJoark: String, urlFilestorage: String,
 	wiremockServer.start()
 }
 
-fun createFilestorageResponse(): String = ObjectMapper().writeValueAsString(listOf(FilElementDto(UUID.randomUUID().toString(), null)))
+fun createFilestorageResponse(uuid: String): String = ObjectMapper().writeValueAsString(listOf(FilElementDto(uuid, "apabepa".toByteArray())))
 
 
 class SoknadsarkivererResponseDefinitionTransformer(private val filestorageResponder: () -> ResponseMocker,

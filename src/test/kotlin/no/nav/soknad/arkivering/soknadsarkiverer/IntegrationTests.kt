@@ -31,11 +31,11 @@ import org.springframework.kafka.test.utils.ContainerTestUtils
 import org.springframework.kafka.test.utils.KafkaTestUtils
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
-import java.time.LocalDateTime
-import java.time.ZoneOffset
+import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
+import kotlin.collections.HashMap
 import kotlin.collections.set
 
 @ActiveProfiles("test")
@@ -50,6 +50,7 @@ class IntegrationTests {
 
 	@Autowired
 	private lateinit var applicationProperties: ApplicationProperties
+
 	@Autowired
 	private lateinit var applicationContext: ApplicationContext
 
@@ -58,6 +59,8 @@ class IntegrationTests {
 	private val consumedMainRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
 	private val consumedDlqRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
 	private val consumedRetryRecords = LinkedBlockingQueue<ConsumerRecord<ByteArray, ByteArray>>()
+
+	val uuid = UUID.randomUUID().toString()
 
 	@BeforeEach
 	fun setup() {
@@ -80,7 +83,7 @@ class IntegrationTests {
 	@Test
 	@DirtiesContext
 	fun `Happy case - Putting events on Kafka will cause rest calls to Joark`() {
-		mockFilestorageIsWorking()
+		mockFilestorageIsWorking(uuid)
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic(createRequestData("id0"))
@@ -102,7 +105,7 @@ class IntegrationTests {
 	@Test
 	@DirtiesContext
 	fun `Failing to send to Joark will put event on retry topic`() {
-		mockFilestorageIsWorking()
+		mockFilestorageIsWorking(uuid)
 		mockJoarkIsDown()
 
 		putDataOnKafkaTopic(createRequestData("id"))
@@ -124,7 +127,7 @@ class IntegrationTests {
 	@Test
 	@DirtiesContext
 	fun `Poison pill followed by proper event -- One event on DLQ, one to Joark`() {
-		mockFilestorageIsWorking()
+		mockFilestorageIsWorking(uuid)
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic("this is not deserializable")
@@ -137,7 +140,7 @@ class IntegrationTests {
 	@Test
 	@DirtiesContext
 	fun `First attempt to Joark fails, the second succeeds`() {
-		mockFilestorageIsWorking()
+		mockFilestorageIsWorking(uuid)
 		mockJoarkRespondsAfterAttempts(1)
 
 		putDataOnKafkaTopic(createRequestData("id"))
@@ -149,7 +152,7 @@ class IntegrationTests {
 	@Test
 	@DirtiesContext
 	fun `First attempt to Joark fails, the fourth succeeds`() {
-		mockFilestorageIsWorking()
+		mockFilestorageIsWorking(uuid)
 		mockJoarkRespondsAfterAttempts(3)
 
 		putDataOnKafkaTopic(createRequestData("id"))
@@ -161,7 +164,7 @@ class IntegrationTests {
 	@Test
 	@DirtiesContext
 	fun `Joark is down -- message ends up on DLQ`() {
-		mockFilestorageIsWorking()
+		mockFilestorageIsWorking(uuid)
 		mockJoarkIsDown()
 
 		putDataOnKafkaTopic(createRequestData("id"))
@@ -190,7 +193,7 @@ class IntegrationTests {
 
 		val continueProcessingFirstMessageLock = Semaphore(0)
 		val sendSecondMessageLock = Semaphore(0)
-		val lockingService = MockLockingServices(continueProcessingFirstMessageLock, sendSecondMessageLock)
+		val lockingService = MockLockingServices(continueProcessingFirstMessageLock, sendSecondMessageLock, uuid)
 
 		stopMockedServices()
 		setupMockedServices(portToExternalServices!!, applicationProperties.joarkUrl, applicationProperties.filestorageUrl,
@@ -206,7 +209,8 @@ class IntegrationTests {
 		verifyMockedGetRequests(3, applicationProperties.filestorageUrl.replace("?", "\\?") + ".*")
 	}
 
-	class MockLockingServices(private val continueProcessingFirstMessageLock: Semaphore, private val sendSecondMessageLock: Semaphore) {
+	class MockLockingServices(private val continueProcessingFirstMessageLock: Semaphore,
+														private val sendSecondMessageLock: Semaphore, private val uuid: String) {
 		private var filestorageRequestCount = 0
 
 		fun giveFilestorageResponse(): ResponseMocker {
@@ -223,7 +227,7 @@ class IntegrationTests {
 			return ResponseMocker()
 				.withStatus(HttpStatus.OK)
 				.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-				.withBody(createFilestorageResponse())
+				.withBody(createFilestorageResponse(uuid))
 		}
 
 		fun giveJoarkResponse(): ResponseMocker {
@@ -300,6 +304,12 @@ class IntegrationTests {
 	}
 
 	private fun createRequestData(eksternReferanseId: String) =
-		Soknadarkivschema(eksternReferanseId, "personId", "FNR", "tema",
-			LocalDateTime.now().toEpochSecond(ZoneOffset.UTC), emptyList())
+		SoknadarkivschemaBuilder()
+			.withBehandlingsid(eksternReferanseId)
+			.withMottatteDokumenter(MottattDokumentBuilder()
+				.withMottatteVarianter(MottattVariantBuilder()
+					.withUuid(uuid)
+					.build())
+				.build())
+			.build()
 }
