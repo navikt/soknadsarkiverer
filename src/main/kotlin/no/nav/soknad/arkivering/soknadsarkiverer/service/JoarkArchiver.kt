@@ -2,6 +2,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.JoarkData
+import no.nav.soknad.arkivering.soknadsarkiverer.dto.JoarkResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
@@ -19,7 +20,9 @@ class JoarkArchiver(private val restTemplate: RestTemplate,
 			logger.info("Sending to Joark: '$joarkData'")
 			val url = applicationProperties.joarkHost + applicationProperties.joarkUrl
 
-			sendDataToJoark(joarkData, url)
+			val response = sendDataToJoark(joarkData, url)
+
+			logger.info("Saved to Joark. Got the following response:\n$response")
 
 		} catch (e: Exception) {
 			logger.error("Error sending to Joark", e)
@@ -27,10 +30,10 @@ class JoarkArchiver(private val restTemplate: RestTemplate,
 		}
 	}
 
-	private fun sendDataToJoark(joarkData: JoarkData, url: String) {
+	private fun sendDataToJoark(joarkData: JoarkData, url: String): JoarkResponse? {
 		val headers = HttpHeaders()
 		headers.contentType = MediaType.APPLICATION_JSON
 		val request = HttpEntity(joarkData, headers)
-		restTemplate.postForObject(url, request, String::class.java)
+		return restTemplate.postForObject(url, request, JoarkResponse::class.java)
 	}
 }

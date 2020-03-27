@@ -62,7 +62,7 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 		val topic = if (retryCount < kafkaMaxRetryCount) retryTopic else deadLetterTopic
 
 		putDataOnTopic(topic, key, value, headers)
-		logger.info("Sent message to retry topic $topic")
+		logger.info("Sent event to retry topic '$topic'. Event: '${event.value}'")
 	}
 
 	override fun uncaughtException(t: Thread, e: Throwable) {
