@@ -13,7 +13,9 @@ import com.github.tomakehurst.wiremock.http.RequestMethod
 import com.github.tomakehurst.wiremock.http.ResponseDefinition
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import com.github.tomakehurst.wiremock.stubbing.Scenario
+import no.nav.soknad.arkivering.soknadsarkiverer.dto.Dokumenter
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
+import no.nav.soknad.arkivering.soknadsarkiverer.dto.JoarkResponse
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -56,11 +58,15 @@ fun verifyMockedRequests(expectedCount: Int, url: String, requestMethod: Request
 }
 
 fun mockJoarkIsWorking() {
-	mockJoark(HttpStatus.OK.value())
+	mockJoark(HttpStatus.OK.value(), createJoarkResponse())
+}
+
+fun mockJoarkIsWorkingButGivesInvalidResponse() {
+	mockJoark(HttpStatus.OK.value(), "invalid response")
 }
 
 fun mockJoarkIsDown() {
-	mockJoark(HttpStatus.NOT_FOUND.value())
+	mockJoark(HttpStatus.NOT_FOUND.value(), "Mocked exception")
 }
 
 fun mockJoarkRespondsAfterAttempts(attempts: Int) {
@@ -70,19 +76,28 @@ fun mockJoarkRespondsAfterAttempts(attempts: Int) {
 		wiremockServer.stubFor(
 			WireMock.post(WireMock.urlEqualTo(joarkUrl))
 				.inScenario("integrationTest").whenScenarioStateIs(stateNames[attempt])
-				.willReturn(WireMock.aResponse().withStatus(HttpStatus.NOT_FOUND.value()))
+				.willReturn(WireMock.aResponse()
+					.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+					.withBody("Mocked exception")
+					.withStatus(HttpStatus.NOT_FOUND.value()))
 				.willSetStateTo(stateNames[attempt + 1]))
 	}
 	wiremockServer.stubFor(
 		WireMock.post(WireMock.urlEqualTo(joarkUrl))
 			.inScenario("integrationTest").whenScenarioStateIs(stateNames.last())
-			.willReturn(WireMock.aResponse().withStatus(HttpStatus.OK.value())))
+			.willReturn(WireMock.aResponse()
+				.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+				.withBody(createJoarkResponse())
+				.withStatus(HttpStatus.OK.value())))
 }
 
-fun mockJoark(statusCode: Int) {
+private fun mockJoark(statusCode: Int, responseBody: String) {
 	wiremockServer.stubFor(
 		WireMock.post(WireMock.urlEqualTo(joarkUrl))
-			.willReturn(WireMock.aResponse().withStatus(statusCode)))
+			.willReturn(WireMock.aResponse()
+				.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+				.withBody(responseBody)
+				.withStatus(statusCode)))
 }
 
 fun mockFilestorageIsWorking(uuid: String) {
@@ -94,10 +109,19 @@ fun mockFilestorageIsWorking(uuid: String) {
 				.withStatus(HttpStatus.OK.value())))
 }
 
+fun mockFilestorageDeletionIsNotWorking() {
+	wiremockServer.stubFor(
+		WireMock.delete(WireMock.urlMatching(filestorageUrl.replace("?", "\\?") + ".*"))
+			.willReturn(WireMock.aResponse()
+				.withBody("Mocked exception")
+				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
+}
+
 fun mockFilestorageIsDown() {
 	wiremockServer.stubFor(
 		WireMock.get(WireMock.urlMatching(filestorageUrl.replace("?", "\\?") + ".*"))
 			.willReturn(WireMock.aResponse()
+				.withBody("Mocked exception")
 				.withStatus(HttpStatus.SERVICE_UNAVAILABLE.value())))
 }
 
@@ -116,6 +140,10 @@ fun setupMockedServices(port: Int, urlJoark: String, urlFilestorage: String,
 }
 
 fun createFilestorageResponse(uuid: String): String = ObjectMapper().writeValueAsString(listOf(FilElementDto(uuid, "apabepa".toByteArray())))
+
+private fun createJoarkResponse(): String = ObjectMapper().writeValueAsString(
+	JoarkResponse(listOf(Dokumenter("brevkode", "dokumentInfoId", "tittel")),
+	"journalpostId", false, "journalstatus", "null"))
 
 
 class SoknadsarkivererResponseDefinitionTransformer(private val filestorageResponder: () -> ResponseMocker,

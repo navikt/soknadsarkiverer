@@ -9,6 +9,7 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -86,8 +87,8 @@ class IntegrationTests {
 		mockFilestorageIsWorking(uuid)
 		mockJoarkIsWorking()
 
-		putDataOnKafkaTopic(createRequestData("id0"))
-		putDataOnKafkaTopic(createRequestData("id1"))
+		putDataOnKafkaTopic(createRequestData())
+		putDataOnKafkaTopic(createRequestData())
 
 		verifyMockedPostRequests(2, applicationProperties.joarkUrl)
 	}
@@ -108,7 +109,7 @@ class IntegrationTests {
 		mockFilestorageIsWorking(uuid)
 		mockJoarkIsDown()
 
-		putDataOnKafkaTopic(createRequestData("id"))
+		putDataOnKafkaTopic(createRequestData())
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 	}
@@ -119,7 +120,7 @@ class IntegrationTests {
 		mockFilestorageIsDown()
 		mockJoarkIsWorking()
 
-		putDataOnKafkaTopic(createRequestData("id"))
+		putDataOnKafkaTopic(createRequestData())
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 	}
@@ -131,7 +132,7 @@ class IntegrationTests {
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic("this is not deserializable")
-		putDataOnKafkaTopic(createRequestData("id"))
+		putDataOnKafkaTopic(createRequestData())
 
 		assertNotNull(consumedDlqRecords.poll(timeout, TimeUnit.SECONDS))
 		verifyMockedPostRequests(1, applicationProperties.joarkUrl)
@@ -143,7 +144,7 @@ class IntegrationTests {
 		mockFilestorageIsWorking(uuid)
 		mockJoarkRespondsAfterAttempts(1)
 
-		putDataOnKafkaTopic(createRequestData("id"))
+		putDataOnKafkaTopic(createRequestData())
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 		verifyMockedPostRequests(2, applicationProperties.joarkUrl)
@@ -155,7 +156,7 @@ class IntegrationTests {
 		mockFilestorageIsWorking(uuid)
 		mockJoarkRespondsAfterAttempts(3)
 
-		putDataOnKafkaTopic(createRequestData("id"))
+		putDataOnKafkaTopic(createRequestData())
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 		verifyMockedPostRequests(4, applicationProperties.joarkUrl)
@@ -167,11 +168,36 @@ class IntegrationTests {
 		mockFilestorageIsWorking(uuid)
 		mockJoarkIsDown()
 
-		putDataOnKafkaTopic(createRequestData("id"))
+		putDataOnKafkaTopic(createRequestData())
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 		assertNotNull(consumedDlqRecords.poll(timeout, TimeUnit.SECONDS))
 		verifyMockedPostRequests(applicationProperties.kafkaMaxRetryCount!!, applicationProperties.joarkUrl)
+	}
+
+	@Test
+	@DirtiesContext
+	fun `Everything works, but Filestorage cannot delete files -- Message is not put on retry topic`() {
+		mockFilestorageIsWorking(uuid)
+		mockFilestorageDeletionIsNotWorking()
+		mockJoarkIsWorking()
+
+		putDataOnKafkaTopic(createRequestData())
+
+		assertNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
+		verifyMockedPostRequests(1, applicationProperties.joarkUrl)
+	}
+
+	@Test
+	@DirtiesContext
+	fun `Joark responds with status OK but invalid body -- will retry`() {
+		mockFilestorageIsWorking(uuid)
+		mockJoarkIsWorkingButGivesInvalidResponse()
+
+		putDataOnKafkaTopic(createRequestData())
+
+		verifyMockedPostRequests(2, applicationProperties.joarkUrl)
+		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 	}
 
 	@Test
@@ -199,9 +225,9 @@ class IntegrationTests {
 		setupMockedServices(portToExternalServices!!, applicationProperties.joarkUrl, applicationProperties.filestorageUrl,
 			lockingService::giveFilestorageResponse, lockingService::giveJoarkResponse)
 
-		putDataOnKafkaTopic(createRequestData("id0"))
+		putDataOnKafkaTopic(createRequestData())
 		sendSecondMessageLock.acquire() // Will only proceed from here once the lock is released
-		putDataOnKafkaTopic(createRequestData("id1"))
+		putDataOnKafkaTopic(createRequestData())
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 		assertNotNull(consumedMainRecords.poll(timeout, TimeUnit.SECONDS))
@@ -303,9 +329,9 @@ class IntegrationTests {
 		ContainerTestUtils.waitForAssignment(container, kafkaBroker.partitionsPerTopic)
 	}
 
-	private fun createRequestData(eksternReferanseId: String) =
+	private fun createRequestData() =
 		SoknadarkivschemaBuilder()
-			.withBehandlingsid(eksternReferanseId)
+			.withBehandlingsid(UUID.randomUUID().toString())
 			.withMottatteDokumenter(MottattDokumentBuilder()
 				.withMottatteVarianter(MottattVariantBuilder()
 					.withUuid(uuid)

@@ -1,7 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
 import no.nav.soknad.arkivering.soknadsarkiverer.converter.MessageConverter
-import no.nav.soknad.arkivering.soknadsarkiverer.service.FileStorageRetrievingService
+import no.nav.soknad.arkivering.soknadsarkiverer.service.FilestorageService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.JoarkArchiver
 import no.nav.soknad.soknadarkivering.avroschemas.Soknadarkivschema
 import org.apache.kafka.common.serialization.IntegerDeserializer
@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit
 
 @Configuration
 class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
-													val fileStorageRetrievingService: FileStorageRetrievingService,
+													val filestorageService: FilestorageService,
 													val messageConverter: MessageConverter,
 													val joarkArchiver: JoarkArchiver) {
 
@@ -38,9 +38,19 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 	private fun setupTopology(kstream: KStream<KafkaMsgWrapper.Value<KafkaMsg>, Soknadarkivschema>) {
 
 		kstream
-			.map { msg, requestData   -> w(msg) { requestData to fileStorageRetrievingService.getFilesFromFileStorage(requestData) } }
-			.map { msg, dataAndFiles  -> w(msg) { messageConverter.createJoarkData(dataAndFiles?.first!!, dataAndFiles.second) } }
-			.foreach { msg, joarkData -> w(msg) { joarkArchiver.putDataInJoark(joarkData!!) } }
+			.map { msg, requestData  -> w(msg) { requestData to filestorageService.getFilesFromFilestorage(requestData) } }
+			.map { msg, dataAndFiles -> w(msg) { messageConverter.createJoarkData(dataAndFiles?.first!!, dataAndFiles.second) } }
+			.map { msg, joarkData    -> w(msg) { joarkArchiver.putDataInJoark(joarkData!!) } }
+			.foreach { msg, _        -> w(msg) { filestorageService.deleteFilesFromFilestorage(getOriginalMessage(msg)) } }
+	}
+
+	private fun getOriginalMessage(wrappedMessage: KafkaMsgWrapper<KafkaMsg>?): Soknadarkivschema? {
+		return if (wrappedMessage is KafkaMsgWrapper.Value) {
+			val (orig) = wrappedMessage
+			orig.value
+		} else {
+			null
+		}
 	}
 
 	/**
