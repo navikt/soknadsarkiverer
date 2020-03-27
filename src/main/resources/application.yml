@@ -37,3 +37,11 @@ application:
   kafka-bootstrap-servers: kafka-broker:29092
   joark-host: http://joark-mock:8092
   filestorage-host: http://soknadsfillager:9042
+
+  kafka-max-retry-count: 5
+  kafka-retry-sleeptime:
+    - 1
+    - 1
+    - 1
+    - 2
+    - 2
