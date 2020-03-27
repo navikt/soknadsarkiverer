@@ -91,6 +91,7 @@ class IntegrationTests {
 		putDataOnKafkaTopic(createRequestData())
 
 		verifyMockedPostRequests(2, applicationProperties.joarkUrl)
+		verifyDeleteRequestsToFilestorage(2)
 	}
 
 	@Test
@@ -112,6 +113,7 @@ class IntegrationTests {
 		putDataOnKafkaTopic(createRequestData())
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
+		verifyDeleteRequestsToFilestorage(0)
 	}
 
 	@Test
@@ -123,6 +125,7 @@ class IntegrationTests {
 		putDataOnKafkaTopic(createRequestData())
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
+		verifyDeleteRequestsToFilestorage(0)
 	}
 
 	@Test
@@ -136,6 +139,7 @@ class IntegrationTests {
 
 		assertNotNull(consumedDlqRecords.poll(timeout, TimeUnit.SECONDS))
 		verifyMockedPostRequests(1, applicationProperties.joarkUrl)
+		verifyDeleteRequestsToFilestorage(1)
 	}
 
 	@Test
@@ -148,6 +152,7 @@ class IntegrationTests {
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 		verifyMockedPostRequests(2, applicationProperties.joarkUrl)
+		verifyDeleteRequestsToFilestorage(1)
 	}
 
 	@Test
@@ -160,6 +165,7 @@ class IntegrationTests {
 
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 		verifyMockedPostRequests(4, applicationProperties.joarkUrl)
+		verifyDeleteRequestsToFilestorage(1)
 	}
 
 	@Test
@@ -173,11 +179,12 @@ class IntegrationTests {
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 		assertNotNull(consumedDlqRecords.poll(timeout, TimeUnit.SECONDS))
 		verifyMockedPostRequests(applicationProperties.kafkaMaxRetryCount!!, applicationProperties.joarkUrl)
+		verifyDeleteRequestsToFilestorage(0)
 	}
 
 	@Test
 	@DirtiesContext
-	fun `Everything works, but Filestorage cannot delete files -- Message is not put on retry topic`() {
+	fun `Everything works, but Filestorage cannot delete files -- Message is NOT put on retry topic`() {
 		mockFilestorageIsWorking(uuid)
 		mockFilestorageDeletionIsNotWorking()
 		mockJoarkIsWorking()
@@ -186,6 +193,7 @@ class IntegrationTests {
 
 		assertNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
 		verifyMockedPostRequests(1, applicationProperties.joarkUrl)
+		verifyDeleteRequestsToFilestorage(1)
 	}
 
 	@Test
@@ -196,8 +204,9 @@ class IntegrationTests {
 
 		putDataOnKafkaTopic(createRequestData())
 
-		verifyMockedPostRequests(2, applicationProperties.joarkUrl)
 		assertNotNull(consumedRetryRecords.poll(timeout, TimeUnit.SECONDS))
+		verifyMockedPostRequests(2, applicationProperties.joarkUrl)
+		verifyDeleteRequestsToFilestorage(0)
 	}
 
 	@Test
@@ -260,6 +269,10 @@ class IntegrationTests {
 			continueProcessingFirstMessageLock.release()
 			return ResponseMocker().withStatus(HttpStatus.OK)
 		}
+	}
+
+	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
+		verifyMockedDeleteRequests(expectedCount, applicationProperties.filestorageUrl.replace("?", "\\?") + ".*")
 	}
 
 

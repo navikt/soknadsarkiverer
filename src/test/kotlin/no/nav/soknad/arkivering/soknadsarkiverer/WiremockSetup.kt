@@ -40,6 +40,7 @@ fun stopMockedServices() {
 
 fun verifyMockedGetRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.GET)
 fun verifyMockedPostRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.POST)
+fun verifyMockedDeleteRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.DELETE)
 
 fun verifyMockedRequests(expectedCount: Int, url: String, requestMethod: RequestMethod) {
 	val requestPattern = RequestPatternBuilder.newRequestPattern(requestMethod, WireMock.urlMatching(url)).build()
@@ -101,11 +102,18 @@ private fun mockJoark(statusCode: Int, responseBody: String) {
 }
 
 fun mockFilestorageIsWorking(uuid: String) {
+	val urlPattern = WireMock.urlMatching(filestorageUrl.replace("?", "\\?") + ".*")
+
 	wiremockServer.stubFor(
-		WireMock.get(WireMock.urlMatching(filestorageUrl.replace("?", "\\?") + ".*"))
+		WireMock.get(urlPattern)
 			.willReturn(WireMock.aResponse()
 				.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
 				.withBody(createFilestorageResponse(uuid))
+				.withStatus(HttpStatus.OK.value())))
+
+	wiremockServer.stubFor(
+		WireMock.delete(urlPattern)
+			.willReturn(WireMock.aResponse()
 				.withStatus(HttpStatus.OK.value())))
 }
 
