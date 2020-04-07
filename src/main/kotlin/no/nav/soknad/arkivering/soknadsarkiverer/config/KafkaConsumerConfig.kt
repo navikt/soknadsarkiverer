@@ -1,5 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
+import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
 import no.nav.soknad.arkivering.soknadsarkiverer.converter.MessageConverter
 import no.nav.soknad.arkivering.soknadsarkiverer.service.FilestorageService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.JoarkArchiver
@@ -30,6 +32,7 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 		it[RETRY_TOPIC] = applicationProperties.kafkaRetryTopic
 		it[DEAD_LETTER_TOPIC] = applicationProperties.kafkaDeadLetterTopic
 		it[KAFKA_MAX_RETRY_COUNT] = applicationProperties.kafkaMaxRetryCount
+		it[SCHEMA_REGISTRY_URL] = applicationProperties.schemaRegistryUrl
 		it[StreamsConfig.APPLICATION_ID_CONFIG] = applicationId
 		it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = applicationProperties.kafkaBootstrapServers
 		it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = KafkaExceptionHandler::class.java
@@ -82,9 +85,10 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 
 	fun kafkaStreamTopology(): Topology {
 		val topic = applicationProperties.kafkaTopic
+		val schemaRegistryUrl = applicationProperties.schemaRegistryUrl
 
 		val streamsBuilder = StreamsBuilder()
-		val kStream = streamsBuilder.stream<String, Soknadarkivschema>(topic, Consumed.with(Serdes.String(), SoknadMottattDtoSerde()))
+		val kStream = streamsBuilder.stream(topic, Consumed.with(Serdes.String(), createAvroSerde(schemaRegistryUrl)))
 			.transform(TransformerSupplier { WrapperTransformer() })
 			.peek { kafkaMsg, _ -> logger.info("Received main event: ${kafkaMsg.t}") }
 
@@ -94,9 +98,10 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 
 	fun kafkaRetryTopology(): Topology {
 		val topic = applicationProperties.kafkaRetryTopic
+		val schemaRegistryUrl = applicationProperties.schemaRegistryUrl
 
 		val streamsBuilder = StreamsBuilder()
-		val kStream = streamsBuilder.stream<String, Soknadarkivschema>(topic, Consumed.with(Serdes.String(), SoknadMottattDtoSerde()))
+		val kStream = streamsBuilder.stream(topic, Consumed.with(Serdes.String(), createAvroSerde(schemaRegistryUrl)))
 			.transform(TransformerSupplier { WrapperTransformer() })
 			.peek { kafkaMsg, _ -> logger.info("Received retry event: ${kafkaMsg.t}") }
 			.peek { kafkaMsg, _ -> backoff(kafkaMsg) }
@@ -163,6 +168,7 @@ class KafkaConsumerConfig(val applicationProperties: ApplicationProperties,
 		const val RETRY_TOPIC = "retry.topic"
 		const val RETRY_COUNT_HEADER = "retry-count"
 		const val KAFKA_MAX_RETRY_COUNT = "kafka-max-retry-count"
+		const val SCHEMA_REGISTRY_URL = AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG
 	}
 }
 
@@ -175,4 +181,10 @@ data class KafkaMsg(val key: String, val value: Soknadarkivschema, val retryCoun
 sealed class KafkaMsgWrapper<out T> {
 	object None : KafkaMsgWrapper<Nothing>()
 	data class Value<T>(val t: T) : KafkaMsgWrapper<T>()
+}
+
+fun createAvroSerde(schemaRegistryUrl: String): SpecificAvroSerde<Soknadarkivschema> {
+
+	val serdeConfig = hashMapOf(KafkaConsumerConfig.SCHEMA_REGISTRY_URL to schemaRegistryUrl)
+	return SpecificAvroSerde<Soknadarkivschema>().also { it.configure(serdeConfig, false) }
 }

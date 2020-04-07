@@ -9,6 +9,7 @@ management:
 
 application:
   kafka-bootstrap-servers: localhost:9092
+  schema-registry-url: http://localhost:8081
 
   kafka-topic: privat-soknadInnsendt-sendsoknad-v1-q0
   kafka-retry-topic: privat-retry-soknadInnsendt-sendsoknad-v1-q0
@@ -35,6 +36,7 @@ spring:
 
 application:
   kafka-bootstrap-servers: kafka-broker:29092
+  schema-registry-url: http://kafka-schema-registry:8081
   joark-host: http://joark-mock:8092
   filestorage-host: http://soknadsfillager:9042
 
