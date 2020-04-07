@@ -23,6 +23,7 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 	private lateinit var retryTopic: String
 	private lateinit var deadLetterTopic: String
 	private lateinit var bootstrapServer: String
+	private lateinit var schemaRegistryUrl: String
 	private var kafkaMaxRetryCount: Int = 0
 
 	private val logger = LoggerFactory.getLogger(javaClass)
@@ -53,8 +54,10 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 	}
 
 	fun retry(event: KafkaMsg) {
+		val avroSerde = createAvroSerde(schemaRegistryUrl)
+
 		val key = Serdes.String().serializer().serialize(retryTopic, event.key)
-		val value = SoknadMottattDtoSerde().serializer().serialize(retryTopic, event.value)
+		val value = avroSerde.serializer().serialize(retryTopic, event.value)
 
 		val retryCount = event.retryCount + 1
 		val headers = RecordHeaders().add(RETRY_COUNT_HEADER, IntegerSerializer().serialize("", retryCount))
@@ -73,6 +76,7 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 		retryTopic = getConfigForKey(configs, KafkaConsumerConfig.RETRY_TOPIC).toString()
 		deadLetterTopic = getConfigForKey(configs, KafkaConsumerConfig.DEAD_LETTER_TOPIC).toString()
 		bootstrapServer = getConfigForKey(configs, StreamsConfig.BOOTSTRAP_SERVERS_CONFIG).toString()
+		schemaRegistryUrl = getConfigForKey(configs, KafkaConsumerConfig.SCHEMA_REGISTRY_URL).toString()
 		kafkaMaxRetryCount = Integer.parseInt(getConfigForKey(configs, KafkaConsumerConfig.KAFKA_MAX_RETRY_COUNT).toString())
 	}
 

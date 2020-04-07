@@ -42,7 +42,7 @@ fun verifyMockedGetRequests(expectedCount: Int, url: String) = verifyMockedReque
 fun verifyMockedPostRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.POST)
 fun verifyMockedDeleteRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.DELETE)
 
-fun verifyMockedRequests(expectedCount: Int, url: String, requestMethod: RequestMethod) {
+private fun verifyMockedRequests(expectedCount: Int, url: String, requestMethod: RequestMethod) {
 	val requestPattern = RequestPatternBuilder.newRequestPattern(requestMethod, WireMock.urlMatching(url)).build()
 	val startTime = System.currentTimeMillis()
 	val timeout = 30 * 1000
@@ -151,7 +151,7 @@ fun createFilestorageResponse(uuid: String): String = ObjectMapper().writeValueA
 
 private fun createJoarkResponse(): String = ObjectMapper().writeValueAsString(
 	JoarkResponse(listOf(Dokumenter("brevkode", "dokumentInfoId", "tittel")),
-	"journalpostId", false, "journalstatus", "null"))
+		"journalpostId", false, "journalstatus", "null"))
 
 
 class SoknadsarkivererResponseDefinitionTransformer(private val filestorageResponder: () -> ResponseMocker,

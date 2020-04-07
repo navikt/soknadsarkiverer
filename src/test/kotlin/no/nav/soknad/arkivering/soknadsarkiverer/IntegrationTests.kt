@@ -1,7 +1,9 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
+import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AvroSerializer
 import no.nav.soknad.soknadarkivering.avroschemas.Soknadarkivschema
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -46,6 +48,9 @@ class IntegrationTests {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
+
+	@Value("\${application.schema-registry-scope}")
+	private val schemaRegistryScope: String = ""
 
 	private val timeout = 30L
 
@@ -294,12 +299,15 @@ class IntegrationTests {
 
 
 	private fun producerFactory(): ProducerFactory<String, Soknadarkivschema> {
-		val configProps = HashMap<String, Any>().also {
-			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaBroker.brokersAsString
-			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
-			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = AvroSerializer::class.java
-		}
-		return DefaultKafkaProducerFactory(configProps)
+
+		val producerConfig: HashMap<String, Any> = hashMapOf(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaBroker.brokersAsString)
+		val serdeConfig = hashMapOf(KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG to applicationProperties.schemaRegistryUrl)
+
+		val schemaRegistry = MockSchemaRegistry.getClientForScope(schemaRegistryScope)
+		val avroSerde = SpecificAvroSerde<Soknadarkivschema>(schemaRegistry)
+		avroSerde.configure(serdeConfig, false)
+
+		return DefaultKafkaProducerFactory(producerConfig, StringSerializer(), avroSerde.serializer())
 	}
 
 	private final fun kafkaTemplate() = KafkaTemplate(producerFactory())
