@@ -2,7 +2,7 @@ apiVersion: "nais.io/v1alpha1"
 kind: "Application"
 metadata:
   name: soknadsarkiverer
-  namespace: default
+  namespace: q1
   labels:
     team: team-soknad
 spec:
@@ -28,16 +28,14 @@ spec:
       cpu: 200m
       memory: 256Mi
   ingress:
-    - "https://tjenester-default.nav.no/soknadsarkiverer"
-    - "https://soknadsarkiverer-default.nais.oera-q.local/"
+    - "https://tjenester-q1.nav.no/soknadsarkiverer"
+    - "https://soknadsarkiverer-q1.nais.oera-q.local/"
   vault:
     enabled: true
     paths:
       - kvPath: /apikey/appdynamics/dev
         mountPath: /var/run/secrets/nais.io/appdynamics
   env:
-    - name: APPRES_CMS_URL
-      value: https://appres-q0.nav.no
     - name: APP_VERSION
       value: {{ app_version }}
     - name: KAFKA_BOOTSTRAP_SERVERS
@@ -51,7 +49,7 @@ spec:
     - name: KAFKA_SASLMEC
         value: PLAIN
     - name: KAFKA_TOPIC
-        value: privat-soknadInnsendt-sendsoknad-v1-default
+        value: privat-soknadInnsendt-v1-q1
     - name: SRVSSOKNADSARKIVERER_USERNAME
         value: srvsoknadarkiverer
     - name: APPLICATION_PROFILE
