@@ -27,7 +27,7 @@ spec:
     requests:
       cpu: 200m
       memory: 256Mi
-  ingress:
+  ingresses:
     - "https://tjenester-q0.nav.no/soknadsarkiverer"
     - "https://soknadsarkiverer-q0.nais.oera-q.local/"
   vault:

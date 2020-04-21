@@ -27,7 +27,7 @@ spec:
     requests:
       cpu: 200m
       memory: 256Mi
-  ingress:
+  ingresses:
     - "https://tjenester-q1.nav.no/soknadsarkiverer"
     - "https://soknadsarkiverer-q1.nais.oera-q.local/"
   vault:
@@ -41,7 +41,7 @@ spec:
     - name: KAFKA_BOOTSTRAP_SERVERS
         value: b27apvl00045.preprod.local:8443,b27apvl00046.preprod.local:8443,b27apvl00047.preprod.local:8443
     - name: KAFKA_CLIENTID
-        value: srvsoknadsmottaker
+        value: srvsoknadsarkiverer
     - name: KAFKA_SECURITY
         value: 'TRUE'
     - name: KAFKA_SECPROT
