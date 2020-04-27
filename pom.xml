@@ -19,6 +19,7 @@
 		<kafka-streams-avro-serde.version>5.4.1</kafka-streams-avro-serde.version>
 		<avro-maven-plugin.version>1.9.2</avro-maven-plugin.version>
 		<kafka.version>2.5.0</kafka.version>
+		<konfig.version>1.6.10.0</konfig.version>
 		<wiremock.version>2.26.3</wiremock.version>
 		<mockito-kotlin.version>2.2.0</mockito-kotlin.version>
 
@@ -43,6 +44,11 @@
 			<groupId>org.jetbrains.kotlin</groupId>
 			<artifactId>kotlin-stdlib-jdk8</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>com.natpryce</groupId>
+			<artifactId>konfig</artifactId>
+			<version>${konfig.version}</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.apache.kafka</groupId>
@@ -59,7 +65,6 @@
 			<artifactId>kafka-streams-avro-serde</artifactId>
 			<version>${kafka-streams-avro-serde.version}</version>
 		</dependency>
-
 		<dependency>
 			<groupId>no.nav.soknad.arkivering</groupId>
 			<artifactId>avro-schemas</artifactId>
