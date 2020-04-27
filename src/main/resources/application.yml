@@ -3,10 +3,18 @@ server:
 
 management:
   endpoints:
+    health:
+      show-details: always
     web:
       exposure:
-        include: "*"
-
+        include: info, health, metrics, prometheus
+      base-path: "/internal/"
+      path-mapping:
+        info: "/isAlive"
+  metrics:
+    export:
+      prometheus:
+          enabled: true
 application:
   kafka-bootstrap-servers: localhost:9092
   schema-registry-url: http://localhost:8081
