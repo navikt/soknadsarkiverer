@@ -39,18 +39,18 @@ spec:
     - name: APP_VERSION
       value: {{ app_version }}
     - name: KAFKA_BOOTSTRAP_SERVERS
-        value: b27apvl00045.preprod.local:8443,b27apvl00046.preprod.local:8443,b27apvl00047.preprod.local:8443
+      value: b27apvl00045.preprod.local:8443,b27apvl00046.preprod.local:8443,b27apvl00047.preprod.local:8443
     - name: KAFKA_CLIENTID
-        value: srvsoknadsmottaker
+      value: srvsoknadsmottaker
     - name: KAFKA_SECURITY
-        value: 'TRUE'
+      value: 'TRUE'
     - name: KAFKA_SECPROT
-        value: SASL_SSL
+      value: SASL_SSL
     - name: KAFKA_SASLMEC
-        value: PLAIN
+      value: PLAIN
     - name: KAFKA_TOPIC
-        value: privat-soknadInnsendt-v1-default
+      value: privat-soknadInnsendt-v1-default
     - name: SRVSSOKNADSARKIVERER_USERNAME
-        value: srvsoknadarkiverer
+      value: srvsoknadarkiverer
     - name: APPLICATION_PROFILE
-        value: dev
+      value: dev
