@@ -19,7 +19,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.dto.JoarkResponse
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
-import java.util.concurrent.TimeUnit
 
 
 private lateinit var wiremockServer: WireMockServer
@@ -44,18 +43,11 @@ fun verifyMockedDeleteRequests(expectedCount: Int, url: String) = verifyMockedRe
 
 private fun verifyMockedRequests(expectedCount: Int, url: String, requestMethod: RequestMethod) {
 	val requestPattern = RequestPatternBuilder.newRequestPattern(requestMethod, WireMock.urlMatching(url)).build()
-	val startTime = System.currentTimeMillis()
-	val timeout = 30 * 1000
 
-	while (System.currentTimeMillis() < startTime + timeout) {
-		val matches = wiremockServer.countRequestsMatching(requestPattern)
+	val getCount = { wiremockServer.countRequestsMatching(requestPattern).count }
+	val finalCheck = { assertEquals(expectedCount, wiremockServer.countRequestsMatching(requestPattern).count) }
 
-		if (matches.count == expectedCount) {
-			break
-		}
-		TimeUnit.MILLISECONDS.sleep(50)
-	}
-	assertEquals(expectedCount, wiremockServer.countRequestsMatching(requestPattern).count)
+	loopAndVerify(expectedCount, getCount, finalCheck)
 }
 
 fun mockJoarkIsWorking() {
