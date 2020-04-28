@@ -6,15 +6,13 @@ import org.springframework.stereotype.Component
 @Component
 @ConfigurationProperties("application")
 class ApplicationProperties {
+
 	lateinit var kafkaBootstrapServers: String
-	lateinit var schemaRegistryUrl: String
-	lateinit var kafkaTopic: String
-	lateinit var kafkaRetryTopic: String
-	lateinit var kafkaDeadLetterTopic: String
+	lateinit var inputTopic: String
+	lateinit var processingTopic: String
 	lateinit var joarkHost: String
 	lateinit var joarkUrl: String
 	lateinit var filestorageHost: String
 	lateinit var filestorageUrl: String
 	lateinit var kafkaRetrySleepTime: List<Int>
-	var kafkaMaxRetryCount: Int? = null
 }

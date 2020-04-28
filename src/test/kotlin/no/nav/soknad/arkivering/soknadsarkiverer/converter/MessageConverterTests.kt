@@ -15,7 +15,6 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 
 class MessageConverterTests {
-	private val messageConverter = MessageConverter()
 
 	@Test
 	fun `Happy case - Soknad - should convert correctly`() {
@@ -36,7 +35,7 @@ class MessageConverterTests {
 				.build())
 			.build()
 
-		val joarkData = messageConverter.createJoarkData(schema, files)
+		val joarkData = createJoarkData(schema, files)
 
 		assertEquals("Søknad til $tittel", joarkData.tittel)
 		assertEquals(1, joarkData.dokumenter.size)
@@ -63,7 +62,7 @@ class MessageConverterTests {
 				.build())
 			.build()
 
-		val joarkData = messageConverter.createJoarkData(schema, files)
+		val joarkData = createJoarkData(schema, files)
 
 		assertEquals("Ettersendelse til $tittel", joarkData.tittel)
 		assertEquals(1, joarkData.dokumenter.size)
@@ -132,7 +131,7 @@ class MessageConverterTests {
 			)
 			.build()
 
-		val joarkData = messageConverter.createJoarkData(schema, files)
+		val joarkData = createJoarkData(schema, files)
 
 		assertEquals("INNGAAENDE", joarkData.journalpostType)
 		assertEquals("NAV_NO", joarkData.kanal)
@@ -206,7 +205,7 @@ class MessageConverterTests {
 
 
 		assertThrows<Exception> {
-			messageConverter.createJoarkData(schema, files)
+			createJoarkData(schema, files)
 		}
 	}
 
@@ -233,7 +232,7 @@ class MessageConverterTests {
 
 
 		assertThrows<Exception> {
-			messageConverter.createJoarkData(schema, files)
+			createJoarkData(schema, files)
 		}
 	}
 
@@ -245,7 +244,7 @@ class MessageConverterTests {
 
 
 		assertThrows<Exception> {
-			messageConverter.createJoarkData(schema, files)
+			createJoarkData(schema, files)
 		}
 	}
 
@@ -261,7 +260,7 @@ class MessageConverterTests {
 
 
 		assertThrows<Exception> {
-			messageConverter.createJoarkData(schema, files)
+			createJoarkData(schema, files)
 		}
 	}
 
@@ -278,7 +277,7 @@ class MessageConverterTests {
 
 
 		assertThrows<Exception> {
-			messageConverter.createJoarkData(schema, emptyList())
+			createJoarkData(schema, emptyList())
 		}
 	}
 
@@ -299,7 +298,7 @@ class MessageConverterTests {
 
 
 		assertThrows<Exception> {
-			messageConverter.createJoarkData(schema, files)
+			createJoarkData(schema, files)
 		}
 	}
 
@@ -318,7 +317,7 @@ class MessageConverterTests {
 
 
 		assertThrows<Exception> {
-			messageConverter.createJoarkData(schema, files)
+			createJoarkData(schema, files)
 		}
 	}
 }

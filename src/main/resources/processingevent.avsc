@@ -1,0 +1,7 @@
+{"namespace": "example.avro",
+	"type": "record",
+	"name": "ProcessingEvent",
+	"fields": [
+		{ "name": "type", "type": { "name": "Eventtypes", "type": "enum", "symbols": ["RECEIVED", "STARTED", "ENDED"] }}
+	]
+}
