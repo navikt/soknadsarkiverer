@@ -96,7 +96,7 @@ jobs:
           PRINT_PAYLOAD: true
 
           CLUSTER: dev-fss
-          RESOURCE: .nais/nais-q0.yml
+          RESOURCE: .nais/preprod-q0.yml
           VAR: app_version=${{env.TAG}}
           DRY_RUN: true
           IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}
@@ -131,7 +131,7 @@ jobs:
           APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
           PRINT_PAYLOAD: true
           CLUSTER: dev-fss
-          RESOURCE: .nais/nais-q1.yml
+          RESOURCE: .nais/preprod-q1.yml
           VAR: app_version=${{env.TAG}}
           DRY_RUN: true
           IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}
