@@ -10,7 +10,7 @@ on:
       - 'master'
     paths-ignore:
       - '**.md'
-      - '.github/workflows/akseptanse.yml'
+      - '.github/workflows/preprod-pipeline.yml'
 jobs:
   bygg-app-prod:
     name: Bygg app/image, push til github
@@ -43,7 +43,7 @@ jobs:
         run: mvn install --settings .m2/maven-settings.xml --file pom.xml
       - name: Create Docker tag
         env:
-          NAME: soknadsfillager
+          NAME: soknadsarkiverer
         run: |
           echo "docker.pkg.github.com"/"$GITHUB_REPOSITORY"/"$NAME" > .docker_image
           echo "$(date "+%Y.%m.%d")-$(git rev-parse --short HEAD)" > .docker_tag
@@ -94,4 +94,4 @@ jobs:
           RESOURCE: .nais/nais.yml
           VAR: app_version=${{env.TAG}}
           DRY_RUN: true
-          IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsfillager:${{env.TAG}}
+          IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}
