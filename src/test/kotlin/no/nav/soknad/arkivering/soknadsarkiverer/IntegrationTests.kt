@@ -52,6 +52,7 @@ class TopologyTestDriverAvroApplicationTests {
 	private lateinit var processingEventTopic: TestOutputTopic<String, ProcessingEvent>
 
 	private val uuid = UUID.randomUUID().toString()
+	private val key = UUID.randomUUID().toString()
 
 	@BeforeEach
 	fun setup() {
@@ -250,8 +251,8 @@ class TopologyTestDriverAvroApplicationTests {
 		val getCount = {
 			mockingDetails(kafkaProcessingEventProducer)
 				.invocations.stream()
-				.map { it.arguments[1] }
-				.filter { it == value }
+				.filter { it.arguments[0] == key }
+				.filter { it.arguments[1] == value }
 				.count()
 				.toInt()
 		}
@@ -261,7 +262,7 @@ class TopologyTestDriverAvroApplicationTests {
 	}
 
 	private fun putDataOnKafkaTopic(data: Soknadarkivschema) {
-		inputTopic.pipeInput(UUID.randomUUID().toString(), data)
+		inputTopic.pipeInput(key, data)
 	}
 
 	private fun putDataOnKafkaTopic(data: String) {

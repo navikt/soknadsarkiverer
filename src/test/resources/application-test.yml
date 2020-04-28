@@ -4,7 +4,7 @@ application:
   filestorage-host: http://localhost:${application.mocked-port-for-external-services}
   kafka-retry-sleeptime:
     - 0
-    - 1
+    - 0
     - 0
     - 0
     - 0

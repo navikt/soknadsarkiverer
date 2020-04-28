@@ -47,7 +47,7 @@ class KafkaStreamsConfig(private val applicationProperties: ApplicationPropertie
 	fun setupKafkaStreams(streamsBuilder: StreamsBuilder): KafkaStreams {
 		val topology = streamsBuilder.build()
 
-		val kafkaStreams = KafkaStreams(topology, kafkaConfig("applicationId"))
+		val kafkaStreams = KafkaStreams(topology, kafkaConfig("soknadsarkiverer-main"))
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
 		kafkaStreams.start()
 		Runtime.getRuntime().addShutdownHook(Thread(kafkaStreams::close))
