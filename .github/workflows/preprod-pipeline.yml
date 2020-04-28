@@ -12,9 +12,11 @@ on:
       - 'q1-pipeline'
     paths-ignore:
       - '**.md'
+      - '.github/workflows/main.yml'
+      - '.github/workflows/preprod-default.yml'
 
 jobs:
-  bygg-app-preprod:
+  bygg-app-preprod-pipeline:
     name: Bygg app/image, push til github
     runs-on: ubuntu-latest
     steps:
@@ -38,14 +40,14 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: '11.x'
-      - name: Build with maven
+      - name: Maven build
         env:
           GITHUB_USERNAME: x-access-token
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: mvn install --settings .m2/maven-settings.xml --file pom.xml
       - name: Create Docker tag
         env:
-          NAME: soknadsfillager
+          NAME: soknadsarkiverer
         run: |
           echo "docker.pkg.github.com"/"$GITHUB_REPOSITORY"/"$NAME" > .docker_image
           echo "$(date "+%Y.%m.%d")-$(git rev-parse --short HEAD)" > .docker_tag
@@ -65,7 +67,7 @@ jobs:
 
   deploy-q0:
     name: Deploy to Q0
-    needs: bygg-app-preprod
+    needs: bygg-app-preprod-pipeline
     if: github.ref == 'refs/heads/q0-pipeline'
     runs-on: ubuntu-latest
     steps:
@@ -97,11 +99,11 @@ jobs:
           RESOURCE: .nais/nais-q0.yml
           VAR: app_version=${{env.TAG}}
           DRY_RUN: true
-          IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsfillager:${{env.TAG}}
+          IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}
 
   deploy-q1:
     name: Deploy to Q1
-    needs: bygg-app-preprod
+    needs: bygg-app-preprod-pipeline
     if: github.ref == 'refs/heads/q1-pipeline'
     runs-on: ubuntu-latest
     steps:
@@ -132,5 +134,5 @@ jobs:
           RESOURCE: .nais/nais-q1.yml
           VAR: app_version=${{env.TAG}}
           DRY_RUN: true
-          IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsfillager:${{env.TAG}}
+          IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}
 
