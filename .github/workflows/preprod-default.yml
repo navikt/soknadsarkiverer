@@ -1,9 +1,6 @@
 name: Build-Deploy-Default
 on:
   push:
-    branches:
-      -  '*'
-      - '*/*'
     branches-ignore:
       - 'q0-pipeline'
       - 'q1-pipeline'
