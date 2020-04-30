@@ -11,9 +11,9 @@ application:
   kafka-bootstrap-servers: localhost:9092
   schema-registry-url: http://localhost:8081
 
-  kafka-topic: privat-soknadInnsendt-sendsoknad-v1-q0
-  kafka-retry-topic: privat-retry-soknadInnsendt-sendsoknad-v1-q0
-  kafka-dead-letter-topic: privat-dlq-soknadInnsendt-sendsoknad-v1-q0
+  kafka-topic: privat-soknadInnsendt-v1-default
+  kafka-retry-topic: privat-retry-soknadInnsendt-v1-default
+  kafka-dead-letter-topic: privat-dlq-soknadInnsendt-v1-default
 
   joark-host: http://localhost:8092
   joark-url: /joark/save
