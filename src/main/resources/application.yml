@@ -11,8 +11,8 @@ application:
   kafka-bootstrap-servers: localhost:9092
   schema-registry-url: http://localhost:8081
 
-  input-topic: aapen-soknadInnsendt-v1-q0
-  processing-topic: privat-soknadInnsendt-processingEventLog-v1-q0
+  input-topic: privat-soknadInnsendt-v1-default
+  processing-topic: privat-soknadInnsendt-processingEventLog-v1-default
 
   joark-host: http://localhost:8092
   joark-url: /joark/save
@@ -26,3 +26,21 @@ application:
     - 60
     - 120
     - 600
+
+---
+spring:
+  profiles: docker
+
+application:
+  kafka-bootstrap-servers: kafka-broker:29092
+  schema-registry-url: http://kafka-schema-registry:8081
+  joark-host: http://joark-mock:8092
+  filestorage-host: http://soknadsfillager:9042
+
+
+  kafka-retry-sleeptime:
+    - 1
+    - 1
+    - 1
+    - 2
+    - 2

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component
 class ApplicationProperties {
 
 	lateinit var kafkaBootstrapServers: String
+	lateinit var schemaRegistryUrl: String
 	lateinit var inputTopic: String
 	lateinit var processingTopic: String
 	lateinit var joarkHost: String

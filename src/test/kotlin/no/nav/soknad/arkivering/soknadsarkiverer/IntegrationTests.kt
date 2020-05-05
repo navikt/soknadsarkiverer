@@ -1,6 +1,8 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
 import com.nhaarman.mockitokotlin2.*
+import example.avro.Eventtypes.ENDED
+import example.avro.Eventtypes.STARTED
 import example.avro.ProcessingEvent
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig
@@ -240,14 +242,14 @@ class TopologyTestDriverAvroApplicationTests {
 
 
 	private fun verifyStartProcessingEvents(expectedCount: Int) {
-		verifyProcessingEvents(expectedCount, "STARTED")
+		verifyProcessingEvents(expectedCount, ProcessingEvent(STARTED))
 	}
 
 	private fun verifyEndProcessingEvents(expectedCount: Int) {
-		verifyProcessingEvents(expectedCount, "ENDED")
+		verifyProcessingEvents(expectedCount, ProcessingEvent(ENDED))
 	}
 
-	private fun verifyProcessingEvents(expectedCount: Int, value: String) {
+	private fun verifyProcessingEvents(expectedCount: Int, value: ProcessingEvent) {
 		val getCount = {
 			mockingDetails(kafkaProcessingEventProducer)
 				.invocations.stream()
