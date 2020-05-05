@@ -4,6 +4,7 @@ import example.avro.Eventtypes.RECEIVED
 import example.avro.ProcessingEvent
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
 import no.nav.soknad.soknadarkivering.avroschemas.Soknadarkivschema
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -95,24 +96,24 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 
 @Service
 class KafkaProcessingEventProducer(private val applicationProperties: ApplicationProperties) {
+	val kafkaProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap())
 
 	fun putDataOnTopic(key: String, value: ProcessingEvent, headers: Headers = RecordHeaders()): RecordMetadata {
 		val topic = applicationProperties.processingTopic
-		val producerRecord = ProducerRecord(topic, key, value.toString())
+		val producerRecord = ProducerRecord(topic, key, value)
 		headers.forEach { h -> producerRecord.headers().add(h) }
 
-		return kafkaProducer().use { // TODO: Don't create a KafkaProducer on each call -- reuse it!
-			it.send(producerRecord).get(1000, TimeUnit.MILLISECONDS) // Blocking call
-		}
+		return kafkaProducer
+			.send(producerRecord)
+			.get(1000, TimeUnit.MILLISECONDS) // Blocking call
 	}
-
-	private fun kafkaProducer() = KafkaProducer<String, /* TODO ProcessingEvent */ String>(kafkaConfigMap())
 
 	private fun kafkaConfigMap(): MutableMap<String, Any> {
 		return HashMap<String, Any>().also {
+			it[AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = applicationProperties.schemaRegistryUrl
 			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = applicationProperties.kafkaBootstrapServers
 			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
-			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
+			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java
 		}
 	}
 }
