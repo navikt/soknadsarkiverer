@@ -1,4 +1,6 @@
 application:
+  schema-registry-scope: mocked-scope
+  schema-registry-url: mock://${application.schema-registry-scope}
   mocked-port-for-external-services: 2908
   joark-host: http://localhost:${application.mocked-port-for-external-services}
   filestorage-host: http://localhost:${application.mocked-port-for-external-services}

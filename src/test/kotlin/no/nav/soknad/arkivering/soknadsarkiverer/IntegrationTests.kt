@@ -34,6 +34,9 @@ class TopologyTestDriverAvroApplicationTests {
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
 
+	@Value("\${application.schema-registry-scope}")
+	private val schemaRegistryScope: String = ""
+
 	@Autowired
 	private lateinit var applicationProperties: ApplicationProperties
 
@@ -44,9 +47,6 @@ class TopologyTestDriverAvroApplicationTests {
 	private lateinit var kafkaProcessingEventProducer: KafkaProcessingEventProducer
 
 	private var maxNumberOfRetries by Delegates.notNull<Int>()
-
-	private val schemaRegistryScope = TopologyTestDriverAvroApplicationTests::class.java.name
-	private val mockSchemaRegistryUrl = "mock://$schemaRegistryScope"
 
 	private lateinit var testDriver: TopologyTestDriver
 	private lateinit var inputTopic: TestInputTopic<String, Soknadarkivschema>
@@ -76,7 +76,7 @@ class TopologyTestDriverAvroApplicationTests {
 			it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = "dummy:1234"
 			it[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = StringSerde::class.java
 			it[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = SpecificAvroSerde::class.java
-			it[AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = mockSchemaRegistryUrl
+			it[AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = applicationProperties.schemaRegistryUrl
 		}
 
 		// Create test driver
@@ -89,7 +89,7 @@ class TopologyTestDriverAvroApplicationTests {
 		val avroProcessingEventSerde = SpecificAvroSerde<ProcessingEvent>(schemaRegistry)
 
 		// Configure Serdes to use the same mock schema registry URL
-		val config = hashMapOf(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to mockSchemaRegistryUrl)
+		val config = hashMapOf(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to applicationProperties.schemaRegistryUrl)
 		avroSoknadarkivschemaSerde.configure(config, false)
 		avroProcessingEventSerde.configure(config, false)
 
