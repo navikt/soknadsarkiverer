@@ -11,12 +11,15 @@ spec:
   liveliness:
     path: /internal/isAlive
     initialDelay: 20
+    failureThreshold: 10
+    timeout: 1
   readiness:
-    path: /internal/isReady
+    path: /internal/isAlive
     initialDelay: 20
+    timeout: 1
   prometheus:
     enable: true
-    path: /internal/prometheus
+    path: /metrics
   replicas:
     min: 2
     max: 4
@@ -28,29 +31,34 @@ spec:
       cpu: 200m
       memory: 256Mi
   ingresses:
-    - "https://tjenester-q1.nav.no/soknadsarkiverer"
-    - "https://soknadsarkiverer-q1.nais.oera-q.local/"
+    - "https://soknadsarkiverer-q1.nais.preprod.local"
+    - "https://soknadsarkiverer-q1.dev-fss.nais.io"
   vault:
     enabled: true
     paths:
-      - kvPath: /apikey/appdynamics/dev
-        mountPath: /var/run/secrets/nais.io/appdynamics
+      - mountPath: /var/run/secrets/nais.io/serviceuser
+        kvPath: /serviceuser/data/dev/srvsoknadsarkiverer
+      - mountPath: /var/run/secrets/nais.io/kv
+        kvPath: /kv/preprod/fss/soknadsarkiverer/default
+      - mountPath: /var/run/secrets/nais.io/appdynamics
+        kvPath: /apikey/appdynamics/dev
+
   env:
     - name: APP_VERSION
       value: {{ app_version }}
     - name: KAFKA_BOOTSTRAP_SERVERS
       value: b27apvl00045.preprod.local:8443,b27apvl00046.preprod.local:8443,b27apvl00047.preprod.local:8443
-    - name: KAFKA_CLIENTID
-      value: srvsoknadsarkiverer
+    - name: SCHEMA_REGISTRY_URL
+      value: https://kafka-schema-registry.nais.preprod.local
     - name: KAFKA_SECURITY
       value: 'TRUE'
     - name: KAFKA_SECPROT
       value: SASL_SSL
     - name: KAFKA_SASLMEC
       value: PLAIN
-    - name: KAFKA_TOPIC
-      value: privat-soknadInnsendt-v1-q1
-    - name: SRVSSOKNADSARKIVERER_USERNAME
-      value: srvsoknadarkiverer
     - name: APPLICATION_PROFILE
       value: dev
+    - name: KAFKA_INPUT_TOPIC
+      value: privat-soknadInnsendt-v1-q1
+    - name: KAFKA_PROCESSING_TOPIC
+      value: privat-soknadInnsendt-processingEventLog-v1-q1

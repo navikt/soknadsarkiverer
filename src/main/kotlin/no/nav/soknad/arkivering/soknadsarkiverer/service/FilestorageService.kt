@@ -1,6 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
-import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.soknadarkivering.avroschemas.Soknadarkivschema
 import org.slf4j.LoggerFactory
@@ -13,7 +13,7 @@ import java.net.URI
 
 @Service
 class FilestorageService(private val restTemplate: RestTemplate,
-												 private val applicationProperties: ApplicationProperties) {
+												 private val appConfiguration: AppConfiguration) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	fun getFilesFromFilestorage(data: Soknadarkivschema): List<FilElementDto> {
@@ -61,7 +61,7 @@ class FilestorageService(private val restTemplate: RestTemplate,
 	private fun constructFilestorageUrl(data: Soknadarkivschema): String {
 		val ids = getAllUuids(data)
 
-		return applicationProperties.filestorageHost + applicationProperties.filestorageUrl + ids
+		return appConfiguration.config.filestorageHost + appConfiguration.config.filestorageUrl + ids
 	}
 
 	private fun getAllUuids(data: Soknadarkivschema): String {

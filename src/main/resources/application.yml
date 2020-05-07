@@ -2,35 +2,16 @@ server:
   port: 8091
 
 management:
-  endpoints:
+  endpoint:
     health:
       show-details: always
-    web:
-      exposure:
-        include: info, health, metrics, prometheus
-      base-path: "/internal/"
-      path-mapping:
-        info: "/isAlive"
+  endpoints.web:
+    exposure:
+      include: info, health, metrics
+    base-path: "/internal"
+    path-mapping:
+      info: "/isAlive"
   metrics:
     export:
       prometheus:
-          enabled: true
-application:
-  kafka-bootstrap-servers: localhost:9092
-  schema-registry-url: http://localhost:8081
-
-  input-topic: aapen-soknadInnsendt-v1-q0
-  processing-topic: privat-soknadInnsendt-processingEventLog-v1-q0
-
-  joark-host: http://localhost:8092
-  joark-url: /joark/save
-
-  filestorage-host: http://localhost:9042
-  filestorage-url: /filer?ids=
-
-  kafka-retry-sleeptime:
-    - 5
-    - 25
-    - 60
-    - 120
-    - 600
+        enabled: true
