@@ -16,7 +16,7 @@ spec:
     initialDelay: 5
   prometheus:
     enable: true
-    path: /internal/prometheus
+    path: /metrics
   replicas:
     min: 2
     max: 4
@@ -27,29 +27,33 @@ spec:
     requests:
       cpu: 200m
       memory: 256Mi
-  ingress:
-    - https://soknadsarkiverer.nais.adeo.no
+  ingresses:
+    - "https://soknadsarkiverer.nais.adeo.no"
+    - "https://soknadsarkiverer.prod-fss.nais.io"
   vault:
     enabled: true
     paths:
-      - kvPath: /apikey/appdynamics/dev
-        mountPath: /var/run/secrets/nais.io/appdynamics
+      - mountPath: /var/run/secrets/nais.io/serviceuser
+        kvPath: /serviceuser/data/prod/srvsoknadsarkiverer
+      - mountPath: /var/run/secrets/nais.io/kv
+        kvPath: /kv/preprod/fss/soknadsarkiverer/default
+      - mountPath: /var/run/secrets/nais.io/appdynamics
+        kvPath: /apikey/appdynamics/prod
+
   env:
     - name: APP_VERSION
       value: {{ app_version }}
     - name: KAFKA_BOOTSTRAP_SERVERS
       value: SASL_SSL://a01apvl00145.adeo.no:8443,SASL_SSL://a01apvl00146.adeo.no:8443,SASL_SSL://a01apvl00147.adeo.no:8443,SASL_SSL://a01apvl00149.adeo.no:8443
-    - name: KAFKA_CLIENTID
-      value: srvsoknadarkiverer
+    - name: SCHEMA_REGISTRY_URL
+      value: https://kafka-schema-registry.nais.adeo.no
     - name: KAFKA_SECURITY
       value: 'TRUE'
     - name: KAFKA_SECPROT
       value: SASL_SSL
     - name: KAFKA_SASLMEC
       value: PLAIN
-    - name: KAFKA_TOPIC
-      value: privat-soknadInnsendt-sendsoknad-v1
-    - name: SRVSSOKNADSMOTTAKER_USERNAME
-      value: srvsoknadarkiverer
-    - name: APPLICATION_PROFILE
-      value: prod
+    - name: KAFKA_INPUT_TOPIC
+      value: privat-soknadInnsendt-v1
+    - name: KAFKA_PROCESSING_TOPIC
+      value: privat-soknadInnsendt-processingEventLog-v1

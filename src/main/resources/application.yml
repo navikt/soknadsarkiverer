@@ -2,19 +2,20 @@ server:
   port: 8091
 
 management:
-  endpoints:
+  endpoint:
     health:
       show-details: always
-    web:
-      exposure:
-        include: info, health, metrics, prometheus
-      base-path: "/internal/"
-      path-mapping:
-        info: "/isAlive"
+  endpoints.web:
+    exposure:
+      include: info, health, metrics
+    base-path: "/internal"
+    path-mapping:
+      info: "/isAlive"
   metrics:
     export:
       prometheus:
-          enabled: true
+        enabled: true
+
 application:
   kafka-bootstrap-servers: localhost:9092
   schema-registry-url: http://localhost:8081
@@ -44,7 +45,6 @@ application:
   schema-registry-url: http://kafka-schema-registry:8081
   joark-host: http://joark-mock:8092
   filestorage-host: http://soknadsfillager:9042
-
 
   kafka-retry-sleeptime:
     - 1
