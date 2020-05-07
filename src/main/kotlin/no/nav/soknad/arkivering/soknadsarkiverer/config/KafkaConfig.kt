@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.collections.HashMap
 
 @Configuration
-class KafkaStreamsConfig(private val applicationProperties: ApplicationProperties,
+class KafkaStreamsConfig(private val appConfiguration: AppConfiguration,
 												 private val schedulerService: SchedulerService) {
 
 	@Bean
@@ -40,12 +40,12 @@ class KafkaStreamsConfig(private val applicationProperties: ApplicationPropertie
 	@Bean
 	fun handleStream(builder: StreamsBuilder): KStream<String, Soknadarkivschema> {
 
-		val inputTopicStream = builder.stream(applicationProperties.inputTopic, Consumed.with(Serdes.String(), createAvroSerde()))
+		val inputTopicStream = builder.stream(appConfiguration.kafkaConfig.inputTopic, Consumed.with(Serdes.String(), createAvroSerde()))
 		val eventStream: KStream<String, ProcessingEvent> = inputTopicStream
 			.peek { key, soknadarkivschema -> schedulerService.schedule(key, soknadarkivschema) }
 			.mapValues { _, _ -> ProcessingEvent(RECEIVED) }
 
-		eventStream.to(applicationProperties.processingTopic)
+		eventStream.to(appConfiguration.kafkaConfig.processingTopic)
 		return inputTopicStream
 	}
 
@@ -61,9 +61,9 @@ class KafkaStreamsConfig(private val applicationProperties: ApplicationPropertie
 	}
 
 	private fun kafkaConfig(applicationId: String) = Properties().also {
-		it[AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = applicationProperties.schemaRegistryUrl
+		it[AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
 		it[StreamsConfig.APPLICATION_ID_CONFIG] = applicationId
-		it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = applicationProperties.kafkaBootstrapServers
+		it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers
 		it[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = Serdes.StringSerde::class.java
 		it[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = SpecificAvroSerde::class.java
 		it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = KafkaExceptionHandler::class.java
@@ -75,7 +75,7 @@ class KafkaStreamsConfig(private val applicationProperties: ApplicationPropertie
 
 	private fun createAvroSerde(): SpecificAvroSerde<Soknadarkivschema> {
 
-		val serdeConfig = hashMapOf(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to applicationProperties.schemaRegistryUrl)
+		val serdeConfig = hashMapOf(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
 		return SpecificAvroSerde<Soknadarkivschema>().also { it.configure(serdeConfig, false) }
 	}
 }
@@ -95,11 +95,11 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 
 
 @Service
-class KafkaProcessingEventProducer(private val applicationProperties: ApplicationProperties) {
+class KafkaProcessingEventProducer(private val appConfiguration: AppConfiguration) {
 	val kafkaProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap())
 
 	fun putDataOnTopic(key: String, value: ProcessingEvent, headers: Headers = RecordHeaders()): RecordMetadata {
-		val topic = applicationProperties.processingTopic
+		val topic = appConfiguration.kafkaConfig.processingTopic
 		val producerRecord = ProducerRecord(topic, key, value)
 		headers.forEach { h -> producerRecord.headers().add(h) }
 
@@ -110,8 +110,8 @@ class KafkaProcessingEventProducer(private val applicationProperties: Applicatio
 
 	private fun kafkaConfigMap(): MutableMap<String, Any> {
 		return HashMap<String, Any>().also {
-			it[AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = applicationProperties.schemaRegistryUrl
-			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = applicationProperties.kafkaBootstrapServers
+			it[AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
+			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers
 			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java
 		}

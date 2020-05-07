@@ -7,7 +7,7 @@ import example.avro.ProcessingEvent
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
-import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaProcessingEventProducer
 import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaStreamsConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
@@ -38,7 +38,7 @@ class TopologyTestDriverAvroApplicationTests {
 	private val schemaRegistryScope: String = ""
 
 	@Autowired
-	private lateinit var applicationProperties: ApplicationProperties
+	private lateinit var appConfiguration: AppConfiguration
 
 	@Autowired
 	private lateinit var schedulerService: SchedulerService
@@ -58,16 +58,16 @@ class TopologyTestDriverAvroApplicationTests {
 
 	@BeforeEach
 	fun setup() {
-		setupMockedServices(portToExternalServices!!, applicationProperties.joarkUrl, applicationProperties.filestorageUrl)
+		setupMockedServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
 
-		maxNumberOfRetries = applicationProperties.kafkaRetrySleepTime.size
+		maxNumberOfRetries = appConfiguration.config.retryTime.size
 
 		setupKafkaTopologyTestDriver()
 	}
 
 	private fun setupKafkaTopologyTestDriver() {
 		val builder = StreamsBuilder()
-		KafkaStreamsConfig(applicationProperties, schedulerService).handleStream(builder)
+		KafkaStreamsConfig(appConfiguration, schedulerService).handleStream(builder)
 		val topology = builder.build()
 
 		// Dummy properties needed for test diver
@@ -76,7 +76,7 @@ class TopologyTestDriverAvroApplicationTests {
 			it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = "dummy:1234"
 			it[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = StringSerde::class.java
 			it[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = SpecificAvroSerde::class.java
-			it[AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = applicationProperties.schemaRegistryUrl
+			it[AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
 		}
 
 		// Create test driver
@@ -89,14 +89,14 @@ class TopologyTestDriverAvroApplicationTests {
 		val avroProcessingEventSerde = SpecificAvroSerde<ProcessingEvent>(schemaRegistry)
 
 		// Configure Serdes to use the same mock schema registry URL
-		val config = hashMapOf(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to applicationProperties.schemaRegistryUrl)
+		val config = hashMapOf(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
 		avroSoknadarkivschemaSerde.configure(config, false)
 		avroProcessingEventSerde.configure(config, false)
 
 		// Define input and output topics to use in tests
-		inputTopic = testDriver.createInputTopic(applicationProperties.inputTopic, stringSerde.serializer(), avroSoknadarkivschemaSerde.serializer())
-		inputTopicForBadData = testDriver.createInputTopic(applicationProperties.inputTopic, stringSerde.serializer(), stringSerde.serializer())
-		processingEventTopic = testDriver.createOutputTopic(applicationProperties.processingTopic, stringSerde.deserializer(), avroProcessingEventSerde.deserializer())
+		inputTopic = testDriver.createInputTopic(appConfiguration.kafkaConfig.inputTopic, stringSerde.serializer(), avroSoknadarkivschemaSerde.serializer())
+		inputTopicForBadData = testDriver.createInputTopic(appConfiguration.kafkaConfig.inputTopic, stringSerde.serializer(), stringSerde.serializer())
+		processingEventTopic = testDriver.createOutputTopic(appConfiguration.kafkaConfig.processingTopic, stringSerde.deserializer(), avroProcessingEventSerde.deserializer())
 	}
 
 	@AfterEach
@@ -120,7 +120,7 @@ class TopologyTestDriverAvroApplicationTests {
 
 		verifyStartProcessingEvents(2)
 		verifyEndProcessingEvents(2)
-		verifyMockedPostRequests(2, applicationProperties.joarkUrl)
+		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(2)
 	}
 
@@ -172,7 +172,7 @@ class TopologyTestDriverAvroApplicationTests {
 
 		verifyStartProcessingEvents(1)
 		verifyEndProcessingEvents(1)
-		verifyMockedPostRequests(1, applicationProperties.joarkUrl)
+		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 		//TODO: Verify Message topic?
 	}
@@ -186,7 +186,7 @@ class TopologyTestDriverAvroApplicationTests {
 
 		verifyStartProcessingEvents(2)
 		verifyEndProcessingEvents(1)
-		verifyMockedPostRequests(2, applicationProperties.joarkUrl)
+		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 	}
 
@@ -199,7 +199,7 @@ class TopologyTestDriverAvroApplicationTests {
 
 		verifyStartProcessingEvents(4)
 		verifyEndProcessingEvents(1)
-		verifyMockedPostRequests(4, applicationProperties.joarkUrl)
+		verifyMockedPostRequests(4, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 	}
 
@@ -218,7 +218,7 @@ class TopologyTestDriverAvroApplicationTests {
 
 		verifyStartProcessingEvents(1)
 		verifyEndProcessingEvents(1)
-		verifyMockedPostRequests(1, applicationProperties.joarkUrl)
+		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 	}
 
@@ -231,7 +231,7 @@ class TopologyTestDriverAvroApplicationTests {
 
 		verifyStartProcessingEvents(maxNumberOfRetries + 1)
 		verifyEndProcessingEvents(0)
-		verifyMockedPostRequests(maxNumberOfRetries + 1, applicationProperties.joarkUrl)
+		verifyMockedPostRequests(maxNumberOfRetries + 1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(0)
 	}
 
@@ -272,7 +272,7 @@ class TopologyTestDriverAvroApplicationTests {
 	}
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
-		verifyMockedDeleteRequests(expectedCount, applicationProperties.filestorageUrl.replace("?", "\\?") + ".*")
+		verifyMockedDeleteRequests(expectedCount, appConfiguration.config.filestorageUrl.replace("?", "\\?") + ".*")
 	}
 
 	private fun createRequestData() =

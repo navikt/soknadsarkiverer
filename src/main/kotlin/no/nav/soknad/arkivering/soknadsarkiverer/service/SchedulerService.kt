@@ -1,6 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
-import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.soknadarkivering.avroschemas.Soknadarkivschema
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
@@ -23,7 +23,7 @@ class SchedulerService(private val schedulingDependencies: SchedulingDependencie
 				schedulingDependencies.archiverService.archive(key, soknadarkivschema)
 			} catch (e: Exception) {
 
-				val maxNumberOfAttempts = schedulingDependencies.applicationProperties.kafkaRetrySleepTime.size
+				val maxNumberOfAttempts = schedulingDependencies.appConfiguration.config.retryTime.size
 				if (attempt < maxNumberOfAttempts) {
 					schedule(key, soknadarkivschema, attempt + 1, schedulingDependencies)
 				} else {
@@ -38,7 +38,7 @@ private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt:
 
 	val task = SchedulerService.ArchivingTask(key, soknadarkivschema, attempt, schedulingDependencies)
 
-	val secondsToWait = if (attempt == 0) 0 else schedulingDependencies.applicationProperties.kafkaRetrySleepTime[attempt - 1].toLong()
+	val secondsToWait = if (attempt == 0) 0 else schedulingDependencies.appConfiguration.config.retryTime[attempt - 1].toLong()
 	val scheduledTime = schedulingDependencies.clock.instant().plusSeconds(secondsToWait)
 
 	log.info("For '$key': About to schedule attempt $attempt at job in $secondsToWait seconds")
@@ -49,4 +49,4 @@ private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt:
 class SchedulingDependencies(val archiverScheduler: ThreadPoolTaskScheduler,
 														 val clock: Clock, // TODO: Is a clock needed?
 														 val archiverService: ArchiverService,
-														 val applicationProperties: ApplicationProperties)
+														 val appConfiguration: AppConfiguration)

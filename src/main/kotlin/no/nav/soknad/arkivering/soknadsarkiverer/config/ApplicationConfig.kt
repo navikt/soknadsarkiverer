@@ -15,6 +15,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_SECURITY" to "",
 	"KAFKA_SECPROT" to "",
 	"KAFKA_SASLMEC" to "",
+	"APPLICATION_PROFILE" to "",
 	"KAFKA_INPUT_TOPIC" to "privat-soknadInnsendt-v1-default",
 	"KAFKA_PROCESSING_TOPIC" to "privat-soknadInnsendt-processingEventLog-v1-default",
 
@@ -22,9 +23,11 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"JOARK_URL" to "/joark/save",
 	"FILESTORAGE_HOST" to "http://localhost:9042",
 	"FILESTORAGE_URL" to "/filer?ids="
-//,
-//	"RETRY_TIME" to listOf(5, 25, 60, 120, 600) // TODO
 ))
+
+val secondsBetweenRetries = listOf(5, 25, 60, 120, 600)  // As many retries will be attempted as there are elements in the list.
+val secondsBetweenRetriesForTest = listOf(0, 0, 0, 0, 0) // As many retries will be attempted as there are elements in the list.
+
 
 val appConfig =
 	EnvironmentVariables() overriding
@@ -37,7 +40,7 @@ private fun String.configProperty(): String = appConfig[Key(this, stringType)]
 
 fun readFileAsText(fileName: String, default: String = "") = try { File(fileName).readText(Charsets.UTF_8) } catch (e: Exception ) { default }
 
-data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig()) {
+data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val config: Config = Config()) {
 	data class KafkaConfig(
 		val version: String = "APP_VERSION".configProperty(),
 		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "SOKNADSARKIVERER_USERNAME".configProperty()),
@@ -58,9 +61,12 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig()) {
 		val joarkUrl: String = "JOARK_URL".configProperty(),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
-		val retryTime: String = "RETRY_TIME".configProperty()
+		val retryTime: List<Int> = if ("APPLICATION_PROFILE".configProperty() != "test") secondsBetweenRetries else secondsBetweenRetriesForTest
 	)
 }
 
-@Bean
-fun appConfiguration() = AppConfiguration()
+@org.springframework.context.annotation.Configuration
+class ConfigConfig {
+	@Bean
+	fun appConfiguration() = AppConfiguration()
+}

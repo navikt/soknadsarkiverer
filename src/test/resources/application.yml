@@ -1,0 +1,7 @@
+application:
+  APPLICATION_PROFILE: test
+  schema-registry-scope: mocked-scope
+  schema-registry-url: mock://${application.schema-registry-scope}
+  mocked-port-for-external-services: 2908
+  JOARK_HOST: http://localhost:2908
+  FILESTORAGE_HOST: http://localhost:2908

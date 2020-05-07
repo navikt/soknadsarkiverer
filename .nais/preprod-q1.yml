@@ -56,6 +56,8 @@ spec:
       value: SASL_SSL
     - name: KAFKA_SASLMEC
       value: PLAIN
+    - name: APPLICATION_PROFILE
+      value: dev
     - name: KAFKA_INPUT_TOPIC
       value: privat-soknadInnsendt-v1-q1
     - name: KAFKA_PROCESSING_TOPIC
