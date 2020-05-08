@@ -1,8 +1,8 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
-import example.avro.Eventtypes.ENDED
-import example.avro.Eventtypes.STARTED
-import example.avro.ProcessingEvent
+import no.nav.soknad.arkivering.soknadsarkiverer.EventTypes
+import no.nav.soknad.arkivering.soknadsarkiverer.EventTypes.*
+import no.nav.soknad.arkivering.soknadsarkiverer.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaProcessingEventProducer
 import no.nav.soknad.arkivering.soknadsarkiverer.converter.createJoarkData
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
@@ -17,15 +17,16 @@ class ArchiverService(private val filestorageService: FilestorageService, privat
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	fun archive(key: String, data: Soknadarkivschema) {
-		createStartedEvent(key)
+		createProcessingEvent(key, STARTED)
 
 		val files = filestorageService.getFilesFromFilestorage(data)
 		val joarkData = convertToJoarkData(data, files)
 
 		joarkArchiver.putDataInJoark(joarkData)
+		createProcessingEvent(key, ARCHIVED)
 		filestorageService.deleteFilesFromFilestorage(data)
 
-		createFinishedEvent(key)
+		createProcessingEvent(key, FINISHED)
 	}
 
 	private fun convertToJoarkData(data: Soknadarkivschema, files: List<FilElementDto>): JoarkData {
@@ -37,15 +38,7 @@ class ArchiverService(private val filestorageService: FilestorageService, privat
 		}
 	}
 
-	private fun createStartedEvent(key: String) {
-		return createProcessingTopicEvent(key, ProcessingEvent(STARTED))
-	}
-
-	private fun createFinishedEvent(key: String) {
-		return createProcessingTopicEvent(key, ProcessingEvent(ENDED))
-	}
-
-	private fun createProcessingTopicEvent(key: String, type: ProcessingEvent) {
-		kafkaProcessingEventProducer.putDataOnTopic(key, type)
+	private fun createProcessingEvent(key: String, type: EventTypes) {
+		kafkaProcessingEventProducer.putDataOnTopic(key, ProcessingEvent(type))
 	}
 }

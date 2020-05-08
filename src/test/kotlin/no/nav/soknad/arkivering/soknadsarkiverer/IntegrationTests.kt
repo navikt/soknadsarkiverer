@@ -1,12 +1,10 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
 import com.nhaarman.mockitokotlin2.*
-import example.avro.Eventtypes.ENDED
-import example.avro.Eventtypes.STARTED
-import example.avro.ProcessingEvent
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
+import no.nav.soknad.arkivering.soknadsarkiverer.EventTypes.*
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaProcessingEventProducer
 import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaStreamsConfig
@@ -118,8 +116,9 @@ class TopologyTestDriverAvroApplicationTests {
 		putDataOnKafkaTopic(createRequestData())
 		putDataOnKafkaTopic(createRequestData())
 
-		verifyStartProcessingEvents(2)
-		verifyEndProcessingEvents(2)
+		verifyProcessingEvents(2, STARTED)
+		verifyProcessingEvents(2, ARCHIVED)
+		verifyProcessingEvents(2, FINISHED)
 		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(2)
 	}
@@ -132,8 +131,9 @@ class TopologyTestDriverAvroApplicationTests {
 		putDataOnKafkaTopic(invalidData)
 
 		// TODO: Delays will always make these pass:
-		verifyStartProcessingEvents(0)
-		verifyEndProcessingEvents(0)
+		verifyProcessingEvents(0, STARTED)
+		verifyProcessingEvents(0, ARCHIVED)
+		verifyProcessingEvents(0, FINISHED)
 		// TODO: Verify Message topic?
 	}
 
@@ -144,8 +144,9 @@ class TopologyTestDriverAvroApplicationTests {
 
 		putDataOnKafkaTopic(createRequestData())
 
-		verifyStartProcessingEvents(maxNumberOfRetries + 1)
-		verifyEndProcessingEvents(0)
+		verifyProcessingEvents(maxNumberOfRetries + 1, STARTED)
+		verifyProcessingEvents(0, ARCHIVED)
+		verifyProcessingEvents(0, FINISHED)
 		verifyDeleteRequestsToFilestorage(0)
 	}
 
@@ -156,8 +157,9 @@ class TopologyTestDriverAvroApplicationTests {
 
 		putDataOnKafkaTopic(createRequestData())
 
-		verifyStartProcessingEvents(maxNumberOfRetries + 1)
-		verifyEndProcessingEvents(0)
+		verifyProcessingEvents(maxNumberOfRetries + 1, STARTED)
+		verifyProcessingEvents(0, ARCHIVED)
+		verifyProcessingEvents(0, FINISHED)
 		verifyDeleteRequestsToFilestorage(0)
 	}
 
@@ -170,8 +172,9 @@ class TopologyTestDriverAvroApplicationTests {
 		putDataOnKafkaTopic("this is not deserializable")
 		putDataOnKafkaTopic(createRequestData())
 
-		verifyStartProcessingEvents(1)
-		verifyEndProcessingEvents(1)
+		verifyProcessingEvents(1, STARTED)
+		verifyProcessingEvents(1, ARCHIVED)
+		verifyProcessingEvents(1, FINISHED)
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 		//TODO: Verify Message topic?
@@ -184,8 +187,9 @@ class TopologyTestDriverAvroApplicationTests {
 
 		putDataOnKafkaTopic(createRequestData())
 
-		verifyStartProcessingEvents(2)
-		verifyEndProcessingEvents(1)
+		verifyProcessingEvents(2, STARTED)
+		verifyProcessingEvents(1, ARCHIVED)
+		verifyProcessingEvents(1, FINISHED)
 		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 	}
@@ -197,8 +201,9 @@ class TopologyTestDriverAvroApplicationTests {
 
 		putDataOnKafkaTopic(createRequestData())
 
-		verifyStartProcessingEvents(4)
-		verifyEndProcessingEvents(1)
+		verifyProcessingEvents(4, STARTED)
+		verifyProcessingEvents(1, ARCHIVED)
+		verifyProcessingEvents(1, FINISHED)
 		verifyMockedPostRequests(4, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 	}
@@ -216,8 +221,9 @@ class TopologyTestDriverAvroApplicationTests {
 
 		putDataOnKafkaTopic(createRequestData())
 
-		verifyStartProcessingEvents(1)
-		verifyEndProcessingEvents(1)
+		verifyProcessingEvents(1, STARTED)
+		verifyProcessingEvents(1, ARCHIVED)
+		verifyProcessingEvents(1, FINISHED)
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 	}
@@ -229,8 +235,9 @@ class TopologyTestDriverAvroApplicationTests {
 
 		putDataOnKafkaTopic(createRequestData())
 
-		verifyStartProcessingEvents(maxNumberOfRetries + 1)
-		verifyEndProcessingEvents(0)
+		verifyProcessingEvents(maxNumberOfRetries + 1, STARTED)
+		verifyProcessingEvents(0, ARCHIVED)
+		verifyProcessingEvents(0, FINISHED)
 		verifyMockedPostRequests(maxNumberOfRetries + 1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(0)
 	}
@@ -241,25 +248,18 @@ class TopologyTestDriverAvroApplicationTests {
 	}
 
 
-	private fun verifyStartProcessingEvents(expectedCount: Int) {
-		verifyProcessingEvents(expectedCount, ProcessingEvent(STARTED))
-	}
-
-	private fun verifyEndProcessingEvents(expectedCount: Int) {
-		verifyProcessingEvents(expectedCount, ProcessingEvent(ENDED))
-	}
-
-	private fun verifyProcessingEvents(expectedCount: Int, value: ProcessingEvent) {
+	private fun verifyProcessingEvents(expectedCount: Int, eventType: EventTypes) {
+		val type = ProcessingEvent(eventType)
 		val getCount = {
 			mockingDetails(kafkaProcessingEventProducer)
 				.invocations.stream()
 				.filter { it.arguments[0] == key }
-				.filter { it.arguments[1] == value }
+				.filter { it.arguments[1] == type }
 				.count()
 				.toInt()
 		}
 
-		val finalCheck = { verify(kafkaProcessingEventProducer, times(expectedCount)).putDataOnTopic(any(), eq(value), any()) }
+		val finalCheck = { verify(kafkaProcessingEventProducer, times(expectedCount)).putDataOnTopic(any(), eq(type), any()) }
 		loopAndVerify(expectedCount, getCount, finalCheck)
 	}
 
