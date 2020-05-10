@@ -59,3 +59,5 @@ spec:
       value: privat-soknadInnsendt-v1
     - name: KAFKA_PROCESSING_TOPIC
       value: privat-soknadInnsendt-processingEventLog-v1
+    - name: KAFKA_MESSAGE_TOPIC
+      value: privat-soknadInnsendt-messages-v1

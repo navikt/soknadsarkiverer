@@ -9,16 +9,20 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
-import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaProcessingEventProducer
+import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaStreamsConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.common.serialization.Serdes.StringSerde
-import org.apache.kafka.streams.*
+import org.apache.kafka.streams.StreamsBuilder
+import org.apache.kafka.streams.StreamsConfig
+import org.apache.kafka.streams.TestInputTopic
+import org.apache.kafka.streams.TopologyTestDriver
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers.startsWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
@@ -44,14 +48,13 @@ class TopologyTestDriverAvroApplicationTests {
 	private lateinit var schedulerService: SchedulerService
 
 	@MockBean
-	private lateinit var kafkaProcessingEventProducer: KafkaProcessingEventProducer
+	private lateinit var kafkaPublisherMock: KafkaPublisher
 
 	private var maxNumberOfRetries by Delegates.notNull<Int>()
 
 	private lateinit var testDriver: TopologyTestDriver
 	private lateinit var inputTopic: TestInputTopic<String, Soknadarkivschema>
 	private lateinit var inputTopicForBadData: TestInputTopic<String, String>
-	private lateinit var processingEventTopic: TestOutputTopic<String, ProcessingEvent>
 
 	private val uuid = UUID.randomUUID().toString()
 	private val key = UUID.randomUUID().toString()
@@ -96,7 +99,6 @@ class TopologyTestDriverAvroApplicationTests {
 		// Define input and output topics to use in tests
 		inputTopic = testDriver.createInputTopic(appConfiguration.kafkaConfig.inputTopic, stringSerde.serializer(), avroSoknadarkivschemaSerde.serializer())
 		inputTopicForBadData = testDriver.createInputTopic(appConfiguration.kafkaConfig.inputTopic, stringSerde.serializer(), stringSerde.serializer())
-		processingEventTopic = testDriver.createOutputTopic(appConfiguration.kafkaConfig.processingTopic, stringSerde.deserializer(), avroProcessingEventSerde.deserializer())
 	}
 
 	@AfterEach
@@ -105,8 +107,8 @@ class TopologyTestDriverAvroApplicationTests {
 		testDriver.close()
 		MockSchemaRegistry.dropScope(schemaRegistryScope)
 
-		reset(kafkaProcessingEventProducer)
-		clearInvocations(kafkaProcessingEventProducer)
+		reset(kafkaPublisherMock)
+		clearInvocations(kafkaPublisherMock)
 	}
 
 
@@ -123,6 +125,8 @@ class TopologyTestDriverAvroApplicationTests {
 		verifyProcessingEvents(2, FINISHED)
 		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(2)
+		verifyMessageStartsWith(2, "ok")
+		verifyMessageStartsWith(0, "Exception")
 	}
 
 	@Test
@@ -136,7 +140,7 @@ class TopologyTestDriverAvroApplicationTests {
 		verifyProcessingEvents(0, STARTED)
 		verifyProcessingEvents(0, ARCHIVED)
 		verifyProcessingEvents(0, FINISHED)
-		// TODO: Verify Message topic?
+		// TODO: Verify Message topic!
 	}
 
 	@Test
@@ -150,6 +154,8 @@ class TopologyTestDriverAvroApplicationTests {
 		verifyProcessingEvents(0, ARCHIVED)
 		verifyProcessingEvents(0, FINISHED)
 		verifyDeleteRequestsToFilestorage(0)
+		verifyMessageStartsWith(maxNumberOfRetries + 1, "Exception")
+		verifyMessageStartsWith(0, "ok")
 	}
 
 	@Test
@@ -163,6 +169,8 @@ class TopologyTestDriverAvroApplicationTests {
 		verifyProcessingEvents(0, ARCHIVED)
 		verifyProcessingEvents(0, FINISHED)
 		verifyDeleteRequestsToFilestorage(0)
+		verifyMessageStartsWith(maxNumberOfRetries + 1, "Exception")
+		verifyMessageStartsWith(0, "ok")
 	}
 
 	@Test
@@ -179,7 +187,8 @@ class TopologyTestDriverAvroApplicationTests {
 		verifyProcessingEvents(1, FINISHED)
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
-		//TODO: Verify Message topic?
+		verifyMessageStartsWith(1, "Exception")
+		verifyMessageStartsWith(1, "ok")
 	}
 
 	@Test
@@ -194,20 +203,25 @@ class TopologyTestDriverAvroApplicationTests {
 		verifyProcessingEvents(1, FINISHED)
 		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
+		verifyMessageStartsWith(1, "Exception")
+		verifyMessageStartsWith(1, "ok")
 	}
 
 	@Test
 	fun `First attempt to Joark fails, the fourth succeeds`() {
+		val attemptsToFail = 3
 		mockFilestorageIsWorking(uuid)
-		mockJoarkRespondsAfterAttempts(3)
+		mockJoarkRespondsAfterAttempts(attemptsToFail)
 
 		putDataOnKafkaTopic(createRequestData())
 
-		verifyProcessingEvents(4, STARTED)
+		verifyProcessingEvents(attemptsToFail + 1, STARTED)
 		verifyProcessingEvents(1, ARCHIVED)
 		verifyProcessingEvents(1, FINISHED)
-		verifyMockedPostRequests(4, appConfiguration.config.joarkUrl)
+		verifyMockedPostRequests(attemptsToFail + 1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
+		verifyMessageStartsWith(1, "ok")
+		verifyMessageStartsWith(attemptsToFail, "Exception")
 	}
 
 	@Test
@@ -216,7 +230,7 @@ class TopologyTestDriverAvroApplicationTests {
 	}
 
 	@Test
-	fun `Everything works, but Filestorage cannot delete files -- Message is NOT put on retry topic`() {
+	fun `Everything works, but Filestorage cannot delete files -- Message is nevertheless marked as finished`() {
 		mockFilestorageIsWorking(uuid)
 		mockFilestorageDeletionIsNotWorking()
 		mockJoarkIsWorking()
@@ -228,6 +242,8 @@ class TopologyTestDriverAvroApplicationTests {
 		verifyProcessingEvents(1, FINISHED)
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
+		verifyMessageStartsWith(1, "ok")
+		verifyMessageStartsWith(0, "Exception")
 	}
 
 	@Test
@@ -242,6 +258,8 @@ class TopologyTestDriverAvroApplicationTests {
 		verifyProcessingEvents(0, FINISHED)
 		verifyMockedPostRequests(maxNumberOfRetries + 1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(0)
+		verifyMessageStartsWith(maxNumberOfRetries + 1, "Exception")
+		verifyMessageStartsWith(0, "ok")
 	}
 
 	@Test
@@ -250,10 +268,25 @@ class TopologyTestDriverAvroApplicationTests {
 	}
 
 
+	private fun verifyMessageStartsWith(expectedCount: Int, message: String) {
+		val getCount = {
+			mockingDetails(kafkaPublisherMock)
+				.invocations.stream()
+				.filter { it.arguments[0] == key }
+				.filter { it.arguments[1] is String }
+				.filter { (it.arguments[1] as String).startsWith(message) }
+				.count()
+				.toInt()
+		}
+
+		val finalCheck = { verify(kafkaPublisherMock, times(expectedCount)).putMessageOnTopic(eq(key), startsWith(message), any()) }
+		loopAndVerify(expectedCount, getCount, finalCheck)
+	}
+
 	private fun verifyProcessingEvents(expectedCount: Int, eventType: EventTypes) {
 		val type = ProcessingEvent(eventType)
 		val getCount = {
-			mockingDetails(kafkaProcessingEventProducer)
+			mockingDetails(kafkaPublisherMock)
 				.invocations.stream()
 				.filter { it.arguments[0] == key }
 				.filter { it.arguments[1] == type }
@@ -261,7 +294,7 @@ class TopologyTestDriverAvroApplicationTests {
 				.toInt()
 		}
 
-		val finalCheck = { verify(kafkaProcessingEventProducer, times(expectedCount)).putDataOnTopic(any(), eq(type), any()) }
+		val finalCheck = { verify(kafkaPublisherMock, times(expectedCount)).putProcessingEventOnTopic(eq(key), eq(type), any()) }
 		loopAndVerify(expectedCount, getCount, finalCheck)
 	}
 

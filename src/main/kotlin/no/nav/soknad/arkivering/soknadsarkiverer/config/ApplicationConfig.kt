@@ -18,6 +18,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"APPLICATION_PROFILE" to "",
 	"KAFKA_INPUT_TOPIC" to "privat-soknadInnsendt-v1-default",
 	"KAFKA_PROCESSING_TOPIC" to "privat-soknadInnsendt-processingEventLog-v1-default",
+	"KAFKA_MESSAGE_TOPIC" to "privat-soknadInnsendt-messages-v1-default",
 
 	"JOARK_HOST" to "http://localhost:8092",
 	"JOARK_URL" to "/joark/save",
@@ -54,6 +55,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val salsmec: String = "KAFKA_SASLMEC".configProperty(), // PLAIN
 		val inputTopic: String = "KAFKA_INPUT_TOPIC".configProperty(),
 		val processingTopic: String = "KAFKA_PROCESSING_TOPIC".configProperty(),
+		val messageTopic: String = "KAFKA_MESSAGE_TOPIC".configProperty(),
 		val saslJaasConfig: String = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"$username\" password=\"$password\";"
 	)
 

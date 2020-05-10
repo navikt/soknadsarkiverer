@@ -107,11 +107,25 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 
 
 @Service
-class KafkaProcessingEventProducer(private val appConfiguration: AppConfiguration) {
-	val kafkaProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap())
+class KafkaPublisher(private val appConfiguration: AppConfiguration) {
+	private val kafkaProcessingEventProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap())
+	private val kafkaMessageProducer = KafkaProducer<String, String>(kafkaConfigMap())
 
-	fun putDataOnTopic(key: String, value: ProcessingEvent, headers: Headers = RecordHeaders()): RecordMetadata {
+	fun putProcessingEventOnTopic(key: String, value: ProcessingEvent, headers: Headers = RecordHeaders()): RecordMetadata {
 		val topic = appConfiguration.kafkaConfig.processingTopic
+		val kafkaProducer = kafkaProcessingEventProducer
+		return putDataOnTopic(key, value, headers, topic, kafkaProducer)
+	}
+
+	fun putMessageOnTopic(key: String, value: String, headers: Headers = RecordHeaders()): RecordMetadata {
+		val topic = appConfiguration.kafkaConfig.messageTopic
+		val kafkaProducer = kafkaMessageProducer
+		return putDataOnTopic(key, value, headers, topic, kafkaProducer)
+	}
+
+	private fun <T> putDataOnTopic(key: String, value: T, headers: Headers, topic: String,
+																 kafkaProducer: KafkaProducer<String, T>): RecordMetadata {
+
 		val producerRecord = ProducerRecord(topic, key, value)
 		headers.forEach { h -> producerRecord.headers().add(h) }
 
