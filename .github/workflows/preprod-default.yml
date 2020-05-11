@@ -70,6 +70,7 @@ jobs:
   deploy-default:
     name: Deploy to default
     needs: bygg-app-preprod-default
+    if: github.ref != 'refs/heads/master' || github.ref !='refs/heads/q0-pipeline' || github.ref !='refs/heads/q1-pipeline'
     runs-on: ubuntu-latest
     steps:
       - name: Download tag file
