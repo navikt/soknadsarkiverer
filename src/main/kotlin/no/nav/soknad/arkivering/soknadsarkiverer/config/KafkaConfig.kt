@@ -1,11 +1,12 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
-import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import no.nav.soknad.arkivering.avroschemas.EventTypes.RECEIVED
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaStreamsConfig.Companion.KAFKA_PUBLISHER
 import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -29,13 +30,16 @@ import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.stereotype.Service
+import java.io.PrintWriter
+import java.io.StringWriter
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.collections.HashMap
 
 @Configuration
 class KafkaStreamsConfig(private val appConfiguration: AppConfiguration,
-												 private val schedulerService: SchedulerService) {
+												 private val schedulerService: SchedulerService,
+												 private val kafkaPublisher: KafkaPublisher) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -67,7 +71,7 @@ class KafkaStreamsConfig(private val appConfiguration: AppConfiguration,
 	}
 
 	private fun kafkaConfig(applicationId: String) = Properties().also {
-		it[AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
+		it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
 		it[StreamsConfig.APPLICATION_ID_CONFIG] = applicationId
 		it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers
 		it[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = Serdes.StringSerde::class.java
@@ -78,31 +82,72 @@ class KafkaStreamsConfig(private val appConfiguration: AppConfiguration,
 			it[SaslConfigs.SASL_JAAS_CONFIG] = appConfiguration.kafkaConfig.saslJaasConfig
 			it[SaslConfigs.SASL_MECHANISM] = appConfiguration.kafkaConfig.salsmec
 		}
-
+		it[KAFKA_PUBLISHER] = kafkaPublisher
 	}
 
 	private fun kafkaExceptionHandler() = KafkaExceptionHandler().also {
-		it.configure(kafkaConfig("soknadsarkiverer-exception").map { (k, v) -> k.toString() to v.toString() }.toMap())
+		it.configure(kafkaConfig("soknadsarkiverer-exception").map { (k, v) -> k.toString() to v }.toMap())
 	}
 
 	private fun createAvroSerde(): SpecificAvroSerde<Soknadarkivschema> {
 
-		val serdeConfig = hashMapOf(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
+		val serdeConfig = hashMapOf(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
 		return SpecificAvroSerde<Soknadarkivschema>().also { it.configure(serdeConfig, false) }
+	}
+
+	companion object {
+		const val KAFKA_PUBLISHER = "kafka.publisher"
 	}
 }
 
 class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationExceptionHandler {
+	private val logger = LoggerFactory.getLogger(javaClass)
+
+	private lateinit var kafkaPublisher: KafkaPublisher
+
+
 	override fun uncaughtException(t: Thread, e: Throwable) {
-		//TODO("Not yet implemented")
+
+		val message = createMessage("Uncaught exception", e)
+		logger.error(message)
+
+		kafkaPublisher.putMessageOnTopic(null, message)
 	}
 
 	override fun handle(context: ProcessorContext, record: ConsumerRecord<ByteArray, ByteArray>, exception: Exception): DeserializationExceptionHandler.DeserializationHandlerResponse {
-		//TODO("Not yet implemented")
+
+		val key = createKey(record)
+		val message = createMessage("Exception when deserializing data", exception)
+		logger.error("For key '$key': $message")
+
+		kafkaPublisher.putMessageOnTopic(key, message)
+
 		return DeserializationExceptionHandler.DeserializationHandlerResponse.CONTINUE
 	}
 
-	override fun configure(configs: Map<String, *>) { }
+	private fun createKey(record: ConsumerRecord<ByteArray, ByteArray>) =
+		Serdes.String().deserializer().deserialize("topic", record.key())
+
+	private fun createMessage(description: String, exception: Throwable): String {
+		val sw = StringWriter()
+		exception.printStackTrace(PrintWriter(sw))
+		val stacktrace = sw.toString()
+		return "$description: '${exception.message}'\n$stacktrace"
+	}
+
+	override fun configure(configs: Map<String, *>) {
+		kafkaPublisher = getConfigForKey(configs, KAFKA_PUBLISHER) as KafkaPublisher
+	}
+
+	private fun getConfigForKey(configs: Map<String, *>, key: String): Any? {
+		if (configs.containsKey(key)) {
+			return configs[key]
+		} else {
+			val msg = "Could not find key '${key}' in configuration! Won't be able to create event on Message topic!"
+			logger.error(msg)
+			throw Exception(msg)
+		}
+	}
 }
 
 
@@ -117,13 +162,13 @@ class KafkaPublisher(private val appConfiguration: AppConfiguration) {
 		return putDataOnTopic(key, value, headers, topic, kafkaProducer)
 	}
 
-	fun putMessageOnTopic(key: String, value: String, headers: Headers = RecordHeaders()): RecordMetadata {
+	fun putMessageOnTopic(key: String?, value: String, headers: Headers = RecordHeaders()): RecordMetadata {
 		val topic = appConfiguration.kafkaConfig.messageTopic
 		val kafkaProducer = kafkaMessageProducer
 		return putDataOnTopic(key, value, headers, topic, kafkaProducer)
 	}
 
-	private fun <T> putDataOnTopic(key: String, value: T, headers: Headers, topic: String,
+	private fun <T> putDataOnTopic(key: String?, value: T, headers: Headers, topic: String,
 																 kafkaProducer: KafkaProducer<String, T>): RecordMetadata {
 
 		val producerRecord = ProducerRecord(topic, key, value)
@@ -136,7 +181,7 @@ class KafkaPublisher(private val appConfiguration: AppConfiguration) {
 
 	private fun kafkaConfigMap(): MutableMap<String, Any> {
 		return HashMap<String, Any>().also {
-			it[AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
+			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
 			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers
 			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java

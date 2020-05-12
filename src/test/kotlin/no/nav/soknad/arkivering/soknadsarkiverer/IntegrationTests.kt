@@ -2,15 +2,17 @@ package no.nav.soknad.arkivering.soknadsarkiverer
 
 import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
-import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaExceptionHandler
 import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaStreamsConfig
+import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaStreamsConfig.Companion.KAFKA_PUBLISHER
 import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.common.serialization.Serdes.StringSerde
@@ -20,7 +22,6 @@ import org.apache.kafka.streams.TestInputTopic
 import org.apache.kafka.streams.TopologyTestDriver
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.startsWith
 import org.springframework.beans.factory.annotation.Autowired
@@ -29,6 +30,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.context.ActiveProfiles
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
 @ActiveProfiles("test")
@@ -70,7 +72,7 @@ class TopologyTestDriverAvroApplicationTests {
 
 	private fun setupKafkaTopologyTestDriver() {
 		val builder = StreamsBuilder()
-		KafkaStreamsConfig(appConfiguration, schedulerService).handleStream(builder)
+		KafkaStreamsConfig(appConfiguration, schedulerService, kafkaPublisherMock).handleStream(builder)
 		val topology = builder.build()
 
 		// Dummy properties needed for test diver
@@ -79,7 +81,9 @@ class TopologyTestDriverAvroApplicationTests {
 			it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = "dummy:1234"
 			it[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = StringSerde::class.java
 			it[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = SpecificAvroSerde::class.java
-			it[AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
+			it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = KafkaExceptionHandler::class.java
+			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
+			it[KAFKA_PUBLISHER] = kafkaPublisherMock
 		}
 
 		// Create test driver
@@ -89,12 +93,10 @@ class TopologyTestDriverAvroApplicationTests {
 		// Create Serdes used for test record keys and values
 		val stringSerde = Serdes.String()
 		val avroSoknadarkivschemaSerde = SpecificAvroSerde<Soknadarkivschema>(schemaRegistry)
-		val avroProcessingEventSerde = SpecificAvroSerde<ProcessingEvent>(schemaRegistry)
 
 		// Configure Serdes to use the same mock schema registry URL
-		val config = hashMapOf(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
+		val config = hashMapOf(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
 		avroSoknadarkivschemaSerde.configure(config, false)
-		avroProcessingEventSerde.configure(config, false)
 
 		// Define input and output topics to use in tests
 		inputTopic = testDriver.createInputTopic(appConfiguration.kafkaConfig.inputTopic, stringSerde.serializer(), avroSoknadarkivschemaSerde.serializer())
@@ -130,17 +132,18 @@ class TopologyTestDriverAvroApplicationTests {
 	}
 
 	@Test
-	@Disabled // TODO: Fix text
 	fun `Sending in invalid data will not create Processing Events`() {
 		val invalidData = "this string is not deserializable"
 
-		putDataOnKafkaTopic(invalidData)
+		putDataOnKafkaTopic(key, invalidData)
 
-		// TODO: Delays will always make these pass:
+		verifyMessageStartsWith(1, "Exception")
+		TimeUnit.MILLISECONDS.sleep(500)
 		verifyProcessingEvents(0, STARTED)
 		verifyProcessingEvents(0, ARCHIVED)
 		verifyProcessingEvents(0, FINISHED)
-		// TODO: Verify Message topic!
+		verifyMockedPostRequests(0, appConfiguration.config.joarkUrl)
+		verifyDeleteRequestsToFilestorage(0)
 	}
 
 	@Test
@@ -174,12 +177,12 @@ class TopologyTestDriverAvroApplicationTests {
 	}
 
 	@Test
-	@Disabled // TODO: Fix text
 	fun `Poison pill followed by proper event -- Only proper one is sent to Joark`() {
+		val keyForPoisionPill = UUID.randomUUID().toString()
 		mockFilestorageIsWorking(uuid)
 		mockJoarkIsWorking()
 
-		putDataOnKafkaTopic("this is not deserializable")
+		putDataOnKafkaTopic(keyForPoisionPill, "this is not deserializable")
 		putDataOnKafkaTopic(createRequestData())
 
 		verifyProcessingEvents(1, STARTED)
@@ -187,8 +190,8 @@ class TopologyTestDriverAvroApplicationTests {
 		verifyProcessingEvents(1, FINISHED)
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
-		verifyMessageStartsWith(1, "Exception")
-		verifyMessageStartsWith(1, "ok")
+		verifyMessageStartsWith(1, "Exception", keyForPoisionPill)
+		verifyMessageStartsWith(1, "ok", key)
 	}
 
 	@Test
@@ -225,11 +228,6 @@ class TopologyTestDriverAvroApplicationTests {
 	}
 
 	@Test
-	fun `Joark is down -- message ends up on DLQ`() {
-		// TODO
-	}
-
-	@Test
 	fun `Everything works, but Filestorage cannot delete files -- Message is nevertheless marked as finished`() {
 		mockFilestorageIsWorking(uuid)
 		mockFilestorageDeletionIsNotWorking()
@@ -262,13 +260,8 @@ class TopologyTestDriverAvroApplicationTests {
 		verifyMessageStartsWith(0, "ok")
 	}
 
-	@Test
-	fun `Put event on retry topic, then send another event on main topic -- one topic should not lock the other`() {
-		// TODO
-	}
 
-
-	private fun verifyMessageStartsWith(expectedCount: Int, message: String) {
+	private fun verifyMessageStartsWith(expectedCount: Int, message: String, key: String = this.key) {
 		val getCount = {
 			mockingDetails(kafkaPublisherMock)
 				.invocations.stream()
@@ -302,8 +295,8 @@ class TopologyTestDriverAvroApplicationTests {
 		inputTopic.pipeInput(key, data)
 	}
 
-	private fun putDataOnKafkaTopic(data: String) {
-		inputTopicForBadData.pipeInput(UUID.randomUUID().toString(), data)
+	private fun putDataOnKafkaTopic(key: String, data: String) {
+		inputTopicForBadData.pipeInput(key, data)
 	}
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
