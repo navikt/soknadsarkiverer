@@ -99,5 +99,5 @@ jobs:
           CLUSTER: dev-fss
           RESOURCE: .nais/preprod-default.yml
           VAR: app_version=${{env.TAG}}
-          DRY_RUN: true
+          DRY_RUN: false
           IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}
