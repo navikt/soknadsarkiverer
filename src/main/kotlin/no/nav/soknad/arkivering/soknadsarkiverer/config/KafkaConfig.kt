@@ -23,6 +23,7 @@ import org.apache.kafka.streams.errors.DeserializationExceptionHandler
 import org.apache.kafka.streams.kstream.Consumed
 import org.apache.kafka.streams.kstream.KStream
 import org.apache.kafka.streams.processor.ProcessorContext
+import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.stereotype.Service
@@ -33,6 +34,8 @@ import kotlin.collections.HashMap
 @Configuration
 class KafkaStreamsConfig(private val appConfiguration: AppConfiguration,
 												 private val schedulerService: SchedulerService) {
+
+	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Bean
 	fun streamsBuilder() = StreamsBuilder()
@@ -57,6 +60,7 @@ class KafkaStreamsConfig(private val appConfiguration: AppConfiguration,
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
 		kafkaStreams.start()
 		Runtime.getRuntime().addShutdownHook(Thread(kafkaStreams::close))
+		logger.info("Ferdig setupKafkaStreams")
 		return kafkaStreams
 	}
 
