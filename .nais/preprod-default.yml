@@ -10,12 +10,12 @@ spec:
   port: 8090
   liveliness:
     path: /internal/isAlive
-    initialDelay: 20
+    initialDelay: 100
     failureThreshold: 10
     timeout: 1
   readiness:
     path: /internal/isAlive
-    initialDelay: 20
+    initialDelay: 100
     timeout: 1
   prometheus:
     enable: true
@@ -26,10 +26,10 @@ spec:
   resource:
     limits:
       cpu: 3000m
-      memory: 512Mi
+      memory: 1024Mi
     requests:
       cpu: 200m
-      memory: 256Mi
+      memory: 512Mi
   ingresses:
     - "https://soknadsarkiverer.nais.preprod.local"
     - "https://soknadsarkiverer.dev-fss.nais.io"
