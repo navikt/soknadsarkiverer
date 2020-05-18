@@ -22,7 +22,8 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"JOARK_HOST" to "http://localhost:8092",
 	"JOARK_URL" to "/joark/save",
 	"FILESTORAGE_HOST" to "http://localhost:9042",
-	"FILESTORAGE_URL" to "/filer?ids="
+	"FILESTORAGE_URL" to "/filer?ids=",
+	"SHARED_PASSORD" to ""
 ))
 
 val secondsBetweenRetries = listOf(5, 25, 60, 120, 600)  // As many retries will be attempted as there are elements in the list.
@@ -59,6 +60,8 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 	data class Config(
 		val joarkHost: String = "JOARK_HOST".configProperty(),
 		val joarkUrl: String = "JOARK_URL".configProperty(),
+		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "SOKNADSARKIVERER_USERNAME".configProperty()),
+		val sharedPassword: String = readFileAsText("/var/run/secrets/nais.io/kv/sharedPassword", "SHARED_PASSORD".configProperty()),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
 		val retryTime: List<Int> = if ("APPLICATION_PROFILE".configProperty() != "test") secondsBetweenRetries else secondsBetweenRetriesForTest
