@@ -1,6 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
-import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationProperties
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.JoarkData
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.JoarkResponse
 import org.slf4j.LoggerFactory
@@ -12,13 +12,13 @@ import org.springframework.web.client.RestTemplate
 
 @Service
 class JoarkArchiver(private val restTemplate: RestTemplate,
-										private val applicationProperties: ApplicationProperties) {
+										private val appConfiguration: AppConfiguration) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	fun putDataInJoark(joarkData: JoarkData) {
 		try {
 			logger.info("Sending to Joark: '$joarkData'")
-			val url = applicationProperties.joarkHost + applicationProperties.joarkUrl
+			val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
 
 			val response = sendDataToJoark(joarkData, url)
 

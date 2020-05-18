@@ -2,48 +2,16 @@ server:
   port: 8091
 
 management:
-  endpoints:
-    web:
-      exposure:
-        include: "*"
-
-application:
-  kafka-bootstrap-servers: localhost:9092
-  schema-registry-url: http://localhost:8081
-
-  kafka-topic: privat-soknadInnsendt-v1-default
-  kafka-retry-topic: privat-retry-soknadInnsendt-v1-default
-  kafka-dead-letter-topic: privat-dlq-soknadInnsendt-v1-default
-
-  joark-host: http://localhost:8092
-  joark-url: /joark/save
-
-  filestorage-host: http://localhost:9042
-  filestorage-url: /filer?ids=
-
-  kafka-max-retry-count: 20
-  kafka-retry-sleeptime:
-    - 5
-    - 25
-    - 60
-    - 120
-    - 600
-
-
----
-spring:
-  profiles: docker
-
-application:
-  kafka-bootstrap-servers: kafka-broker:29092
-  schema-registry-url: http://kafka-schema-registry:8081
-  joark-host: http://joark-mock:8092
-  filestorage-host: http://soknadsfillager:9042
-
-  kafka-max-retry-count: 5
-  kafka-retry-sleeptime:
-    - 1
-    - 1
-    - 1
-    - 2
-    - 2
+  endpoint:
+    health:
+      show-details: always
+  endpoints.web:
+    exposure:
+      include: info, health, metrics
+    base-path: "/internal"
+    path-mapping:
+      info: "/isAlive"
+  metrics:
+    export:
+      prometheus:
+        enabled: true
