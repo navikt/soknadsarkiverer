@@ -1,10 +1,10 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
-import example.avro.Eventtypes.RECEIVED
-import example.avro.ProcessingEvent
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
+import no.nav.soknad.arkivering.soknadsarkiverer.EventTypes.RECEIVED
+import no.nav.soknad.arkivering.soknadsarkiverer.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
 import no.nav.soknad.soknadarkivering.avroschemas.Soknadarkivschema
 import org.apache.kafka.clients.CommonClientConfigs
