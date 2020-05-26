@@ -12,14 +12,14 @@ spec:
     path: /internal/isAlive
     initialDelay: 100
     failureThreshold: 10
-    timeout: 1
+    timeout: 20
   readiness:
     path: /internal/isAlive
     initialDelay: 100
-    timeout: 1
+    timeout: 20
   prometheus:
     enable: true
-    path: /metrics
+    path: /internal/prometheus
   replicas:
     min: 2
     max: 4
