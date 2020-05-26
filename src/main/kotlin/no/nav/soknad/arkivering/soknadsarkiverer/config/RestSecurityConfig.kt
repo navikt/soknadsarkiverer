@@ -1,5 +1,4 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
-/*
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest
@@ -39,4 +38,3 @@ class RestSecurityConfig(private val config: AppConfiguration) : WebSecurityConf
 			.roles("ADMIN")
 	}
 }
-*/
