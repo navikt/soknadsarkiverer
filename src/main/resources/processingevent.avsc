@@ -1,7 +1,0 @@
-{"namespace": "no.nav.soknad.arkivering.soknadsarkiverer",
-	"type": "record",
-	"name": "ProcessingEvent",
-	"fields": [
-		{ "name": "type", "type": { "name": "EventTypes", "type": "enum", "symbols": ["RECEIVED", "STARTED", "ARCHIVED", "FINISHED"] }}
-	]
-}
