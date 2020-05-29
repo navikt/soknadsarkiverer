@@ -10,13 +10,13 @@
 	</parent>
 	<groupId>no.nav.soknad.arkivering</groupId>
 	<artifactId>soknadsarkiverer</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.2-SNAPSHOT</version>
 	<name>Soknadsarkiverer</name>
 	<description>Arkiverer soknader</description>
 
 	<properties>
 		<arkivering-schemas.version>85752408</arkivering-schemas.version>
-		<kafka-streams-avro-serde.version>5.4.1</kafka-streams-avro-serde.version>
+		<kafka-streams-avro-serde.version>5.5.0</kafka-streams-avro-serde.version>
 		<avro-maven-plugin.version>1.9.2</avro-maven-plugin.version>
 		<kafka.version>2.5.0</kafka.version>
 		<konfig.version>1.6.10.0</konfig.version>
@@ -105,6 +105,11 @@
 		<dependency>
 			<groupId>org.springframework.kafka</groupId>
 			<artifactId>spring-kafka-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.kafka</groupId>
+			<artifactId>spring-kafka</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

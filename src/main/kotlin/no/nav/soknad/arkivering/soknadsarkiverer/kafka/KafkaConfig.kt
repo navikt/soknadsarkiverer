@@ -1,4 +1,4 @@
-package no.nav.soknad.arkivering.soknadsarkiverer.config
+package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
@@ -6,7 +6,8 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import no.nav.soknad.arkivering.avroschemas.EventTypes.RECEIVED
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaStreamsConfig.Companion.KAFKA_PUBLISHER
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaStreamsConfig.Companion.KAFKA_PUBLISHER
 import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -44,23 +45,25 @@ class KafkaStreamsConfig(private val appConfiguration: AppConfiguration,
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Bean
-	fun streamsBuilder() = StreamsBuilder()
+	fun inputStreamsBuilder() = StreamsBuilder()
 
 	@Bean
-	fun handleStream(builder: StreamsBuilder): KStream<String, Soknadarkivschema> {
+	fun handleStream(inputStreamsBuilder: StreamsBuilder): KStream<String, Soknadarkivschema> {
 
-		val inputTopicStream = builder.stream(appConfiguration.kafkaConfig.inputTopic, Consumed.with(Serdes.String(), createAvroSerde()))
-		val eventStream: KStream<String, ProcessingEvent> = inputTopicStream
+		val inputTopicStream = inputStreamsBuilder.stream(appConfiguration.kafkaConfig.inputTopic, Consumed.with(Serdes.String(), createAvroSerde()))
+
+		inputTopicStream
 			.peek { key, soknadarkivschema -> schedulerService.schedule(key, soknadarkivschema) }
 			.mapValues { _, _ -> ProcessingEvent(RECEIVED) }
+			.to(appConfiguration.kafkaConfig.processingTopic)
 
-		eventStream.to(appConfiguration.kafkaConfig.processingTopic)
 		return inputTopicStream
 	}
 
+
 	@Bean
-	fun setupKafkaStreams(streamsBuilder: StreamsBuilder): KafkaStreams {
-		val topology = streamsBuilder.build()
+	fun setupKafkaStreams(inputStreamsBuilder: StreamsBuilder): KafkaStreams {
+		val topology = inputStreamsBuilder.build()
 
 		val kafkaStreams = KafkaStreams(topology, kafkaConfig("soknadsarkiverer-main"))
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
@@ -154,7 +157,7 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 @Service
 class KafkaPublisher(private val appConfiguration: AppConfiguration) {
 	private val kafkaProcessingEventProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap())
-	private val kafkaMessageProducer = KafkaProducer<String, String>(kafkaConfigMap())
+	private val kafkaMessageProducer = KafkaProducer<String, String>(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 
 	fun putProcessingEventOnTopic(key: String, value: ProcessingEvent, headers: Headers = RecordHeaders()): RecordMetadata {
 		val topic = appConfiguration.kafkaConfig.processingTopic

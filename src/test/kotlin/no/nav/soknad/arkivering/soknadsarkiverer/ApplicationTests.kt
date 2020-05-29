@@ -9,10 +9,10 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
-import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaExceptionHandler
-import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaPublisher
-import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaStreamsConfig
-import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaStreamsConfig.Companion.KAFKA_PUBLISHER
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaExceptionHandler
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaStreamsConfig
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaStreamsConfig.Companion.KAFKA_PUBLISHER
 import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.common.serialization.Serdes.StringSerde
@@ -35,7 +35,7 @@ import kotlin.properties.Delegates
 
 @ActiveProfiles("test")
 @SpringBootTest
-class TopologyTestDriverAvroApplicationTests {
+class ApplicationTests {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
