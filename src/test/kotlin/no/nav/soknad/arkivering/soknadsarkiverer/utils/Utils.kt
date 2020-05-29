@@ -1,4 +1,4 @@
-package no.nav.soknad.arkivering.soknadsarkiverer
+package no.nav.soknad.arkivering.soknadsarkiverer.utils
 
 import java.util.concurrent.TimeUnit
 

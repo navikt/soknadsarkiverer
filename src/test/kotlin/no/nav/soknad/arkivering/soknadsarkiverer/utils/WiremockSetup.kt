@@ -1,4 +1,4 @@
-package no.nav.soknad.arkivering.soknadsarkiverer
+package no.nav.soknad.arkivering.soknadsarkiverer.utils
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.tomakehurst.wiremock.WireMockServer
