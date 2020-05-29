@@ -27,8 +27,8 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"SHARED_PASSORD" to ""
 ))
 
-val secondsBetweenRetries = listOf(5, 25, 60, 120, 600)  // As many retries will be attempted as there are elements in the list.
-val secondsBetweenRetriesForTest = listOf(0, 0, 0, 0, 0) // As many retries will be attempted as there are elements in the list.
+private val secondsBetweenRetries = listOf(5, 25, 60, 120, 600)   // As many retries will be attempted as there are elements in the list.
+private val secondsBetweenRetriesForTests = listOf(0, 0, 0, 0, 0) // As many retries will be attempted as there are elements in the list.
 
 
 val appConfig =
@@ -49,7 +49,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val password: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "SOKNADSARKIVERER_PASSWORD".configProperty()),
 		val servers: String = readFileAsText("/var/run/secrets/nais.io/kv/kafkaBootstrapServers", "KAFKA_BOOTSTRAP_SERVERS".configProperty()),
 		val schemaRegistryUrl: String = "SCHEMA_REGISTRY_URL".configProperty(),
-		val clientId: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username","KAFKA_CLIENTID".configProperty()),
+		val clientId: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "KAFKA_CLIENTID".configProperty()),
 		val secure: String = "KAFKA_SECURITY".configProperty(),
 		val protocol: String = "KAFKA_SECPROT".configProperty(), // SASL_PLAINTEXT | SASL_SSL
 		val salsmec: String = "KAFKA_SASLMEC".configProperty(), // PLAIN
@@ -66,7 +66,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val sharedPassword: String = readFileAsText("/var/run/secrets/nais.io/kv/sharedPassword", "SHARED_PASSORD".configProperty()),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
-		val retryTime: List<Int> = if ("APPLICATION_PROFILE".configProperty() != "test") secondsBetweenRetries else secondsBetweenRetriesForTest
+		val retryTime: List<Int> = if ("APPLICATION_PROFILE".configProperty() != "test") secondsBetweenRetries else secondsBetweenRetriesForTests
 	)
 }
 

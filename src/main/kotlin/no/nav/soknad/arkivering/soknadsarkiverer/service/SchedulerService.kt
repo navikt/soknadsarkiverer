@@ -12,8 +12,8 @@ private val log = LoggerFactory.getLogger(object{}::class.java.`package`.name)
 @Service
 class SchedulerService(private val schedulingDependencies: SchedulingDependencies) {
 
-	fun schedule(key: String, soknadarkivschema: Soknadarkivschema) {
-		schedule(key, soknadarkivschema, 0, schedulingDependencies)
+	fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
+		schedule(key, soknadarkivschema, attempt, schedulingDependencies)
 	}
 
 	class ArchivingTask(private val key: String, private val soknadarkivschema: Soknadarkivschema, private val attempt: Int,

@@ -4,11 +4,11 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.converter.createJoarkData
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.JoarkData
 import no.nav.soknad.arkivering.soknadsarkiverer.fileservice.FileserviceInterface
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.io.PrintWriter
