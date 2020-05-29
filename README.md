@@ -31,6 +31,13 @@ Add this to the Environment Variables:<br />
 Settings -> Build, Execution, Deployment -> Build Tools -> Maven<br />
 Override User Settings File and specify ./m2/maven-settings.xml
 
+## Kafka stream configuration
+This application consumes messages on the stream privat-soknadInnsendt-v1* (where * is, depending on environment, is replaced with none | -default | -q0 | q1 ).
+This stream is configured using the stream configuration found in kafka-config.json in the soknadsmottaker project, see https://github.com/navikt/soknadsmottaker/blob/master/kafka-config.json. Replace TODO with correct application user names for producer and consumer roles and run
+After specifying producer and consumer, use the result to execute the "one-shot" option found in https://kafka-adminrest.nais.preprod.local/api/v1/.
+The application uses the stream privat-soknadInnsendt-processingEventLog-v1* (replace * depending on environment as described above) as both producer and consumer in order to process messages read from privat-soknadInnsendt-v1.
+This stream is configures using the configuration kafka-config.json found in this project. Replace TODO with username for this application and use the "one-shot" option found in https://kafka-adminrest.nais.preprod.local/api/v1/.
+
 ## Inquiries
 Questions regarding the code or the project can be asked to [team-soknad@nav.no](mailto:team-soknad@nav.no)
 

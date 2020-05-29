@@ -7,11 +7,13 @@ import no.nav.soknad.arkivering.soknadsarkiverer.EventTypes.RECEIVED
 import no.nav.soknad.arkivering.soknadsarkiverer.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
 import no.nav.soknad.soknadarkivering.avroschemas.Soknadarkivschema
+import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
+import org.apache.kafka.common.config.SaslConfigs
 import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.Serdes
@@ -23,6 +25,7 @@ import org.apache.kafka.streams.errors.DeserializationExceptionHandler
 import org.apache.kafka.streams.kstream.Consumed
 import org.apache.kafka.streams.kstream.KStream
 import org.apache.kafka.streams.processor.ProcessorContext
+import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.stereotype.Service
@@ -33,6 +36,8 @@ import kotlin.collections.HashMap
 @Configuration
 class KafkaStreamsConfig(private val appConfiguration: AppConfiguration,
 												 private val schedulerService: SchedulerService) {
+
+	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Bean
 	fun streamsBuilder() = StreamsBuilder()
@@ -57,6 +62,7 @@ class KafkaStreamsConfig(private val appConfiguration: AppConfiguration,
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
 		kafkaStreams.start()
 		Runtime.getRuntime().addShutdownHook(Thread(kafkaStreams::close))
+		logger.info("Ferdig setupKafkaStreams")
 		return kafkaStreams
 	}
 
@@ -67,6 +73,12 @@ class KafkaStreamsConfig(private val appConfiguration: AppConfiguration,
 		it[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = Serdes.StringSerde::class.java
 		it[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = SpecificAvroSerde::class.java
 		it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = KafkaExceptionHandler::class.java
+		if ("TRUE" == appConfiguration.kafkaConfig.secure) {
+			it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = appConfiguration.kafkaConfig.protocol
+			it[SaslConfigs.SASL_JAAS_CONFIG] = appConfiguration.kafkaConfig.saslJaasConfig
+			it[SaslConfigs.SASL_MECHANISM] = appConfiguration.kafkaConfig.salsmec
+		}
+
 	}
 
 	private fun kafkaExceptionHandler() = KafkaExceptionHandler().also {
@@ -114,6 +126,11 @@ class KafkaProcessingEventProducer(private val appConfiguration: AppConfiguratio
 			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers
 			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java
+			if ("TRUE" == appConfiguration.kafkaConfig.secure) {
+				it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = appConfiguration.kafkaConfig.protocol
+				it[SaslConfigs.SASL_JAAS_CONFIG] = appConfiguration.kafkaConfig.saslJaasConfig
+				it[SaslConfigs.SASL_MECHANISM] = appConfiguration.kafkaConfig.salsmec
+			}
 		}
 	}
 }
