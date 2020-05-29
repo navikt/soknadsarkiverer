@@ -1,14 +1,14 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
-import no.nav.soknad.arkivering.soknadsarkiverer.EventTypes
-import no.nav.soknad.arkivering.soknadsarkiverer.EventTypes.*
-import no.nav.soknad.arkivering.soknadsarkiverer.ProcessingEvent
+import no.nav.soknad.arkivering.avroschemas.EventTypes
+import no.nav.soknad.arkivering.avroschemas.EventTypes.*
+import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
+import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaProcessingEventProducer
 import no.nav.soknad.arkivering.soknadsarkiverer.converter.createJoarkData
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.JoarkData
 import no.nav.soknad.arkivering.soknadsarkiverer.fileservice.FileserviceInterface
-import no.nav.soknad.soknadarkivering.avroschemas.Soknadarkivschema
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
@@ -44,11 +44,9 @@ class ArchiverService(private val filestorageService: FileserviceInterface, priv
 		kafkaProcessingEventProducer.putDataOnTopic(key, ProcessingEvent(type))
 	}
 
-
 	private fun getAllUuids(data: Soknadarkivschema): String {
 		return data.getMottatteDokumenter()
 			.flatMap { it.getMottatteVarianter().map { variant -> variant.getUuid() } }
 			.joinToString(",")
 	}
-
 }

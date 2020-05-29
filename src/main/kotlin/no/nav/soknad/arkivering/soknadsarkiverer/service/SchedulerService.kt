@@ -1,7 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
+import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
-import no.nav.soknad.soknadarkivering.avroschemas.Soknadarkivschema
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
 import org.springframework.stereotype.Service

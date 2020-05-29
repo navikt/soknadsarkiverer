@@ -4,12 +4,14 @@ import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
-import no.nav.soknad.arkivering.soknadsarkiverer.EventTypes.*
+import no.nav.soknad.arkivering.avroschemas.EventTypes
+import no.nav.soknad.arkivering.avroschemas.EventTypes.*
+import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
+import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaProcessingEventProducer
 import no.nav.soknad.arkivering.soknadsarkiverer.config.KafkaStreamsConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
-import no.nav.soknad.soknadarkivering.avroschemas.Soknadarkivschema
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.common.serialization.Serdes.StringSerde
 import org.apache.kafka.streams.*

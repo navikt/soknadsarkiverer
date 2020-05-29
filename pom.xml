@@ -15,7 +15,7 @@
 	<description>Arkiverer soknader</description>
 
 	<properties>
-		<arkivering-schemas.version>7b655c0d</arkivering-schemas.version>
+		<arkivering-schemas.version>85752408</arkivering-schemas.version>
 		<kafka-streams-avro-serde.version>5.4.1</kafka-streams-avro-serde.version>
 		<avro-maven-plugin.version>1.9.2</avro-maven-plugin.version>
 		<kafka.version>2.5.0</kafka.version>
