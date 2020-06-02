@@ -48,7 +48,7 @@ class StateRecreatorTests {
 
 	private fun setupKafkaTopologyTestDriver() {
 		val builder = StreamsBuilder()
-		StateRecreator(appConfiguration, schedulerService).recreationStream(builder)
+		StateRecreator(appConfiguration, schedulerService, mock()).recreationStream(builder)
 		val topology = builder.build()
 
 		// Dummy properties needed for test diver
@@ -270,7 +270,7 @@ class StateRecreatorTests {
 
 		recreateState()
 
-		verifyThatScheduler().wasNotCalled()
+		verifyThatScheduler().wasCalled(1).forKey(key).withCount(0)
 	}
 
 	@Test
@@ -302,7 +302,7 @@ class StateRecreatorTests {
 	}
 
 	private fun recreateState() {
-		StateRecreator(appConfiguration, schedulerService).recreationStream(StreamsBuilder())
+		StateRecreator(appConfiguration, schedulerService, mock()).recreationStream(StreamsBuilder())
 	}
 
 	private fun createRequestData() =

@@ -1,3 +1,4 @@
+/*
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
@@ -52,11 +53,13 @@ class KafkaStreamsConfig(private val appConfiguration: AppConfiguration,
 
 		val inputTopicStream = inputStreamsBuilder.stream(appConfiguration.kafkaConfig.inputTopic, Consumed.with(Serdes.String(), createAvroSerde()))
 
+/ *
 		inputTopicStream
 			.peek { key, soknadarkivschema -> schedulerService.schedule(key, soknadarkivschema) }
 			.mapValues { _, _ -> ProcessingEvent(RECEIVED) }
 			.to(appConfiguration.kafkaConfig.processingTopic)
 
+ * /
 		return inputTopicStream
 	}
 
@@ -196,3 +199,4 @@ class KafkaPublisher(private val appConfiguration: AppConfiguration) {
 		}
 	}
 }
+*/

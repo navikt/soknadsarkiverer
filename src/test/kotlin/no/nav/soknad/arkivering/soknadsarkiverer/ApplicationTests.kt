@@ -11,8 +11,7 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaExceptionHandler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaStreamsConfig
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaStreamsConfig.Companion.KAFKA_PUBLISHER
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.StateRecreator
 import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.common.serialization.Serdes
@@ -73,7 +72,7 @@ class ApplicationTests {
 
 	private fun setupKafkaTopologyTestDriver() {
 		val builder = StreamsBuilder()
-		KafkaStreamsConfig(appConfiguration, schedulerService, kafkaPublisherMock).handleStream(builder)
+		StateRecreator(appConfiguration, schedulerService, kafkaPublisherMock).recreationStream(builder)
 		val topology = builder.build()
 
 		// Dummy properties needed for test diver
@@ -84,7 +83,7 @@ class ApplicationTests {
 			it[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = SpecificAvroSerde::class.java
 			it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = KafkaExceptionHandler::class.java
 			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
-			it[KAFKA_PUBLISHER] = kafkaPublisherMock
+			it[StateRecreator.KAFKA_PUBLISHER] = kafkaPublisherMock
 		}
 
 		// Create test driver

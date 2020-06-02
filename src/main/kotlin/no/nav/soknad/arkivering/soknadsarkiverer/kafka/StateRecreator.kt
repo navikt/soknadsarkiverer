@@ -26,7 +26,9 @@ import org.springframework.context.annotation.Configuration
 import java.util.*
 
 @Configuration
-class StateRecreator(private val appConfiguration: AppConfiguration, private val schedulerService: SchedulerService) {
+class StateRecreator(private val appConfiguration: AppConfiguration,
+										 private val schedulerService: SchedulerService,
+										 private val kafkaPublisher: KafkaPublisher) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -34,7 +36,7 @@ class StateRecreator(private val appConfiguration: AppConfiguration, private val
 	private val intSerde = Serdes.IntegerSerde()
 	private val soknadarkivschemaSerde = createSoknadarkivschemaSerde()
 	private val processingEventSerde = createProcessingEventSerde()
-	private val processingEventsSerde: Serde<MutableList<String>> = MutableListSerdeWrapper()
+	private val mutableListSerde: Serde<MutableList<String>> = MutableListSerde()
 
 	@Bean
 	fun processingEventsStreamsBuilder() = StreamsBuilder()
@@ -63,10 +65,10 @@ class StateRecreator(private val appConfiguration: AppConfiguration, private val
 					aggregate
 				},
 				Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("ProcessingEventDtos")
-					.withValueSerde(processingEventsSerde) // TODO: Is Materialized needed? Use Default Value Serde?
+					.withValueSerde(mutableListSerde) // TODO: Is Materialized needed? Use Default Value Serde?
 			)
 			.mapValues { processingEvents -> ProcessingEventDto(processingEvents) }
-			.mapValues { processingEventDto -> if (processingEventDto.isFinished()) null else processingEventDto.getNumberOfStarts() }
+			.mapValues { processingEventDto -> if (processingEventDto.isFinished()) -1 else processingEventDto.getNumberOfStarts() }
 		// TODO: Remove nulls
 
 		inputTopicStream
@@ -82,7 +84,8 @@ class StateRecreator(private val appConfiguration: AppConfiguration, private val
 
 	private fun shouldSchedule(count: Int?, soknadsarkivschema: Soknadarkivschema?, key: String?): Boolean {
 		return when {
-			count == null -> false // This case means that the ProcessingEvent is finished.
+			count == null -> true // This case means that there are no previous ProcessingEvents.
+			count < 0 -> false // This case means that the ProcessingEvents are finished.
 			soknadsarkivschema == null -> {
 				logger.error("For key '$key': Found no associated Soknadsarkivschema on the input topic. Will ignore and continue.")
 				false
@@ -96,7 +99,7 @@ class StateRecreator(private val appConfiguration: AppConfiguration, private val
 		val topology = processingEventsStreamsBuilder.build()
 
 		val kafkaStreams = KafkaStreams(topology, kafkaConfig("soknadsarkiverer-recreation"))
-//		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler()) TODO
+		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
 		kafkaStreams.start()
 		Runtime.getRuntime().addShutdownHook(Thread(kafkaStreams::close))
 		return kafkaStreams
@@ -109,6 +112,12 @@ class StateRecreator(private val appConfiguration: AppConfiguration, private val
 		it[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = Serdes.StringSerde::class.java
 		it[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = SpecificAvroSerde::class.java
 		it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = LogAndContinueExceptionHandler::class.java
+
+		it[KAFKA_PUBLISHER] = kafkaPublisher
+	}
+
+	private fun kafkaExceptionHandler() = KafkaExceptionHandler().also {
+		it.configure(kafkaConfig("soknadsarkiverer-exception").map { (k, v) -> k.toString() to v }.toMap())
 	}
 
 	private fun createProcessingEventSerde(): SpecificAvroSerde<ProcessingEvent> = createAvroSerde()
@@ -117,5 +126,9 @@ class StateRecreator(private val appConfiguration: AppConfiguration, private val
 	private fun <T: SpecificRecord> createAvroSerde(): SpecificAvroSerde<T> {
 		val serdeConfig = hashMapOf(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
 		return SpecificAvroSerde<T>().also { it.configure(serdeConfig, false) }
+	}
+
+	companion object {
+		const val KAFKA_PUBLISHER = "kafka.publisher"
 	}
 }
