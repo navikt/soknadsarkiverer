@@ -26,7 +26,7 @@ import org.springframework.test.context.ActiveProfiles
 import java.util.*
 
 @ActiveProfiles("test")
-class StateRecreatorTests {
+class StateRecreationTests {
 
 	private val schemaRegistryScope: String = "mocked-scope"
 	private val schemaRegistryUrl = "mock://$schemaRegistryScope"
@@ -38,17 +38,19 @@ class StateRecreatorTests {
 	private lateinit var inputTopic: TestInputTopic<String, Soknadarkivschema>
 	private lateinit var processingEventTopic: TestInputTopic<String, ProcessingEvent>
 
+	private lateinit var kafkaConfig: KafkaConfig
 	private val soknadarkivschema = createRequestData()
 
 	@BeforeEach
 	fun setup() {
 		schedulerService = mock()
+		kafkaConfig = KafkaConfig(appConfiguration, schedulerService, mock())
 		setupKafkaTopologyTestDriver()
 	}
 
 	private fun setupKafkaTopologyTestDriver() {
 		val builder = StreamsBuilder()
-		StateRecreator(appConfiguration, schedulerService, mock()).recreationStream(builder)
+		kafkaConfig.recreationStream(builder)
 		val topology = builder.build()
 
 		// Dummy properties needed for test diver
@@ -302,7 +304,7 @@ class StateRecreatorTests {
 	}
 
 	private fun recreateState() {
-		StateRecreator(appConfiguration, schedulerService, mock()).recreationStream(StreamsBuilder())
+		kafkaConfig.recreationStream(StreamsBuilder())
 	}
 
 	private fun createRequestData() =

@@ -26,9 +26,9 @@ import org.springframework.context.annotation.Configuration
 import java.util.*
 
 @Configuration
-class StateRecreator(private val appConfiguration: AppConfiguration,
-										 private val schedulerService: SchedulerService,
-										 private val kafkaPublisher: KafkaPublisher) {
+class KafkaConfig(private val appConfiguration: AppConfiguration,
+									private val schedulerService: SchedulerService,
+									private val kafkaPublisher: KafkaPublisher) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -39,21 +39,18 @@ class StateRecreator(private val appConfiguration: AppConfiguration,
 	private val mutableListSerde: Serde<MutableList<String>> = MutableListSerde()
 
 	@Bean
-	fun processingEventsStreamsBuilder() = StreamsBuilder()
+	fun streamsBuilder() = StreamsBuilder()
 
-	//TODO: Shut down after finished
 	//TODO: Make sure processingTopic is consumed before inputTopic
 	@Bean
-	fun recreationStream(processingEventsStreamsBuilder: StreamsBuilder): KStream<String, ProcessingEvent> {
+	fun recreationStream(streamsBuilder: StreamsBuilder): KStream<String, ProcessingEvent> {
 
 		val joined = Joined.with(stringSerde, soknadarkivschemaSerde, intSerde, "SoknadsarkivCountJoined")
 
-		val inputStreamsBuilder = processingEventsStreamsBuilder // TODO
-
-		val inputTopicStream = inputStreamsBuilder.stream(appConfiguration.kafkaConfig.inputTopic, Consumed.with(stringSerde, soknadarkivschemaSerde))
+		val inputTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.inputTopic, Consumed.with(stringSerde, soknadarkivschemaSerde))
 
 
-		val processingTopicStream = processingEventsStreamsBuilder.stream(appConfiguration.kafkaConfig.processingTopic, Consumed.with(stringSerde, processingEventSerde))
+		val processingTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.processingTopic, Consumed.with(stringSerde, processingEventSerde))
 		val ktable = processingTopicStream
 			.peek { key, value -> println("$key => $value") }
 			.mapValues { processingEvent -> processingEvent.getType().name } // TODO: Clumsy to convert to string
