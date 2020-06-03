@@ -10,8 +10,8 @@ import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 
 @Service
-class FilestorageService(private val restTemplate: RestTemplate
-												 , private val appConfiguration: AppConfiguration): FileserviceInterface {
+class FilestorageService(private val restTemplate: RestTemplate,
+												 private val appConfiguration: AppConfiguration): FileserviceInterface {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -19,11 +19,10 @@ class FilestorageService(private val restTemplate: RestTemplate
 		try {
 			logger.info("Getting files with ids: '$fileIds'")
 
-			val files = hentFiler(fileIds)
-			if (files == null) return arrayListOf()
+			val files = getFiles(fileIds)
 
 			logger.info("Received: $files")
-			return files
+			return files ?: return arrayListOf()
 
 		} catch (e: Exception) {
 			logger.error("Error retrieving files from file storage", e)
@@ -34,8 +33,8 @@ class FilestorageService(private val restTemplate: RestTemplate
 	override fun deleteFilesFromFilestorage(fileIds: String) {
 		try {
 			logger.info("Calling filestorage to delete '$fileIds'")
-			slettFiler(fileIds)
-			logger.info("The files: ${fileIds} are deleted")
+			deleteFiles(fileIds)
+			logger.info("The files: $fileIds are deleted")
 
 		} catch (e: Exception) {
 			logger.warn("Failed to delete files from file storage. Everything is saved to Joark correctly, " +
@@ -50,31 +49,27 @@ class FilestorageService(private val restTemplate: RestTemplate
 				val encodedAuth: ByteArray = Base64.encodeBase64(auth.toByteArray())
 				val authHeader = "Basic " + String(encodedAuth)
 				set("Authorization", authHeader)
-				set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-				set(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+				set(CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+				set(ACCEPT, MediaType.APPLICATION_JSON_VALUE)
 			}
 		}
 	}
 
-	private fun hentFiler(fileIds: String): List<FilElementDto>? {
+	private fun getFiles(fileIds: String): List<FilElementDto>? {
 		val username = appConfiguration.config.username
 		val sharedPassword = appConfiguration.config.sharedPassword
 		val url = appConfiguration.config.filestorageHost+appConfiguration.config.filestorageUrl+fileIds
 		val request = HttpEntity<Any>(url, createHeaders(username, sharedPassword))
-		val response = restTemplate.exchange(url, HttpMethod.GET, request, typeRef<List<FilElementDto>>()).body
-		return response
+		return restTemplate.exchange(url, HttpMethod.GET, request, typeRef<List<FilElementDto>>()).body
 	}
 
-	inline private fun <reified T : Any> typeRef(): ParameterizedTypeReference<T> = object : ParameterizedTypeReference<T>() {}
-
-	private fun slettFiler(fileIds: String): Boolean  {
+	private fun deleteFiles(fileIds: String) {
 		val username = appConfiguration.config.username
 		val sharedPassword = appConfiguration.config.sharedPassword
 		val url = appConfiguration.config.filestorageHost+appConfiguration.config.filestorageUrl+fileIds
 		val request = HttpEntity<Any>(url, createHeaders(username, sharedPassword))
 		restTemplate.delete(url, HttpMethod.DELETE, request)
-		return true
 	}
 
+	private inline fun <reified T : Any> typeRef(): ParameterizedTypeReference<T> = object : ParameterizedTypeReference<T>() {}
 }
-
