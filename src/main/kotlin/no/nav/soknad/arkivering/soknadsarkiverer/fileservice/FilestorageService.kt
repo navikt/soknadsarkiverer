@@ -12,6 +12,7 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 
+
 @Service
 class FilestorageService(private val restTemplate: RestTemplate,
 												 private val appConfiguration: AppConfiguration): FileserviceInterface {
@@ -71,7 +72,7 @@ class FilestorageService(private val restTemplate: RestTemplate,
 		val sharedPassword = appConfiguration.config.sharedPassword
 		val url = appConfiguration.config.filestorageHost+appConfiguration.config.filestorageUrl+fileIds
 		val request = HttpEntity<Any>(url, createHeaders(username, sharedPassword))
-		restTemplate.delete(url, HttpMethod.DELETE, request)
+		restTemplate.exchange(url, HttpMethod.DELETE, request, String::class.java)
 	}
 
 	private inline fun <reified T : Any> typeRef(): ParameterizedTypeReference<T> = object : ParameterizedTypeReference<T>() {}

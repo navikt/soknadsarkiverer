@@ -46,7 +46,7 @@ private fun createHoveddokument(documents: List<MottattDokument>, attachedFiles:
 		.map { createDokument(it, attachedFiles, soknadstype) }
 
 	if (hoveddokument.size != 1)
-		throw Exception("Fannt ${hoveddokument.size} hoveddokumenter, forventet eksakt 1")
+		throw Exception("Fant ${hoveddokument.size} hoveddokumenter, forventet eksakt 1")
 	return hoveddokument[0]
 }
 
