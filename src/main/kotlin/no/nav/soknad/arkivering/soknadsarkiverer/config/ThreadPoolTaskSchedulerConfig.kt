@@ -15,5 +15,5 @@ class ThreadPoolTaskSchedulerConfig {
 	}
 
 	@Bean
-	fun clock(): Clock = Clock.systemUTC()
+	fun clock(): Clock = Clock.systemUTC() //TODO: Is a clock needed?
 }

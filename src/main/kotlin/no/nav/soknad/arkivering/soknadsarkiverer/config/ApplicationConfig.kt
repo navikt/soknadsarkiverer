@@ -18,6 +18,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"APPLICATION_PROFILE" to "",
 	"KAFKA_INPUT_TOPIC" to "privat-soknadInnsendt-v1-default",
 	"KAFKA_PROCESSING_TOPIC" to "privat-soknadInnsendt-processingEventLog-v1-default",
+	"KAFKA_MESSAGE_TOPIC" to "privat-soknadInnsendt-messages-v1-default",
 
 	"JOARK_HOST" to "http://localhost:8092",
 	"JOARK_URL" to "/joark/save",
@@ -26,8 +27,8 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"SHARED_PASSORD" to "password"
 ))
 
-val secondsBetweenRetries = listOf(5, 25, 60, 120, 600)  // As many retries will be attempted as there are elements in the list.
-val secondsBetweenRetriesForTest = listOf(0, 0, 0, 0, 0) // As many retries will be attempted as there are elements in the list.
+private val secondsBetweenRetries = listOf(5, 25, 60, 120, 600)   // As many retries will be attempted as there are elements in the list.
+private val secondsBetweenRetriesForTests = listOf(0, 0, 0, 0, 0) // As many retries will be attempted as there are elements in the list.
 
 
 val appConfig =
@@ -48,12 +49,13 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val password: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "SOKNADSARKIVERER_PASSWORD".configProperty()),
 		val servers: String = readFileAsText("/var/run/secrets/nais.io/kv/kafkaBootstrapServers", "KAFKA_BOOTSTRAP_SERVERS".configProperty()),
 		val schemaRegistryUrl: String = "SCHEMA_REGISTRY_URL".configProperty(),
-		val clientId: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username","KAFKA_CLIENTID".configProperty()),
+		val clientId: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "KAFKA_CLIENTID".configProperty()),
 		val secure: String = "KAFKA_SECURITY".configProperty(),
 		val protocol: String = "KAFKA_SECPROT".configProperty(), // SASL_PLAINTEXT | SASL_SSL
 		val salsmec: String = "KAFKA_SASLMEC".configProperty(), // PLAIN
 		val inputTopic: String = "KAFKA_INPUT_TOPIC".configProperty(),
 		val processingTopic: String = "KAFKA_PROCESSING_TOPIC".configProperty(),
+		val messageTopic: String = "KAFKA_MESSAGE_TOPIC".configProperty(),
 		val saslJaasConfig: String = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"$username\" password=\"$password\";"
 	)
 
@@ -64,7 +66,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val sharedPassword: String = readFileAsText("/var/run/secrets/nais.io/kv/sharedPassword", "SHARED_PASSORD".configProperty()),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
-		val retryTime: List<Int> = if (!"test".equals("APPLICATION_PROFILE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTest
+		val retryTime: List<Int> = if (!"test".equals("APPLICATION_PROFILE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests
 	)
 }
 
