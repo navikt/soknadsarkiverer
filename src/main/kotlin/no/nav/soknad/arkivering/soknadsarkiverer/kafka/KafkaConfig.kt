@@ -41,7 +41,6 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	@Bean
 	fun streamsBuilder() = StreamsBuilder()
 
-	//TODO: Make sure processingTopic is consumed before inputTopic
 	@Bean
 	fun recreationStream(streamsBuilder: StreamsBuilder): KStream<String, ProcessingEvent> {
 
@@ -53,7 +52,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		val processingTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.processingTopic, Consumed.with(stringSerde, processingEventSerde))
 		val ktable = processingTopicStream
 			.peek { key, value -> println("$key => $value") }
-			.mapValues { processingEvent -> processingEvent.getType().name } // TODO: Clumsy to convert to string
+			.mapValues { processingEvent -> processingEvent.getType().name }
 			.groupByKey()
 			.aggregate(
 				{ mutableListOf() },
@@ -62,11 +61,10 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 					aggregate
 				},
 				Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("ProcessingEventDtos")
-					.withValueSerde(mutableListSerde) // TODO: Is Materialized needed? Use Default Value Serde?
+					.withValueSerde(mutableListSerde)
 			)
 			.mapValues { processingEvents -> ProcessingEventDto(processingEvents) }
 			.mapValues { processingEventDto -> if (processingEventDto.isFinished()) -1 else processingEventDto.getNumberOfStarts() }
-		// TODO: Remove nulls
 
 		inputTopicStream
 			.peek { key, value -> println("$key: $value") }

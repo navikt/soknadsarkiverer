@@ -18,7 +18,6 @@ import org.apache.kafka.common.serialization.Serdes.StringSerde
 import org.apache.kafka.streams.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyString
@@ -116,22 +115,6 @@ class StateRecreationTests {
 			key to STARTED
 		)
 		publishSoknadsarkivschemas(key)
-
-		recreateState()
-
-		verifyThatScheduler().wasCalled(1).forKey(key).withCount(1)
-	}
-
-	@Disabled
-	@Test
-	fun `Can read Event Log with Event that was started once -- input topic first`() {// TODO: Remove test once it works
-		val key = UUID.randomUUID().toString()
-
-		publishSoknadsarkivschemas(key)
-		publishProcessingEvents(
-			key to RECEIVED,
-			key to STARTED
-		)
 
 		recreateState()
 
@@ -261,7 +244,7 @@ class StateRecreationTests {
 
 		recreateState()
 
-		verifyThatScheduler().wasNotCalled() // TODO: We'd like an error log when this happens, but there is nothing to consume from the stream.
+		verifyThatScheduler().wasNotCalled()
 	}
 
 	@Test
