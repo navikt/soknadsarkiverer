@@ -5,7 +5,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
 import org.springframework.stereotype.Service
-import java.time.Clock
+import java.time.Instant
 
 private val log = LoggerFactory.getLogger(object{}::class.java.`package`.name)
 
@@ -39,7 +39,7 @@ private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt:
 	val task = SchedulerService.ArchivingTask(key, soknadarkivschema, attempt, schedulingDependencies)
 
 	val secondsToWait = if (attempt == 0) 0 else schedulingDependencies.appConfiguration.config.retryTime[attempt - 1].toLong()
-	val scheduledTime = schedulingDependencies.clock.instant().plusSeconds(secondsToWait)
+	val scheduledTime = Instant.now().plusSeconds(secondsToWait)
 
 	log.info("For '$key': About to schedule attempt $attempt at job in $secondsToWait seconds")
 	schedulingDependencies.archiverScheduler.schedule(task, scheduledTime)
@@ -47,6 +47,5 @@ private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt:
 
 @Service
 class SchedulingDependencies(val archiverScheduler: ThreadPoolTaskScheduler,
-														 val clock: Clock, // TODO: Is a clock needed?
 														 val archiverService: ArchiverService,
 														 val appConfiguration: AppConfiguration)

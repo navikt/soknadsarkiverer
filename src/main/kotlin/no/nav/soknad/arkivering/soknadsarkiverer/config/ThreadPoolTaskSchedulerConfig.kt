@@ -13,7 +13,4 @@ class ThreadPoolTaskSchedulerConfig {
 		it.poolSize = 5
 		it.setThreadNamePrefix("ThreadPoolTaskScheduler")
 	}
-
-	@Bean
-	fun clock(): Clock = Clock.systemUTC() //TODO: Is a clock needed?
 }
