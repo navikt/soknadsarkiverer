@@ -3,7 +3,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.config
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
-import java.time.Clock
 
 @Configuration
 class ThreadPoolTaskSchedulerConfig {
