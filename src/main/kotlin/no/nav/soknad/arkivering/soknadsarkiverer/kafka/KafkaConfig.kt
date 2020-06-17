@@ -52,8 +52,8 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 
 
 		val processingTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.processingTopic, Consumed.with(stringSerde, processingEventSerde))
-		val ktable = processingTopicStream
-			.peek { key, value -> println("$key => $value") }
+		val counts = processingTopicStream
+			.peek { key, value -> logger.info("ProcessingTopic - $key: $value") }
 			.mapValues { processingEvent -> processingEvent.getType().name }
 			.groupByKey()
 			.aggregate(
@@ -69,8 +69,8 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 			.mapValues { processingEventDto -> if (processingEventDto.isFinished()) -1 else processingEventDto.getNumberOfStarts() }
 
 		inputTopicStream
-			.peek { key, value -> println("$key: $value") }
-			.leftJoin(ktable, { soknadarkivschema, count -> soknadarkivschema to count }, joined)
+			.peek { key, value -> logger.info("InputTopic - $key: $value") }
+			.leftJoin(counts, { soknadarkivschema, count -> soknadarkivschema to count }, joined)
 			.filter  { key, (soknadsarkivschema, count) -> shouldSchedule(count, soknadsarkivschema, key) }
 			.mapValues { (soknadarkivschema, count) -> soknadarkivschema to (count ?: 0) }
 			.peek    { key, (_, count) -> logger.info("For key '$key': Will schedule with count $count") }
@@ -83,7 +83,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		return when {
 			count == null -> true // This case means that there are no previous ProcessingEvents.
 			count < 0 -> false // This case means that the ProcessingEvents are finished.
-			soknadsarkivschema == null -> {
+			soknadsarkivschema == null -> { // Should not ever occur, but let's protect against NPE's anyway.
 				logger.error("For key '$key': Found no associated Soknadsarkivschema on the input topic. Will ignore and continue.")
 				false
 			}
@@ -92,8 +92,8 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	}
 
 	@Bean
-	fun setupRecreationStream(processingEventsStreamsBuilder: StreamsBuilder): KafkaStreams {
-		val topology = processingEventsStreamsBuilder.build()
+	fun setupRecreationStream(streamsBuilder: StreamsBuilder): KafkaStreams {
+		val topology = streamsBuilder.build()
 
 		val kafkaStreams = KafkaStreams(topology, kafkaConfig("soknadsarkiverer-recreation"))
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
