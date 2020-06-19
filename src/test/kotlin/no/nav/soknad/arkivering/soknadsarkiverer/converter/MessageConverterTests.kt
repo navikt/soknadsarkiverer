@@ -1,10 +1,10 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.converter
 
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
-import no.nav.soknad.arkivering.soknadsarkiverer.MottattDokumentBuilder
-import no.nav.soknad.arkivering.soknadsarkiverer.MottattVariantBuilder
-import no.nav.soknad.arkivering.soknadsarkiverer.SoknadarkivschemaBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattDokumentBuilder
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattVariantBuilder
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.SoknadarkivschemaBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
