@@ -1,4 +1,4 @@
-package no.nav.soknad.arkivering.soknadsarkiverer
+package no.nav.soknad.arkivering.soknadsarkiverer.utils
 
 import no.nav.soknad.arkivering.avroschemas.MottattDokument
 import no.nav.soknad.arkivering.avroschemas.MottattVariant

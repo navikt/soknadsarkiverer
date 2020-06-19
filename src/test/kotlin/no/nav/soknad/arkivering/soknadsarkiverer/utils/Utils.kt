@@ -1,9 +1,10 @@
-package no.nav.soknad.arkivering.soknadsarkiverer
+package no.nav.soknad.arkivering.soknadsarkiverer.utils
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import java.util.concurrent.TimeUnit
 
 fun loopAndVerify(expectedCount: Int, getCount: () -> Int,
-									finalCheck: () -> Any = { getCount.invoke() == expectedCount }) {
+									finalCheck: () -> Any = { assertEquals(expectedCount, getCount.invoke()) }) {
 	val startTime = System.currentTimeMillis()
 	val timeout = 30 * 1000
 
