@@ -180,13 +180,17 @@
 
 	<repositories>
 		<repository>
-			<id>soknadarkiv-schema</id>
-			<url>https://maven.pkg.github.com/navikt/soknadarkiv-schema</url>
+			<id>github</id>
+			<name>nav github</name>
+			<url>https://github-package-registry-mirror.gc.nav.no/cached/maven-release</url>
 		</repository>
-
 		<repository>
 			<id>confluent</id>
 			<url>https://packages.confluent.io/maven</url>
+		</repository>
+		<repository>
+			<id>central</id>
+			<url>https://repo1.maven.org/maven2</url>
 		</repository>
 	</repositories>
 </project>
