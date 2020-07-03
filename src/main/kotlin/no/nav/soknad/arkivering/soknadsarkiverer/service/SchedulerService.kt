@@ -6,46 +6,42 @@ import org.slf4j.LoggerFactory
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
 import org.springframework.stereotype.Service
 import java.time.Instant
+import java.util.concurrent.ScheduledFuture
 
-private val log = LoggerFactory.getLogger(object{}::class.java.`package`.name)
+private val logger = LoggerFactory.getLogger(object{}::class.java.`package`.name)
 
 @Service
-class SchedulerService(private val schedulingDependencies: SchedulingDependencies) {
+class SchedulerService(val archiverScheduler: ThreadPoolTaskScheduler,
+											 val archiverService: ArchiverService,
+											 val appConfiguration: AppConfiguration) {
 
-	fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
-		schedule(key, soknadarkivschema, attempt, schedulingDependencies)
+	fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int): ScheduledFuture<*> {
+
+		val task = ArchivingTask(key, soknadarkivschema, archiverService)
+
+		val secondsToWait = getSecondsToWait(attempt)
+		val scheduledTime = Instant.now().plusSeconds(secondsToWait)
+
+		logger.info("For '$key': About to schedule attempt $attempt at job in $secondsToWait seconds")
+		return archiverScheduler.schedule(task, scheduledTime)
 	}
 
-	class ArchivingTask(private val key: String, private val soknadarkivschema: Soknadarkivschema, private val attempt: Int,
-											private val schedulingDependencies: SchedulingDependencies) : Runnable {
+	private fun getSecondsToWait(attempt: Int): Long {
+		val index = if (attempt < appConfiguration.config.retryTime.size)
+			attempt
+		else
+			appConfiguration.config.retryTime.lastIndex
+
+		return appConfiguration.config.retryTime[index].toLong()
+	}
+
+	class ArchivingTask(private val key: String, private val soknadarkivschema: Soknadarkivschema, private val archiverService: ArchiverService) : Runnable {
 		override fun run() {
 			try {
-				schedulingDependencies.archiverService.archive(key, soknadarkivschema)
+				archiverService.archive(key, soknadarkivschema)
 			} catch (e: Exception) {
-
-				val maxNumberOfAttempts = schedulingDependencies.appConfiguration.config.retryTime.size
-				if (attempt < maxNumberOfAttempts) {
-					schedule(key, soknadarkivschema, attempt + 1, schedulingDependencies)
-				} else {
-					log.warn("Have exceeded $maxNumberOfAttempts attempts for key '$key'. Will not attempt again.")
-				}
+				logger.error("Error when performing scheduled task", e)
 			}
 		}
 	}
 }
-
-private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int, schedulingDependencies: SchedulingDependencies) {
-
-	val task = SchedulerService.ArchivingTask(key, soknadarkivschema, attempt, schedulingDependencies)
-
-	val secondsToWait = if (attempt == 0) 0 else schedulingDependencies.appConfiguration.config.retryTime[attempt - 1].toLong()
-	val scheduledTime = Instant.now().plusSeconds(secondsToWait)
-
-	log.info("For '$key': About to schedule attempt $attempt at job in $secondsToWait seconds")
-	schedulingDependencies.archiverScheduler.schedule(task, scheduledTime)
-}
-
-@Service
-class SchedulingDependencies(val archiverScheduler: ThreadPoolTaskScheduler,
-														 val archiverService: ArchiverService,
-														 val appConfiguration: AppConfiguration)

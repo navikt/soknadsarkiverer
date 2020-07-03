@@ -13,11 +13,13 @@ import java.util.*
 
 class TaskListServiceTests {
 
-	private val schedulerMock = mock<SchedulerService>()
+	private val schedulerMock = mock<SchedulerService>().also {
+		whenever(it.schedule(anyString(), any(), anyInt())).thenReturn(mock())
+	}
 	private val taskListService = TaskListService(schedulerMock)
 
 	@Test
-	fun `Can list task when there are none`() {
+	fun `Can list Tasks when there are none`() {
 		assertTrue(taskListService.listTasks().isEmpty())
 	}
 
@@ -27,7 +29,7 @@ class TaskListServiceTests {
 		val value = createRequestData()
 		val count = 0
 
-		taskListService.createTask(uuid, value, count)
+		taskListService.addOrUpdateTask(uuid, value, count)
 
 		val tasks = taskListService.listTasks()
 		assertEquals(1, tasks.size)
@@ -38,49 +40,20 @@ class TaskListServiceTests {
 	}
 
 	@Test
-	fun `Duplicate creation of tasks discards duplicate`() {
-		val uuid = UUID.randomUUID().toString()
-		val value = createRequestData()
-		val countOriginal = 0
-		val countUpdated = 71
-
-		taskListService.createTask(uuid, value, countOriginal)
-		taskListService.createTask(uuid, value, countUpdated)
-
-		val tasks = taskListService.listTasks()
-		assertEquals(1, tasks.size)
-		assertEquals(value, tasks.fetch(uuid).first)
-		assertEquals(countOriginal, tasks.fetch(uuid).second)
-
-		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(countOriginal))
-		verify(schedulerMock, times(0)).schedule(eq(uuid), eq(value), eq(countUpdated))
-	}
-
-	@Test
-	fun `Can update task`() {
+	fun `Can update Task`() {
 		val uuid = UUID.randomUUID().toString()
 		val value = createRequestData()
 		val countOriginal = 1
 		val countUpdated = 2
 
-		taskListService.createTask(uuid, value, countOriginal)
+		taskListService.addOrUpdateTask(uuid, value, countOriginal)
 		assertEquals(countOriginal, taskListService.listTasks().fetch(uuid).second)
 
-		taskListService.updateTaskCount(uuid, countUpdated)
+		taskListService.addOrUpdateTask(uuid, value, countUpdated)
 		assertEquals(countUpdated, taskListService.listTasks().fetch(uuid).second)
 
 		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(countOriginal))
-		verify(schedulerMock, times(0)).schedule(eq(uuid), eq(value), eq(countUpdated))
-	}
-
-	@Test
-	fun `Updating non-existent task will not produce exception`() {
-		val nonExistentUuid = UUID.randomUUID().toString()
-
-		taskListService.updateTaskCount(nonExistentUuid, 2)
-		assertTrue(taskListService.listTasks().isEmpty())
-
-		verify(schedulerMock, times(0)).schedule(anyString(), any(), anyInt())
+		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(countUpdated))
 	}
 
 	@Test
@@ -90,10 +63,10 @@ class TaskListServiceTests {
 		val countOriginal = 1
 		val countUpdated = 2
 
-		taskListService.createTask(uuid, value, countOriginal)
+		taskListService.addOrUpdateTask(uuid, value, countOriginal)
 		assertEquals(countOriginal, taskListService.listTasks().fetch(uuid).second)
 
-		taskListService.updateTaskCount(uuid, countUpdated)
+		taskListService.addOrUpdateTask(uuid, value, countUpdated)
 		assertEquals(countUpdated, taskListService.listTasks().fetch(uuid).second)
 
 		taskListService.finishTask(uuid)
@@ -104,9 +77,9 @@ class TaskListServiceTests {
 
 	@Test
 	fun `Finishing non-existent task will not produce exception`() {
-		val uuid = UUID.randomUUID().toString()
+		val nonExistentUuid = UUID.randomUUID().toString()
 
-		taskListService.finishTask(uuid)
+		taskListService.finishTask(nonExistentUuid)
 		assertTrue(taskListService.listTasks().isEmpty())
 
 		verify(schedulerMock, times(0)).schedule(anyString(), any(), anyInt())

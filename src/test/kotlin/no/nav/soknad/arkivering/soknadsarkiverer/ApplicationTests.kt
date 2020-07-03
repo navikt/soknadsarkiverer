@@ -8,7 +8,7 @@ import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
-import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
+import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -30,14 +30,11 @@ class ApplicationTests : TopologyTestDriverTests() {
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
 
-	@Value("\${application.schema-registry-scope}")
-	private val schemaRegistryScope: String = ""
-
 	@Autowired
 	private lateinit var appConfiguration: AppConfiguration
 
 	@Autowired
-	private lateinit var schedulerService: SchedulerService
+	private lateinit var taskListService: TaskListService
 
 	@MockBean
 	private lateinit var kafkaPublisherMock: KafkaPublisher
@@ -53,7 +50,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 
 		maxNumberOfRetries = appConfiguration.config.retryTime.size
 
-		setupKafkaTopologyTestDriver(appConfiguration, schedulerService, kafkaPublisherMock)
+		setupKafkaTopologyTestDriver(appConfiguration, taskListService, kafkaPublisherMock)
 
 		mockKafkaPublisher(RECEIVED)
 		mockKafkaPublisher(STARTED)
@@ -82,14 +79,14 @@ class ApplicationTests : TopologyTestDriverTests() {
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic(createRequestData())
-		putDataOnKafkaTopic(createRequestData())
 
-		verifyProcessingEvents(2, STARTED)
-		verifyProcessingEvents(2, ARCHIVED)
-		verifyProcessingEvents(2, FINISHED)
-		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
-		verifyDeleteRequestsToFilestorage(2)
-		verifyMessageStartsWith(2, "ok")
+		verifyProcessingEvents(1, RECEIVED)
+		verifyProcessingEvents(1, STARTED)
+		verifyProcessingEvents(1, ARCHIVED)
+		verifyProcessingEvents(1, FINISHED)
+		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
+		verifyDeleteRequestsToFilestorage(1)
+		verifyMessageStartsWith(1, "ok")
 		verifyMessageStartsWith(0, "Exception")
 	}
 

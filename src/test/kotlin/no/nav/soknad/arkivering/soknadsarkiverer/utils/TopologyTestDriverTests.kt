@@ -9,7 +9,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaExceptionHandler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
-import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
+import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.StreamsConfig
@@ -25,9 +25,9 @@ open class TopologyTestDriverTests {
 	lateinit var inputTopicForBadData: TestInputTopic<String, String>
 	lateinit var processingEventTopic: TestInputTopic<String, ProcessingEvent>
 
-	fun setupKafkaTopologyTestDriver(appConfiguration: AppConfiguration, schedulerService: SchedulerService, kafkaPublisher: KafkaPublisher) {
+	fun setupKafkaTopologyTestDriver(appConfiguration: AppConfiguration, taskListService: TaskListService, kafkaPublisher: KafkaPublisher) {
 		val builder = StreamsBuilder()
-		KafkaConfig(appConfiguration, schedulerService, kafkaPublisher).recreationStream(builder)
+		KafkaConfig(appConfiguration, taskListService, kafkaPublisher).recreationStream(builder)
 		val topology = builder.build()
 
 		// Dummy properties needed for test diver

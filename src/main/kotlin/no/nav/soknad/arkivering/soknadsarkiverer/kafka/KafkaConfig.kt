@@ -2,11 +2,12 @@ package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
+import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.ProcessingEventDto
-import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
+import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.common.config.SaslConfigs
@@ -29,7 +30,7 @@ import java.util.*
 
 @Configuration
 class KafkaConfig(private val appConfiguration: AppConfiguration,
-									private val schedulerService: SchedulerService,
+									private val schedulerService: TaskListService,
 									private val kafkaPublisher: KafkaPublisher) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
@@ -46,10 +47,17 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	@Bean
 	fun recreationStream(streamsBuilder: StreamsBuilder): KStream<String, ProcessingEvent> {
 
-		val joined = Joined.with(stringSerde, soknadarkivschemaSerde, intSerde, "SoknadsarkivCountJoined")
+		val joined = Joined.with(stringSerde, intSerde, soknadarkivschemaSerde, "SoknadsarkivCountJoined")
 
 		val inputTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.inputTopic, Consumed.with(stringSerde, soknadarkivschemaSerde))
 
+		val inputTable = inputTopicStream
+			.peek { key, value -> logger.info("before toTable $key $value")}
+			.toTable()
+
+		inputTopicStream
+			.peek { key, value -> logger.info("before publish $key $value")}
+			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED))}
 
 		val processingTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.processingTopic, Consumed.with(stringSerde, processingEventSerde))
 		val counts = processingTopicStream
@@ -66,29 +74,22 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 					.withValueSerde(mutableListSerde)
 			)
 			.mapValues { processingEvents -> ProcessingEventDto(processingEvents) }
-			.mapValues { processingEventDto -> if (processingEventDto.isFinished()) -1 else processingEventDto.getNumberOfStarts() }
+			.mapValues { key, processingEventDto ->
+				if (processingEventDto.isFinished()) {
+					schedulerService.finishTask(key)
+					null // Return null which acts as a tombstone, thus removing the entry from the table
+				} else {
+					processingEventDto.getNumberOfStarts()
+				}
+			}
 
-		inputTopicStream
-			.peek { key, value -> logger.info("InputTopic - $key: $value") }
-			.leftJoin(counts, { soknadarkivschema, count -> soknadarkivschema to count }, joined)
-			.filter  { key, (soknadsarkivschema, count) -> shouldSchedule(count, soknadsarkivschema, key) }
-			.mapValues { (soknadarkivschema, count) -> soknadarkivschema to (count ?: 0) }
-			.peek    { key, (_, count) -> logger.info("For key '$key': Will schedule with count $count") }
-			.foreach { key, (soknadsarkivschema, count) -> schedulerService.schedule(key, soknadsarkivschema!!, count) }
+		counts
+			.toStream()
+			.leftJoin(inputTable, { count, soknadarkivschema -> soknadarkivschema to (count ?: 0) }, joined)
+			.peek { key, pair -> logger.info("Apa $key $pair") }
+			.foreach { key, (soknadsarkivschema, count) -> schedulerService.addOrUpdateTask(key, soknadsarkivschema, count) }
 
 		return processingTopicStream
-	}
-
-	private fun shouldSchedule(count: Int?, soknadsarkivschema: Soknadarkivschema?, key: String?): Boolean {
-		return when {
-			count == null -> true // This case means that there are no previous ProcessingEvents.
-			count < 0 -> false // This case means that the ProcessingEvents are finished.
-			soknadsarkivschema == null -> { // Should not ever occur, but let's protect against NPE's anyway.
-				logger.error("For key '$key': Found no associated Soknadsarkivschema on the input topic. Will ignore and continue.")
-				false
-			}
-			else -> true
-		}
 	}
 
 	@Bean
