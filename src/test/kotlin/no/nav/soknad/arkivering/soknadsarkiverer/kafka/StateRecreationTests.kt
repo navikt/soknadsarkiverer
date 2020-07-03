@@ -2,20 +2,14 @@ package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
 import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
-import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
-import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattDokumentBuilder
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattVariantBuilder
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.SoknadarkivschemaBuilder
-import org.apache.kafka.common.serialization.Serdes
-import org.apache.kafka.common.serialization.Serdes.StringSerde
-import org.apache.kafka.streams.*
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
+import org.apache.kafka.streams.KeyValue
+import org.apache.kafka.streams.StreamsBuilder
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -25,64 +19,21 @@ import org.springframework.test.context.ActiveProfiles
 import java.util.*
 
 @ActiveProfiles("test")
-class StateRecreationTests {
-
-	private val schemaRegistryScope: String = "mocked-scope"
-	private val schemaRegistryUrl = "mock://$schemaRegistryScope"
+class StateRecreationTests : TopologyTestDriverTests() {
 
 	private val appConfiguration = createAppConfiguration()
-	private lateinit var schedulerService: SchedulerService
+	private val schedulerService = mock<SchedulerService>()
 
-	private lateinit var testDriver: TopologyTestDriver
-	private lateinit var inputTopic: TestInputTopic<String, Soknadarkivschema>
-	private lateinit var processingEventTopic: TestInputTopic<String, ProcessingEvent>
-
-	private lateinit var kafkaConfig: KafkaConfig
 	private val soknadarkivschema = createRequestData()
 
 	@BeforeEach
 	fun setup() {
-		schedulerService = mock()
-		kafkaConfig = KafkaConfig(appConfiguration, schedulerService, mock())
-		setupKafkaTopologyTestDriver()
-	}
-
-	private fun setupKafkaTopologyTestDriver() {
-		val builder = StreamsBuilder()
-		kafkaConfig.recreationStream(builder)
-		val topology = builder.build()
-
-		// Dummy properties needed for test diver
-		val props = Properties().also {
-			it[StreamsConfig.APPLICATION_ID_CONFIG] = "test"
-			it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = "dummy:1234"
-			it[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = StringSerde::class.java
-			it[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = SpecificAvroSerde::class.java
-			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
-		}
-
-		// Create test driver
-		testDriver = TopologyTestDriver(topology, props)
-		val schemaRegistry = MockSchemaRegistry.getClientForScope(schemaRegistryScope)
-
-		// Create Serdes used for test record keys and values
-		val stringSerde = Serdes.String()
-		val avroSoknadarkivschemaSerde = SpecificAvroSerde<Soknadarkivschema>(schemaRegistry)
-		val avroProcessingEventSerde = SpecificAvroSerde<ProcessingEvent>(schemaRegistry)
-
-		// Configure Serdes to use the same mock schema registry URL
-		val config = hashMapOf(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
-		avroSoknadarkivschemaSerde.configure(config, false)
-		avroProcessingEventSerde.configure(config, false)
-
-		// Define input and output topics to use in tests
-		inputTopic = testDriver.createInputTopic(appConfiguration.kafkaConfig.inputTopic, stringSerde.serializer(), avroSoknadarkivschemaSerde.serializer())
-		processingEventTopic = testDriver.createInputTopic(appConfiguration.kafkaConfig.processingTopic, stringSerde.serializer(), avroProcessingEventSerde.serializer())
+		setupKafkaTopologyTestDriver(appConfiguration, schedulerService, mock())
 	}
 
 	@AfterEach
 	fun teardown() {
-		testDriver.close()
+		closeTestDriver()
 		MockSchemaRegistry.dropScope(schemaRegistryScope)
 	}
 
@@ -287,7 +238,7 @@ class StateRecreationTests {
 	}
 
 	private fun recreateState() {
-		kafkaConfig.recreationStream(StreamsBuilder())
+		KafkaConfig(appConfiguration, schedulerService, mock()).recreationStream(StreamsBuilder())
 	}
 
 	private fun createRequestData() =
@@ -300,14 +251,6 @@ class StateRecreationTests {
 				.build())
 			.build()
 
-	private fun createAppConfiguration() : AppConfiguration {
-		val kafkaConfig = AppConfiguration.KafkaConfig(
-			inputTopic = "inputTopic",
-			processingTopic = "processingTopic",
-			schemaRegistryUrl = schemaRegistryUrl,
-			servers = "bootstrapServers")
-		return AppConfiguration(kafkaConfig)
-	}
 
 	private fun verifyThatScheduler() = SchedulerVerifier(schedulerService, soknadarkivschema)
 }

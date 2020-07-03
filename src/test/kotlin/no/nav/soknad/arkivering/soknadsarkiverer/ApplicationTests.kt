@@ -2,24 +2,14 @@ package no.nav.soknad.arkivering.soknadsarkiverer
 
 import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
-import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
-import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaExceptionHandler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
-import org.apache.kafka.common.serialization.Serdes
-import org.apache.kafka.common.serialization.Serdes.StringSerde
-import org.apache.kafka.streams.StreamsBuilder
-import org.apache.kafka.streams.StreamsConfig
-import org.apache.kafka.streams.TestInputTopic
-import org.apache.kafka.streams.TopologyTestDriver
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -35,7 +25,7 @@ import kotlin.properties.Delegates
 
 @ActiveProfiles("test")
 @SpringBootTest
-class ApplicationTests {
+class ApplicationTests : TopologyTestDriverTests() {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
@@ -54,10 +44,6 @@ class ApplicationTests {
 
 	private var maxNumberOfRetries by Delegates.notNull<Int>()
 
-	private lateinit var testDriver: TopologyTestDriver
-	private lateinit var inputTopic: TestInputTopic<String, Soknadarkivschema>
-	private lateinit var inputTopicForBadData: TestInputTopic<String, String>
-
 	private val uuid = UUID.randomUUID().toString()
 	private val key = UUID.randomUUID().toString()
 
@@ -67,46 +53,22 @@ class ApplicationTests {
 
 		maxNumberOfRetries = appConfiguration.config.retryTime.size
 
-		setupKafkaTopologyTestDriver()
+		setupKafkaTopologyTestDriver(appConfiguration, schedulerService, kafkaPublisherMock)
+
+		mockKafkaPublisher(RECEIVED)
+		mockKafkaPublisher(STARTED)
+		mockKafkaPublisher(FINISHED)
 	}
 
-	private fun setupKafkaTopologyTestDriver() {
-		val builder = StreamsBuilder()
-		KafkaConfig(appConfiguration, schedulerService, kafkaPublisherMock).recreationStream(builder)
-		val topology = builder.build()
-
-		// Dummy properties needed for test diver
-		val props = Properties().also {
-			it[StreamsConfig.APPLICATION_ID_CONFIG] = "test"
-			it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = "dummy:1234"
-			it[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = StringSerde::class.java
-			it[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = SpecificAvroSerde::class.java
-			it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = KafkaExceptionHandler::class.java
-			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
-			it[KafkaConfig.KAFKA_PUBLISHER] = kafkaPublisherMock
-		}
-
-		// Create test driver
-		testDriver = TopologyTestDriver(topology, props)
-		val schemaRegistry = MockSchemaRegistry.getClientForScope(schemaRegistryScope)
-
-		// Create Serdes used for test record keys and values
-		val stringSerde = Serdes.String()
-		val avroSoknadarkivschemaSerde = SpecificAvroSerde<Soknadarkivschema>(schemaRegistry)
-
-		// Configure Serdes to use the same mock schema registry URL
-		val config = hashMapOf(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
-		avroSoknadarkivschemaSerde.configure(config, false)
-
-		// Define input and output topics to use in tests
-		inputTopic = testDriver.createInputTopic(appConfiguration.kafkaConfig.inputTopic, stringSerde.serializer(), avroSoknadarkivschemaSerde.serializer())
-		inputTopicForBadData = testDriver.createInputTopic(appConfiguration.kafkaConfig.inputTopic, stringSerde.serializer(), stringSerde.serializer())
+	fun mockKafkaPublisher(eventType: EventTypes) {
+		whenever(kafkaPublisherMock.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(eventType)), any()))
+			.then { processingEventTopic.pipeInput(key, ProcessingEvent(eventType)) }
 	}
 
 	@AfterEach
 	fun teardown() {
 		stopMockedServices()
-		testDriver.close()
+		closeTestDriver()
 		MockSchemaRegistry.dropScope(schemaRegistryScope)
 
 		reset(kafkaPublisherMock)

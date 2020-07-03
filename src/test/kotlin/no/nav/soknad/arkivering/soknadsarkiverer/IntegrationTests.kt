@@ -53,8 +53,8 @@ class IntegrationTests {
 
 		assertEquals(kafkaBrokers, appConfiguration.kafkaConfig.servers, "The Kafka bootstrap server property is misconfigured!")
 
-		kafkaProducer = KafkaProducer<String, Soknadarkivschema>(kafkaConfigMap())
-		kafkaProducerForBadData = KafkaProducer<String, String>(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java  })
+		kafkaProducer = KafkaProducer(kafkaConfigMap())
+		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java  })
 	}
 
 	@AfterEach
