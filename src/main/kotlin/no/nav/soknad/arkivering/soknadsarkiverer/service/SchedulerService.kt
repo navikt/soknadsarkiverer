@@ -9,16 +9,17 @@ import org.springframework.stereotype.Service
 import java.time.Instant
 import java.util.concurrent.ScheduledFuture
 
-private val logger = LoggerFactory.getLogger(object {}::class.java.`package`.name)
-
 @Service
 class SchedulerService(val archiverScheduler: ThreadPoolTaskScheduler,
 											 val archiverService: ArchiverService,
 											 val appConfiguration: AppConfiguration) {
 
-	fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int): ScheduledFuture<*> {
+	private val logger = LoggerFactory.getLogger(javaClass)
 
-		val task = ArchivingTask(key, soknadarkivschema, archiverService)
+
+	fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int, taskListService: TaskListService): ScheduledFuture<*> {
+
+		val task = ArchivingTask(key, soknadarkivschema, taskListService)
 
 		val secondsToWait = getSecondsToWait(attempt)
 		val scheduledTime = Instant.now().plusSeconds(secondsToWait)
@@ -36,7 +37,9 @@ class SchedulerService(val archiverScheduler: ThreadPoolTaskScheduler,
 		return appConfiguration.config.retryTime[index].toLong()
 	}
 
-	private class ArchivingTask(private val key: String, private val soknadarkivschema: Soknadarkivschema, private val archiverService: ArchiverService) : Runnable {
+	private inner class ArchivingTask(private val key: String,
+																		private val soknadarkivschema: Soknadarkivschema,
+																		private val taskListService: TaskListService) : Runnable {
 		override fun run() {
 			try {
 				archiverService.archive(key, soknadarkivschema)
@@ -46,6 +49,7 @@ class SchedulerService(val archiverScheduler: ThreadPoolTaskScheduler,
 			} catch (e: Exception) {
 				logger.error("Error when performing scheduled task", e)
 			}
+			taskListService.unlock(key)
 		}
 	}
 }

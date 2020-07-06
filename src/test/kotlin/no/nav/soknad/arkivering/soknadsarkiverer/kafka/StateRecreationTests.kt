@@ -25,7 +25,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 	private val appConfiguration = createAppConfiguration()
 	private val schedulerService = mock<SchedulerService>()
-	private val taskListService = TaskListService(schedulerService)
+	private val taskListService = TaskListService(schedulerService, mock())
 
 	private val soknadarkivschema = createSoknadarkivschema()
 
@@ -292,6 +292,6 @@ private class SchedulerVerifier(private val schedulerService: SchedulerService, 
 		} else {
 			{ any() }
 		}
-		verify(schedulerService, times(timesCalled)).schedule(key.invoke(), value.invoke(), count.invoke())
+		verify(schedulerService, times(timesCalled)).schedule(key.invoke(), value.invoke(), count.invoke(), any())
 	}
 }

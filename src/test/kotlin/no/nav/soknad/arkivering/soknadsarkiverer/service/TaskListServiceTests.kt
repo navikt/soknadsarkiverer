@@ -12,9 +12,9 @@ import java.util.*
 class TaskListServiceTests {
 
 	private val schedulerMock = mock<SchedulerService>().also {
-		whenever(it.schedule(anyString(), any(), anyInt())).thenReturn(mock())
+		whenever(it.schedule(anyString(), any(), anyInt(), any())).thenReturn(mock())
 	}
-	private val taskListService = TaskListService(schedulerMock)
+	private val taskListService = TaskListService(schedulerMock, mock())
 
 	@Test
 	fun `Can list Tasks when there are none`() {
@@ -34,7 +34,7 @@ class TaskListServiceTests {
 		assertEquals(value, tasks.fetch(uuid).first)
 		assertEquals(count, tasks.fetch(uuid).second)
 
-		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(count))
+		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(count), any())
 	}
 
 	@Test
@@ -50,8 +50,8 @@ class TaskListServiceTests {
 		taskListService.addOrUpdateTask(uuid, value, countUpdated)
 		assertEquals(countUpdated, taskListService.listTasks().fetch(uuid).second)
 
-		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(countOriginal))
-		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(countUpdated))
+		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(countOriginal), any())
+		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(countUpdated), any())
 	}
 
 	@Test
@@ -70,7 +70,7 @@ class TaskListServiceTests {
 		taskListService.finishTask(uuid)
 		assertTrue(taskListService.listTasks().isEmpty())
 
-		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(countOriginal))
+		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(countOriginal), any())
 	}
 
 	@Test
@@ -80,7 +80,7 @@ class TaskListServiceTests {
 		taskListService.finishTask(nonExistentUuid)
 		assertTrue(taskListService.listTasks().isEmpty())
 
-		verify(schedulerMock, times(0)).schedule(anyString(), any(), anyInt())
+		verify(schedulerMock, times(0)).schedule(anyString(), any(), anyInt(), any())
 	}
 
 
