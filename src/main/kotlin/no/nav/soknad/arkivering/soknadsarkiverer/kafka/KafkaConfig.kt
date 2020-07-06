@@ -52,7 +52,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		val inputTable = inputTopicStream.toTable()
 
 		inputTopicStream
-			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED))}
+			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
 
 		processingTopicStream
 			.peek { key, value -> logger.info("ProcessingTopic - $key: $value") }
@@ -121,7 +121,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	private fun createProcessingEventSerde(): SpecificAvroSerde<ProcessingEvent> = createAvroSerde()
 	private fun createSoknadarkivschemaSerde(): SpecificAvroSerde<Soknadarkivschema> = createAvroSerde()
 
-	private fun <T: SpecificRecord> createAvroSerde(): SpecificAvroSerde<T> {
+	private fun <T : SpecificRecord> createAvroSerde(): SpecificAvroSerde<T> {
 		val serdeConfig = hashMapOf(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
 		return SpecificAvroSerde<T>().also { it.configure(serdeConfig, false) }
 	}

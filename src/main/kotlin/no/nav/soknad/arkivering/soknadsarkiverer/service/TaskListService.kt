@@ -36,4 +36,4 @@ class TaskListService(private val schedulerService: SchedulerService) {
 	fun listTasks() = tasks.mapValues { (_, task) -> task.value to task.count }
 }
 
-private data class Task(val value: Soknadarkivschema, val count: Int, var scheduledTask: ScheduledFuture<*>)
+private data class Task(val value: Soknadarkivschema, val count: Int, val scheduledTask: ScheduledFuture<*>)

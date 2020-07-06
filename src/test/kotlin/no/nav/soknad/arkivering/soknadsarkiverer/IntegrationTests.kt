@@ -54,7 +54,7 @@ class IntegrationTests {
 		assertEquals(kafkaBrokers, appConfiguration.kafkaConfig.servers, "The Kafka bootstrap server property is misconfigured!")
 
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
-		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java  })
+		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 	}
 
 	@AfterEach
@@ -135,7 +135,7 @@ class IntegrationTests {
 	}
 
 	private fun <T> putDataOnTopic(key: String, value: T, headers: Headers, topic: String,
-												 kafkaProducer: KafkaProducer<String, T>): RecordMetadata {
+																 kafkaProducer: KafkaProducer<String, T>): RecordMetadata {
 
 		val producerRecord = ProducerRecord(topic, key, value)
 		headers.forEach { producerRecord.headers().add(it) }
@@ -154,4 +154,3 @@ class IntegrationTests {
 		}
 	}
 }
-

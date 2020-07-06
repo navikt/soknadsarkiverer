@@ -5,14 +5,14 @@ import org.apache.kafka.common.serialization.Deserializer
 import org.apache.kafka.common.serialization.Serde
 import org.apache.kafka.common.serialization.Serializer
 
-class MutableListSerde: Serde<MutableList<String>> {
+class MutableListSerde : Serde<MutableList<String>> {
 	override fun configure(configs: Map<String, *>, isKey: Boolean) {}
 	override fun close() {}
 	override fun serializer() = StringsListSerde()
 	override fun deserializer() = StringsListSerde()
 }
 
-class StringsListSerde: Serializer<MutableList<String>>, Deserializer<MutableList<String>> {
+class StringsListSerde : Serializer<MutableList<String>>, Deserializer<MutableList<String>> {
 	private var mapper: ObjectMapper? = ObjectMapper()
 
 	override fun configure(configs: Map<String, *>, isKey: Boolean) {

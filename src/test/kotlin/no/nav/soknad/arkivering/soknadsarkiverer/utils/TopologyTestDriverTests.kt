@@ -66,7 +66,7 @@ open class TopologyTestDriverTests {
 	}
 }
 
-fun createAppConfiguration() : AppConfiguration {
+fun createAppConfiguration(): AppConfiguration {
 	val kafkaConfig = AppConfiguration.KafkaConfig(
 		inputTopic = "inputTopic",
 		processingTopic = "processingTopic",

@@ -7,5 +7,4 @@ interface FileserviceInterface {
 	fun getFilesFromFilestorage(fileIds: String): List<FilElementDto>
 
 	fun deleteFilesFromFilestorage(fileIds: String)
-
 }
