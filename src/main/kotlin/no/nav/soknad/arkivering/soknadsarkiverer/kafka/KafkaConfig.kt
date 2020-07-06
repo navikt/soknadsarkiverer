@@ -35,32 +35,30 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	private val stringSerde = Serdes.StringSerde()
 	private val intSerde = Serdes.IntegerSerde()
-	private val soknadarkivschemaSerde = createSoknadarkivschemaSerde()
+	private val stringSerde = Serdes.StringSerde()
 	private val processingEventSerde = createProcessingEventSerde()
+	private val soknadarkivschemaSerde = createSoknadarkivschemaSerde()
 	private val mutableListSerde: Serde<MutableList<String>> = MutableListSerde()
 
 	@Bean
 	fun streamsBuilder() = StreamsBuilder()
 
 	@Bean
-	fun recreationStream(streamsBuilder: StreamsBuilder): KStream<String, ProcessingEvent> {
+	fun kafkaStreams(streamsBuilder: StreamsBuilder): KStream<String, Soknadarkivschema> {
 
 		val joined = Joined.with(stringSerde, intSerde, soknadarkivschemaSerde, "SoknadsarkivCountJoined")
-
+		val materialized = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("ProcessingEventDtos").withValueSerde(mutableListSerde)
 		val inputTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.inputTopic, Consumed.with(stringSerde, soknadarkivschemaSerde))
+		val processingTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.processingTopic, Consumed.with(stringSerde, processingEventSerde))
 
-		val inputTable = inputTopicStream
-			.peek { key, value -> logger.info("before toTable $key $value")}
-			.toTable()
+
+		val inputTable = inputTopicStream.toTable()
 
 		inputTopicStream
-			.peek { key, value -> logger.info("before publish $key $value")}
 			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED))}
 
-		val processingTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.processingTopic, Consumed.with(stringSerde, processingEventSerde))
-		val counts = processingTopicStream
+		processingTopicStream
 			.peek { key, value -> logger.info("ProcessingTopic - $key: $value") }
 			.mapValues { processingEvent -> processingEvent.getType().name }
 			.groupByKey()
@@ -70,8 +68,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 					aggregate.add(value)
 					aggregate
 				},
-				Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("ProcessingEventDtos")
-					.withValueSerde(mutableListSerde)
+				materialized
 			)
 			.mapValues { processingEvents -> ProcessingEventDto(processingEvents) }
 			.mapValues { key, processingEventDto ->
@@ -82,18 +79,17 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 					processingEventDto.getNumberOfStarts()
 				}
 			}
-
-		counts
 			.toStream()
+			.peek { key, count -> logger.info("Processing Events - $key $count") }
 			.leftJoin(inputTable, { count, soknadarkivschema -> soknadarkivschema to (count ?: 0) }, joined)
-			.peek { key, pair -> logger.info("Apa $key $pair") }
+			.peek { key, pair -> logger.info("About to schedule - $key $pair") }
 			.foreach { key, (soknadsarkivschema, count) -> schedulerService.addOrUpdateTask(key, soknadsarkivschema, count) }
 
-		return processingTopicStream
+		return inputTopicStream
 	}
 
 	@Bean
-	fun setupRecreationStream(streamsBuilder: StreamsBuilder): KafkaStreams {
+	fun setupKafkaStreams(streamsBuilder: StreamsBuilder): KafkaStreams {
 		val topology = streamsBuilder.build()
 
 		val kafkaStreams = KafkaStreams(topology, kafkaConfig("soknadsarkiverer-recreation"))

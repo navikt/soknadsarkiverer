@@ -246,7 +246,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 	}
 
 	private fun recreateState() {
-		KafkaConfig(appConfiguration, taskListService, mock()).recreationStream(StreamsBuilder())
+		KafkaConfig(appConfiguration, taskListService, mock()).kafkaStreams(StreamsBuilder())
 	}
 
 	private fun createRequestData() =
