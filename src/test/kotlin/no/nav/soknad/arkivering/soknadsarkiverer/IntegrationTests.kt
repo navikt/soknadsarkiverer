@@ -68,8 +68,8 @@ class IntegrationTests {
 		mockFilestorageIsWorking(uuid)
 		mockJoarkIsWorking()
 
-		putDataOnKafkaTopic(createRequestData())
-		putDataOnKafkaTopic(createRequestData())
+		putDataOnKafkaTopic(createSoknadarkivschema())
+		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		TimeUnit.SECONDS.sleep(1)
 		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
@@ -93,7 +93,7 @@ class IntegrationTests {
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic("this is not deserializable")
-		putDataOnKafkaTopic(createRequestData())
+		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		TimeUnit.SECONDS.sleep(1)
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
@@ -105,15 +105,7 @@ class IntegrationTests {
 		verifyMockedDeleteRequests(expectedCount, appConfiguration.config.filestorageUrl.replace("?", "\\?") + ".*")
 	}
 
-	private fun createRequestData() =
-		SoknadarkivschemaBuilder()
-			.withBehandlingsid(UUID.randomUUID().toString())
-			.withMottatteDokumenter(MottattDokumentBuilder()
-				.withMottatteVarianter(MottattVariantBuilder()
-					.withUuid(uuid)
-					.build())
-				.build())
-			.build()
+	private fun createSoknadarkivschema() = createSoknadarkivschema(uuid)
 
 
 	private fun putDataOnKafkaTopic(soknadarkivschema: Soknadarkivschema) {

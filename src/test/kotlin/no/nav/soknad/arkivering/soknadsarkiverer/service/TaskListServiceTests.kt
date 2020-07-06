@@ -1,9 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import com.nhaarman.mockitokotlin2.*
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattDokumentBuilder
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattVariantBuilder
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.SoknadarkivschemaBuilder
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -26,7 +24,7 @@ class TaskListServiceTests {
 	@Test
 	fun `Can create task - will schedule`() {
 		val uuid = UUID.randomUUID().toString()
-		val value = createRequestData()
+		val value = createSoknadarkivschema()
 		val count = 0
 
 		taskListService.addOrUpdateTask(uuid, value, count)
@@ -42,7 +40,7 @@ class TaskListServiceTests {
 	@Test
 	fun `Can update Task`() {
 		val uuid = UUID.randomUUID().toString()
-		val value = createRequestData()
+		val value = createSoknadarkivschema()
 		val countOriginal = 1
 		val countUpdated = 2
 
@@ -59,7 +57,7 @@ class TaskListServiceTests {
 	@Test
 	fun `Can create, update and finish task`() {
 		val uuid = UUID.randomUUID().toString()
-		val value = createRequestData()
+		val value = createSoknadarkivschema()
 		val countOriginal = 1
 		val countUpdated = 2
 
@@ -85,16 +83,6 @@ class TaskListServiceTests {
 		verify(schedulerMock, times(0)).schedule(anyString(), any(), anyInt())
 	}
 
-
-	private fun createRequestData() = // TODO: Duplicate
-		SoknadarkivschemaBuilder()
-			.withBehandlingsid(UUID.randomUUID().toString())
-			.withMottatteDokumenter(MottattDokumentBuilder()
-				.withMottatteVarianter(MottattVariantBuilder()
-					.withUuid(UUID.randomUUID().toString())
-					.build())
-				.build())
-			.build()
 
 	/**
 	 * Infix helper function used to silence warnings that values could be null.

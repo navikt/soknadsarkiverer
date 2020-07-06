@@ -27,7 +27,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 	private val schedulerService = mock<SchedulerService>()
 	private val taskListService = TaskListService(schedulerService)
 
-	private val soknadarkivschema = createRequestData()
+	private val soknadarkivschema = createSoknadarkivschema()
 
 	@BeforeEach
 	fun setup() {
@@ -248,16 +248,6 @@ class StateRecreationTests : TopologyTestDriverTests() {
 	private fun recreateState() {
 		KafkaConfig(appConfiguration, taskListService, mock()).kafkaStreams(StreamsBuilder())
 	}
-
-	private fun createRequestData() =
-		SoknadarkivschemaBuilder()
-			.withBehandlingsid(UUID.randomUUID().toString())
-			.withMottatteDokumenter(MottattDokumentBuilder()
-				.withMottatteVarianter(MottattVariantBuilder()
-					.withUuid(UUID.randomUUID().toString())
-					.build())
-				.build())
-			.build()
 
 
 	private fun verifyThatScheduler() = SchedulerVerifier(schedulerService, soknadarkivschema)

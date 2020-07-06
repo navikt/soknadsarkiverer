@@ -78,7 +78,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 		mockFilestorageIsWorking(uuid)
 		mockJoarkIsWorking()
 
-		putDataOnKafkaTopic(createRequestData())
+		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		verifyProcessingEvents(1, RECEIVED)
 		verifyProcessingEvents(1, STARTED)
@@ -110,7 +110,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 		mockFilestorageIsWorking(uuid)
 		mockJoarkIsDown()
 
-		putDataOnKafkaTopic(createRequestData())
+		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		verifyProcessingEvents(maxNumberOfRetries + 1, STARTED)
 		verifyProcessingEvents(0, ARCHIVED)
@@ -125,7 +125,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 		mockFilestorageIsDown()
 		mockJoarkIsWorking()
 
-		putDataOnKafkaTopic(createRequestData())
+		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		verifyProcessingEvents(maxNumberOfRetries + 1, STARTED)
 		verifyProcessingEvents(0, ARCHIVED)
@@ -142,7 +142,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic(keyForPoisionPill, "this is not deserializable")
-		putDataOnKafkaTopic(createRequestData())
+		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		verifyProcessingEvents(1, STARTED)
 		verifyProcessingEvents(1, ARCHIVED)
@@ -158,7 +158,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 		mockFilestorageIsWorking(uuid)
 		mockJoarkRespondsAfterAttempts(1)
 
-		putDataOnKafkaTopic(createRequestData())
+		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		verifyProcessingEvents(2, STARTED)
 		verifyProcessingEvents(1, ARCHIVED)
@@ -175,7 +175,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 		mockFilestorageIsWorking(uuid)
 		mockJoarkRespondsAfterAttempts(attemptsToFail)
 
-		putDataOnKafkaTopic(createRequestData())
+		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		verifyProcessingEvents(attemptsToFail + 1, STARTED)
 		verifyProcessingEvents(1, ARCHIVED)
@@ -192,7 +192,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 		mockFilestorageDeletionIsNotWorking()
 		mockJoarkIsWorking()
 
-		putDataOnKafkaTopic(createRequestData())
+		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		verifyProcessingEvents(1, STARTED)
 		verifyProcessingEvents(1, ARCHIVED)
@@ -208,7 +208,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 		mockFilestorageIsWorking(uuid)
 		mockJoarkIsWorkingButGivesInvalidResponse()
 
-		putDataOnKafkaTopic(createRequestData())
+		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		verifyProcessingEvents(maxNumberOfRetries + 1, STARTED)
 		verifyProcessingEvents(0, ARCHIVED)
@@ -262,13 +262,5 @@ class ApplicationTests : TopologyTestDriverTests() {
 		verifyMockedDeleteRequests(expectedCount, appConfiguration.config.filestorageUrl.replace("?", "\\?") + ".*")
 	}
 
-	private fun createRequestData() =
-		SoknadarkivschemaBuilder()
-			.withBehandlingsid(UUID.randomUUID().toString())
-			.withMottatteDokumenter(MottattDokumentBuilder()
-				.withMottatteVarianter(MottattVariantBuilder()
-					.withUuid(uuid)
-					.build())
-				.build())
-			.build()
+	private fun createSoknadarkivschema() = createSoknadarkivschema(uuid)
 }
