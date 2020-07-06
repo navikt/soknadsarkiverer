@@ -4,6 +4,7 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.converter.createJoarkData
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.JoarkData
@@ -46,7 +47,7 @@ class ArchiverService(private val filestorageService: FileserviceInterface, priv
 			return createJoarkData(data, files)
 		} catch (e: Exception) {
 			logger.error("Error when converting message.", e)
-			throw e
+			throw ArchivingException(e)
 		}
 	}
 

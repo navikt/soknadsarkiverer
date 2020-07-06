@@ -1,6 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.fileservice
 
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import org.apache.tomcat.util.codec.binary.Base64
 import org.slf4j.LoggerFactory
@@ -12,10 +13,9 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 
-
 @Service
 class FilestorageService(private val restTemplate: RestTemplate,
-												 private val appConfiguration: AppConfiguration): FileserviceInterface {
+												 private val appConfiguration: AppConfiguration) : FileserviceInterface {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -30,7 +30,7 @@ class FilestorageService(private val restTemplate: RestTemplate,
 
 		} catch (e: Exception) {
 			logger.error("Error retrieving files from file storage", e)
-			throw e
+			throw ArchivingException(e)
 		}
 	}
 
@@ -62,7 +62,7 @@ class FilestorageService(private val restTemplate: RestTemplate,
 	private fun getFiles(fileIds: String): List<FilElementDto>? {
 		val username = appConfiguration.config.username
 		val sharedPassword = appConfiguration.config.sharedPassword
-		val url = appConfiguration.config.filestorageHost+appConfiguration.config.filestorageUrl+fileIds
+		val url = appConfiguration.config.filestorageHost + appConfiguration.config.filestorageUrl + fileIds
 		val request = HttpEntity<Any>(url, createHeaders(username, sharedPassword))
 		return restTemplate.exchange(url, HttpMethod.GET, request, typeRef<List<FilElementDto>>()).body
 	}
@@ -70,7 +70,7 @@ class FilestorageService(private val restTemplate: RestTemplate,
 	private fun deleteFiles(fileIds: String) {
 		val username = appConfiguration.config.username
 		val sharedPassword = appConfiguration.config.sharedPassword
-		val url = appConfiguration.config.filestorageHost+appConfiguration.config.filestorageUrl+fileIds
+		val url = appConfiguration.config.filestorageHost + appConfiguration.config.filestorageUrl + fileIds
 		val request = HttpEntity<Any>(url, createHeaders(username, sharedPassword))
 		restTemplate.exchange(url, HttpMethod.DELETE, request, String::class.java)
 	}

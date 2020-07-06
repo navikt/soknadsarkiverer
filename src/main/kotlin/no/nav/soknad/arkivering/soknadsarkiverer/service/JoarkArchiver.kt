@@ -1,6 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.JoarkData
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.JoarkResponse
 import org.slf4j.LoggerFactory
@@ -26,7 +27,7 @@ class JoarkArchiver(private val restTemplate: RestTemplate,
 
 		} catch (e: Exception) {
 			logger.error("Error sending to Joark", e)
-			throw e
+			throw ArchivingException(e)
 		}
 	}
 
