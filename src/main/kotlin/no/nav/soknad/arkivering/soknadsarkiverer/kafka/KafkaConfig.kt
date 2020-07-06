@@ -41,10 +41,6 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	private val soknadarkivschemaSerde = createSoknadarkivschemaSerde()
 	private val mutableListSerde: Serde<MutableList<String>> = MutableListSerde()
 
-	@Bean
-	fun streamsBuilder() = StreamsBuilder()
-
-	@Bean
 	fun kafkaStreams(streamsBuilder: StreamsBuilder): KStream<String, Soknadarkivschema> {
 
 		val joined = Joined.with(stringSerde, intSerde, soknadarkivschemaSerde, "SoknadsarkivCountJoined")
@@ -89,7 +85,9 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	}
 
 	@Bean
-	fun setupKafkaStreams(streamsBuilder: StreamsBuilder): KafkaStreams {
+	fun setupKafkaStreams(): KafkaStreams {
+		val streamsBuilder = StreamsBuilder()
+		kafkaStreams(streamsBuilder)
 		val topology = streamsBuilder.build()
 
 		val kafkaStreams = KafkaStreams(topology, kafkaConfig("soknadsarkiverer-recreation"))
