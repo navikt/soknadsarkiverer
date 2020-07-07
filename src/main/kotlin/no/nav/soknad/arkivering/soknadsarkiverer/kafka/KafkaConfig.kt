@@ -55,7 +55,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
 
 		processingTopicStream
-			.peek { key, value -> logger.info("ProcessingTopic - $key: $value") }
+			.peek { key, value -> logger.info("$key: ProcessingTopic - $value") }
 			.mapValues { processingEvent -> processingEvent.getType().name }
 			.groupByKey()
 			.aggregate(
@@ -76,9 +76,9 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 				}
 			}
 			.toStream()
-			.peek { key, count -> logger.info("Processing Events - $key $count") }
+			.peek { key, count -> logger.info("$key: Processing Events - $count") }
 			.leftJoin(inputTable, { count, soknadarkivschema -> soknadarkivschema to (count ?: 0) }, joined)
-			.peek { key, pair -> logger.info("About to schedule - $key $pair") }
+			.peek { key, pair -> logger.info("$key: About to schedule - $pair") }
 			.foreach { key, (soknadsarkivschema, count) -> schedulerService.addOrUpdateTask(key, soknadsarkivschema, count) }
 
 		return inputTopicStream

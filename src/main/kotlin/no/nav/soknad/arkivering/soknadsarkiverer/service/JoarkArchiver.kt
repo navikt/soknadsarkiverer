@@ -16,17 +16,17 @@ class JoarkArchiver(private val restTemplate: RestTemplate,
 										private val appConfiguration: AppConfiguration) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	fun putDataInJoark(joarkData: JoarkData) {
+	fun putDataInJoark(key: String, joarkData: JoarkData) {
 		try {
-			logger.info("Sending to Joark: '$joarkData'")
+			logger.info("$key: Sending to Joark: '$joarkData'")
 			val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
 
 			val response = sendDataToJoark(joarkData, url)
 
-			logger.info("Saved to Joark. Got the following response:\n$response")
+			logger.info("$key: Saved to Joark. Got the following response:\n$response")
 
 		} catch (e: Exception) {
-			logger.error("Error sending to Joark", e)
+			logger.error("$key: Error sending to Joark", e)
 			throw ArchivingException(e)
 		}
 	}

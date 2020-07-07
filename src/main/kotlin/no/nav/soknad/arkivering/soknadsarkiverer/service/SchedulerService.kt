@@ -24,7 +24,7 @@ class SchedulerService(val archiverScheduler: ThreadPoolTaskScheduler,
 		val secondsToWait = getSecondsToWait(attempt)
 		val scheduledTime = Instant.now().plusSeconds(secondsToWait)
 
-		logger.info("For '$key': About to schedule attempt $attempt at job in $secondsToWait seconds")
+		logger.info("$key: About to schedule attempt $attempt at job in $secondsToWait seconds")
 		return archiverScheduler.schedule(task, scheduledTime)
 	}
 
@@ -47,7 +47,7 @@ class SchedulerService(val archiverScheduler: ThreadPoolTaskScheduler,
 			} catch (e: ArchivingException) {
 				// Do nothing, these should already have been logged
 			} catch (e: Exception) {
-				logger.error("Error when performing scheduled task", e)
+				logger.error("$key: Error when performing scheduled task", e)
 			}
 			taskListService.unlock(key)
 		}

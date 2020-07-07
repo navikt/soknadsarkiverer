@@ -25,12 +25,12 @@ class ArchiverService(private val filestorageService: FileserviceInterface, priv
 			createProcessingEvent(key, STARTED)
 
 			val fileIds = getAllUuids(data)
-			val files = filestorageService.getFilesFromFilestorage(fileIds)
-			val joarkData = convertToJoarkData(data, files)
+			val files = filestorageService.getFilesFromFilestorage(key, fileIds)
+			val joarkData = convertToJoarkData(key, data, files)
 
-			joarkArchiver.putDataInJoark(joarkData)
+			joarkArchiver.putDataInJoark(key, joarkData)
 			createProcessingEvent(key, ARCHIVED)
-			filestorageService.deleteFilesFromFilestorage(fileIds)
+			filestorageService.deleteFilesFromFilestorage(key, fileIds)
 
 			createProcessingEvent(key, FINISHED)
 			createMessage(key, "ok")
@@ -42,11 +42,11 @@ class ArchiverService(private val filestorageService: FileserviceInterface, priv
 		}
 	}
 
-	private fun convertToJoarkData(data: Soknadarkivschema, files: List<FilElementDto>): JoarkData {
+	private fun convertToJoarkData(key: String, data: Soknadarkivschema, files: List<FilElementDto>): JoarkData {
 		try {
 			return createJoarkData(data, files)
 		} catch (e: Exception) {
-			logger.error("Error when converting message.", e)
+			logger.error("$key: Error when converting message.", e)
 			throw ArchivingException(e)
 		}
 	}

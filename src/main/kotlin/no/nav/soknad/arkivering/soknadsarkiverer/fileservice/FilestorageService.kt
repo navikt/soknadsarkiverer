@@ -19,29 +19,29 @@ class FilestorageService(private val restTemplate: RestTemplate,
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	override fun getFilesFromFilestorage(fileIds: String): List<FilElementDto> {
+	override fun getFilesFromFilestorage(key: String, fileIds: String): List<FilElementDto> {
 		try {
-			logger.info("Getting files with ids: '$fileIds'")
+			logger.info("$key: Getting files with ids: '$fileIds'")
 
 			val files = getFiles(fileIds)
 
-			logger.info("Received: $files")
+			logger.info("$key: Received: $files")
 			return files ?: return arrayListOf()
 
 		} catch (e: Exception) {
-			logger.error("Error retrieving files from file storage", e)
+			logger.error("$key: Error retrieving files from file storage", e)
 			throw ArchivingException(e)
 		}
 	}
 
-	override fun deleteFilesFromFilestorage(fileIds: String) {
+	override fun deleteFilesFromFilestorage(key: String, fileIds: String) {
 		try {
-			logger.info("Calling filestorage to delete '$fileIds'")
+			logger.info("$key: Calling filestorage to delete '$fileIds'")
 			deleteFiles(fileIds)
-			logger.info("The files: $fileIds are deleted")
+			logger.info("$key: The files: $fileIds are deleted")
 
 		} catch (e: Exception) {
-			logger.warn("Failed to delete files from file storage. Everything is saved to Joark correctly, " +
+			logger.warn("$key: Failed to delete files from file storage. Everything is saved to Joark correctly, " +
 				"so this error will be ignored. Affected file ids: '$fileIds'", e)
 		}
 	}
