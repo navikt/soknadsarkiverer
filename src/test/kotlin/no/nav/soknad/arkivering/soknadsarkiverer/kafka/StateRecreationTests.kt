@@ -5,27 +5,32 @@ import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
-import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
+import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.TopologyTestDriverTests
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.createAppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.schemaRegistryScope
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.StreamsBuilder
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyString
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
 import org.springframework.test.context.ActiveProfiles
+import java.time.Instant
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 @ActiveProfiles("test")
 class StateRecreationTests : TopologyTestDriverTests() {
 
 	private val appConfiguration = createAppConfiguration()
-	private val schedulerService = mock<SchedulerService>()
-	private val taskListService = TaskListService(schedulerService, mock())
+	private val archiverService = mock<ArchiverService>()
+	private val archiverScheduler = mock<ThreadPoolTaskScheduler>()
+	private val taskListService = TaskListService(archiverService, appConfiguration, archiverScheduler)
 
 	private val soknadarkivschema = createSoknadarkivschema()
 
@@ -250,48 +255,60 @@ class StateRecreationTests : TopologyTestDriverTests() {
 	}
 
 
-	private fun verifyThatScheduler() = SchedulerVerifier(schedulerService, soknadarkivschema)
-}
+	private fun verifyThatScheduler() = SchedulerVerifier()
 
-private class SchedulerVerifier(private val schedulerService: SchedulerService, private val soknadarkivschema: Soknadarkivschema) {
-	private var timesCalled = 0
-	private var key: () -> String = { anyString() }
-	private var count: () -> Int = { anyInt() }
+	private inner class SchedulerVerifier {
+		private var timesCalled = 0
+		private var key: () -> String = { anyString() }
+		private var count: () -> Int = { anyInt() }
 
-	fun wasCalled(times: Int): KeyStep {
-		timesCalled = times
-		return KeyStep(this)
-	}
-
-	fun wasNotCalled() {
-		verify()
-	}
-
-	fun wasNotCalledForKey(key: String) {
-		this.key = { eq(key) }
-		verify()
-	}
-
-	class KeyStep(private val schedulerVerifier: SchedulerVerifier) {
-		fun forKey(key: String): CountStep {
-			schedulerVerifier.key = { eq(key) }
-			return CountStep(schedulerVerifier)
+		fun wasCalled(times: Int): KeyStep {
+			timesCalled = times
+			return KeyStep(this)
 		}
-	}
 
-	class CountStep(private val schedulerVerifier: SchedulerVerifier) {
-		fun withCount(count: Int) {
-			schedulerVerifier.count = { eq(count) }
-			schedulerVerifier.verify()
+		fun wasNotCalled() {
+			verify()
 		}
-	}
 
-	private fun verify() {
-		val value = if (timesCalled > 0) {
-			{ eq(soknadarkivschema) }
-		} else {
-			{ any() }
+		fun wasNotCalledForKey(key: String) {
+			this.key = { eq(key) }
+			verify()
 		}
-		verify(schedulerService, times(timesCalled)).schedule(key.invoke(), value.invoke(), count.invoke(), any())
+
+		inner class KeyStep(private val schedulerVerifier: SchedulerVerifier) {
+			fun forKey(key: String): CountStep {
+				schedulerVerifier.key = { eq(key) }
+				return CountStep(schedulerVerifier)
+			}
+		}
+
+		inner class CountStep(private val schedulerVerifier: SchedulerVerifier) {
+			fun withCount(count: Int) {
+				schedulerVerifier.count = { eq(count) }
+				schedulerVerifier.verify()
+			}
+		}
+
+		private fun verify() {
+			val value = if (timesCalled > 0) {
+				{ eq(soknadarkivschema) }
+			} else {
+				{ any() }
+			}
+			TimeUnit.SECONDS.sleep(2) // TODO
+			val captor = argumentCaptor<Runnable>()
+			verify(archiverScheduler, times(timesCalled)).schedule(capture(captor), any<Instant>())
+
+			val capturedValues = captor.allValues.size
+			assertEquals(timesCalled, capturedValues)
+			if (capturedValues > 0) {
+				captor.firstValue.run()
+
+				verify(archiverService, times(1)).archive(key.invoke(), value.invoke())
+			}
+		}
+
+		inline fun <reified T : Runnable> argumentCaptor(): ArgumentCaptor<T> = ArgumentCaptor.forClass(T::class.java)
 	}
 }

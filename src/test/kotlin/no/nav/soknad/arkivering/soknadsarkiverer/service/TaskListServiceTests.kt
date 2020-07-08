@@ -1,91 +1,124 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import com.nhaarman.mockitokotlin2.*
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers.anyInt
-import org.mockito.ArgumentMatchers.anyString
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
+import java.time.Instant
+import java.time.LocalDateTime
 import java.util.*
+import java.util.concurrent.Semaphore
 
 class TaskListServiceTests {
 
-	private val schedulerMock = mock<SchedulerService>().also {
-		whenever(it.schedule(anyString(), any(), anyInt(), any())).thenReturn(mock())
-	}
-	private val taskListService = TaskListService(schedulerMock, mock())
+	private val archiverService = mock<ArchiverService>()
+	private val archiverScheduler = mock<ThreadPoolTaskScheduler>()
+
+	private val taskListService = TaskListService(archiverService, AppConfiguration(), archiverScheduler)
 
 	@Test
-	fun `Can list Tasks when there are none`() {
+	fun `No tasks, can list`() {
 		assertTrue(taskListService.listTasks().isEmpty())
 	}
 
 	@Test
-	fun `Can create task - will schedule`() {
-		val uuid = UUID.randomUUID().toString()
-		val value = createSoknadarkivschema()
+	fun `Can add task`() {
+		taskListService.addOrUpdateTask(UUID.randomUUID().toString(), createSoknadarkivschema(), 0)
+
+		assertEquals(1, taskListService.listTasks().size)
+	}
+
+	@Test
+	fun `Newly added tasks are started after a short delay`() {
+		val key = UUID.randomUUID().toString()
+		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), 0)
+		assertEquals(0, taskListService.listTasks()[key]!!.isRunningLock.availablePermits())
+
+		verifyTaskIsRunning(key)
+	}
+
+	@Test
+	fun `Can update task`() {
+		val originalCount = 0
+		val newCount = 2
+		val key = UUID.randomUUID().toString()
+
+		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), originalCount)
+		assertEquals(1, taskListService.listTasks().size)
+		assertEquals(originalCount, taskListService.listTasks()[key]!!.count)
+
+		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), newCount)
+		assertEquals(1, taskListService.listTasks().size)
+		assertEquals(newCount, taskListService.listTasks()[key]!!.count)
+
+		// Try to update back to original count, but that value wont be saved
+		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), originalCount)
+		assertEquals(1, taskListService.listTasks().size)
+		assertEquals(newCount, taskListService.listTasks()[key]!!.count)
+	}
+
+	@Test
+	fun `Can finish task`() {
+		assertTrue(taskListService.listTasks().isEmpty())
+
+		val key = UUID.randomUUID().toString()
+		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), 0)
+		assertFalse(taskListService.listTasks().isEmpty())
+
+		taskListService.finishTask(key)
+		assertTrue(taskListService.listTasks().isEmpty())
+	}
+
+	@Test
+	fun `Wont crash if non-present task is finished`() {
+		assertTrue(taskListService.listTasks().isEmpty())
+
+		taskListService.finishTask(UUID.randomUUID().toString())
+
+		assertTrue(taskListService.listTasks().isEmpty())
+	}
+
+	@Test
+	fun `Archiving succeeds - will remove task from list and not attempt to schedule again`() {
+		val key = UUID.randomUUID().toString()
+
+		taskListService.listTasks()[key] = Task(createSoknadarkivschema(), 0, LocalDateTime.now(), Semaphore(1).also { it.acquire() })
+		assertFalse(taskListService.listTasks().isEmpty())
+
+		taskListService.tryToArchive(key, createSoknadarkivschema())
+
+		assertTrue(taskListService.listTasks().isEmpty())
+		verify(archiverService, times(1)).archive(eq(key), any())
+		verify(archiverScheduler, times(0)).schedule(any(), any<Instant>())
+	}
+
+	@Test
+	fun `Archiving does not succeed - will not remove task from list but attempt to schedule again`() {
 		val count = 0
+		val key = UUID.randomUUID().toString()
+		whenever(archiverService.archive(eq(key), any())).thenThrow(RuntimeException("Mocked exception"))
 
-		taskListService.addOrUpdateTask(uuid, value, count)
+		taskListService.listTasks()[key] = Task(createSoknadarkivschema(), 0, LocalDateTime.now(), Semaphore(1).also { it.acquire() })
+		assertFalse(taskListService.listTasks().isEmpty())
 
-		val tasks = taskListService.listTasks()
-		assertEquals(1, tasks.size)
-		assertEquals(value, tasks.fetch(uuid).first)
-		assertEquals(count, tasks.fetch(uuid).second)
+		taskListService.tryToArchive(key, createSoknadarkivschema())
 
-		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(count), any())
-	}
-
-	@Test
-	fun `Can update Task`() {
-		val uuid = UUID.randomUUID().toString()
-		val value = createSoknadarkivschema()
-		val countOriginal = 1
-		val countUpdated = 2
-
-		taskListService.addOrUpdateTask(uuid, value, countOriginal)
-		assertEquals(countOriginal, taskListService.listTasks().fetch(uuid).second)
-
-		taskListService.addOrUpdateTask(uuid, value, countUpdated)
-		assertEquals(countUpdated, taskListService.listTasks().fetch(uuid).second)
-
-		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(countOriginal), any())
-		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(countUpdated), any())
-	}
-
-	@Test
-	fun `Can create, update and finish task`() {
-		val uuid = UUID.randomUUID().toString()
-		val value = createSoknadarkivschema()
-		val countOriginal = 1
-		val countUpdated = 2
-
-		taskListService.addOrUpdateTask(uuid, value, countOriginal)
-		assertEquals(countOriginal, taskListService.listTasks().fetch(uuid).second)
-
-		taskListService.addOrUpdateTask(uuid, value, countUpdated)
-		assertEquals(countUpdated, taskListService.listTasks().fetch(uuid).second)
-
-		taskListService.finishTask(uuid)
-		assertTrue(taskListService.listTasks().isEmpty())
-
-		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(countOriginal), any())
-	}
-
-	@Test
-	fun `Finishing non-existent task will not produce exception`() {
-		val nonExistentUuid = UUID.randomUUID().toString()
-
-		taskListService.finishTask(nonExistentUuid)
-		assertTrue(taskListService.listTasks().isEmpty())
-
-		verify(schedulerMock, times(0)).schedule(anyString(), any(), anyInt(), any())
+		assertFalse(taskListService.listTasks().isEmpty())
+		assertEquals(count + 1, taskListService.listTasks()[key]!!.count)
+		verify(archiverService, times(1)).archive(eq(key), any())
+		verify(archiverScheduler, times(1)).schedule(any(), any<Instant>())
 	}
 
 
-	/**
-	 * Infix helper function used to silence warnings that values could be null.
-	 */
-	private infix fun <K, V> Map<K, V>.fetch(key: K) = this[key] ?: error("Expected value")
+	private fun verifyTaskIsRunning(key: String) {
+		val getCount = {
+			taskListService.listTasks()
+				.filter { it.key == key && it.value.isRunningLock.availablePermits() == 0 }
+				.size
+		}
+		loopAndVerify(1, getCount)
+	}
 }
