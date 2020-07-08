@@ -45,11 +45,11 @@ fun mockJoarkIsWorking() {
 }
 
 fun mockJoarkIsWorkingButGivesInvalidResponse() {
-	mockJoark(HttpStatus.OK.value(), "invalid response")
+	mockJoark(HttpStatus.OK.value(), "invalid_response")
 }
 
 fun mockJoarkIsDown() {
-	mockJoark(HttpStatus.NOT_FOUND.value(), "Mocked exception")
+	mockJoark(HttpStatus.NOT_FOUND.value(), "Mocked_exception")
 }
 
 fun mockJoarkRespondsAfterAttempts(attempts: Int) {
