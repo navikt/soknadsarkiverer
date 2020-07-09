@@ -1,6 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.converter
 
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
+import no.nav.soknad.arkivering.soknadsarkiverer.consumer.rest.journalpostapi.converter.createOpprettJournalpostRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattDokumentBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattVariantBuilder
@@ -35,7 +36,7 @@ class MessageConverterTests {
 				.build())
 			.build()
 
-		val joarkData = createJoarkData(schema, files)
+		val joarkData = createOpprettJournalpostRequest(schema, files)
 
 		assertEquals("Søknad til $tittel", joarkData.tittel)
 		assertEquals(1, joarkData.dokumenter.size)
@@ -62,7 +63,7 @@ class MessageConverterTests {
 				.build())
 			.build()
 
-		val joarkData = createJoarkData(schema, files)
+		val joarkData = createOpprettJournalpostRequest(schema, files)
 
 		assertEquals("Ettersendelse til $tittel", joarkData.tittel)
 		assertEquals(1, joarkData.dokumenter.size)
@@ -131,7 +132,7 @@ class MessageConverterTests {
 			)
 			.build()
 
-		val joarkData = createJoarkData(schema, files)
+		val joarkData = createOpprettJournalpostRequest(schema, files)
 
 		assertEquals("INNGAAENDE", joarkData.journalpostType)
 		assertEquals("NAV_NO", joarkData.kanal)
@@ -205,7 +206,7 @@ class MessageConverterTests {
 
 
 		assertThrows<Exception> {
-			createJoarkData(schema, files)
+            createOpprettJournalpostRequest(schema, files)
 		}
 	}
 
@@ -232,7 +233,7 @@ class MessageConverterTests {
 
 
 		assertThrows<Exception> {
-			createJoarkData(schema, files)
+            createOpprettJournalpostRequest(schema, files)
 		}
 	}
 
@@ -244,7 +245,7 @@ class MessageConverterTests {
 
 
 		assertThrows<Exception> {
-			createJoarkData(schema, files)
+            createOpprettJournalpostRequest(schema, files)
 		}
 	}
 
@@ -260,7 +261,7 @@ class MessageConverterTests {
 
 
 		assertThrows<Exception> {
-			createJoarkData(schema, files)
+            createOpprettJournalpostRequest(schema, files)
 		}
 	}
 
@@ -277,7 +278,7 @@ class MessageConverterTests {
 
 
 		assertThrows<Exception> {
-			createJoarkData(schema, emptyList())
+            createOpprettJournalpostRequest(schema, emptyList())
 		}
 	}
 
@@ -298,7 +299,7 @@ class MessageConverterTests {
 
 
 		assertThrows<Exception> {
-			createJoarkData(schema, files)
+            createOpprettJournalpostRequest(schema, files)
 		}
 	}
 
@@ -317,7 +318,7 @@ class MessageConverterTests {
 
 
 		assertThrows<Exception> {
-			createJoarkData(schema, files)
+            createOpprettJournalpostRequest(schema, files)
 		}
 	}
 }

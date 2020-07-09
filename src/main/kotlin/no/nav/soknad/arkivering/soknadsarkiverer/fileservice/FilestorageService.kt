@@ -4,6 +4,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import org.apache.tomcat.util.codec.binary.Base64
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
@@ -14,7 +15,7 @@ import org.springframework.web.client.RestTemplate
 
 
 @Service
-class FilestorageService(private val restTemplate: RestTemplate,
+class FilestorageService(@Qualifier("basicRestTemplate") private val restTemplate: RestTemplate,
 												 private val appConfiguration: AppConfiguration): FileserviceInterface {
 
 	private val logger = LoggerFactory.getLogger(javaClass)

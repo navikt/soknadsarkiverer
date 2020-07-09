@@ -15,3 +15,12 @@ management:
     export:
       prometheus:
         enabled: true
+
+http.proxy.parametername: notused
+
+no.nav.security.jwt:
+  expirythreshold: 1 #threshold in minutes until token expires
+  issuer.someshortname:
+    discoveryurl: http://metadata
+    accepted_audience: aud-localhost
+    cookie_name: localhost-idtoken

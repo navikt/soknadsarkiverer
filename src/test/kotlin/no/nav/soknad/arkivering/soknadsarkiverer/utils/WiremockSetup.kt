@@ -6,9 +6,9 @@ import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.http.RequestMethod
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import com.github.tomakehurst.wiremock.stubbing.Scenario
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.Dokumenter
+import no.nav.soknad.arkivering.soknadsarkiverer.consumer.rest.journalpostapi.api.Dokumenter
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.JoarkResponse
+import no.nav.soknad.arkivering.soknadsarkiverer.consumer.rest.journalpostapi.api.opprettJournalpostResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 
@@ -118,5 +118,5 @@ fun mockFilestorageIsDown() {
 fun createFilestorageResponse(uuid: String): String = ObjectMapper().writeValueAsString(listOf(FilElementDto(uuid, "apabepa".toByteArray())))
 
 private fun createJoarkResponse(): String = ObjectMapper().writeValueAsString(
-	JoarkResponse(listOf(Dokumenter("brevkode", "dokumentInfoId", "tittel")),
+	opprettJournalpostResponse(listOf(Dokumenter("brevkode", "dokumentInfoId", "tittel")),
 		"journalpostId", false, "journalstatus", "null"))

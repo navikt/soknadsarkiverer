@@ -1,8 +1,8 @@
-package no.nav.soknad.arkivering.soknadsarkiverer.dto
+package no.nav.soknad.arkivering.soknadsarkiverer.consumer.rest.journalpostapi.api
 
-data class JoarkData(val bruker: Bruker, val datoMottatt: String, val dokumenter: List<Dokument>,
-										 val eksternReferanseId: String, val journalpostType: String, val kanal: String,
-										 val tema: String, val tittel: String)
+data class OpprettJournalpostRequest(val bruker: Bruker, val datoMottatt: String, val dokumenter: List<Dokument>,
+																		 val eksternReferanseId: String, val journalpostType: String, val kanal: String,
+																		 val tema: String, val tittel: String)
 
 data class Bruker(val id: String, val idType: String)
 

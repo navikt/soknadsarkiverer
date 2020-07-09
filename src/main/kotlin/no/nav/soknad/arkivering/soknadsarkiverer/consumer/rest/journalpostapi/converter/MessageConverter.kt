@@ -1,9 +1,13 @@
-package no.nav.soknad.arkivering.soknadsarkiverer.converter
+package no.nav.soknad.arkivering.soknadsarkiverer.consumer.rest.journalpostapi.converter
 
 import no.nav.soknad.arkivering.avroschemas.MottattDokument
 import no.nav.soknad.arkivering.avroschemas.MottattVariant
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
+import no.nav.soknad.arkivering.soknadsarkiverer.consumer.rest.journalpostapi.api.Bruker
+import no.nav.soknad.arkivering.soknadsarkiverer.consumer.rest.journalpostapi.api.Dokument
+import no.nav.soknad.arkivering.soknadsarkiverer.consumer.rest.journalpostapi.api.DokumentVariant
+import no.nav.soknad.arkivering.soknadsarkiverer.consumer.rest.journalpostapi.api.OpprettJournalpostRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.*
 import java.time.Instant
 import java.time.LocalDateTime
@@ -11,14 +15,14 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 
-fun createJoarkData(o: Soknadarkivschema, attachedFiles: List<FilElementDto>): JoarkData {
+fun createOpprettJournalpostRequest(o: Soknadarkivschema, attachedFiles: List<FilElementDto>): OpprettJournalpostRequest {
 	val soknadstype = o.getSoknadstype()
 	val date = DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(o.getInnsendtDato()), ZoneOffset.UTC))
 
 	val documents = createDocuments(o.getMottatteDokumenter(), attachedFiles, soknadstype)
 	val tittel = createTitle(documents, soknadstype)
 
-	return JoarkData(Bruker(o.getFodselsnummer(), "FNR"), date, documents, o.getBehandlingsid(),
+	return OpprettJournalpostRequest(Bruker(o.getFodselsnummer(), "FNR"), date, documents, o.getBehandlingsid(),
 		"INNGAAENDE", "NAV_NO", o.getArkivtema(), tittel)
 }
 
