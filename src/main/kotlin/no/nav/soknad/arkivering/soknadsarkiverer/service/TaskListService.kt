@@ -79,7 +79,7 @@ class TaskListService(private val archiverService: ArchiverService,
 		}
 	}
 
-	internal fun listTasks() = tasks // TODO: Return only data needed, not the whole class
+	internal fun listTasks() = tasks.mapValues { it.value.count to it.value.isRunningLock }
 
 	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int) {
 
@@ -122,6 +122,7 @@ class TaskListService(private val archiverService: ArchiverService,
 		incrementCountAndSetToNotRunning(key)
 		start(key)
 	}
-}
 
-internal class Task(val value: Soknadarkivschema, val count: Int, val timeStarted: LocalDateTime, val isRunningLock: Semaphore) // TODO: Make class private
+
+	private class Task(val value: Soknadarkivschema, val count: Int, val timeStarted: LocalDateTime, val isRunningLock: Semaphore)
+}
