@@ -5,44 +5,45 @@ import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
+import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.TopologyTestDriverTests
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.createAppConfiguration
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.schemaRegistryScope
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.StreamsBuilder
-import org.junit.jupiter.api.*
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.anyInt
-import org.mockito.ArgumentMatchers.anyString
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
 import org.springframework.test.context.ActiveProfiles
-import java.time.Instant
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 @ActiveProfiles("test")
 class StateRecreationTests : TopologyTestDriverTests() {
 
 	private val appConfiguration = createAppConfiguration()
 	private val archiverService = mock<ArchiverService>()
-	private val archiverScheduler = mock<ThreadPoolTaskScheduler>()
-	private val taskListService = TaskListService(archiverService, appConfiguration, archiverScheduler)
+	private val scheduler = mock<Scheduler>()
+	private val taskListService = TaskListService(archiverService, appConfiguration, scheduler)
 
 	private val soknadarkivschema = createSoknadarkivschema()
 
 	@BeforeEach
 	fun setup() {
 		setupKafkaTopologyTestDriver(appConfiguration, taskListService, mock())
+		runScheduledTaskOnScheduling()
 	}
 
 	@AfterEach
 	fun teardown() {
 		closeTestDriver()
 		MockSchemaRegistry.dropScope(schemaRegistryScope)
+	}
+
+	private fun runScheduledTaskOnScheduling() {
+		val captor = argumentCaptor<() -> Unit>()
+		whenever(scheduler.schedule(capture(captor), any()))
+			.then { captor.value.invoke() }
 	}
 
 
@@ -62,7 +63,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 		recreateState()
 
-		verifyThatScheduler().wasCalled(1).forKey(key).withCount(0)
+		verifyThatScheduler().wasCalled(1).forKey(key)
 	}
 
 	@Test
@@ -77,11 +78,11 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 		recreateState()
 
-		verifyThatScheduler().wasCalled(1).forKey(key).withCount(1)
+		verifyThatScheduler().wasCalled(1).forKey(key)
 	}
 
 	@Test
-	fun `Can read Event Log with Event that was started six times`() {
+	fun `Can read Event Log with Event that was started six times - will not reattempt`() {
 		val key = UUID.randomUUID().toString()
 
 		publishSoknadsarkivschemas(key)
@@ -97,7 +98,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 		recreateState()
 
-		verifyThatScheduler().wasCalled(1).forKey(key).withCount(6)
+		verifyThatScheduler().wasNotCalled()
 	}
 
 	@Test
@@ -116,11 +117,10 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 		recreateState()
 
-		verifyThatScheduler().wasCalled(1).forKey(key0).withCount(1)
-		verifyThatScheduler().wasCalled(1).forKey(key1).withCount(1)
+		verifyThatScheduler().wasCalled(1).forKey(key0)
+		verifyThatScheduler().wasCalled(1).forKey(key1)
 	}
 
-	@Disabled // TODO
 	@Test
 	fun `Can read Event Log with Event that was started twice and finished`() {
 		val key = UUID.randomUUID().toString()
@@ -138,7 +138,6 @@ class StateRecreationTests : TopologyTestDriverTests() {
 		verifyThatScheduler().wasNotCalled()
 	}
 
-	@Disabled // TODO
 	@Test
 	fun `Can read Event Log with Event that was started twice and finished, but in wrong order`() {
 		val key = UUID.randomUUID().toString()
@@ -156,7 +155,6 @@ class StateRecreationTests : TopologyTestDriverTests() {
 		verifyThatScheduler().wasNotCalled()
 	}
 
-	@Disabled // TODO
 	@Test
 	fun `Can read Event Log with one Started and one Finished Event`() {
 		val key0 = UUID.randomUUID().toString()
@@ -174,11 +172,10 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 		recreateState()
 
-		verifyThatScheduler().wasCalled(1).forKey(key0).withCount(1)
+		verifyThatScheduler().wasCalled(1).forKey(key0)
 		verifyThatScheduler().wasNotCalledForKey(key1)
 	}
 
-	@Disabled // TODO
 	@Test
 	fun `Can read Event Log with mixed order of events`() {
 		val key0 = UUID.randomUUID().toString()
@@ -195,7 +192,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 		recreateState()
 
-		verifyThatScheduler().wasCalled(1).forKey(key0).withCount(1)
+		verifyThatScheduler().wasCalled(1).forKey(key0)
 		verifyThatScheduler().wasNotCalledForKey(key1)
 	}
 
@@ -208,18 +205,6 @@ class StateRecreationTests : TopologyTestDriverTests() {
 		recreateState()
 
 		verifyThatScheduler().wasNotCalled()
-	}
-
-	@Disabled // TODO
-	@Test
-	fun `Can read Event Log where ProcessingEvents are missing`() {
-		val key = UUID.randomUUID().toString()
-
-		publishSoknadsarkivschemas(key)
-
-		recreateState()
-
-		verifyThatScheduler().wasCalled(1).forKey(key).withCount(0)
 	}
 
 	@Test
@@ -236,7 +221,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 		publishProcessingEvents(key to STARTED)
 
-		verifyThatScheduler().wasCalled(1).forKey(key).withCount(1)
+		verifyThatScheduler().wasCalled(1).forKey(key)
 	}
 
 
@@ -259,12 +244,11 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 	private inner class SchedulerVerifier {
 		private var timesCalled = 0
-		private var key: () -> String = { anyString() }
-		private var count: () -> Int = { anyInt() }
+		private var key: String? = null
 
 		fun wasCalled(times: Int): KeyStep {
 			timesCalled = times
-			return KeyStep(this)
+			return KeyStep()
 		}
 
 		fun wasNotCalled() {
@@ -272,43 +256,35 @@ class StateRecreationTests : TopologyTestDriverTests() {
 		}
 
 		fun wasNotCalledForKey(key: String) {
-			this.key = { eq(key) }
+			this.key = key
 			verify()
 		}
 
-		inner class KeyStep(private val schedulerVerifier: SchedulerVerifier) {
-			fun forKey(key: String): CountStep {
-				schedulerVerifier.key = { eq(key) }
-				return CountStep(schedulerVerifier)
-			}
-		}
-
-		inner class CountStep(private val schedulerVerifier: SchedulerVerifier) {
-			fun withCount(count: Int) {
-				schedulerVerifier.count = { eq(count) }
-				schedulerVerifier.verify()
+		inner class KeyStep {
+			fun forKey(theKey: String) {
+				key = theKey
+				verify()
 			}
 		}
 
 		private fun verify() {
 			val value = if (timesCalled > 0) {
-				{ eq(soknadarkivschema) }
+				soknadarkivschema
 			} else {
-				{ any() }
+				null
 			}
-			TimeUnit.SECONDS.sleep(2) // TODO
-			val captor = argumentCaptor<Runnable>()
-			verify(archiverScheduler, times(timesCalled)).schedule(capture(captor), any<Instant>())
 
-			val capturedValues = captor.allValues.size
-			assertEquals(timesCalled, capturedValues)
-			if (capturedValues > 0) {
-				captor.firstValue.run()
+			val invocations = { mockingDetails(archiverService)
+				.invocations.stream()
+				.filter { if (key == null) true else it.arguments[0] == key }
+				.filter { if (value == null) true else it.arguments[1] == value }
+				.count().toInt() }
 
-				verify(archiverService, times(1)).archive(key.invoke(), value.invoke())
-			}
+			loopAndVerify(timesCalled, invocations)
+
+			verify(scheduler, atLeast(timesCalled)).schedule(any(), any())
 		}
-
-		inline fun <reified T : Runnable> argumentCaptor(): ArgumentCaptor<T> = ArgumentCaptor.forClass(T::class.java)
 	}
+
+	private inline fun <reified T> argumentCaptor(): ArgumentCaptor<T> = ArgumentCaptor.forClass(T::class.java)
 }

@@ -39,7 +39,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 	@MockBean
 	private lateinit var kafkaPublisherMock: KafkaPublisher
 
-	private var maxNumberOfRetries by Delegates.notNull<Int>()
+	private var maxNumberOfAttempts by Delegates.notNull<Int>()
 
 	private val uuid = UUID.randomUUID().toString()
 	private val key = UUID.randomUUID().toString()
@@ -48,7 +48,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 	fun setup() {
 		setupMockedServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
 
-		maxNumberOfRetries = appConfiguration.config.retryTime.size
+		maxNumberOfAttempts = appConfiguration.config.retryTime.size
 
 		setupKafkaTopologyTestDriver(appConfiguration, taskListService, kafkaPublisherMock)
 
@@ -112,11 +112,11 @@ class ApplicationTests : TopologyTestDriverTests() {
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		verifyProcessingEvents(maxNumberOfRetries + 1, STARTED)
+		verifyProcessingEvents(maxNumberOfAttempts, STARTED)
 		verifyProcessingEvents(0, ARCHIVED)
 		verifyProcessingEvents(0, FINISHED)
 		verifyDeleteRequestsToFilestorage(0)
-		verifyMessageStartsWith(maxNumberOfRetries + 1, "Exception")
+		verifyMessageStartsWith(maxNumberOfAttempts, "Exception")
 		verifyMessageStartsWith(0, "ok")
 	}
 
@@ -127,11 +127,11 @@ class ApplicationTests : TopologyTestDriverTests() {
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		verifyProcessingEvents(maxNumberOfRetries + 1, STARTED)
+		verifyProcessingEvents(maxNumberOfAttempts, STARTED)
 		verifyProcessingEvents(0, ARCHIVED)
 		verifyProcessingEvents(0, FINISHED)
 		verifyDeleteRequestsToFilestorage(0)
-		verifyMessageStartsWith(maxNumberOfRetries + 1, "Exception")
+		verifyMessageStartsWith(maxNumberOfAttempts, "Exception")
 		verifyMessageStartsWith(0, "ok")
 	}
 
@@ -210,12 +210,12 @@ class ApplicationTests : TopologyTestDriverTests() {
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		verifyProcessingEvents(maxNumberOfRetries + 1, STARTED)
+		verifyProcessingEvents(maxNumberOfAttempts, STARTED)
 		verifyProcessingEvents(0, ARCHIVED)
 		verifyProcessingEvents(0, FINISHED)
-		verifyMockedPostRequests(maxNumberOfRetries + 1, appConfiguration.config.joarkUrl)
+		verifyMockedPostRequests(maxNumberOfAttempts, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(0)
-		verifyMessageStartsWith(maxNumberOfRetries + 1, "Exception")
+		verifyMessageStartsWith(maxNumberOfAttempts, "Exception")
 		verifyMessageStartsWith(0, "ok")
 	}
 

@@ -2,11 +2,11 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import com.nhaarman.mockitokotlin2.*
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.*
@@ -15,9 +15,9 @@ import java.util.concurrent.Semaphore
 class TaskListServiceTests {
 
 	private val archiverService = mock<ArchiverService>()
-	private val archiverScheduler = mock<ThreadPoolTaskScheduler>()
+	private val scheduler = mock<Scheduler>()
 
-	private val taskListService = TaskListService(archiverService, AppConfiguration(), archiverScheduler)
+	private val taskListService = TaskListService(archiverService, AppConfiguration(), scheduler)
 
 	@Test
 	fun `No tasks, can list`() {
@@ -92,7 +92,7 @@ class TaskListServiceTests {
 
 		assertTrue(taskListService.listTasks().isEmpty())
 		verify(archiverService, times(1)).archive(eq(key), any())
-		verify(archiverScheduler, times(0)).schedule(any(), any<Instant>())
+		verify(scheduler, times(0)).schedule(any(), any<Instant>())
 	}
 
 	@Test
@@ -109,7 +109,7 @@ class TaskListServiceTests {
 		assertFalse(taskListService.listTasks().isEmpty())
 		assertEquals(count + 1, taskListService.listTasks()[key]!!.count)
 		verify(archiverService, times(1)).archive(eq(key), any())
-		verify(archiverScheduler, times(1)).schedule(any(), any<Instant>())
+		verify(scheduler, times(1)).schedule(any(), any<Instant>())
 	}
 
 
