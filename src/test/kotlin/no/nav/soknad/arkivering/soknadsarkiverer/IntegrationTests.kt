@@ -49,7 +49,7 @@ class IntegrationTests {
 
 	@BeforeEach
 	fun setup() {
-		setupMockedServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
+		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
 
 		assertEquals(kafkaBrokers, appConfiguration.kafkaConfig.servers, "The Kafka bootstrap server property is misconfigured!")
 
@@ -59,7 +59,7 @@ class IntegrationTests {
 
 	@AfterEach
 	fun teardown() {
-		stopMockedServices()
+		stopMockedNetworkServices()
 	}
 
 

@@ -17,7 +17,7 @@ private lateinit var wiremockServer: WireMockServer
 private lateinit var joarkUrl: String
 private lateinit var filestorageUrl: String
 
-fun setupMockedServices(port: Int, urlJoark: String, urlFilestorage: String) {
+fun setupMockedNetworkServices(port: Int, urlJoark: String, urlFilestorage: String) {
 	joarkUrl = urlJoark
 	filestorageUrl = urlFilestorage
 
@@ -25,7 +25,7 @@ fun setupMockedServices(port: Int, urlJoark: String, urlFilestorage: String) {
 	wiremockServer.start()
 }
 
-fun stopMockedServices() {
+fun stopMockedNetworkServices() {
 	wiremockServer.stop()
 }
 

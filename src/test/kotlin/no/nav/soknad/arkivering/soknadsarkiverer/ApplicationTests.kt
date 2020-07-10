@@ -46,7 +46,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 
 	@BeforeEach
 	fun setup() {
-		setupMockedServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
+		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
 
 		maxNumberOfAttempts = appConfiguration.config.retryTime.size
 
@@ -64,7 +64,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 
 	@AfterEach
 	fun teardown() {
-		stopMockedServices()
+		stopMockedNetworkServices()
 		closeTestDriver()
 		MockSchemaRegistry.dropScope(schemaRegistryScope)
 
