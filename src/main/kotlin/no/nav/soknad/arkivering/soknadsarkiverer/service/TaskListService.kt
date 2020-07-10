@@ -1,42 +1,121 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
+import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_SINGLETON
+import org.springframework.context.annotation.Scope
+import org.springframework.stereotype.Service
+import java.time.Instant
+import java.time.LocalDateTime
+import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 
-class TaskListService(private val schedulerService: SchedulerService) {
+@Scope(SCOPE_SINGLETON) // This is a stateful component so it must be singleton
+@Service
+class TaskListService(private val archiverService: ArchiverService,
+											private val appConfiguration: AppConfiguration,
+											private val scheduler: Scheduler) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	private val tasks = mutableMapOf<String, Task>()
+	private val tasks = hashMapOf<String, Task>()
 
-	fun createTask(key: String, value: Soknadarkivschema, count: Int) {
+	@Synchronized
+	fun addOrUpdateTask(key: String, soknadarkivschema: Soknadarkivschema, count: Int) {
 		if (!tasks.containsKey(key)) {
-			tasks[key] = Task(value, count)
-			schedulerService.schedule(key, value, count)
-			logger.debug("Created task with key '$key' and count $count")
+			tasks[key] = Task(soknadarkivschema, count, LocalDateTime.now(), Semaphore(1).also { it.acquire() })
+			logger.info("$key: Created task")
+			GlobalScope.launch { startNewlyCreatedTask(key) }
 		} else {
-			logger.error("Attempted to create task with key '$key', but task already exists!")
+			updateCount(key, count)
 		}
 	}
 
-	fun updateTaskCount(key: String, newCount: Int) {
-		if (tasks.containsKey(key)) {
-			tasks[key]!!.count = newCount
-			logger.debug("Updated task with key '$key' to now have count $newCount")
-		} else {
-			logger.error("Attempted to update task with key '$key', but no such task exists!")
+	private fun startNewlyCreatedTask(key: String) {
+		val task = tasks[key]
+		if (task != null) {
+			TimeUnit.SECONDS.sleep(1) // When recreating state, there could be more updates coming. Wait a little while to make sure we don't start prematurely.
+			task.isRunningLock.release()
+			start(key)
+		}
+	}
+
+	private fun start(key: String) {
+		val task = tasks[key]
+		if (task != null && task.isRunningLock.tryAcquire())
+			schedule(key, task.value, task.count)
+	}
+
+	private fun incrementCountAndSetToNotRunning(key: String) {
+		val task = tasks[key]
+		if (task != null) {
+			updateCount(key, task.count + 1)
+			task.isRunningLock.release()
+		}
+	}
+
+	@Synchronized
+	private fun updateCount(key: String, newCount: Int) {
+		val task = tasks[key]
+		if (task != null && task.count < newCount) {
+			tasks[key] = Task(task.value, newCount, task.timeStarted, task.isRunningLock)
 		}
 	}
 
 	fun finishTask(key: String) {
 		if (tasks.containsKey(key)) {
 			tasks.remove(key)
-			logger.debug("Finished task with key '$key'")
 		} else {
-			logger.error("Attempted to finish task with key '$key', but no such task exists!")
+			logger.info("$key: Tried to finish task, but it is already finished")
 		}
 	}
 
-	fun listTasks() = tasks.mapValues { (_, task) -> task.value to task.count }
-}
+	internal fun listTasks() = tasks.mapValues { it.value.count to it.value.isRunningLock }
 
-data class Task(val value: Soknadarkivschema, var count: Int)
+	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int) {
+
+		if (attempt > appConfiguration.config.retryTime.size) {
+			logger.warn("$key: Too many attempts ($attempt), will not try again")
+			return
+		}
+
+		val task = { tryToArchive(key, soknadarkivschema) }
+
+		val secondsToWait = getSecondsToWait(attempt)
+		val scheduledTime = Instant.now().plusSeconds(secondsToWait)
+
+		logger.info("$key: About to schedule attempt $attempt at job in $secondsToWait seconds")
+		scheduler.schedule(task, scheduledTime)
+	}
+
+	private fun getSecondsToWait(attempt: Int): Long {
+		val index = if (attempt < appConfiguration.config.retryTime.size)
+			attempt
+		else
+			appConfiguration.config.retryTime.lastIndex
+
+		return appConfiguration.config.retryTime[index].toLong()
+	}
+
+	internal fun tryToArchive(key: String, soknadarkivschema: Soknadarkivschema) {
+		try {
+			archiverService.archive(key, soknadarkivschema)
+			finishTask(key)
+			return
+
+		} catch (e: ArchivingException) {
+			// Do nothing, the Exceptions of this type are supposed to already have been logged
+		} catch (e: Exception) {
+			logger.error("$key: Error when performing scheduled task", e)
+		}
+		incrementCountAndSetToNotRunning(key)
+		start(key)
+	}
+
+
+	private class Task(val value: Soknadarkivschema, val count: Int, val timeStarted: LocalDateTime, val isRunningLock: Semaphore)
+}

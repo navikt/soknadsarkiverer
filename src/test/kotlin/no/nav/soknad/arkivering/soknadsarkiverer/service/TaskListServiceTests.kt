@@ -1,130 +1,132 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import com.nhaarman.mockitokotlin2.*
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattDokumentBuilder
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattVariantBuilder
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.SoknadarkivschemaBuilder
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers.anyInt
-import org.mockito.ArgumentMatchers.anyString
+import org.mockito.ArgumentCaptor
 import java.util.*
 
 class TaskListServiceTests {
 
-	private val schedulerMock = mock<SchedulerService>()
-	private val taskListService = TaskListService(schedulerMock)
+	private val archiverService = mock<ArchiverService>()
+	private val scheduler = mock<Scheduler>()
+
+	private val taskListService = TaskListService(archiverService, AppConfiguration(), scheduler)
 
 	@Test
-	fun `Can list task when there are none`() {
+	fun `No tasks, can list`() {
 		assertTrue(taskListService.listTasks().isEmpty())
 	}
 
 	@Test
-	fun `Can create task - will schedule`() {
-		val uuid = UUID.randomUUID().toString()
-		val value = createRequestData()
-		val count = 0
+	fun `Can add task`() {
+		taskListService.addOrUpdateTask(UUID.randomUUID().toString(), createSoknadarkivschema(), 0)
 
-		taskListService.createTask(uuid, value, count)
-
-		val tasks = taskListService.listTasks()
-		assertEquals(1, tasks.size)
-		assertEquals(value, tasks.fetch(uuid).first)
-		assertEquals(count, tasks.fetch(uuid).second)
-
-		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(count))
+		assertEquals(1, taskListService.listTasks().size)
 	}
 
 	@Test
-	fun `Duplicate creation of tasks discards duplicate`() {
-		val uuid = UUID.randomUUID().toString()
-		val value = createRequestData()
-		val countOriginal = 0
-		val countUpdated = 71
+	fun `Newly added tasks are started after a short delay`() {
+		val key = UUID.randomUUID().toString()
+		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), 0)
+		assertEquals(0, getTaskListLock(key).availablePermits())
 
-		taskListService.createTask(uuid, value, countOriginal)
-		taskListService.createTask(uuid, value, countUpdated)
-
-		val tasks = taskListService.listTasks()
-		assertEquals(1, tasks.size)
-		assertEquals(value, tasks.fetch(uuid).first)
-		assertEquals(countOriginal, tasks.fetch(uuid).second)
-
-		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(countOriginal))
-		verify(schedulerMock, times(0)).schedule(eq(uuid), eq(value), eq(countUpdated))
+		verifyTaskIsRunning(key)
 	}
 
 	@Test
 	fun `Can update task`() {
-		val uuid = UUID.randomUUID().toString()
-		val value = createRequestData()
-		val countOriginal = 1
-		val countUpdated = 2
+		val originalCount = 0
+		val newCount = 2
+		val key = UUID.randomUUID().toString()
 
-		taskListService.createTask(uuid, value, countOriginal)
-		assertEquals(countOriginal, taskListService.listTasks().fetch(uuid).second)
+		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), originalCount)
+		assertEquals(1, taskListService.listTasks().size)
+		assertEquals(originalCount, getTaskListCount(key))
 
-		taskListService.updateTaskCount(uuid, countUpdated)
-		assertEquals(countUpdated, taskListService.listTasks().fetch(uuid).second)
+		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), newCount)
+		assertEquals(1, taskListService.listTasks().size)
+		assertEquals(newCount, getTaskListCount(key))
 
-		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(countOriginal))
-		verify(schedulerMock, times(0)).schedule(eq(uuid), eq(value), eq(countUpdated))
+		// Try to update back to original count, but that value wont be saved
+		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), originalCount)
+		assertEquals(1, taskListService.listTasks().size)
+		assertEquals(newCount, getTaskListCount(key))
 	}
 
 	@Test
-	fun `Updating non-existent task will not produce exception`() {
-		val nonExistentUuid = UUID.randomUUID().toString()
-
-		taskListService.updateTaskCount(nonExistentUuid, 2)
+	fun `Can finish task`() {
 		assertTrue(taskListService.listTasks().isEmpty())
 
-		verify(schedulerMock, times(0)).schedule(anyString(), any(), anyInt())
+		val key = UUID.randomUUID().toString()
+		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), 0)
+		assertFalse(taskListService.listTasks().isEmpty())
+
+		taskListService.finishTask(key)
+		assertTrue(taskListService.listTasks().isEmpty())
 	}
 
 	@Test
-	fun `Can create, update and finish task`() {
-		val uuid = UUID.randomUUID().toString()
-		val value = createRequestData()
-		val countOriginal = 1
-		val countUpdated = 2
-
-		taskListService.createTask(uuid, value, countOriginal)
-		assertEquals(countOriginal, taskListService.listTasks().fetch(uuid).second)
-
-		taskListService.updateTaskCount(uuid, countUpdated)
-		assertEquals(countUpdated, taskListService.listTasks().fetch(uuid).second)
-
-		taskListService.finishTask(uuid)
+	fun `Wont crash if non-present task is finished`() {
 		assertTrue(taskListService.listTasks().isEmpty())
 
-		verify(schedulerMock, times(1)).schedule(eq(uuid), eq(value), eq(countOriginal))
+		taskListService.finishTask(UUID.randomUUID().toString())
+
+		assertTrue(taskListService.listTasks().isEmpty())
 	}
 
 	@Test
-	fun `Finishing non-existent task will not produce exception`() {
-		val uuid = UUID.randomUUID().toString()
+	fun `Archiving succeeds - will remove task from list and not attempt to schedule again`() {
+		val key = UUID.randomUUID().toString()
+		runScheduledTaskOnScheduling()
 
-		taskListService.finishTask(uuid)
-		assertTrue(taskListService.listTasks().isEmpty())
+		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), 0)
 
-		verify(schedulerMock, times(0)).schedule(anyString(), any(), anyInt())
+		loopAndVerify(0, { taskListService.listTasks().size })
+		verify(archiverService, times(1)).archive(eq(key), any())
+		verify(scheduler, times(1)).schedule(any(), any())
+	}
+
+	@Test
+	fun `Archiving does not succeed - will not remove task from list but attempt to schedule again`() {
+		val count = 0
+		val key = UUID.randomUUID().toString()
+		runScheduledTaskOnScheduling()
+		whenever(archiverService.archive(eq(key), any())).thenThrow(RuntimeException("Mocked exception"))
+
+		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), 0)
+
+		loopAndVerify(count + 1, { getTaskListCount(key) })
+		assertFalse(taskListService.listTasks().isEmpty())
+		verify(archiverService, atLeast(1)).archive(eq(key), any())
+		verify(scheduler, atLeast(2)).schedule(any(), any())
 	}
 
 
-	private fun createRequestData() = // TODO: Duplicate
-		SoknadarkivschemaBuilder()
-			.withBehandlingsid(UUID.randomUUID().toString())
-			.withMottatteDokumenter(MottattDokumentBuilder()
-				.withMottatteVarianter(MottattVariantBuilder()
-					.withUuid(UUID.randomUUID().toString())
-					.build())
-				.build())
-			.build()
+	private fun verifyTaskIsRunning(key: String) {
+		val getCount = {
+			taskListService.listTasks()
+				.filter { it.key == key && it.value.second.availablePermits() == 0 }
+				.size
+		}
+		loopAndVerify(1, getCount)
+	}
 
-	/**
-	 * Infix helper function used to silence warnings that values could be null.
-	 */
-	private infix fun <K, V> Map<K, V>.fetch(key: K) = this[key] ?: error("Expected value")
+	private fun runScheduledTaskOnScheduling() {
+		val captor = argumentCaptor<() -> Unit>()
+		whenever(scheduler.schedule(capture(captor), any()))
+			.then { captor.value.invoke() }
+			.thenThrow(RuntimeException("Mocked exception"))
+	}
+
+
+	private fun getTaskListCount(key: String) = getTaskListPair(key).first
+	private fun getTaskListLock (key: String) = getTaskListPair(key).second
+	private fun getTaskListPair (key: String) = taskListService.listTasks()[key] ?: error("Expected to find $key in map")
+
+	private inline fun <reified T> argumentCaptor(): ArgumentCaptor<T> = ArgumentCaptor.forClass(T::class.java)
 }

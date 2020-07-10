@@ -17,7 +17,7 @@ private lateinit var wiremockServer: WireMockServer
 private lateinit var joarkUrl: String
 private lateinit var filestorageUrl: String
 
-fun setupMockedServices(port: Int, urlJoark: String, urlFilestorage: String) {
+fun setupMockedNetworkServices(port: Int, urlJoark: String, urlFilestorage: String) {
 	joarkUrl = urlJoark
 	filestorageUrl = urlFilestorage
 
@@ -25,7 +25,7 @@ fun setupMockedServices(port: Int, urlJoark: String, urlFilestorage: String) {
 	wiremockServer.start()
 }
 
-fun stopMockedServices() {
+fun stopMockedNetworkServices() {
 	wiremockServer.stop()
 }
 
@@ -45,11 +45,11 @@ fun mockJoarkIsWorking() {
 }
 
 fun mockJoarkIsWorkingButGivesInvalidResponse() {
-	mockJoark(HttpStatus.OK.value(), "invalid response")
+	mockJoark(HttpStatus.OK.value(), "mocked_invalid_response")
 }
 
 fun mockJoarkIsDown() {
-	mockJoark(HttpStatus.NOT_FOUND.value(), "Mocked exception")
+	mockJoark(HttpStatus.NOT_FOUND.value(), "Mocked_exception")
 }
 
 fun mockJoarkRespondsAfterAttempts(attempts: Int) {

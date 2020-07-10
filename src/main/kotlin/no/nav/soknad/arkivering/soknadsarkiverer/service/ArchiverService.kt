@@ -4,10 +4,11 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.converter.createJoarkData
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
+import no.nav.soknad.arkivering.soknadsarkiverer.service.converter.createJoarkData
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.JoarkData
-import no.nav.soknad.arkivering.soknadsarkiverer.fileservice.FileserviceInterface
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -24,12 +25,12 @@ class ArchiverService(private val filestorageService: FileserviceInterface, priv
 			createProcessingEvent(key, STARTED)
 
 			val fileIds = getAllUuids(data)
-			val files = filestorageService.getFilesFromFilestorage(fileIds)
-			val joarkData = convertToJoarkData(data, files)
+			val files = filestorageService.getFilesFromFilestorage(key, fileIds)
+			val joarkData = convertToJoarkData(key, data, files)
 
-			joarkArchiver.putDataInJoark(joarkData)
+			joarkArchiver.putDataInJoark(key, joarkData)
 			createProcessingEvent(key, ARCHIVED)
-			filestorageService.deleteFilesFromFilestorage(fileIds)
+			filestorageService.deleteFilesFromFilestorage(key, fileIds)
 
 			createProcessingEvent(key, FINISHED)
 			createMessage(key, "ok")
@@ -41,12 +42,12 @@ class ArchiverService(private val filestorageService: FileserviceInterface, priv
 		}
 	}
 
-	private fun convertToJoarkData(data: Soknadarkivschema, files: List<FilElementDto>): JoarkData {
+	private fun convertToJoarkData(key: String, data: Soknadarkivschema, files: List<FilElementDto>): JoarkData {
 		try {
 			return createJoarkData(data, files)
 		} catch (e: Exception) {
-			logger.error("Error when converting message.", e)
-			throw e
+			logger.error("$key: Error when converting message.", e)
+			throw ArchivingException(e)
 		}
 	}
 
