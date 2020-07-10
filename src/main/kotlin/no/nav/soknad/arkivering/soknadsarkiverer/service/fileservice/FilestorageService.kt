@@ -1,4 +1,4 @@
-package no.nav.soknad.arkivering.soknadsarkiverer.fileservice
+package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException

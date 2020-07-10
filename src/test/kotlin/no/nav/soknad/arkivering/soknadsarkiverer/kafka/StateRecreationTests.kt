@@ -270,11 +270,13 @@ class StateRecreationTests : TopologyTestDriverTests() {
 		private fun verify() {
 			val value = if (timesCalled > 0) soknadarkivschema else null
 
-			val getInvocations = { mockingDetails(archiverService)
-				.invocations.stream()
-				.filter { if (key == null) true else it.arguments[0] == key }
-				.filter { if (value == null) true else it.arguments[1] == value }
-				.count().toInt() }
+			val getInvocations = {
+				mockingDetails(archiverService)
+					.invocations.stream()
+					.filter { if (key == null) true else it.arguments[0] == key }
+					.filter { if (value == null) true else it.arguments[1] == value }
+					.count().toInt()
+			}
 
 			loopAndVerify(timesCalled, getInvocations)
 

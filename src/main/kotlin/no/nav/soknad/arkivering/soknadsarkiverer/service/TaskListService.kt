@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit
 @Service
 class TaskListService(private val archiverService: ArchiverService,
 											private val appConfiguration: AppConfiguration,
-											private val scheduler: Scheduler)  {
+											private val scheduler: Scheduler) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	private val tasks = hashMapOf<String, Task>()
@@ -70,7 +70,7 @@ class TaskListService(private val archiverService: ArchiverService,
 		if (tasks.containsKey(key)) {
 			tasks.remove(key)
 		} else {
-			logger.error("$key: Task is already finished")
+			logger.info("$key: Tried to finish task, but it is already finished")
 		}
 	}
 

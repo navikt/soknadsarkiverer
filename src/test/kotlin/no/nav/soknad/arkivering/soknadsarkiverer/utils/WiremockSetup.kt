@@ -45,7 +45,7 @@ fun mockJoarkIsWorking() {
 }
 
 fun mockJoarkIsWorkingButGivesInvalidResponse() {
-	mockJoark(HttpStatus.OK.value(), "invalid_response")
+	mockJoark(HttpStatus.OK.value(), "mocked_invalid_response")
 }
 
 fun mockJoarkIsDown() {
