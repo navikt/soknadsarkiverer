@@ -9,12 +9,10 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
-import org.apache.kafka.streams.KeyValue
 import org.apache.kafka.streams.StreamsBuilder
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentCaptor
 import org.springframework.test.context.ActiveProfiles
 import java.util.*
 
@@ -30,20 +28,18 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 	@BeforeEach
 	fun setup() {
-		setupKafkaTopologyTestDriver(appConfiguration, taskListService, mock())
-		runScheduledTaskOnScheduling()
+		setupKafkaTopologyTestDriver()
+			.withAppConfiguration(appConfiguration)
+			.withTaskListService(taskListService)
+			.withMockedKafkaPublisher()
+			.runScheduledTasksOnScheduling(scheduler)
+			.setup()
 	}
 
 	@AfterEach
 	fun teardown() {
 		closeTestDriver()
 		MockSchemaRegistry.dropScope(schemaRegistryScope)
-	}
-
-	private fun runScheduledTaskOnScheduling() {
-		val captor = argumentCaptor<() -> Unit>()
-		whenever(scheduler.schedule(capture(captor), any()))
-			.then { captor.value.invoke() }
 	}
 
 
@@ -226,13 +222,11 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 
 	private fun publishSoknadsarkivschemas(vararg keys: String) {
-		val keyValues = keys.map { KeyValue(it, soknadarkivschema) }
-		inputTopic.pipeKeyValueList(keyValues)
+		keys.forEach { putDataOnInputTopic(it, soknadarkivschema) }
 	}
 
 	private fun publishProcessingEvents(vararg keysAndEventTypes: Pair<String, EventTypes>) {
-		val keyValues = keysAndEventTypes.map { (key, eventType) -> KeyValue(key, ProcessingEvent(eventType)) }
-		processingEventTopic.pipeKeyValueList(keyValues)
+		keysAndEventTypes.forEach { (key, eventType) -> putDataOnProcessingTopic(key, ProcessingEvent(eventType)) }
 	}
 
 	private fun recreateState() {
@@ -283,6 +277,4 @@ class StateRecreationTests : TopologyTestDriverTests() {
 			verify(scheduler, atLeast(timesCalled)).schedule(any(), any())
 		}
 	}
-
-	private inline fun <reified T> argumentCaptor(): ArgumentCaptor<T> = ArgumentCaptor.forClass(T::class.java)
 }

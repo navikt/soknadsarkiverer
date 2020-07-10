@@ -41,7 +41,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 
 	private var maxNumberOfAttempts by Delegates.notNull<Int>()
 
-	private val uuid = UUID.randomUUID().toString()
+	private val fileUuid = UUID.randomUUID().toString()
 	private val key = UUID.randomUUID().toString()
 
 	@BeforeEach
@@ -50,16 +50,12 @@ class ApplicationTests : TopologyTestDriverTests() {
 
 		maxNumberOfAttempts = appConfiguration.config.retryTime.size
 
-		setupKafkaTopologyTestDriver(appConfiguration, taskListService, kafkaPublisherMock)
-
-		mockKafkaPublisher(RECEIVED)
-		mockKafkaPublisher(STARTED)
-		mockKafkaPublisher(FINISHED)
-	}
-
-	fun mockKafkaPublisher(eventType: EventTypes) {
-		whenever(kafkaPublisherMock.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(eventType)), any()))
-			.then { processingEventTopic.pipeInput(key, ProcessingEvent(eventType)) }
+		setupKafkaTopologyTestDriver()
+			.withAppConfiguration(appConfiguration)
+			.withTaskListService(taskListService)
+			.withKafkaPublisher(kafkaPublisherMock)
+			.putProcessingEventLogsOnTopic()
+			.setup()
 	}
 
 	@AfterEach
@@ -75,7 +71,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 
 	@Test
 	fun `Happy case - Putting events on Kafka will cause rest calls to Joark`() {
-		mockFilestorageIsWorking(uuid)
+		mockFilestorageIsWorking(fileUuid)
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
@@ -107,7 +103,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 
 	@Test
 	fun `Failing to send to Joark will cause retries`() {
-		mockFilestorageIsWorking(uuid)
+		mockFilestorageIsWorking(fileUuid)
 		mockJoarkIsDown()
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
@@ -138,7 +134,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 	@Test
 	fun `Poison pill followed by proper event -- Only proper one is sent to Joark`() {
 		val keyForPoisionPill = UUID.randomUUID().toString()
-		mockFilestorageIsWorking(uuid)
+		mockFilestorageIsWorking(fileUuid)
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic(keyForPoisionPill, "this is not deserializable")
@@ -155,7 +151,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 
 	@Test
 	fun `First attempt to Joark fails, the second succeeds`() {
-		mockFilestorageIsWorking(uuid)
+		mockFilestorageIsWorking(fileUuid)
 		mockJoarkRespondsAfterAttempts(1)
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
@@ -172,7 +168,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 	@Test
 	fun `First attempt to Joark fails, the fourth succeeds`() {
 		val attemptsToFail = 3
-		mockFilestorageIsWorking(uuid)
+		mockFilestorageIsWorking(fileUuid)
 		mockJoarkRespondsAfterAttempts(attemptsToFail)
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
@@ -188,7 +184,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 
 	@Test
 	fun `Everything works, but Filestorage cannot delete files -- Message is nevertheless marked as finished`() {
-		mockFilestorageIsWorking(uuid)
+		mockFilestorageIsWorking(fileUuid)
 		mockFilestorageDeletionIsNotWorking()
 		mockJoarkIsWorking()
 
@@ -205,7 +201,7 @@ class ApplicationTests : TopologyTestDriverTests() {
 
 	@Test
 	fun `Joark responds with status OK but invalid body -- will retry`() {
-		mockFilestorageIsWorking(uuid)
+		mockFilestorageIsWorking(fileUuid)
 		mockJoarkIsWorkingButGivesInvalidResponse()
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
@@ -251,16 +247,16 @@ class ApplicationTests : TopologyTestDriverTests() {
 	}
 
 	private fun putDataOnKafkaTopic(data: Soknadarkivschema) {
-		inputTopic.pipeInput(key, data)
+		putDataOnInputTopic(key, data)
 	}
 
 	private fun putDataOnKafkaTopic(key: String, data: String) {
-		inputTopicForBadData.pipeInput(key, data)
+		putBadDataOnInputTopic(key, data)
 	}
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
 		verifyMockedDeleteRequests(expectedCount, appConfiguration.config.filestorageUrl.replace("?", "\\?") + ".*")
 	}
 
-	private fun createSoknadarkivschema() = createSoknadarkivschema(uuid)
+	private fun createSoknadarkivschema() = createSoknadarkivschema(fileUuid)
 }

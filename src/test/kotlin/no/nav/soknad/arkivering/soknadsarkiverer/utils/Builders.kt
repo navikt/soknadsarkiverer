@@ -109,12 +109,12 @@ class MottattVariantBuilder {
 }
 
 
-fun createSoknadarkivschema(uuid: String = UUID.randomUUID().toString()) =
+fun createSoknadarkivschema(fileUuid: String = UUID.randomUUID().toString()) =
 	SoknadarkivschemaBuilder()
 		.withBehandlingsid(UUID.randomUUID().toString())
 		.withMottatteDokumenter(MottattDokumentBuilder()
 			.withMottatteVarianter(MottattVariantBuilder()
-				.withUuid(uuid)
+				.withUuid(fileUuid)
 				.build())
 			.build())
 		.build()
