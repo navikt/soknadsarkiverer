@@ -103,6 +103,7 @@ class TaskListService(private val archiverService: ArchiverService,
 
 	internal fun tryToArchive(key: String, soknadarkivschema: Soknadarkivschema) {
 		try {
+			logger.info("$key: Will now start to archive")
 			archiverService.archive(key, soknadarkivschema)
 			finishTask(key)
 			return
