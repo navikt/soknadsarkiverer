@@ -11,7 +11,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -34,16 +33,20 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 	@MockBean
 	private lateinit var kafkaPublisherMock: KafkaPublisher
 
+	@Autowired
+	private lateinit var archiverService: ArchiverService
+
 	private val appConfiguration = createAppConfiguration()
-	private val archiverService = mock<ArchiverService>()
 	private val scheduler = mock<Scheduler>()
-	private val taskListService = TaskListService(archiverService, appConfiguration, scheduler)
+	private lateinit var taskListService: TaskListService
 
 	private val maxNumberOfAttempts = appConfiguration.config.retryTime.size
 
 	@BeforeEach
 	fun setup() {
 		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
+
+		taskListService = TaskListService(archiverService, appConfiguration, scheduler)
 
 		setupKafkaTopologyTestDriver()
 			.withAppConfiguration(appConfiguration)
@@ -73,10 +76,12 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 
 		putDataOnInputTopic(key, createSoknadarkivschema())
 		verifyProcessingEvents(key, maxNumberOfAttempts, STARTED)
-		assertEquals(maxNumberOfAttempts, getTaskListCount(key))
+		loopAndVerify(maxNumberOfAttempts + 1, { getTaskListCount(key) })
 
+		mockFilestorageIsWorking(key)
 		adminInterface.rerun(key)
-		//TODO: Make proper test
+
+		loopAndVerify(0, { getTaskListCount(key) })
 	}
 
 	@Test
@@ -108,6 +113,7 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 		adminInterface.filesExists(UUID.randomUUID().toString())
 		//TODO: Make proper test
 	}
+
 
 	private fun verifyProcessingEvents(key: String, expectedCount: Int, eventType: EventTypes) { // TODO: Duplicated method
 		val type = ProcessingEvent(eventType)
