@@ -7,12 +7,15 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_SINGLETON
+import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Service
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
+@Scope(SCOPE_SINGLETON) // This is a stateful component so it must be singleton
 @Service
 class TaskListService(private val archiverService: ArchiverService,
 											private val appConfiguration: AppConfiguration,
@@ -35,21 +38,16 @@ class TaskListService(private val archiverService: ArchiverService,
 	private fun startNewlyCreatedTask(key: String) {
 		val task = tasks[key]
 		if (task != null) {
-			logger.info("$key: starting newly created task")
 			TimeUnit.SECONDS.sleep(1) // When recreating state, there could be more updates coming. Wait a little while to make sure we don't start prematurely.
 			task.isRunningLock.release()
-			logger.info("$key: Released lock")
 			start(key)
 		}
 	}
 
 	private fun start(key: String) {
 		val task = tasks[key]
-		if (task != null && task.isRunningLock.tryAcquire()) {
-			logger.info("$key: Acquired lock, will now call schedule")
+		if (task != null && task.isRunningLock.tryAcquire())
 			schedule(key, task.value, task.count)
-		} else
-			logger.info("$key: task == null: ${task == null}, or failed to acquire lock")
 	}
 
 	private fun incrementCountAndSetToNotRunning(key: String) {
@@ -65,15 +63,12 @@ class TaskListService(private val archiverService: ArchiverService,
 		val task = tasks[key]
 		if (task != null && task.count < newCount) {
 			tasks[key] = Task(task.value, newCount, task.timeStarted, task.isRunningLock)
-			logger.info("$key: Updated task with count $newCount")
 		}
 	}
 
 	fun finishTask(key: String) {
 		if (tasks.containsKey(key)) {
-			logger.info("$key: About to remove task")
 			tasks.remove(key)
-			logger.info("$key: Task removed")
 		} else {
 			logger.error("$key: Task is already finished")
 		}
@@ -108,9 +103,7 @@ class TaskListService(private val archiverService: ArchiverService,
 
 	internal fun tryToArchive(key: String, soknadarkivschema: Soknadarkivschema) {
 		try {
-			logger.info("$key: About to archive")
 			archiverService.archive(key, soknadarkivschema)
-			logger.info("$key: Finished archiving")
 			finishTask(key)
 			return
 
