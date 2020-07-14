@@ -9,16 +9,20 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.web.server.ResponseStatusException
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -35,6 +39,9 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 	@Autowired
 	private lateinit var archiverService: ArchiverService
 
+	@Autowired
+	private lateinit var fileservice: FileserviceInterface
+
 	private val appConfiguration = createAppConfiguration()
 	private val scheduler = mock<Scheduler>()
 	private lateinit var taskListService: TaskListService
@@ -47,7 +54,7 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
 
 		taskListService = TaskListService(archiverService, appConfiguration, scheduler)
-		adminInterface = AdminInterface(taskListService)
+		adminInterface = AdminInterface(taskListService, fileservice)
 
 		setupKafkaTopologyTestDriver()
 			.withAppConfiguration(appConfiguration)
@@ -124,6 +131,7 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 		assertTrue(System.currentTimeMillis() - timeBeforeRerun < 100, "This operation should not take a long time to perform")
 	}
 
+
 	@Test
 	fun `Can request allEvents`() {
 		adminInterface.allEvents()
@@ -148,10 +156,48 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 		//TODO: Make proper test
 	}
 
+
+	@Test
+	fun `Querying file that does not exist throws 404`() {
+		val key = UUID.randomUUID().toString()
+		val fileUuid = UUID.randomUUID().toString()
+		val soknadarkivschema = createSoknadarkivschema(fileUuid)
+		mockFilestorageIsWorking(fileUuid)
+		mockJoarkIsWorking()
+
+		putDataOnInputTopic(key, soknadarkivschema)
+		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
+
+
+		assertThrows<ResponseStatusException> {
+			adminInterface.filesExists(UUID.randomUUID().toString())
+		}
+	}
+
 	@Test
 	fun `Can query if file exists`() {
-		adminInterface.filesExists(UUID.randomUUID().toString())
-		//TODO: Make proper test
+		mockFilestorageIsDown()
+		mockJoarkIsWorking()
+
+		val key = UUID.randomUUID().toString()
+		val fileUuidInFilestorage = UUID.randomUUID().toString()
+		val fileUuidNotInFilestorage = UUID.randomUUID().toString()
+
+		val soknadarkivschema = createSoknadarkivschema(listOf(fileUuidInFilestorage, fileUuidNotInFilestorage))
+
+		putDataOnInputTopic(key, soknadarkivschema)
+		verifyProcessingEvents(key, maxNumberOfAttempts, STARTED)
+
+
+		mockFilestorageIsWorking(listOf(fileUuidInFilestorage to "filecontent", fileUuidNotInFilestorage to null))
+
+		val response = adminInterface.filesExists(key)
+
+		assertEquals(2, response.size)
+		assertEquals(fileUuidInFilestorage, response[0].id)
+		assertEquals("Exists", response[0].status)
+		assertEquals(fileUuidNotInFilestorage, response[1].id)
+		assertEquals("Does not exist", response[1].status)
 	}
 
 

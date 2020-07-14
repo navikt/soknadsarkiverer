@@ -24,13 +24,12 @@ class ArchiverService(private val filestorageService: FileserviceInterface, priv
 		try {
 			createProcessingEvent(key, STARTED)
 
-			val fileIds = getAllUuids(data)
-			val files = filestorageService.getFilesFromFilestorage(key, fileIds)
+			val files = filestorageService.getFilesFromFilestorage(key, data)
 			val joarkData = convertToJoarkData(key, data, files)
 
 			joarkArchiver.putDataInJoark(key, joarkData)
 			createProcessingEvent(key, ARCHIVED)
-			filestorageService.deleteFilesFromFilestorage(key, fileIds)
+			filestorageService.deleteFilesFromFilestorage(key, data)
 
 			createProcessingEvent(key, FINISHED)
 			createMessage(key, "ok")
@@ -65,11 +64,5 @@ class ArchiverService(private val filestorageService: FileserviceInterface, priv
 		val stacktrace = sw.toString()
 
 		return "Exception when archiving: '" + e.message + "'\n" + stacktrace
-	}
-
-	private fun getAllUuids(data: Soknadarkivschema): String {
-		return data.getMottatteDokumenter()
-			.flatMap { it.getMottatteVarianter().map { variant -> variant.getUuid() } }
-			.joinToString(",")
 	}
 }

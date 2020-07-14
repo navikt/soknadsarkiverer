@@ -91,6 +91,8 @@ class TaskListService(private val archiverService: ArchiverService,
 
 	internal fun listTasks() = tasks.mapValues { it.value.count to it.value.isRunningLock }
 
+	fun getSoknadarkivschema(key: String) = tasks[key]?.value
+
 	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int) {
 
 		if (attempt > appConfiguration.config.retryTime.size) {

@@ -84,14 +84,16 @@ private fun mockJoark(statusCode: Int, responseBody: String, timeout: Int) {
 				.withFixedDelay(timeout)))
 }
 
-fun mockFilestorageIsWorking(uuid: String) {
+fun mockFilestorageIsWorking(uuid: String) = mockFilestorageIsWorking(listOf(uuid to "apabepa"))
+
+fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>) {
 	val urlPattern = WireMock.urlMatching(filestorageUrl.replace("?", "\\?") + ".*")
 
 	wiremockServer.stubFor(
 		WireMock.get(urlPattern)
 			.willReturn(WireMock.aResponse()
 				.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-				.withBody(createFilestorageResponse(uuid))
+				.withBody(createFilestorageResponse(uuidsAndResponses))
 				.withStatus(HttpStatus.OK.value())))
 
 	wiremockServer.stubFor(
@@ -116,7 +118,10 @@ fun mockFilestorageIsDown() {
 				.withStatus(HttpStatus.SERVICE_UNAVAILABLE.value())))
 }
 
-fun createFilestorageResponse(uuid: String): String = ObjectMapper().writeValueAsString(listOf(FilElementDto(uuid, "apabepa".toByteArray())))
+private fun createFilestorageResponse(uuidsAndResponses: List<Pair<String, String?>>): String =
+	ObjectMapper().writeValueAsString(
+		uuidsAndResponses.map { (uuid, response) -> FilElementDto(uuid, response?.toByteArray()) }
+	)
 
 private fun createJoarkResponse(): String = ObjectMapper().writeValueAsString(
 	JoarkResponse(listOf(Dokumenter("brevkode", "dokumentInfoId", "tittel")),
