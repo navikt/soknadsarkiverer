@@ -50,6 +50,20 @@ class TaskListService(private val archiverService: ArchiverService,
 			schedule(key, task.value, task.count)
 	}
 
+	fun pauseAndStart(key: String) {
+		val task = tasks[key]
+		if (task != null) {
+
+			logger.info("$key: Waiting to acquire lock")
+			task.isRunningLock.acquire()
+			logger.info("$key: Acquired lock, will start rerun")
+			schedule(key, task.value, 0)
+
+		} else {
+			logger.info("$key: Failed to find task, maybe it it already finished?")
+		}
+	}
+
 	private fun incrementCountAndSetToNotRunning(key: String) {
 		val task = tasks[key]
 		if (task != null) {
@@ -68,6 +82,7 @@ class TaskListService(private val archiverService: ArchiverService,
 
 	fun finishTask(key: String) {
 		if (tasks.containsKey(key)) {
+			logger.info("$key: Finishing task")
 			tasks.remove(key)
 		} else {
 			logger.info("$key: Tried to finish task, but it is already finished")
@@ -80,6 +95,7 @@ class TaskListService(private val archiverService: ArchiverService,
 
 		if (attempt > appConfiguration.config.retryTime.size) {
 			logger.warn("$key: Too many attempts ($attempt), will not try again")
+			tasks[key]?.isRunningLock?.release()
 			return
 		}
 

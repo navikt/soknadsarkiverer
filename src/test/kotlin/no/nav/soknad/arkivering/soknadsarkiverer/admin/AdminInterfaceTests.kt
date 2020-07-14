@@ -11,6 +11,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -19,6 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.context.ActiveProfiles
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 @ActiveProfiles("test")
 @SpringBootTest
@@ -26,9 +28,6 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
-
-	@Autowired
-	private lateinit var adminInterface: AdminInterface
 
 	@MockBean
 	private lateinit var kafkaPublisherMock: KafkaPublisher
@@ -39,6 +38,7 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 	private val appConfiguration = createAppConfiguration()
 	private val scheduler = mock<Scheduler>()
 	private lateinit var taskListService: TaskListService
+	private lateinit var adminInterface: AdminInterface
 
 	private val maxNumberOfAttempts = appConfiguration.config.retryTime.size
 
@@ -47,6 +47,7 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
 
 		taskListService = TaskListService(archiverService, appConfiguration, scheduler)
+		adminInterface = AdminInterface(taskListService)
 
 		setupKafkaTopologyTestDriver()
 			.withAppConfiguration(appConfiguration)
@@ -71,17 +72,56 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 	@Test
 	fun `Can call rerun`() {
 		val key = UUID.randomUUID().toString()
+		val fileUuid = UUID.randomUUID().toString()
+		val soknadarkivschema = createSoknadarkivschema(fileUuid)
 		mockFilestorageIsDown()
 		mockJoarkIsWorking()
 
-		putDataOnInputTopic(key, createSoknadarkivschema())
+		putDataOnInputTopic(key, soknadarkivschema)
 		verifyProcessingEvents(key, maxNumberOfAttempts, STARTED)
 		loopAndVerify(maxNumberOfAttempts + 1, { getTaskListCount(key) })
 
-		mockFilestorageIsWorking(key)
+		mockFilestorageIsWorking(fileUuid)
 		adminInterface.rerun(key)
 
-		loopAndVerify(0, { getTaskListCount(key) })
+		loopAndVerify(0, { taskListService.listTasks().size })
+		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
+	}
+
+	@Test
+	fun `Rerunning finished task wont cause hanging`() {
+		val key = UUID.randomUUID().toString()
+		val fileUuid = UUID.randomUUID().toString()
+		val soknadarkivschema = createSoknadarkivschema(fileUuid)
+		mockFilestorageIsWorking(fileUuid)
+		mockJoarkIsWorking()
+
+		putDataOnInputTopic(key, soknadarkivschema)
+		loopAndVerify(0, { taskListService.listTasks().size })
+		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
+
+		adminInterface.rerun(key)
+
+		TimeUnit.SECONDS.sleep(1)
+		loopAndVerify(0, { taskListService.listTasks().size })
+		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
+	}
+
+	@Test
+	fun `Rerunning blocked task wont block caller`() {
+		val key = UUID.randomUUID().toString()
+		val fileUuid = UUID.randomUUID().toString()
+		val soknadarkivschema = createSoknadarkivschema(fileUuid)
+		mockFilestorageIsWorking(fileUuid)
+		mockJoarkIsWorking(10_000)
+
+		putDataOnInputTopic(key, soknadarkivschema)
+
+		val timeBeforeRerun = System.currentTimeMillis()
+		adminInterface.rerun(key)
+
+		loopAndVerify(1, { taskListService.listTasks().size })
+		assertTrue(System.currentTimeMillis() - timeBeforeRerun < 100, "This operation should not take a long time to perform")
 	}
 
 	@Test

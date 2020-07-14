@@ -1,14 +1,20 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/admin")
-class AdminInterface {
+class AdminInterface(private val taskListService: TaskListService) {
+	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@PostMapping("/rerun/{key}")
 	fun rerun(@PathVariable key: String) {
-		//TODO("Not yet implemented")
+		logger.info("$key: Performing forced rerun")
+		GlobalScope.launch { taskListService.pauseAndStart(key) }
 	}
 
 	@GetMapping("/kafka/events/allEvents")

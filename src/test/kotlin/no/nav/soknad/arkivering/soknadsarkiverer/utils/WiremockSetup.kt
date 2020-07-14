@@ -40,16 +40,16 @@ private fun verifyMockedRequests(expectedCount: Int, url: String, requestMethod:
 	loopAndVerify(expectedCount, getCount)
 }
 
-fun mockJoarkIsWorking() {
-	mockJoark(HttpStatus.OK.value(), createJoarkResponse())
+fun mockJoarkIsWorking(timeout: Int = 0) {
+	mockJoark(HttpStatus.OK.value(), createJoarkResponse(), timeout)
 }
 
-fun mockJoarkIsWorkingButGivesInvalidResponse() {
-	mockJoark(HttpStatus.OK.value(), "mocked_invalid_response")
+fun mockJoarkIsWorkingButGivesInvalidResponse(timeout: Int = 0) {
+	mockJoark(HttpStatus.OK.value(), "mocked_invalid_response", timeout)
 }
 
-fun mockJoarkIsDown() {
-	mockJoark(HttpStatus.NOT_FOUND.value(), "Mocked_exception")
+fun mockJoarkIsDown(timeout: Int = 0) {
+	mockJoark(HttpStatus.NOT_FOUND.value(), "Mocked_exception", timeout)
 }
 
 fun mockJoarkRespondsAfterAttempts(attempts: Int) {
@@ -74,13 +74,14 @@ fun mockJoarkRespondsAfterAttempts(attempts: Int) {
 				.withStatus(HttpStatus.OK.value())))
 }
 
-private fun mockJoark(statusCode: Int, responseBody: String) {
+private fun mockJoark(statusCode: Int, responseBody: String, timeout: Int) {
 	wiremockServer.stubFor(
 		WireMock.post(WireMock.urlEqualTo(joarkUrl))
 			.willReturn(WireMock.aResponse()
 				.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
 				.withBody(responseBody)
-				.withStatus(statusCode)))
+				.withStatus(statusCode)
+				.withFixedDelay(timeout)))
 }
 
 fun mockFilestorageIsWorking(uuid: String) {
