@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
+import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
@@ -19,8 +20,9 @@ class FilestorageService(private val restTemplate: RestTemplate,
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	override fun getFilesFromFilestorage(key: String, fileIds: String): List<FilElementDto> {
+	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): List<FilElementDto> {
 		try {
+			val fileIds = getFileIds(data)
 			logger.info("$key: Getting files with ids: '$fileIds'")
 
 			val files = getFiles(fileIds)
@@ -34,8 +36,10 @@ class FilestorageService(private val restTemplate: RestTemplate,
 		}
 	}
 
-	override fun deleteFilesFromFilestorage(key: String, fileIds: String) {
+	override fun deleteFilesFromFilestorage(key: String, data: Soknadarkivschema) {
+		val fileIds = getFileIds(data)
 		try {
+
 			logger.info("$key: Calling filestorage to delete '$fileIds'")
 			deleteFiles(fileIds)
 			logger.info("$key: The files: $fileIds are deleted")
@@ -74,6 +78,13 @@ class FilestorageService(private val restTemplate: RestTemplate,
 		val request = HttpEntity<Any>(url, createHeaders(username, sharedPassword))
 		restTemplate.exchange(url, HttpMethod.DELETE, request, String::class.java)
 	}
+
+
+	private fun getFileIds(data: Soknadarkivschema) =
+		data.getMottatteDokumenter()
+			.flatMap { it.getMottatteVarianter().map { variant -> variant.getUuid() } }
+			.joinToString(",")
+
 
 	private inline fun <reified T : Any> typeRef(): ParameterizedTypeReference<T> = object : ParameterizedTypeReference<T>() {}
 }

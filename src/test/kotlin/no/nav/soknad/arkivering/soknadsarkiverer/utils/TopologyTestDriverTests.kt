@@ -85,8 +85,8 @@ open class TopologyTestDriverTests {
 
 	inner class TopologyTestDriverBuilder {
 		private var appConfiguration = createAppConfiguration()
-		private var taskListService = mock<TaskListService>()
-		private var kafkaPublisher = mock<KafkaPublisher>()
+		private lateinit var taskListService: TaskListService
+		private lateinit var kafkaPublisher: KafkaPublisher
 
 		fun withAppConfiguration(appConfiguration: AppConfiguration): TaskListServiceStep {
 			this.appConfiguration = appConfiguration

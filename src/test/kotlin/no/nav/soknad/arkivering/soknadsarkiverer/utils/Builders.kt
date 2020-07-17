@@ -72,6 +72,10 @@ class MottattDokumentBuilder {
 	}
 
 	fun withMottatteVarianter(vararg mottatteVarianter: MottattVariant): MottattDokumentBuilder {
+		return withMottatteVarianter(mottatteVarianter.toList())
+	}
+
+	fun withMottatteVarianter(mottatteVarianter: List<MottattVariant>): MottattDokumentBuilder {
 		this.mottatteVarianter.addAll(mottatteVarianter)
 		return this
 	}
@@ -108,13 +112,14 @@ class MottattVariantBuilder {
 	fun build() = MottattVariant(uuid, filnavn, filtype, variantformat)
 }
 
+fun createSoknadarkivschema(fileId: String = UUID.randomUUID().toString()) = createSoknadarkivschema(listOf(fileId))
 
-fun createSoknadarkivschema(fileUuid: String = UUID.randomUUID().toString()) =
+fun createSoknadarkivschema(fileIds: List<String>) =
 	SoknadarkivschemaBuilder()
 		.withBehandlingsid(UUID.randomUUID().toString())
 		.withMottatteDokumenter(MottattDokumentBuilder()
-			.withMottatteVarianter(MottattVariantBuilder()
-				.withUuid(fileUuid)
-				.build())
+			.withMottatteVarianter(
+				fileIds.map { MottattVariantBuilder().withUuid(it).build() }
+			)
 			.build())
 		.build()
