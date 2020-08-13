@@ -10,26 +10,26 @@ spec:
   port: 8091
   liveliness:
     path: /internal/isAlive
-    initialDelay: 20
+    initialDelay: 100
     failureThreshold: 10
-    timeout: 1
+    timeout: 20
   readiness:
-    path: /internal/isAlive
-    initialDelay: 20
-    timeout: 1
+    path: /internal/isReady
+    initialDelay: 100
+    timeout: 20
   prometheus:
     enable: true
-    path: /metrics
+    path: /internal/prometheus
   replicas:
     min: 2
     max: 4
   resource:
     limits:
       cpu: 3000m
-      memory: 512Mi
+      memory: 1024Mi
     requests:
       cpu: 200m
-      memory: 256Mi
+      memory: 512Mi
   ingresses:
     - "https://soknadsarkiverer-q0.nais.preprod.local"
     - "https://soknadsarkiverer-q0.dev-fss.nais.io"
@@ -64,3 +64,5 @@ spec:
       value: privat-soknadInnsendt-processingEventLog-v1-q0
     - name: KAFKA_MESSAGE_TOPIC
       value: privat-soknadInnsendt-messages-v1-q0
+    - name: FILESTORAGE_HOST
+      value: https://tjenester-default.nav.no/soknadsfillager

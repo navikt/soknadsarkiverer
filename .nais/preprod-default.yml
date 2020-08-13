@@ -14,7 +14,7 @@ spec:
     failureThreshold: 10
     timeout: 20
   readiness:
-    path: /internal/isAlive
+    path: /internal/isReady
     initialDelay: 100
     timeout: 20
   prometheus:
@@ -37,7 +37,7 @@ spec:
     enabled: true
     paths:
       - mountPath: /var/run/secrets/nais.io/serviceuser
-        kvPath: /serviceuser/data/dev/srvsoknadarkiverer
+        kvPath: /serviceuser/data/dev/srvsoknadsarkiverer
       - mountPath: /var/run/secrets/nais.io/kv
         kvPath: /kv/preprod/fss/soknadsarkiverer/default
       - mountPath: /var/run/secrets/nais.io/appdynamics
