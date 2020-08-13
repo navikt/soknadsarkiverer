@@ -42,6 +42,10 @@ spec:
         kvPath: /kv/preprod/fss/soknadsarkiverer/default
       - mountPath: /var/run/secrets/nais.io/appdynamics
         kvPath: /apikey/appdynamics/dev
+      - mountPath: /var/run/secrets/nais.io/application.yml
+        kvPath: /kv/preprod/fss/soknadsarkiverer/default/application.yml
+
+
 
   env:
     - name: APP_VERSION

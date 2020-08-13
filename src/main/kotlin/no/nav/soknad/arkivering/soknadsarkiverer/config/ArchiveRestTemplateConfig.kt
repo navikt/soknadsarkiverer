@@ -10,16 +10,16 @@ import no.nav.security.token.support.client.core.oauth2.OAuth2AccessTokenService
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.security.token.support.client.spring.oauth2.EnableOAuth2Client
 import no.nav.security.token.support.spring.api.EnableJwtTokenValidation
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.web.client.RestTemplateBuilder
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
+import org.springframework.context.annotation.Scope
 import org.springframework.http.HttpRequest
 import org.springframework.http.client.ClientHttpRequestExecution
 import org.springframework.http.client.ClientHttpRequestInterceptor
-import org.springframework.http.converter.HttpMessageConverter
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter
 import org.springframework.web.client.RestTemplate
 import java.lang.annotation.ElementType
 import java.lang.annotation.Retention
@@ -29,46 +29,31 @@ import java.net.URI
 import java.util.*
 
 
+@Profile("prod | dev")
 @EnableOAuth2Client(cacheEnabled = true)
 @EnableJwtTokenValidation
 @Configuration
-class ArchiveRestTemplateConfig(private val appConfiguration: AppConfiguration, val objectMapper: ObjectMapper) {
+class ArchiveRestTemplateConfig(private val appConfiguration: AppConfiguration,
+																val objectMapper: ObjectMapper,
+																private val clientConfigurationProperties: ClientConfigurationProperties) {
 
-/*
-	@Bean
-	@Qualifier("archiveConfigurationProperties")
-	fun getClientConfigurationProperties(): ClientConfigurationProperties {
-		return ClientConfigurationProperties( mapOf("journalpost" to getClientProperties(appConfiguration)) )
-	}
+	private val logger = LoggerFactory.getLogger(javaClass)
 
-*/
 	@Bean
-	@Profile("prod | test")
+	@Profile("prod | dev")
 	@Qualifier("archiveRestTemplate")
-	fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
-													clientConfigurationProperties: ClientConfigurationProperties,
+	@Scope("prototype")
+fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
 													oAuth2AccessTokenService: OAuth2AccessTokenService): RestTemplate? {
 		val properties: ClientProperties? = getClientProperties(appConfiguration)
+		logger.info("Token tokenEndpointUrl= ${clientConfigurationProperties.registration.get("tokenEndpointUrl")}")
+
 		val clientProperties: ClientProperties = Optional.ofNullable(properties)
 			.orElseThrow( { RuntimeException("could not find oauth2 client config for archiveRestTemplate") })
+		// Set correlation_id_header??
 		return restTemplateBuilder
 			.additionalInterceptors(bearerTokenInterceptor(clientProperties, oAuth2AccessTokenService))
 			.build()
-	}
-
-	@Bean
-	@Profile("spring")
-	@Qualifier("archiveRestTemplate")
-	fun archiveRestTestTemplate(): RestTemplate {
-		val restTemplate = RestTemplate()
-		val messageConverters = ArrayList<HttpMessageConverter<*>>()
-
-		val jsonMessageConverter = MappingJackson2HttpMessageConverter()
-		jsonMessageConverter.objectMapper = objectMapper
-		messageConverters.add(jsonMessageConverter)
-
-		restTemplate.messageConverters = messageConverters
-		return restTemplate
 	}
 
 	private fun bearerTokenInterceptor(clientProperties: ClientProperties,
@@ -82,8 +67,8 @@ class ArchiveRestTemplateConfig(private val appConfiguration: AppConfiguration, 
 
 	@Bean
 	fun getClientProperties(appConfiguration: AppConfiguration): ClientProperties {
-		val authentication = ClientAuthenticationProperties(appConfiguration.config.username, ClientAuthenticationMethod("client_secret_basic"), appConfiguration.config.sharedPassword, null )
-		return ClientProperties(URI.create(appConfiguration.config.tokenEndpointUrl), OAuth2GrantType("urn:ietf:params:oauth:grant-type:jwt-bearer"), listOf("scope"), authentication, null) //TODO sjekk scope og resourceUrl
+		val authentication = ClientAuthenticationProperties(appConfiguration.config.username, ClientAuthenticationMethod(appConfiguration.config.tokenAuthenticationMethod), appConfiguration.kafkaConfig.password, null )
+		return ClientProperties(URI.create(appConfiguration.config.tokenEndpointUrl), OAuth2GrantType.CLIENT_CREDENTIALS, appConfiguration.config.scopes, authentication, null) //TODO sjekk resourceUrl
 	}
 
 

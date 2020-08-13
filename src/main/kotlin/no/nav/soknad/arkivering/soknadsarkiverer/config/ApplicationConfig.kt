@@ -3,6 +3,8 @@ package no.nav.soknad.arkivering.soknadsarkiverer.config
 import com.natpryce.konfig.*
 import com.natpryce.konfig.ConfigurationProperties.Companion.systemProperties
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.core.env.ConfigurableEnvironment
 import java.io.File
@@ -22,17 +24,33 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_PROCESSING_TOPIC" to "privat-soknadInnsendt-processingEventLog-v1-default",
 	"KAFKA_MESSAGE_TOPIC" to "privat-soknadInnsendt-messages-v1-default",
 
-	"JOARK_HOST" to "http://localhost:8092",
-	"JOARK_URL" to "/joark/save",
-	"TOKEN_ENDPOINT_URL" to "http://localhost:8181/oauth2/v2.0/token",
+	"JOARK_HOST" to "http://localhost:8092", // https://dokarkiv-q0.nais.preprod.local
+	"JOARK_URL" to "/joark/save", // /swagger-ui.html#/arkiver-og-journalfoer-rest-controller/opprettJournalpostUsingPOST
 	"FILESTORAGE_HOST" to "http://localhost:9042",
 	"FILESTORAGE_URL" to "/filer?ids=",
 	"SHARED_PASSORD" to "password",
 
+	// client registration
+	//"CLIENT_ID" to "client_id",
+	//"TOKEN_ENDPOINT_URL" to "http://localhost:8181/oauth2/v2.0/token", // https://security-token-service.nais.preprod.local/rest/v1/sts/token
+	//"AUTH_METHOD" to "client_secret_basic",
+	//"SCOPES" to "openid",
+	//"GRANT_TYPE" to "client_credentials",
 	"EXPIRY_TRESHOLD" to "2",
-	"METADATAURL" to "",
-	"AUDIENCE" to "srvsoknadarkiverer",
-	"TOKEN_COOKIE" to ""
+	//"METADATAURL" to "",
+	//"AUDIENCE" to "",
+	//"TOKEN_COOKIE" to "",
+
+	"DISCOVERY_URL" to "https://login.microsoftonline.com/966ac572-f5b7-4bbe-aa88-c76419c0f851/v2.0/.well-known/openid-configuration",
+	"STS_AUDIENCE_ID" to "soknadsarkiverer-default",
+	"STS_COOKIE" to "idtoken-cookie",
+	"TOKEN_ENDPOINT_URL" to "https://security-token-service.nais.preprod.local/oauth2/v2.0/token",
+	"GRANT_TYPE" to "client_credentials",
+	"SCOPES" to "openid",
+	"CLIENT_ID" to "",
+	"CLIENT_SECRET" to "",
+	"AUTH_METHOD" to "client_secret_basic"
+
 ))
 
 private val secondsBetweenRetries = listOf(5, 25, 60, 120, 600)   // As many retries will be attempted as there are elements in the list.
@@ -71,6 +89,9 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val joarkHost: String = "JOARK_HOST".configProperty(),
 		val joarkUrl: String = "JOARK_URL".configProperty(),
 		val tokenEndpointUrl: String = "TOKEN_ENDPOINT_URL".configProperty(),
+		val tokenAuthenticationMethod: String = "AUTH_METHOD".configProperty(),
+		val scopes: List<String> = listOf("SCOPES".configProperty()),
+		val grantType: String = "GRANT_TYPE",
 		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "SOKNADSARKIVERER_USERNAME".configProperty()),
 		val sharedPassword: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "SHARED_PASSORD".configProperty()),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
@@ -81,12 +102,16 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 }
 
 @org.springframework.context.annotation.Configuration
+@ConfigurationPropertiesScan
+@EnableConfigurationProperties(ClientConfigurationProperties::class)
 class ConfigConfig(private val env: ConfigurableEnvironment) {
+
 	@Bean
 	//fun appConfiguration() = AppConfiguration()
 	fun appConfiguration(): AppConfiguration {
 		val appConfiguration = AppConfiguration()
-		env.setActiveProfiles(appConfiguration.config.profile);
+		env.setActiveProfiles(appConfiguration.config.profile)
 		return appConfiguration
 	}
+
 }
