@@ -37,7 +37,7 @@ spec:
     enabled: true
     paths:
       - mountPath: /var/run/secrets/nais.io/serviceuser
-        kvPath: /serviceuser/data/dev/srvsoknadsarkiverer
+        kvPath: /serviceuser/data/dev/srvsoknadarkiverer
       - mountPath: /var/run/secrets/nais.io/kv
         kvPath: /kv/preprod/fss/soknadsarkiverer/default
       - mountPath: /var/run/secrets/nais.io/appdynamics
