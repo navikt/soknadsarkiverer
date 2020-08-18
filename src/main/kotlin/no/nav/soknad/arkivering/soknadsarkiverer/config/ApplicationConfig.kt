@@ -60,7 +60,7 @@ private val secondsBetweenRetriesForTests = listOf(0, 0, 0, 0, 0) // As many ret
 val appConfig =
 	EnvironmentVariables() overriding
 		systemProperties() overriding
-		ConfigurationProperties.fromOptionalFile(File("/var/run/secrets/nais.io/application.yml")) overriding
+		ConfigurationProperties.fromOptionalFile(File("/var/run/secrets/nais.io/application.properties")) overriding
 		ConfigurationProperties.fromResource(Configuration::class.java, "/application.yml") overriding
 		ConfigurationProperties.fromResource(Configuration::class.java, "/local.properties") overriding
 		defaultProperties

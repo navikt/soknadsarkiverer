@@ -1,21 +1,21 @@
 ---
 spring:
-  profiles: test | spring | default
+  profiles: test | spring | default | dev | prod
 
 no.nav.security.jwt:
-  expirythreshold: 1 #threshold in minutes until token expires
+  expirythreshold: ${EXPIRYTHRESHOLD} #threshold in minutes until token expires
   issuer.someshortname:
-    discoveryurl: http://metadata
-    accepted_audience: aud-localhost
-    cookie_name: localhost-idtoken
+    discoveryurl: ${DISCOVERYURL}
+    accepted_audience: ${ACCEPTED_AUDIENCE}
+    cookie_name: ${COOKIE_NAME}
 
   client:
     registration:
       soknadsarkiverer:
-        token-endpoint-url: http://localhost/oauth2/v2.0/token
-        grant-type: client_credentials
+        token-endpoint-url: ${TOKEN-ENDPOINT-URL}
+        grant-type: ${GRANT-TYPE}
         scope: openid
         authentication:
-          client-id: srvsoknadarkiverer
-          client-secret: noetemmelighemmelig
-          client-auth-method: client_secret_basic
+          client-id: ${CLIENT-ID}
+          client-secret: ${CLIENT-SECRET}
+          client-auth-method: ${CLIENT-AUTH-METHOD}
