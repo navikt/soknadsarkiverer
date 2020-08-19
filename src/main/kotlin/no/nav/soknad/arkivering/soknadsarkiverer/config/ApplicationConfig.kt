@@ -3,6 +3,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.config
 import com.natpryce.konfig.*
 import com.natpryce.konfig.ConfigurationProperties.Companion.systemProperties
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
+import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -107,11 +108,14 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 class ConfigConfig(private val env: ConfigurableEnvironment) {
 
+	private val logger = LoggerFactory.getLogger(javaClass)
+
 	@Bean
 	//fun appConfiguration() = AppConfiguration()
 	fun appConfiguration(): AppConfiguration {
 		val appConfiguration = AppConfiguration()
 		env.setActiveProfiles(appConfiguration.config.profile)
+		logger.info("discovertyurl=" + env.getProperty("DISCOVERYURL"))
 		return appConfiguration
 	}
 
