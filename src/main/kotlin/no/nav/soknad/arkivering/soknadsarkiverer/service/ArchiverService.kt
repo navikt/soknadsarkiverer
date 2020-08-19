@@ -16,7 +16,8 @@ import java.io.PrintWriter
 import java.io.StringWriter
 
 @Service
-class ArchiverService(private val filestorageService: FileserviceInterface, private val joarkArchiver: JoarkArchiver,
+class ArchiverService(private val filestorageService: FileserviceInterface,
+											private val joarkArchiver: JoarkArchiver,
 											private val kafkaPublisher: KafkaPublisher) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
