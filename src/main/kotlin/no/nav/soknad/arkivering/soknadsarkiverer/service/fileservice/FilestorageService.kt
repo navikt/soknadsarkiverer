@@ -37,7 +37,7 @@ class FilestorageService(private val restTemplate: RestTemplate,
 		val fileIds = getFileIds(data)
 		try {
 
-			logger.info("$key: Calling filestorage to delete '$fileIds'")
+			logger.info("$key: Calling file storage to delete '$fileIds'")
 			deleteFiles(fileIds)
 			logger.info("$key: The files: $fileIds are deleted")
 
