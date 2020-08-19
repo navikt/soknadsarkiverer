@@ -62,6 +62,8 @@ spec:
       value: PLAIN
     - name: APPLICATION_PROFILE
       value: dev
+    - name: SPRING_PROFILES_ACTIVE
+      value: dev
     - name: KAFKA_INPUT_TOPIC
       value: privat-soknadInnsendt-v1-default
     - name: KAFKA_PROCESSING_TOPIC
