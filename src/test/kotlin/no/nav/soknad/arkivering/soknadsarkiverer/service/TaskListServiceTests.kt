@@ -120,7 +120,7 @@ class TaskListServiceTests {
 		val captor = argumentCaptor<() -> Unit>()
 		whenever(scheduler.schedule(capture(captor), any()))
 			.then { captor.value.invoke() }
-			.thenThrow(RuntimeException("Mocked exception"))
+			.thenThrow(RuntimeException("Mocked exception for scheduled task"))
 	}
 
 

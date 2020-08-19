@@ -61,7 +61,7 @@ fun mockJoarkRespondsAfterAttempts(attempts: Int) {
 				.inScenario("integrationTest").whenScenarioStateIs(stateNames[attempt])
 				.willReturn(WireMock.aResponse()
 					.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-					.withBody("Mocked exception")
+					.withBody("Mocked exception, attempt $attempt")
 					.withStatus(HttpStatus.NOT_FOUND.value()))
 				.willSetStateTo(stateNames[attempt + 1]))
 	}
@@ -106,7 +106,7 @@ fun mockFilestorageDeletionIsNotWorking() {
 	wiremockServer.stubFor(
 		WireMock.delete(WireMock.urlMatching(filestorageUrl.replace("?", "\\?") + ".*"))
 			.willReturn(WireMock.aResponse()
-				.withBody("Mocked exception")
+				.withBody("Mocked exception for deletion")
 				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
 }
 
@@ -114,7 +114,7 @@ fun mockFilestorageIsDown() {
 	wiremockServer.stubFor(
 		WireMock.get(WireMock.urlMatching(filestorageUrl.replace("?", "\\?") + ".*"))
 			.willReturn(WireMock.aResponse()
-				.withBody("Mocked exception")
+				.withBody("Mocked exception for filestorage")
 				.withStatus(HttpStatus.SERVICE_UNAVAILABLE.value())))
 }
 
