@@ -19,7 +19,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_SECURITY" to "",
 	"KAFKA_SECPROT" to "",
 	"KAFKA_SASLMEC" to "",
-	"APPLICATION_PROFILE" to "spring",
+	"SPRING_PROFILES_ACTIVE" to "spring",
 	"KAFKA_INPUT_TOPIC" to "privat-soknadInnsendt-v1-default",
 	"KAFKA_PROCESSING_TOPIC" to "privat-soknadInnsendt-processingEventLog-v1-default",
 	"KAFKA_MESSAGE_TOPIC" to "privat-soknadInnsendt-messages-v1-default",
@@ -97,8 +97,8 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val sharedPassword: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "SHARED_PASSORD".configProperty()),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
-		val retryTime: List<Int> = if (!"test".equals("APPLICATION_PROFILE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
-		val profile: String = "APPLICATION_PROFILE".configProperty()
+		val retryTime: List<Int> = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
+		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty()
 	)
 }
 

@@ -1,6 +1,6 @@
 FROM navikt/java:11
 
-ENV APPLICATION_PROFILE=test
+ENV SPRING_PROFILES_ACTIVE=test
 ENV KAFKA_BOOTSTRAP_SERVERS=kafka-broker:29092
 ENV SCHEMA_REGISTRY_URL=http://kafka-schema-registry:8081
 ENV JOARK_HOST=http://joark-mock:8092

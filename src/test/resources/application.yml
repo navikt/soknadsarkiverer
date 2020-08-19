@@ -1,5 +1,5 @@
 application:
-  APPLICATION_PROFILE: test
+  SPRING_PROFILES_ACTIVE: test
   schema-registry-scope: mocked-scope
   SCHEMA_REGISTRY_URL: mock://mocked-scope
   mocked-port-for-external-services: 2908

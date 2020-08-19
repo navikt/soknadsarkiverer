@@ -42,8 +42,6 @@ spec:
         kvPath: /kv/preprod/fss/soknadsarkiverer/default
       - mountPath: /var/run/secrets/nais.io/appdynamics
         kvPath: /apikey/appdynamics/dev
-      - mountPath: /var/run/secrets/nais.io/application.properties
-        kvPath: /kv/preprod/fss/soknadsarkiverer/default/application.properties
 
 
 
@@ -60,8 +58,6 @@ spec:
       value: SASL_SSL
     - name: KAFKA_SASLMEC
       value: PLAIN
-    - name: APPLICATION_PROFILE
-      value: dev
     - name: SPRING_PROFILES_ACTIVE
       value: dev
     - name: KAFKA_INPUT_TOPIC
