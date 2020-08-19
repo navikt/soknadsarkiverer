@@ -82,7 +82,7 @@ class TaskListServiceTests {
 	@Test
 	fun `Archiving succeeds - will remove task from list and not attempt to schedule again`() {
 		val key = UUID.randomUUID().toString()
-		runScheduledTaskOnScheduling()
+		runScheduledTaskOnScheduling("1")
 
 		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), 0)
 
@@ -95,7 +95,7 @@ class TaskListServiceTests {
 	fun `Archiving does not succeed - will not remove task from list but attempt to schedule again`() {
 		val count = 0
 		val key = UUID.randomUUID().toString()
-		runScheduledTaskOnScheduling()
+		runScheduledTaskOnScheduling("2")
 		whenever(archiverService.archive(eq(key), any())).thenThrow(RuntimeException("Mocked exception"))
 
 		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), 0)
@@ -116,11 +116,11 @@ class TaskListServiceTests {
 		loopAndVerify(1, getCount)
 	}
 
-	private fun runScheduledTaskOnScheduling() {
+	private fun runScheduledTaskOnScheduling(msg: String) {
 		val captor = argumentCaptor<() -> Unit>()
 		whenever(scheduler.schedule(capture(captor), any()))
 			.then { captor.value.invoke() }
-			.thenThrow(RuntimeException("Mocked exception for scheduled task"))
+			.thenThrow(RuntimeException("Mocked exception for scheduled task, $msg"))
 	}
 
 
