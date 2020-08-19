@@ -7,10 +7,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import org.apache.tomcat.util.codec.binary.Base64
 import org.slf4j.LoggerFactory
 import org.springframework.core.ParameterizedTypeReference
-import org.springframework.http.HttpEntity
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpMethod
-import org.springframework.http.MediaType
+import org.springframework.http.*
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 
@@ -64,19 +61,20 @@ class FilestorageService(private val restTemplate: RestTemplate,
 	}
 
 	private fun getFiles(fileIds: String): List<FilElementDto>? {
-		val username = appConfiguration.config.username
-		val sharedPassword = appConfiguration.config.sharedPassword
-		val url = appConfiguration.config.filestorageHost + appConfiguration.config.filestorageUrl + fileIds
-		val request = HttpEntity<Any>(url, createHeaders(username, sharedPassword))
-		return restTemplate.exchange(url, HttpMethod.GET, request, typeRef<List<FilElementDto>>()).body
+		val exchange = performRestCall(fileIds, HttpMethod.GET, typeRef<List<FilElementDto>>())
+		return exchange.body
 	}
 
 	private fun deleteFiles(fileIds: String) {
+		performRestCall(fileIds, HttpMethod.DELETE, typeRef<String>())
+	}
+
+	private fun <T> performRestCall(fileIds: String, method: HttpMethod, type: ParameterizedTypeReference<T>): ResponseEntity<T> {
 		val username = appConfiguration.config.username
 		val sharedPassword = appConfiguration.config.sharedPassword
 		val url = appConfiguration.config.filestorageHost + appConfiguration.config.filestorageUrl + fileIds
 		val request = HttpEntity<Any>(url, createHeaders(username, sharedPassword))
-		restTemplate.exchange(url, HttpMethod.DELETE, request, String::class.java)
+		return restTemplate.exchange(url, method, request, type)
 	}
 
 
