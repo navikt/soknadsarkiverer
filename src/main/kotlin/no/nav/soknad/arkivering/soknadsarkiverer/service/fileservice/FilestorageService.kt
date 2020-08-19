@@ -61,8 +61,8 @@ class FilestorageService(private val restTemplate: RestTemplate,
 	}
 
 	private fun getFiles(fileIds: String): List<FilElementDto>? {
-		val exchange = performRestCall(fileIds, HttpMethod.GET, typeRef<List<FilElementDto>>())
-		return exchange.body
+		val response = performRestCall(fileIds, HttpMethod.GET, typeRef<List<FilElementDto>>())
+		return response.body
 	}
 
 	private fun deleteFiles(fileIds: String) {
@@ -73,6 +73,7 @@ class FilestorageService(private val restTemplate: RestTemplate,
 		val username = appConfiguration.config.username
 		val sharedPassword = appConfiguration.config.sharedPassword
 		val url = appConfiguration.config.filestorageHost + appConfiguration.config.filestorageUrl + fileIds
+
 		val request = HttpEntity<Any>(url, createHeaders(username, sharedPassword))
 		return restTemplate.exchange(url, method, request, type)
 	}
