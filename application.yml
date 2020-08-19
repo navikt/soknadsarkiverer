@@ -6,8 +6,8 @@ no.nav.security.jwt:
   expirythreshold: ${EXPIRYTHRESHOLD} #threshold in minutes until token expires
   issuer.someshortname:
     discoveryurl: ${DISCOVERYURL}
-    accepted_audience: ${ACCEPTED_AUDIENCE}
-    cookie_name: ${COOKIE_NAME}
+    accepted_audience: ${ACCEPTEDAUDIENCE}
+    cookie_name: ${COOKIENAME}
 
   client:
     registration:

@@ -42,10 +42,10 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	//"AUDIENCE" to "",
 	//"TOKEN_COOKIE" to "",
 
-	"DISCOVERY_URL" to "https://login.microsoftonline.com/966ac572-f5b7-4bbe-aa88-c76419c0f851/v2.0/.well-known/openid-configuration",
+	"DISCOVERY_URL" to "",
 	"STS_AUDIENCE_ID" to "soknadsarkiverer-default",
 	"STS_COOKIE" to "idtoken-cookie",
-	"TOKEN_ENDPOINT_URL" to "https://security-token-service.nais.preprod.local/oauth2/v2.0/token",
+	"TOKEN_ENDPOINT_URL" to "",
 	"GRANT_TYPE" to "client_credentials",
 	"SCOPES" to "openid",
 	"CLIENT_ID" to "",
@@ -99,7 +99,8 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
 		val retryTime: List<Int> = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
-		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty()
+		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty(),
+		val discoveryurl: String = readFileAsText("/var/run/secrets/nais.io/kv/DISCOVERYURL", "DISCOVERY_URL".configProperty())
 	)
 }
 
@@ -115,7 +116,9 @@ class ConfigConfig(private val env: ConfigurableEnvironment) {
 	fun appConfiguration(): AppConfiguration {
 		val appConfiguration = AppConfiguration()
 		env.setActiveProfiles(appConfiguration.config.profile)
-		logger.info("discovertyurl=" + env.getProperty("DISCOVERYURL"))
+		logger.info("discoveryurl=" + env.getProperty("DISCOVERYURL"))
+		logger.info("appConfiguration.config.discoveryurl=${appConfiguration.config.discoveryurl}")
+		logger.info("tokenendpointurl=" + env.getProperty("TOKEN-ENDPOINT-URL"))
 		return appConfiguration
 	}
 
