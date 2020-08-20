@@ -98,7 +98,7 @@ class TaskListServiceTests {
 		runScheduledTaskOnScheduling("2")
 		whenever(archiverService.archive(eq(key), any())).thenThrow(RuntimeException("Mocked exception"))
 
-		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), 0)
+		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), count)
 
 		loopAndVerify(count + 1, { getTaskListCount(key) })
 		assertFalse(taskListService.listTasks().isEmpty())
