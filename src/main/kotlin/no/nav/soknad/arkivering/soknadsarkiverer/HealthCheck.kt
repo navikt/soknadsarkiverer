@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping(value = ["/internal"])
-class IsAlive {
+class HealthCheck {
 	private val logger = LoggerFactory.getLogger(javaClass)
 	private var oppstart = 0
 
