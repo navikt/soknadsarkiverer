@@ -66,3 +66,5 @@ spec:
       value: privat-soknadInnsendt-messages-v1-default
     - name: FILESTORAGE_HOST
       value: https://tjenester-default.nav.no/soknadsfillager
+    - name: JOARK_HOST
+      value: https://dokarkiv-default.nav.no/dokarkiv

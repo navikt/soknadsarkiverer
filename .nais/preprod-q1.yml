@@ -66,3 +66,5 @@ spec:
       value: privat-soknadInnsendt-messages-v1-q1
     - name: FILESTORAGE_HOST
       value: https://soknadsfillager-q1.nais.preprod.local
+    - name: JOARK_HOST
+      value: https://dokarkiv-q1.nais.preprod.local
