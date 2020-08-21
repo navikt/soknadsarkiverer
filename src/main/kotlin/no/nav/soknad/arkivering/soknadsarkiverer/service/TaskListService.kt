@@ -136,5 +136,8 @@ class TaskListService(private val archiverService: ArchiverService,
 	}
 
 
-	private class Task(val value: Soknadarkivschema, val count: Int, val timeStarted: LocalDateTime, val isRunningLock: Semaphore)
+	private class Task(val value: Soknadarkivschema,
+										 val count: Int,
+										 val timeStarted: LocalDateTime,
+										 val isRunningLock: Semaphore)
 }

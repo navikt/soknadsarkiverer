@@ -98,7 +98,7 @@ class TaskListServiceTests {
 		runScheduledTaskOnScheduling()
 		whenever(archiverService.archive(eq(key), any())).thenThrow(RuntimeException("Mocked exception"))
 
-		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), 0)
+		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), count)
 
 		loopAndVerify(count + 1, { getTaskListCount(key) })
 		assertFalse(taskListService.listTasks().isEmpty())
@@ -119,8 +119,8 @@ class TaskListServiceTests {
 	private fun runScheduledTaskOnScheduling() {
 		val captor = argumentCaptor<() -> Unit>()
 		whenever(scheduler.schedule(capture(captor), any()))
-			.then { captor.value.invoke() }
-			.thenThrow(RuntimeException("Mocked exception"))
+			.then { captor.value.invoke() } // Run scheduled task on first invocation of scheduler.schedule()
+			.then { } // Do nothing on second invocation of scheduler.schedule()
 	}
 
 

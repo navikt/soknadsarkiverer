@@ -65,4 +65,6 @@ spec:
     - name: KAFKA_MESSAGE_TOPIC
       value: privat-soknadInnsendt-messages-v1-q1
     - name: FILESTORAGE_HOST
-      value: https://tjenester-default.nav.no/soknadsfillager
+      value: https://soknadsfillager-q1.nais.preprod.local
+    - name: JOARK_HOST
+      value: https://dokarkiv-q1.nais.preprod.local
