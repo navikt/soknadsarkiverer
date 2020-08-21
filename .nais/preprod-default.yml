@@ -67,3 +67,18 @@ spec:
       value: privat-soknadInnsendt-messages-v1-default
     - name: FILESTORAGE_HOST
       value: https://tjenester-default.nav.no/soknadsfillager
+    - name: TOKEN-ENDPOINT-URL
+      value: https://security-token-service.nais.preprod.local/oauth2/v2.0/token
+    - name: GRANT-TYPE
+      value: client_credentials
+    - name: SCOPE
+      value: openid
+    - name: CLIENT-ID
+      value: srvsoknadarkiverer
+    - name: CLIENT-AUTH-METHOD
+      value: client_secret_basic
+    - name: ACCEPTEDAUDIENCE
+      value: soknadsarkiverer-default
+    - name: DISCOVERYURL
+      value: https://login.microsoftonline.com/966ac572-f5b7-4bbe-aa88-c76419c0f851/v2.0/.well-known/openid-configuration
+
