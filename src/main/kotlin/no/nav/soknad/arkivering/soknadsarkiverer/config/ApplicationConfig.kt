@@ -116,8 +116,8 @@ class ConfigConfig(private val env: ConfigurableEnvironment) {
 	fun appConfiguration(): AppConfiguration {
 		val appConfiguration = AppConfiguration()
 		env.setActiveProfiles(appConfiguration.config.profile)
-		logger.info("discoveryurl=" + env.getProperty("DISCOVERYURL"))
 		logger.info("appConfiguration.config.discoveryurl=${appConfiguration.config.discoveryurl}")
+		logger.info("discoveryurl=" + env.getProperty("DISCOVERYURL"))
 		logger.info("tokenendpointurl=" + env.getProperty("TOKEN-ENDPOINT-URL"))
 		return appConfiguration
 	}
