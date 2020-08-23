@@ -58,7 +58,7 @@ val appConfig =
 
 private fun String.configProperty(): String = appConfig[Key(this, stringType)]
 
-fun readFileAsText(fileName: String, default: String = "") = try { File(fileName).readText(Charsets.UTF_8) } catch (e: Exception ) { default }
+fun readFileAsText(fileName: String, default: String = "") = try { File(fileName).readText(Charsets.UTF_8) } catch (e: Exception) { default }
 
 data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val config: Config = Config()) {
 	data class KafkaConfig(
@@ -96,7 +96,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 
 @org.springframework.context.annotation.Configuration
 @ConfigurationPropertiesScan
-@EnableConfigurationProperties(ClientConfigurationProperties::class)
+//@EnableConfigurationProperties(ClientConfigurationProperties::class)
 @Priority(-1)
 class ConfigConfig(private val env: ConfigurableEnvironment) {
 
