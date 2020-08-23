@@ -21,10 +21,12 @@ import org.springframework.http.HttpRequest
 import org.springframework.http.client.ClientHttpRequestExecution
 import org.springframework.http.client.ClientHttpRequestInterceptor
 import org.springframework.web.client.RestTemplate
+/*
 import java.lang.annotation.ElementType
 import java.lang.annotation.Retention
 import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
+*/
 import java.net.URI
 import java.util.*
 
@@ -42,10 +44,9 @@ class ArchiveRestTemplateConfig(private val appConfiguration: AppConfiguration,
 	@Bean
 	@Profile("prod | dev")
 	@Qualifier("archiveRestTemplate")
-//	@Scope("prototype")
+	@Scope("prototype")
 fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
 													oAuth2AccessTokenService: OAuth2AccessTokenService): RestTemplate? {
-		//val properties: ClientProperties? = getClientProperties(appConfiguration)
 		val properties: ClientProperties? = clientConfigurationProperties.registration?.get("soknadsarkiverer")
 		logger.info("Token tokenEndpointUrl= ${properties?.tokenEndpointUrl}")
 
@@ -66,16 +67,20 @@ fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
 		}
 	}
 
+/*
 	@Bean
 	fun getClientProperties(appConfiguration: AppConfiguration): ClientProperties {
 		val authentication = ClientAuthenticationProperties(appConfiguration.config.username, ClientAuthenticationMethod(appConfiguration.config.tokenAuthenticationMethod), appConfiguration.kafkaConfig.password, null )
 		return ClientProperties(URI.create(appConfiguration.config.tokenEndpointUrl), OAuth2GrantType.CLIENT_CREDENTIALS, appConfiguration.config.scopes, authentication, null) //TODO sjekk resourceUrl
 	}
+*/
 
+/*
 
 	@Target(ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.TYPE,	ElementType.ANNOTATION_TYPE)
 	@Retention(RetentionPolicy.RUNTIME)
 	@Qualifier
 	annotation class ArchiveRestTemplate
+*/
 
 }

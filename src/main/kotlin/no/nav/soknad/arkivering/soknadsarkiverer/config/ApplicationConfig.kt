@@ -9,6 +9,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.core.env.ConfigurableEnvironment
 import java.io.File
+import javax.annotation.Priority
 
 private val defaultProperties = ConfigurationMap(mapOf(
 	"APP_VERSION" to "",
@@ -96,18 +97,15 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 @org.springframework.context.annotation.Configuration
 @ConfigurationPropertiesScan
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
+@Priority(-1)
 class ConfigConfig(private val env: ConfigurableEnvironment) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Bean
-	//fun appConfiguration() = AppConfiguration()
 	fun appConfiguration(): AppConfiguration {
 		val appConfiguration = AppConfiguration()
 		env.setActiveProfiles(appConfiguration.config.profile)
-		logger.info("appConfiguration.config.discoveryurl=${appConfiguration.config.discoveryurl}")
-		logger.info("discoveryurl=" + env.getProperty("DISCOVERYURL"))
-		logger.info("tokenendpointurl=" + env.getProperty("TOKENENDPOINTURL"))
 		return appConfiguration
 	}
 
