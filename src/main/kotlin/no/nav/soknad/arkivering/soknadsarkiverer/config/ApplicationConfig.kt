@@ -31,26 +31,15 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"FILESTORAGE_URL" to "/filer?ids=",
 	"SHARED_PASSORD" to "password",
 
-	// client registration
-	//"CLIENT_ID" to "client_id",
-	//"TOKEN_ENDPOINT_URL" to "http://localhost:8181/oauth2/v2.0/token", // https://security-token-service.nais.preprod.local/rest/v1/sts/token
-	//"AUTH_METHOD" to "client_secret_basic",
-	//"SCOPES" to "openid",
-	//"GRANT_TYPE" to "client_credentials",
-	"EXPIRY_TRESHOLD" to "2",
-	//"METADATAURL" to "",
-	//"AUDIENCE" to "",
-	//"TOKEN_COOKIE" to "",
-
-	"DISCOVERY_URL" to "",
-	"STS_AUDIENCE_ID" to "soknadsarkiverer-default",
-	"STS_COOKIE" to "idtoken-cookie",
-	"TOKEN_ENDPOINT_URL" to "",
-	"GRANT_TYPE" to "client_credentials",
+	"DISCOVERYURL" to "",
+	"ACCEPTEDAUDIENCE" to "soknadsarkiverer-default",
+	"COOKIENAME" to "idtoken-cookie",
+	"TOKENENDPOINTURL" to "",
+	"GRANTTYPE" to "client_credentials",
 	"SCOPES" to "openid",
-	"CLIENT_ID" to "",
-	"CLIENT_SECRET" to "",
-	"AUTH_METHOD" to "client_secret_basic"
+	"CLIENTID" to "",
+	"CLIENTSECRET" to "",
+	"CLIENTAUTHMETHOD" to "client_secret_basic"
 
 ))
 
@@ -90,17 +79,17 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 	data class Config(
 		val joarkHost: String = "JOARK_HOST".configProperty(),
 		val joarkUrl: String = "JOARK_URL".configProperty(),
-		val tokenEndpointUrl: String = "TOKEN_ENDPOINT_URL".configProperty(),
-		val tokenAuthenticationMethod: String = "AUTH_METHOD".configProperty(),
+		val tokenEndpointUrl: String = readFileAsText("/var/run/secrets/nais.io/kv/TOKENENDPOINTURL", "TOKENENDPOINTURL".configProperty()),
+		val tokenAuthenticationMethod: String = readFileAsText("/var/run/secrets/nais.io/kv/CLIENTAUTHMETHOD", "CLIENTAUTHMETHOD".configProperty()),
 		val scopes: List<String> = listOf("SCOPES".configProperty()),
-		val grantType: String = "GRANT_TYPE",
+		val grantType: String = readFileAsText("/var/run/secrets/nais.io/kv/GRANTTYPE", "GRANTTYPE".configProperty()),
 		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "SOKNADSARKIVERER_USERNAME".configProperty()),
 		val sharedPassword: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "SHARED_PASSORD".configProperty()),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
 		val retryTime: List<Int> = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
 		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty(),
-		val discoveryurl: String = readFileAsText("/var/run/secrets/nais.io/kv/DISCOVERYURL", "DISCOVERY_URL".configProperty())
+		val discoveryurl: String = readFileAsText("/var/run/secrets/nais.io/kv/DISCOVERYURL", "DISCOVERYURL".configProperty())
 	)
 }
 

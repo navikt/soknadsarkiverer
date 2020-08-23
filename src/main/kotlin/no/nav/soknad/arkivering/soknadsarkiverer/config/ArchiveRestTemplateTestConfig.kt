@@ -1,6 +1,8 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import no.nav.security.token.support.client.core.ClientProperties
+import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Bean
@@ -15,7 +17,8 @@ import java.util.ArrayList
 @Profile("spring | test")
 @Configuration
 class ArchiveRestTemplateTestConfig(private val appConfiguration: AppConfiguration,
-																		val objectMapper: ObjectMapper) {
+																		val objectMapper: ObjectMapper,
+																		private val clientConfigurationProperties: ClientConfigurationProperties) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -25,6 +28,10 @@ class ArchiveRestTemplateTestConfig(private val appConfiguration: AppConfigurati
 	@Scope("prototype")
 	fun archiveRestTestTemplate(): RestTemplate? {
 		logger.info("Initialiserer archiveRestTestTemplate. JoarkHost=${appConfiguration.config.joarkHost}")
+
+		val properties: ClientProperties? = clientConfigurationProperties.registration?.get("soknadsarkiverer")
+		logger.info("Token tokenEndpointUrl= ${properties?.tokenEndpointUrl}")
+
 		val restTemplate = RestTemplate()
 		val messageConverters = ArrayList<HttpMessageConverter<*>>()
 

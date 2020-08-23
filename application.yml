@@ -17,5 +17,5 @@ no.nav.security.jwt:
         scope: openid
         authentication:
           client-id: ${CLIENTID}
-          client-secret: ${password}
+          client-secret: ${CLIENTSECRET}
           client-auth-method: ${CLIENTAUTHMETHOD}
