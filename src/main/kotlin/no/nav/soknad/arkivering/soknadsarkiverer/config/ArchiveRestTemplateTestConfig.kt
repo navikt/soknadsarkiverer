@@ -19,8 +19,7 @@ import java.util.ArrayList
 @Configuration
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 class ArchiveRestTemplateTestConfig(private val appConfiguration: AppConfiguration,
-																		val objectMapper: ObjectMapper,
-																		private val clientConfigurationProperties: ClientConfigurationProperties) {
+																		val objectMapper: ObjectMapper) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -28,7 +27,8 @@ class ArchiveRestTemplateTestConfig(private val appConfiguration: AppConfigurati
 	@Profile("spring | test")
 	@Qualifier("archiveRestTemplate")
 	@Scope("prototype")
-	fun archiveRestTestTemplate(): RestTemplate? {
+	fun archiveRestTestTemplate(
+		clientConfigurationProperties: ClientConfigurationProperties): RestTemplate? {
 		logger.info("Initialiserer archiveRestTestTemplate. JoarkHost=${appConfiguration.config.joarkHost}")
 
 		val properties: ClientProperties? = clientConfigurationProperties.registration?.get("soknadsarkiverer")

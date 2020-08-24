@@ -37,9 +37,7 @@ import java.util.*
 @EnableJwtTokenValidation
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 @Configuration
-class ArchiveRestTemplateConfig(private val appConfiguration: AppConfiguration,
-																val objectMapper: ObjectMapper,
-																private val clientConfigurationProperties: ClientConfigurationProperties) {
+class ArchiveRestTemplateConfig(private val appConfiguration: AppConfiguration) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -48,9 +46,11 @@ class ArchiveRestTemplateConfig(private val appConfiguration: AppConfiguration,
 	@Qualifier("archiveRestTemplate")
 	@Scope("prototype")
 fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
-													oAuth2AccessTokenService: OAuth2AccessTokenService): RestTemplate? {
+													oAuth2AccessTokenService: OAuth2AccessTokenService,
+												clientConfigurationProperties: ClientConfigurationProperties): RestTemplate? {
 		val properties: ClientProperties? = clientConfigurationProperties.registration?.get("soknadsarkiverer")
-		logger.info("Token tokenEndpointUrl= ${properties?.tokenEndpointUrl}")
+		logger.info("Properties.tokenEndpointUrl= ${properties?.tokenEndpointUrl}")
+		logger.info("appConfiguration.config.tokenEndpointUrl= ${appConfiguration.config.tokenEndpointUrl}")
 
 		val clientProperties: ClientProperties = Optional.ofNullable(properties)
 			.orElseThrow( { RuntimeException("could not find oauth2 client config for archiveRestTemplate") })

@@ -96,7 +96,6 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 
 @org.springframework.context.annotation.Configuration
 @ConfigurationPropertiesScan
-//@EnableConfigurationProperties(ClientConfigurationProperties::class)
 @Priority(-1)
 class ConfigConfig(private val env: ConfigurableEnvironment) {
 
