@@ -4,14 +4,15 @@ import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
+import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaExceptionHandler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.common.serialization.Serdes
@@ -26,6 +27,8 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.startsWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.context.ActiveProfiles
@@ -35,7 +38,9 @@ import kotlin.properties.Delegates
 
 @ActiveProfiles("test")
 @SpringBootTest
-class ApplicationTests {
+@ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
+@EnableConfigurationProperties(ClientConfigurationProperties::class)
+class ApplicationTests() {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
@@ -51,6 +56,9 @@ class ApplicationTests {
 
 	@MockBean
 	private lateinit var kafkaPublisherMock: KafkaPublisher
+
+	@MockBean
+	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
 
 	private var maxNumberOfRetries by Delegates.notNull<Int>()
 

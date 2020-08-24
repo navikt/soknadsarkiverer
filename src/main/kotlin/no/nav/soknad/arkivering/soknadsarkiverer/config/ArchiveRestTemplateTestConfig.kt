@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Lazy
 import org.springframework.context.annotation.Profile
 import org.springframework.context.annotation.Scope
 import org.springframework.http.converter.HttpMessageConverter
@@ -27,8 +28,10 @@ class ArchiveRestTemplateTestConfig(private val appConfiguration: AppConfigurati
 	@Profile("spring | test")
 	@Qualifier("archiveRestTemplate")
 	@Scope("prototype")
+	@Lazy
 	fun archiveRestTestTemplate(
-		clientConfigurationProperties: ClientConfigurationProperties): RestTemplate? {
+		clientConfigurationProperties: ClientConfigurationProperties
+	): RestTemplate? {
 		logger.info("Initialiserer archiveRestTestTemplate. JoarkHost=${appConfiguration.config.joarkHost}")
 
 		val properties: ClientProperties? = clientConfigurationProperties.registration?.get("soknadsarkiverer")
