@@ -17,7 +17,7 @@ import java.util.ArrayList
 
 @Profile("spring | test")
 @Configuration
-@EnableConfigurationProperties(ClientConfigurationProperties::class)
+//@EnableConfigurationProperties(ClientConfigurationProperties::class)
 class ArchiveRestTemplateTestConfig(private val appConfiguration: AppConfiguration,
 																		val objectMapper: ObjectMapper) {
 
