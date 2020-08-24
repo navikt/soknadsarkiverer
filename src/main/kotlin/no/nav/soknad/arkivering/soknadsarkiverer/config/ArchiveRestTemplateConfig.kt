@@ -33,9 +33,9 @@ import java.util.*
 
 
 @Profile("prod | dev")
-@EnableOAuth2Client(cacheEnabled = true)
-@EnableJwtTokenValidation
-//@EnableConfigurationProperties(ClientConfigurationProperties::class)
+//@EnableOAuth2Client(cacheEnabled = true)
+//@EnableJwtTokenValidation
+@EnableConfigurationProperties(ClientConfigurationProperties::class)
 @Configuration
 class ArchiveRestTemplateConfig(private val appConfiguration: AppConfiguration) {
 
