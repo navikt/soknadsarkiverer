@@ -78,7 +78,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 	)
 
 	data class Config(
-		val joarkHost: String = "JOARK_HOST".configProperty(),
+		val joarkHost: String = readFileAsText("/var/run/secrets/nais.io/kv/JOARK_HOST", "JOARK_HOST".configProperty()),
 		val joarkUrl: String = "JOARK_URL".configProperty(),
 		val tokenEndpointUrl: String = readFileAsText("/var/run/secrets/nais.io/kv/TOKENENDPOINTURL", "TOKENENDPOINTURL".configProperty()),
 		val tokenAuthenticationMethod: String = readFileAsText("/var/run/secrets/nais.io/kv/CLIENTAUTHMETHOD", "CLIENTAUTHMETHOD".configProperty()),

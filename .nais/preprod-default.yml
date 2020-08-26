@@ -33,6 +33,9 @@ spec:
   ingresses:
     - "https://soknadsarkiverer.nais.preprod.local"
     - "https://soknadsarkiverer.dev-fss.nais.io"
+  azure:
+    application:
+      enabled: true
   vault:
     enabled: true
     paths:
@@ -76,9 +79,13 @@ spec:
     - name: CLIENTID
       value: srvsoknadarkiverer
     - name: CLIENTAUTHMETHOD
-      value: client_secret_basic
+      value: client_credentials
     - name: ACCEPTEDAUDIENCE
       value: soknadsarkiverer-default
+    - name: COOKIENAME
+      value: soknadsarkiverer-idtoken
     - name: DISCOVERYURL
       value: https://login.microsoftonline.com/966ac572-f5b7-4bbe-aa88-c76419c0f851/v2.0/.well-known/openid-configuration
+    - name: JOARK_HOST
+      value: https://dokarkiv-q0.nais.preprod.local
 
