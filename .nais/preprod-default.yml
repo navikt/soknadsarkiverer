@@ -33,9 +33,6 @@ spec:
   ingresses:
     - "https://soknadsarkiverer.nais.preprod.local"
     - "https://soknadsarkiverer.dev-fss.nais.io"
-  azure:
-    application:
-      enabled: true
   vault:
     enabled: true
     paths:
@@ -71,15 +68,15 @@ spec:
     - name: FILESTORAGE_HOST
       value: https://tjenester-default.nav.no/soknadsfillager
     - name: TOKENENDPOINTURL
-      value: https://security-token-service.nais.preprod.local/oauth2/v2.0/token
+      value: https://security-token-service.nais.preprod.local/rest/v1/sts/.well-known/openid-configuration
     - name: GRANTTYPE
       value: client_credentials
     - name: SCOPE
       value: openid
     - name: CLIENTID
-      value: srvsoknadarkiverer
+      value: 7b9e459e-225f-4fa8-b79f-2a15b993dae8
     - name: CLIENTAUTHMETHOD
-      value: client_credentials
+      value: client_secret_basic
     - name: ACCEPTEDAUDIENCE
       value: soknadsarkiverer-default
     - name: COOKIENAME

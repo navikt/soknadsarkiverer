@@ -46,7 +46,7 @@ spring:
 no.nav.security.jwt:
   expirythreshold: ${EXPIRYTHRESHOLD} #threshold in minutes until token expires
 
-  issuer.someshortname:
+  issuer.azuread:
     discoveryurl: ${DISCOVERYURL}
     accepted_audience: ${ACCEPTEDAUDIENCE}
     cookie_name: ${COOKIENAME}
@@ -56,7 +56,7 @@ no.nav.security.jwt:
       soknadsarkiverer:
         token-endpoint-url: ${TOKENENDPOINTURL}
         grant-type: ${GRANTTYPE}
-        scope: openid
+        scope: ${SCOPE}
         authentication:
           client-id: ${CLIENTID}
           client-secret: ${CLIENTSECRET}
