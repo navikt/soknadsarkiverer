@@ -67,8 +67,11 @@ spec:
       value: privat-soknadInnsendt-messages-v1-default
     - name: FILESTORAGE_HOST
       value: https://tjenester-default.nav.no/soknadsfillager
+    - name: JOARK_HOST
+      value: https://dokarkiv-q0.nais.preprod.local
     - name: TOKENENDPOINTURL
       value: https://security-token-service.nais.preprod.local/rest/v1/sts/token
+
     - name: GRANTTYPE
       value: client_credentials
     - name: SCOPE
@@ -83,6 +86,4 @@ spec:
       value: soknadsarkiverer-idtoken
     - name: DISCOVERYURL
       value: https://security-token-service.nais.preprod.local/rest/v1/sts/.well-known/openid-configuration
-    - name: JOARK_HOST
-      value: https://dokarkiv-q0.nais.preprod.local
 

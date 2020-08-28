@@ -64,3 +64,24 @@ spec:
       value: privat-soknadInnsendt-processingEventLog-v1-q0
     - name: KAFKA_MESSAGE_TOPIC
       value: privat-soknadInnsendt-messages-v1-q0
+    - name: FILESTORAGE_HOST
+      value: https://tjenester-q0.nav.no/soknadsfillager
+    - name: JOARK_HOST
+      value: https://dokarkiv-q0.nais.preprod.local
+
+    - name: TOKENENDPOINTURL
+      value: https://security-token-service.nais.preprod.local/rest/v1/sts/token
+    - name: GRANTTYPE
+      value: client_credentials
+    - name: SCOPE
+      value: openid
+    - name: CLIENTID
+      value: 7b9e459e-225f-4fa8-b79f-2a15b993dae8
+    - name: CLIENTAUTHMETHOD
+      value: client_secret_basic
+    - name: ACCEPTEDAUDIENCE
+      value: 7b9e459e-225f-4fa8-b79f-2a15b993dae8
+    - name: COOKIENAME
+      value: soknadsarkiverer-idtoken
+    - name: DISCOVERYURL
+      value: https://security-token-service.nais.preprod.local/rest/v1/sts/.well-known/openid-configuration
