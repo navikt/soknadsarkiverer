@@ -14,7 +14,7 @@ ENV COOKIENAME=idtoken-cookie
 ENV TOKENENDPOINTURL=https://security-token-service.nais.preprod.local/oauth2/v2.0/token
 ENV GRANTTYPE=client_credentials
 ENV CLIENTID=srvsoknadarkiverer
-ENV CLIENTSECRET=noetemmelighemmelig
+ENV AZURE_CLIENT_SECRET=noetemmelighemmelig
 ENV CLIENTAUTHMETHOD=client_secret_basic
 
 COPY target/*.jar app.jar

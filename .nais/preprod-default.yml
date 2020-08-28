@@ -68,7 +68,7 @@ spec:
     - name: FILESTORAGE_HOST
       value: https://tjenester-default.nav.no/soknadsfillager
     - name: TOKENENDPOINTURL
-      value: https://security-token-service.nais.preprod.local/rest/v1/sts/.well-known/openid-configuration
+      value: https://login.microsoftonline.com/966ac572-f5b7-4bbe-aa88-c76419c0f851/oauth2/v2.0/token
     - name: GRANTTYPE
       value: client_credentials
     - name: SCOPE
@@ -78,7 +78,7 @@ spec:
     - name: CLIENTAUTHMETHOD
       value: client_secret_basic
     - name: ACCEPTEDAUDIENCE
-      value: soknadsarkiverer-default
+      value: 7b9e459e-225f-4fa8-b79f-2a15b993dae8
     - name: COOKIENAME
       value: soknadsarkiverer-idtoken
     - name: DISCOVERYURL

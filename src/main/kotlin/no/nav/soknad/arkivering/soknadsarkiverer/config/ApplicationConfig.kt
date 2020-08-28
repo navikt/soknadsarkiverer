@@ -39,7 +39,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"GRANTTYPE" to "client_credentials",
 	"SCOPES" to "openid",
 	"CLIENTID" to "",
-	"CLIENTSECRET" to "",
+	"AZURE_CLIENT_SECRET" to "",
 	"CLIENTAUTHMETHOD" to "client_secret_basic"
 
 ))
