@@ -46,10 +46,12 @@ spring:
 no.nav.security.jwt:
   expirythreshold: ${EXPIRYTHRESHOLD} #threshold in minutes until token expires
 
-  issuer.azuread:
-    discoveryurl: ${DISCOVERYURL}
-    accepted_audience: ${ACCEPTEDAUDIENCE}
-    cookie_name: ${COOKIENAME}
+  issuers: isso
+  issuer:
+    isso:
+      discoveryurl: ${DISCOVERYURL}
+      accepted_audience: ${ACCEPTEDAUDIENCE}
+      cookie_name: ${COOKIENAME}
 
   client:
     registration:
