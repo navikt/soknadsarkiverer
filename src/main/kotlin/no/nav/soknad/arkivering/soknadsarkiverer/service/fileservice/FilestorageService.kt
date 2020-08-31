@@ -1,48 +1,49 @@
-package no.nav.soknad.arkivering.soknadsarkiverer.fileservice
+package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
+import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import org.apache.tomcat.util.codec.binary.Base64
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.ParameterizedTypeReference
-import org.springframework.http.HttpEntity
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpMethod
-import org.springframework.http.MediaType
+import org.springframework.http.*
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 
-
 @Service
 class FilestorageService(@Qualifier("basicRestTemplate") private val restTemplate: RestTemplate,
-												 private val appConfiguration: AppConfiguration): FileserviceInterface {
+												 private val appConfiguration: AppConfiguration) : FileserviceInterface {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	override fun getFilesFromFilestorage(fileIds: String): List<FilElementDto> {
+	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): List<FilElementDto> {
 		try {
-			logger.info("Getting files with ids: '$fileIds'")
+			val fileIds = getFileIds(data)
+			logger.info("$key: Getting files with ids: '$fileIds'")
 
 			val files = getFiles(fileIds)
 
-			logger.info("Received: $files")
+			logger.info("$key: Received: $files")
 			return files ?: return arrayListOf()
 
 		} catch (e: Exception) {
-			logger.error("Error retrieving files from file storage", e)
-			throw e
+			logger.error("$key: Error retrieving files from file storage", e)
+			throw ArchivingException(e)
 		}
 	}
 
-	override fun deleteFilesFromFilestorage(fileIds: String) {
+	override fun deleteFilesFromFilestorage(key: String, data: Soknadarkivschema) {
+		val fileIds = getFileIds(data)
 		try {
-			logger.info("Calling filestorage to delete '$fileIds'")
+
+			logger.info("$key: Calling file storage to delete '$fileIds'")
 			deleteFiles(fileIds)
-			logger.info("The files: $fileIds are deleted")
+			logger.info("$key: The files: $fileIds are deleted")
 
 		} catch (e: Exception) {
-			logger.warn("Failed to delete files from file storage. Everything is saved to Joark correctly, " +
+			logger.warn("$key: Failed to delete files from file storage. Everything is saved to Joark correctly, " +
 				"so this error will be ignored. Affected file ids: '$fileIds'", e)
 		}
 	}
@@ -61,20 +62,29 @@ class FilestorageService(@Qualifier("basicRestTemplate") private val restTemplat
 	}
 
 	private fun getFiles(fileIds: String): List<FilElementDto>? {
-		val username = appConfiguration.config.username
-		val sharedPassword = appConfiguration.config.sharedPassword
-		val url = appConfiguration.config.filestorageHost+appConfiguration.config.filestorageUrl+fileIds
-		val request = HttpEntity<Any>(url, createHeaders(username, sharedPassword))
-		return restTemplate.exchange(url, HttpMethod.GET, request, typeRef<List<FilElementDto>>()).body
+		val response = performRestCall(fileIds, HttpMethod.GET, typeRef<List<FilElementDto>>())
+		return response.body
 	}
 
 	private fun deleteFiles(fileIds: String) {
+		performRestCall(fileIds, HttpMethod.DELETE, typeRef<String>())
+	}
+
+	private fun <T> performRestCall(fileIds: String, method: HttpMethod, type: ParameterizedTypeReference<T>): ResponseEntity<T> {
 		val username = appConfiguration.config.username
 		val sharedPassword = appConfiguration.config.sharedPassword
-		val url = appConfiguration.config.filestorageHost+appConfiguration.config.filestorageUrl+fileIds
+		val url = appConfiguration.config.filestorageHost + appConfiguration.config.filestorageUrl + fileIds
+
 		val request = HttpEntity<Any>(url, createHeaders(username, sharedPassword))
-		restTemplate.exchange(url, HttpMethod.DELETE, request, String::class.java)
+		return restTemplate.exchange(url, method, request, type)
 	}
+
+
+	private fun getFileIds(data: Soknadarkivschema) =
+		data.getMottatteDokumenter()
+			.flatMap { it.getMottatteVarianter().map { variant -> variant.getUuid() } }
+			.joinToString(",")
+
 
 	private inline fun <reified T : Any> typeRef(): ParameterizedTypeReference<T> = object : ParameterizedTypeReference<T>() {}
 }

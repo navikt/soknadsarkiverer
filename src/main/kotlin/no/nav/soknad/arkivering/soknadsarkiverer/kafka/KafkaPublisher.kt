@@ -21,16 +21,16 @@ class KafkaPublisher(private val appConfiguration: AppConfiguration) {
 	private val kafkaProcessingEventProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap())
 	private val kafkaMessageProducer = KafkaProducer<String, String>(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 
-	fun putProcessingEventOnTopic(key: String, value: ProcessingEvent, headers: Headers = RecordHeaders()): RecordMetadata {
+	fun putProcessingEventOnTopic(key: String, value: ProcessingEvent, headers: Headers = RecordHeaders()) {
 		val topic = appConfiguration.kafkaConfig.processingTopic
 		val kafkaProducer = kafkaProcessingEventProducer
-		return putDataOnTopic(key, value, headers, topic, kafkaProducer)
+		putDataOnTopic(key, value, headers, topic, kafkaProducer)
 	}
 
-	fun putMessageOnTopic(key: String?, value: String, headers: Headers = RecordHeaders()): RecordMetadata {
+	fun putMessageOnTopic(key: String?, value: String, headers: Headers = RecordHeaders()) {
 		val topic = appConfiguration.kafkaConfig.messageTopic
 		val kafkaProducer = kafkaMessageProducer
-		return putDataOnTopic(key, value, headers, topic, kafkaProducer)
+		putDataOnTopic(key, value, headers, topic, kafkaProducer)
 	}
 
 	private fun <T> putDataOnTopic(key: String?, value: T, headers: Headers, topic: String,

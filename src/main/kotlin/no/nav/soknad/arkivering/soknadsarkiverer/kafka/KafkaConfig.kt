@@ -2,11 +2,12 @@ package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
+import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.ProcessingEventDto
-import no.nav.soknad.arkivering.soknadsarkiverer.service.SchedulerService
+import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.common.config.SaslConfigs
@@ -29,31 +30,32 @@ import java.util.*
 
 @Configuration
 class KafkaConfig(private val appConfiguration: AppConfiguration,
-									private val schedulerService: SchedulerService,
+									private val schedulerService: TaskListService,
 									private val kafkaPublisher: KafkaPublisher) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	private val stringSerde = Serdes.StringSerde()
 	private val intSerde = Serdes.IntegerSerde()
-	private val soknadarkivschemaSerde = createSoknadarkivschemaSerde()
+	private val stringSerde = Serdes.StringSerde()
 	private val processingEventSerde = createProcessingEventSerde()
+	private val soknadarkivschemaSerde = createSoknadarkivschemaSerde()
 	private val mutableListSerde: Serde<MutableList<String>> = MutableListSerde()
 
-	@Bean
-	fun streamsBuilder() = StreamsBuilder()
+	fun kafkaStreams(streamsBuilder: StreamsBuilder): KStream<String, Soknadarkivschema> {
 
-	@Bean
-	fun recreationStream(streamsBuilder: StreamsBuilder): KStream<String, ProcessingEvent> {
-
-		val joined = Joined.with(stringSerde, soknadarkivschemaSerde, intSerde, "SoknadsarkivCountJoined")
-
+		val joined = Joined.with(stringSerde, intSerde, soknadarkivschemaSerde, "SoknadsarkivCountJoined")
+		val materialized = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("ProcessingEventDtos").withValueSerde(mutableListSerde)
 		val inputTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.inputTopic, Consumed.with(stringSerde, soknadarkivschemaSerde))
-
-
 		val processingTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.processingTopic, Consumed.with(stringSerde, processingEventSerde))
-		val counts = processingTopicStream
-			.peek { key, value -> logger.info("ProcessingTopic - $key: $value") }
+
+
+		val inputTable = inputTopicStream.toTable()
+
+		inputTopicStream
+			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
+
+		processingTopicStream
+			.peek { key, value -> logger.info("$key: ProcessingTopic - $value") }
 			.mapValues { processingEvent -> processingEvent.getType().name }
 			.groupByKey()
 			.aggregate(
@@ -62,40 +64,33 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 					aggregate.add(value)
 					aggregate
 				},
-				Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("ProcessingEventDtos")
-					.withValueSerde(mutableListSerde)
+				materialized
 			)
 			.mapValues { processingEvents -> ProcessingEventDto(processingEvents) }
-			.mapValues { processingEventDto -> if (processingEventDto.isFinished()) -1 else processingEventDto.getNumberOfStarts() }
-
-		inputTopicStream
-			.peek { key, value -> logger.info("InputTopic - $key: $value") }
-			.leftJoin(counts, { soknadarkivschema, count -> soknadarkivschema to count }, joined)
-			.filter  { key, (soknadsarkivschema, count) -> shouldSchedule(count, soknadsarkivschema, key) }
-			.mapValues { (soknadarkivschema, count) -> soknadarkivschema to (count ?: 0) }
-			.peek    { key, (_, count) -> logger.info("For key '$key': Will schedule with count $count") }
-			.foreach { key, (soknadsarkivschema, count) -> schedulerService.schedule(key, soknadsarkivschema!!, count) }
-
-		return processingTopicStream
-	}
-
-	private fun shouldSchedule(count: Int?, soknadsarkivschema: Soknadarkivschema?, key: String?): Boolean {
-		return when {
-			count == null -> true // This case means that there are no previous ProcessingEvents.
-			count < 0 -> false // This case means that the ProcessingEvents are finished.
-			soknadsarkivschema == null -> { // Should not ever occur, but let's protect against NPE's anyway.
-				logger.error("For key '$key': Found no associated Soknadsarkivschema on the input topic. Will ignore and continue.")
-				false
+			.mapValues { key, processingEventDto ->
+				if (processingEventDto.isFinished()) {
+					schedulerService.finishTask(key)
+					null // Return null which acts as a tombstone, thus removing the entry from the table
+				} else {
+					processingEventDto.getNumberOfStarts()
+				}
 			}
-			else -> true
-		}
+			.toStream()
+			.peek { key, count -> logger.info("$key: Processing Events - $count") }
+			.leftJoin(inputTable, { count, soknadarkivschema -> soknadarkivschema to (count ?: 0) }, joined)
+			.peek { key, pair -> logger.info("$key: About to schedule - $pair") }
+			.foreach { key, (soknadsarkivschema, count) -> schedulerService.addOrUpdateTask(key, soknadsarkivschema, count) }
+
+		return inputTopicStream
 	}
 
 	@Bean
-	fun setupRecreationStream(streamsBuilder: StreamsBuilder): KafkaStreams {
+	fun setupKafkaStreams(): KafkaStreams {
+		val streamsBuilder = StreamsBuilder()
+		kafkaStreams(streamsBuilder)
 		val topology = streamsBuilder.build()
 
-		val kafkaStreams = KafkaStreams(topology, kafkaConfig("soknadsarkiverer-recreation"))
+		val kafkaStreams = KafkaStreams(topology, kafkaConfig("soknadsarkiverer-streams-${UUID.randomUUID()}"))
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
 		kafkaStreams.start()
 		Runtime.getRuntime().addShutdownHook(Thread(kafkaStreams::close))
@@ -109,6 +104,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		it[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = Serdes.StringSerde::class.java
 		it[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = SpecificAvroSerde::class.java
 		it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = LogAndContinueExceptionHandler::class.java
+		it[StreamsConfig.COMMIT_INTERVAL_MS_CONFIG] = 1000
 
 		if ("TRUE" == appConfiguration.kafkaConfig.secure) {
 			it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = appConfiguration.kafkaConfig.protocol
@@ -126,7 +122,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	private fun createProcessingEventSerde(): SpecificAvroSerde<ProcessingEvent> = createAvroSerde()
 	private fun createSoknadarkivschemaSerde(): SpecificAvroSerde<Soknadarkivschema> = createAvroSerde()
 
-	private fun <T: SpecificRecord> createAvroSerde(): SpecificAvroSerde<T> {
+	private fun <T : SpecificRecord> createAvroSerde(): SpecificAvroSerde<T> {
 		val serdeConfig = hashMapOf(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
 		return SpecificAvroSerde<T>().also { it.configure(serdeConfig, false) }
 	}

@@ -10,26 +10,26 @@ spec:
   port: 8091
   liveliness:
     path: /internal/isAlive
-    initialDelay: 20
+    initialDelay: 100
     failureThreshold: 10
-    timeout: 1
+    timeout: 20
   readiness:
-    path: /internal/isAlive
-    initialDelay: 20
-    timeout: 1
+    path: /internal/isReady
+    initialDelay: 100
+    timeout: 20
   prometheus:
     enable: true
-    path: /metrics
+    path: /internal/prometheus
   replicas:
     min: 2
     max: 4
   resource:
     limits:
       cpu: 3000m
-      memory: 512Mi
+      memory: 1024Mi
     requests:
       cpu: 200m
-      memory: 256Mi
+      memory: 512Mi
   ingresses:
     - "https://soknadsarkiverer-q1.nais.preprod.local"
     - "https://soknadsarkiverer-q1.dev-fss.nais.io"
@@ -37,7 +37,7 @@ spec:
     enabled: true
     paths:
       - mountPath: /var/run/secrets/nais.io/serviceuser
-        kvPath: /serviceuser/data/dev/srvsoknadsarkiverer
+        kvPath: /serviceuser/data/dev/srvsoknadarkiverer
       - mountPath: /var/run/secrets/nais.io/kv
         kvPath: /kv/preprod/fss/soknadsarkiverer/default
       - mountPath: /var/run/secrets/nais.io/appdynamics

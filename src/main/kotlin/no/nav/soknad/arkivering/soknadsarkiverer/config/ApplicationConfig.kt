@@ -44,7 +44,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 
 ))
 
-private val secondsBetweenRetries = listOf(5, 25, 60, 120, 600)   // As many retries will be attempted as there are elements in the list.
+private val secondsBetweenRetries = listOf(1, 25, 60, 120, 600)   // As many retries will be attempted as there are elements in the list.
 private val secondsBetweenRetriesForTests = listOf(0, 0, 0, 0, 0) // As many retries will be attempted as there are elements in the list.
 
 

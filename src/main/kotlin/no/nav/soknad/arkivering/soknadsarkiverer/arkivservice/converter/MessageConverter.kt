@@ -1,13 +1,13 @@
-package no.nav.soknad.arkivering.soknadsarkiverer.consumer.rest.journalpostapi.converter
+package no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.converter
 
 import no.nav.soknad.arkivering.avroschemas.MottattDokument
 import no.nav.soknad.arkivering.avroschemas.MottattVariant
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
-import no.nav.soknad.arkivering.soknadsarkiverer.consumer.rest.journalpostapi.api.Bruker
-import no.nav.soknad.arkivering.soknadsarkiverer.consumer.rest.journalpostapi.api.Dokument
-import no.nav.soknad.arkivering.soknadsarkiverer.consumer.rest.journalpostapi.api.DokumentVariant
-import no.nav.soknad.arkivering.soknadsarkiverer.consumer.rest.journalpostapi.api.OpprettJournalpostRequest
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.Bruker
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.Dokument
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.DokumentVariant
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.OpprettJournalpostRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.*
 import java.time.Instant
 import java.time.LocalDateTime

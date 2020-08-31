@@ -1,7 +1,7 @@
-package no.nav.soknad.arkivering.soknadsarkiverer.converter
+package no.nav.soknad.arkivering.soknadsarkiverer.service.converter
 
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
-import no.nav.soknad.arkivering.soknadsarkiverer.consumer.rest.journalpostapi.converter.createOpprettJournalpostRequest
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.converter.createOpprettJournalpostRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattDokumentBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattVariantBuilder
@@ -26,7 +26,6 @@ class MessageConverterTests {
 
 		val schema = SoknadarkivschemaBuilder()
 			.withSoknadstype(Soknadstyper.SOKNAD)
-
 			.withMottatteDokumenter(MottattDokumentBuilder()
 				.withTittel(tittel)
 				.withSkjemanummer(skjemanummer)
@@ -53,7 +52,6 @@ class MessageConverterTests {
 
 		val schema = SoknadarkivschemaBuilder()
 			.withSoknadstype(Soknadstyper.ETTERSENDING)
-
 			.withMottatteDokumenter(MottattDokumentBuilder()
 				.withTittel(tittel)
 				.withSkjemanummer(skjemanummer)

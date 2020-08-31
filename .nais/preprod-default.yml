@@ -14,7 +14,7 @@ spec:
     failureThreshold: 10
     timeout: 20
   readiness:
-    path: /internal/isAlive
+    path: /internal/isReady
     initialDelay: 100
     timeout: 20
   prometheus:
@@ -42,7 +42,6 @@ spec:
         kvPath: /kv/preprod/fss/soknadsarkiverer/default
       - mountPath: /var/run/secrets/nais.io/appdynamics
         kvPath: /apikey/appdynamics/dev
-
 
   env:
     - name: APP_VERSION

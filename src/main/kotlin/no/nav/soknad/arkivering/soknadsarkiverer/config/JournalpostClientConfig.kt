@@ -1,6 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
-import no.nav.soknad.arkivering.soknadsarkiverer.consumer.rest.journalpostapi.JournalpostClient
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClient
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

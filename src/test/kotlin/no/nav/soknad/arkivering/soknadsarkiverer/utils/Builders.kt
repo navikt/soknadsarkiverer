@@ -6,6 +6,7 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import java.util.*
 
 
 class SoknadarkivschemaBuilder {
@@ -71,6 +72,10 @@ class MottattDokumentBuilder {
 	}
 
 	fun withMottatteVarianter(vararg mottatteVarianter: MottattVariant): MottattDokumentBuilder {
+		return withMottatteVarianter(mottatteVarianter.toList())
+	}
+
+	fun withMottatteVarianter(mottatteVarianter: List<MottattVariant>): MottattDokumentBuilder {
 		this.mottatteVarianter.addAll(mottatteVarianter)
 		return this
 	}
@@ -106,3 +111,15 @@ class MottattVariantBuilder {
 
 	fun build() = MottattVariant(uuid, filnavn, filtype, variantformat)
 }
+
+fun createSoknadarkivschema(fileId: String = UUID.randomUUID().toString()) = createSoknadarkivschema(listOf(fileId))
+
+fun createSoknadarkivschema(fileIds: List<String>) =
+	SoknadarkivschemaBuilder()
+		.withBehandlingsid(UUID.randomUUID().toString())
+		.withMottatteDokumenter(MottattDokumentBuilder()
+			.withMottatteVarianter(
+				fileIds.map { MottattVariantBuilder().withUuid(it).build() }
+			)
+			.build())
+		.build()

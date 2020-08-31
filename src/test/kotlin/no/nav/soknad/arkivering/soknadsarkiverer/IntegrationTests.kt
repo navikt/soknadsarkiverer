@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit
 
 @ActiveProfiles("test")
 @SpringBootTest
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @Import(EmbeddedKafkaBrokerConfig::class)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
@@ -58,17 +58,17 @@ class IntegrationTests {
 
 	@BeforeEach
 	fun setup() {
-		setupMockedServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
+		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
 
 		assertEquals(kafkaBrokers, appConfiguration.kafkaConfig.servers, "The Kafka bootstrap server property is misconfigured!")
 
-		kafkaProducer = KafkaProducer<String, Soknadarkivschema>(kafkaConfigMap())
-		kafkaProducerForBadData = KafkaProducer<String, String>(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java  })
+		kafkaProducer = KafkaProducer(kafkaConfigMap())
+		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 	}
 
 	@AfterEach
 	fun teardown() {
-		stopMockedServices()
+		stopMockedNetworkServices()
 	}
 
 
@@ -77,8 +77,8 @@ class IntegrationTests {
 		mockFilestorageIsWorking(uuid)
 		mockJoarkIsWorking()
 
-		putDataOnKafkaTopic(createRequestData())
-		putDataOnKafkaTopic(createRequestData())
+		putDataOnKafkaTopic(createSoknadarkivschema())
+		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		TimeUnit.SECONDS.sleep(1)
 		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
@@ -102,7 +102,7 @@ class IntegrationTests {
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic("this is not deserializable")
-		putDataOnKafkaTopic(createRequestData())
+		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		TimeUnit.SECONDS.sleep(1)
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
@@ -114,15 +114,7 @@ class IntegrationTests {
 		verifyMockedDeleteRequests(expectedCount, appConfiguration.config.filestorageUrl.replace("?", "\\?") + ".*")
 	}
 
-	private fun createRequestData() =
-		SoknadarkivschemaBuilder()
-			.withBehandlingsid(UUID.randomUUID().toString())
-			.withMottatteDokumenter(MottattDokumentBuilder()
-				.withMottatteVarianter(MottattVariantBuilder()
-					.withUuid(uuid)
-					.build())
-				.build())
-			.build()
+	private fun createSoknadarkivschema() = createSoknadarkivschema(uuid)
 
 
 	private fun putDataOnKafkaTopic(soknadarkivschema: Soknadarkivschema) {
@@ -144,7 +136,7 @@ class IntegrationTests {
 	}
 
 	private fun <T> putDataOnTopic(key: String, value: T, headers: Headers, topic: String,
-												 kafkaProducer: KafkaProducer<String, T>): RecordMetadata {
+																 kafkaProducer: KafkaProducer<String, T>): RecordMetadata {
 
 		val producerRecord = ProducerRecord(topic, key, value)
 		headers.forEach { producerRecord.headers().add(it) }
@@ -163,4 +155,3 @@ class IntegrationTests {
 		}
 	}
 }
-
