@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
+import no.nav.security.token.support.core.api.Unprotected
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -12,6 +13,7 @@ class HealthCheck {
 	private var oppstart = 0
 
 	@GetMapping("/isAlive")
+	@Unprotected
 	fun isAlive(): String {
 		if (oppstart < 10) {
 			logger.info("isAlive called")
@@ -21,11 +23,13 @@ class HealthCheck {
 	}
 
 	@GetMapping("/ping")
+	@Unprotected
 	fun ping(): String {
 		return "pong"
 	}
 
 	@GetMapping("/isReady")
+	@Unprotected
 	fun isReady(): String {
 		if (oppstart < 10) {
 			logger.debug("isReady called")
