@@ -1,11 +1,5 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
-/*
-import java.lang.annotation.ElementType
-import java.lang.annotation.Retention
-import java.lang.annotation.RetentionPolicy
-import java.lang.annotation.Target
-*/
 import no.nav.security.token.support.client.core.ClientProperties
 import no.nav.security.token.support.client.core.oauth2.OAuth2AccessTokenResponse
 import no.nav.security.token.support.client.core.oauth2.OAuth2AccessTokenService
@@ -23,8 +17,6 @@ import java.util.*
 
 
 @Profile("prod | dev")
-//@EnableOAuth2Client(cacheEnabled = true)
-//@EnableJwtTokenValidation
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 @Configuration
 class ArchiveRestTemplateConfig(private val appConfiguration: AppConfiguration) {
@@ -60,25 +52,4 @@ fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
 		}
 	}
 
-/*
-	@Bean
-	fun getClientProperties(appConfiguration: AppConfiguration): ClientProperties {
-		val authentication = ClientAuthenticationProperties(appConfiguration.config.username, ClientAuthenticationMethod(appConfiguration.config.tokenAuthenticationMethod), appConfiguration.kafkaConfig.password, null)
-		return ClientProperties(URI.create(appConfiguration.config.tokenEndpointUrl), OAuth2GrantType.CLIENT_CREDENTIALS, appConfiguration.config.scopes, authentication, null) //TODO sjekk resourceUrl
-	}
-*/
-/*
-	@Target(ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.TYPE,	ElementType.ANNOTATION_TYPE)
-	@Retention(RetentionPolicy.RUNTIME)
-	@Qualifier
-	annotation class ArchiveRestTemplate
-*/
-/*
-	@Bean
-	@ConfigurationProperties(prefix = "no.nav.security.jwt.client", ignoreUnknownFields = false)
-	fun setAppProperties(): ClientConfigurationProperties? {
-		val registration = mutableMapOf("soknadsarkiverer" to getClientProperties(appConfiguration) )
-		return ClientConfigurationProperties(registration)
-	}
-*/
 }

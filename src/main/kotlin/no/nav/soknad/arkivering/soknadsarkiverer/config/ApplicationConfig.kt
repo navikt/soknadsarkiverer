@@ -51,7 +51,6 @@ private val secondsBetweenRetriesForTests = listOf(0, 0, 0, 0, 0) // As many ret
 val appConfig =
 	EnvironmentVariables() overriding
 		systemProperties() overriding
-		//ConfigurationProperties.fromOptionalFile(File("/var/run/secrets/nais.io/application.properties")) overriding
 		ConfigurationProperties.fromResource(Configuration::class.java, "/application.yml") overriding
 		ConfigurationProperties.fromResource(Configuration::class.java, "/local.properties") overriding
 		defaultProperties
@@ -105,6 +104,7 @@ class ConfigConfig(private val env: ConfigurableEnvironment) {
 	fun appConfiguration(): AppConfiguration {
 		val appConfiguration = AppConfiguration()
 		env.setActiveProfiles(appConfiguration.config.profile)
+
 		val discovery = System.getenv("DISCOVERYURL")
 		val tokenurl = System.getenv("TOKENENDPOINTURL")
 		logger.info("appConfiguration: discoveryurl=$discovery, tokenurl=$tokenurl")
