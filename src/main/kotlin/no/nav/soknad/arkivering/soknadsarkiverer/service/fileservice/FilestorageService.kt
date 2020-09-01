@@ -75,6 +75,10 @@ class FilestorageService(@Qualifier("basicRestTemplate") private val restTemplat
 		val sharedPassword = appConfiguration.config.sharedPassword
 		val url = appConfiguration.config.filestorageHost + appConfiguration.config.filestorageUrl + fileIds
 
+		// TMP logging
+		val tmp = if (sharedPassword.startsWith("noe", true)) "nxx" else "xxx"
+		logger.info("Forsøker å kalle ${url} med username=${username} og sharedPassword=${tmp}")
+
 		val request = HttpEntity<Any>(url, createHeaders(username, sharedPassword))
 		return restTemplate.exchange(url, method, request, type)
 	}
