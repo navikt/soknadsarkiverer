@@ -2,6 +2,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import no.nav.security.token.support.core.api.Protected
 import no.nav.security.token.support.core.api.Unprotected
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilestorageExistanceResponse
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
@@ -48,7 +49,7 @@ class AdminInterface(private val taskListService: TaskListService, private val f
 	}
 
 	@GetMapping("/fillager/filesExist/{key}")
-	@Unprotected
+	@Protected
 	fun filesExists(@PathVariable key: String): List<FilestorageExistanceResponse> {
 		val soknadarkivschema = taskListService.getSoknadarkivschema(key)
 		if (soknadarkivschema == null) {
