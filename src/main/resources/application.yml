@@ -61,6 +61,6 @@ no.nav.security.jwt:
         scope: ${SCOPE}
         authentication:
           client-id: ${CLIENTID}
-          client-secret: ${username}
-          client-auth-method: ${password}
+          client-secret: ${CLIENTSECRET}
+          client-auth-method: ${CLIENTAUTHMETHOD}
 
