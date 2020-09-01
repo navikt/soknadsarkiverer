@@ -27,13 +27,13 @@ class ArchiveRestTemplateConfig(private val appConfiguration: AppConfiguration) 
 	@Profile("prod | dev")
 	@Qualifier("archiveRestTemplate")
 	@Scope("prototype")
-	@Lazy
 fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
 												oAuth2AccessTokenService: OAuth2AccessTokenService,
 												clientConfigurationProperties: ClientConfigurationProperties): RestTemplate? {
 		val properties: ClientProperties? = clientConfigurationProperties.registration?.get("soknadsarkiverer")
 		logger.info("Properties.tokenEndpointUrl= ${properties?.tokenEndpointUrl}")
-		logger.info("appConfiguration.config.tokenEndpointUrl= ${appConfiguration.config.tokenEndpointUrl}")
+		logger.info("Properties.scope= ${properties?.scope}")
+		logger.info("Properties.authentication.clientId= ${properties?.authentication?.clientId}")
 
 		val clientProperties: ClientProperties = Optional.ofNullable(properties)
 			.orElseThrow({ RuntimeException("could not find oauth2 client config for archiveRestTemplate") })

@@ -25,7 +25,7 @@ class FilestorageService(@Qualifier("basicRestTemplate") private val restTemplat
 
 			val files = getFiles(fileIds)
 
-			logger.info("$key: Received: $files")
+			logger.info("$key: Received files.size: ${files?.size}")
 			return files ?: return arrayListOf()
 
 		} catch (e: Exception) {

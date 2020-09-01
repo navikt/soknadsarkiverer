@@ -61,6 +61,6 @@ no.nav.security.jwt:
         scope: ${SCOPE}
         authentication:
           client-id: ${CLIENTID}
-          client-secret: ${AZURE_CLIENT_SECRET}
-          client-auth-method: ${CLIENTAUTHMETHOD}
+          client-secret: ${username}
+          client-auth-method: ${password}
 
