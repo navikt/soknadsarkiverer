@@ -31,9 +31,15 @@ fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
 												oAuth2AccessTokenService: OAuth2AccessTokenService,
 												clientConfigurationProperties: ClientConfigurationProperties): RestTemplate? {
 		val properties: ClientProperties? = clientConfigurationProperties.registration?.get("soknadsarkiverer")
+
 		logger.info("Properties.tokenEndpointUrl= ${properties?.tokenEndpointUrl}")
+		logger.info("Properties.grantType= ${properties?.grantType}")
 		logger.info("Properties.scope= ${properties?.scope}")
+		logger.info("Properties.resourceUrl= ${properties?.resourceUrl}")
 		logger.info("Properties.authentication.clientId= ${properties?.authentication?.clientId}")
+		val tmp = if (properties?.authentication?.clientSecret == null) "MANGLER" else "xxxx"
+		logger.info("Properties.authentication.clientSecret= ${tmp}")
+		logger.info("Properties.authentication.clientAuthMethod= ${properties?.authentication?.clientAuthMethod}")
 
 		val clientProperties: ClientProperties = Optional.ofNullable(properties)
 			.orElseThrow({ RuntimeException("could not find oauth2 client config for archiveRestTemplate") })
