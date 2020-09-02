@@ -43,7 +43,7 @@ fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
 
 		val clientProperties: ClientProperties = Optional.ofNullable(properties)
 			.orElseThrow({ RuntimeException("could not find oauth2 client config for archiveRestTemplate") })
-		// Set correlation_id_header??
+
 		return restTemplateBuilder
 			.additionalInterceptors(bearerTokenInterceptor(clientProperties, oAuth2AccessTokenService))
 			.build()
