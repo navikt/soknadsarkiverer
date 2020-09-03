@@ -1,6 +1,7 @@
 #!/bin/bash
 
 export CLIENTID="No authentication available"
+export CLIENTSECRET="No authentication available"
 
 PATH_CLIENTID=/var/run/secrets/nais.io/serviceuser/username
 PATH_CLIENTSECRET=/var/run/secrets/nais.io/serviceuser/password

@@ -39,7 +39,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"GRANTTYPE" to "client_credentials",
 	"SCOPES" to "openid",
 	"CLIENTID" to "",
-	"AZURE_CLIENT_SECRET" to "",
+	"CLIENTSECRET" to "",
 	"CLIENTAUTHMETHOD" to "client_secret_basic"
 
 ))
@@ -85,6 +85,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val grantType: String = readFileAsText("/var/run/secrets/nais.io/kv/GRANTTYPE", "GRANTTYPE".configProperty()),
 		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "SOKNADSARKIVERER_USERNAME".configProperty()),
 		val sharedPassword: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "SHARED_PASSORD".configProperty()),
+		val clientsecret: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "CLIENTSECRET".configProperty()),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
 		val retryTime: List<Int> = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
