@@ -46,6 +46,7 @@ fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
 
 		return restTemplateBuilder
 			.additionalInterceptors(bearerTokenInterceptor(clientProperties, oAuth2AccessTokenService))
+			.basicAuthentication(properties?.authentication?.clientId, properties?.authentication?.clientSecret )
 			.build()
 	}
 

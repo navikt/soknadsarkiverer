@@ -1,16 +1,15 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.arkivservice
 
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.OpprettJournalpostRequest
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.OpprettJournalpostResponse
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.converter.createOpprettJournalpostRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
-import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.OpprettJournalpostRequest
-import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.converter.createOpprettJournalpostRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
-import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.opprettJournalpostResponse
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.HttpEntity
-import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 
 //@Service
@@ -29,7 +28,7 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 		val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
 
 		logger.info("restTemplate.interceptors.size=${restTemplate.interceptors.size}")
-		val responseEntity = restTemplate.postForEntity(url, HttpEntity<Any>(opprettJounalpostRequest), opprettJournalpostResponse::class.java)
+		val responseEntity = restTemplate.postForEntity(url, HttpEntity<Any>(opprettJounalpostRequest), OpprettJournalpostResponse::class.java)
 
 		if (responseEntity != null) {
 			if (responseEntity.body != null) {
