@@ -86,5 +86,5 @@ private fun createDokumentVariant(variant: MottattVariant, attachedFiles: List<F
 	if (attachedFile[0].fil == null)
 		throw Exception("File with uuid '${variant.getUuid()}' was null!")
 
-	return DokumentVariant(variant.getFilnavn(), variant.getFiltype(), attachedFile[0].fil!!, variant.getVariantformat())
+	return DokumentVariant(variant.getFilnavn(), if (variant.getFiltype().equals("PDF/A")) "PDFA" else variant.getFiltype(), attachedFile[0].fil!!, variant.getVariantformat())
 }
