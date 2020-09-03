@@ -32,21 +32,13 @@ fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
 												clientConfigurationProperties: ClientConfigurationProperties): RestTemplate? {
 		val properties: ClientProperties? = clientConfigurationProperties.registration?.get("soknadsarkiverer")
 
-		logger.info("Properties.tokenEndpointUrl= ${properties?.tokenEndpointUrl}")
-		logger.info("Properties.grantType= ${properties?.grantType}")
-		logger.info("Properties.scope= ${properties?.scope}")
-		logger.info("Properties.resourceUrl= ${properties?.resourceUrl}")
-		logger.info("Properties.authentication.clientId= ${properties?.authentication?.clientId}")
-		val tmp = if (properties?.authentication?.clientSecret == null) "MANGLER" else "xxxx"
-		logger.info("Properties.authentication.clientSecret= ${tmp}")
-		logger.info("Properties.authentication.clientAuthMethod= ${properties?.authentication?.clientAuthMethod}")
+		loggClientProperties(properties)
 
 		val clientProperties: ClientProperties = Optional.ofNullable(properties)
 			.orElseThrow({ RuntimeException("could not find oauth2 client config for archiveRestTemplate") })
 
 		return restTemplateBuilder
 			.additionalInterceptors(bearerTokenInterceptor(clientProperties, oAuth2AccessTokenService))
-			.basicAuthentication(properties?.authentication?.clientId, properties?.authentication?.clientSecret )
 			.build()
 	}
 
@@ -57,6 +49,17 @@ fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
 			request.headers.setBearerAuth(response.getAccessToken())
 			execution.execute(request, body!!)
 		}
+	}
+
+	private fun loggClientProperties(properties: ClientProperties?) {
+		logger.info("Properties.tokenEndpointUrl= ${properties?.tokenEndpointUrl}")
+		logger.info("Properties.grantType= ${properties?.grantType}")
+		logger.info("Properties.scope= ${properties?.scope}")
+		logger.info("Properties.resourceUrl= ${properties?.resourceUrl}")
+		logger.info("Properties.authentication.clientId= ${properties?.authentication?.clientId}")
+		val tmp = if (properties?.authentication?.clientSecret == null || properties?.authentication?.clientSecret == "") "MANGLER" else (if (properties.authentication.clientSecret.startsWith("C7")) "xxxx" else "yyyy")
+		logger.info("Properties.authentication.clientSecret= ${tmp}")
+		logger.info("Properties.authentication.clientAuthMethod= ${properties?.authentication?.clientAuthMethod}")
 	}
 
 }

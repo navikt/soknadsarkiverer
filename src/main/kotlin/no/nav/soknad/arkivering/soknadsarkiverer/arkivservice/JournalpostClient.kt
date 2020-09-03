@@ -28,6 +28,8 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 		val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
 
 		logger.info("restTemplate.interceptors.size=${restTemplate.interceptors.size}")
+		logger.info("restTemplate.interceptors.get(0)=${restTemplate.interceptors.get(0)?.javaClass}")
+		logger.info("restTemplate.interceptors.get(1)=${restTemplate.interceptors.get(1)?.javaClass}")
 		val responseEntity = restTemplate.postForEntity(url, HttpEntity<Any>(opprettJounalpostRequest), OpprettJournalpostResponse::class.java)
 
 		if (responseEntity != null) {

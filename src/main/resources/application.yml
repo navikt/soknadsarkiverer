@@ -56,7 +56,7 @@ no.nav.security.jwt:
   client:
     registration:
       soknadsarkiverer:
-        token-endpoint-url: ${TOKENENDPOINTURL}?grant_type=client_credentials&scope=openid
+        token-endpoint-url: ${TOKENENDPOINTURL}
         grant-type: ${GRANTTYPE}
         scope: ${SCOPE}
         authentication:
