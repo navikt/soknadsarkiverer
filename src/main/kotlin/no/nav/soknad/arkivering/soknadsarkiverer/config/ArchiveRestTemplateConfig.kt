@@ -57,7 +57,7 @@ fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
 		logger.info("Properties.scope= ${properties?.scope}")
 		logger.info("Properties.resourceUrl= ${properties?.resourceUrl}")
 		logger.info("Properties.authentication.clientId= ${properties?.authentication?.clientId}")
-		val tmp = if (properties?.authentication?.clientSecret == null || properties?.authentication?.clientSecret == "") "MANGLER" else (if (properties.authentication.clientSecret.startsWith("C7")) "xxxx" else "yyyy")
+		val tmp = if (properties?.authentication?.clientSecret == null || properties?.authentication?.clientSecret == "") "MANGLER" else (if (properties.authentication.clientSecret.equals(appConfiguration.kafkaConfig.password)) "xxxx" else properties.authentication.clientSecret.substring(0,2))
 		logger.info("Properties.authentication.clientSecret= ${tmp}")
 		logger.info("Properties.authentication.clientAuthMethod= ${properties?.authentication?.clientAuthMethod}")
 	}
