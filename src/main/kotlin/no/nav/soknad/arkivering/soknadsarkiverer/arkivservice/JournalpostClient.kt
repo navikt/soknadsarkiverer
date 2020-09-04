@@ -25,7 +25,6 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 	override fun opprettjournalpost(key: String, applicationMessage: Soknadarkivschema, attachedFiles: List<FilElementDto>): String {
 		logger.info("${key}: Skal opprette journalpost for søknad med behandlingsId=${applicationMessage.getBehandlingsid()}")
 		val opprettJounalpostRequest: OpprettJournalpostRequest = createOpprettJournalpostRequest(applicationMessage, attachedFiles)
-		logger.info("TMP: opprettJounalpostRequest=${opprettJounalpostRequest}")
 
 		val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
 

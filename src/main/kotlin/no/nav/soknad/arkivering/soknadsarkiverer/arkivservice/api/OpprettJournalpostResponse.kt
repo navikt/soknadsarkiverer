@@ -6,4 +6,4 @@ data class OpprettJournalpostResponse(val dokumenter: List<Dokumenter>, val jour
 data class Dokumenter(
 	val brevkode: String? = null,
 	val dokumentInfoId: String? = null,
-	val tittel: String)
+	val tittel: String? = null)
