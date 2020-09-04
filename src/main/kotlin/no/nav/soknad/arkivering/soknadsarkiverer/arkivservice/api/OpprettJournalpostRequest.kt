@@ -6,8 +6,7 @@ data class OpprettJournalpostRequest(val bruker: Bruker, val datoMottatt: String
 
 data class Bruker(val id: String, val idType: String)
 
-data class Dokument(val brevkode: String, val dokumentKategori: String, val dokumentvarianter: List<DokumentVariant>,
-                    val tittel: String)
+data class Dokument(val tittel: String, val brevkode: String, val dokumentKategori: String, val dokumentvarianter: List<DokumentVariant>)
 
 data class DokumentVariant(val filnavn: String, val filtype: String, val fysiskDokument: ByteArray, val variantformat: String) {
 	override fun equals(other: Any?): Boolean {

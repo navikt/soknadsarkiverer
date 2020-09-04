@@ -65,10 +65,14 @@ private fun createDokument(document: MottattDokument, attachedFiles: List<FilEle
 	val dokumentvarianter = document.getMottatteVarianter().map { createDokumentVariant(it, attachedFiles) }
 	val skjemanummer = getSkjemanummer(document, soknadstype)
 
+	if (skjemanummer.isNullOrBlank()) {
+		throw Exception("Skjemanummer is not set. This is neccessary inorder to set brevtype on document in archive")
+	}
+
 	if (dokumentvarianter.isEmpty())
 		throw Exception("Expected there to be at least one DokumentVariant")
 
-	return Dokument(skjemanummer, "SOK", dokumentvarianter, document.getTittel())
+	return Dokument(document.getTittel(), skjemanummer, "SOK", dokumentvarianter)
 }
 
 private fun getSkjemanummer(document: MottattDokument, soknadstype: Soknadstyper): String {
@@ -88,3 +92,9 @@ private fun createDokumentVariant(variant: MottattVariant, attachedFiles: List<F
 
 	return DokumentVariant(variant.getFilnavn(), if (variant.getFiltype().equals("PDF/A")) "PDFA" else variant.getFiltype(), attachedFile[0].fil!!, variant.getVariantformat())
 }
+
+data class KodeDto(
+	var kode: String? = null,
+	var dekode: String? = null,
+	var erGyldig: Boolean = true
+)
