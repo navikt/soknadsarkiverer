@@ -21,8 +21,8 @@ spec:
     enable: true
     path: /internal/prometheus
   replicas:
-    min: 2
-    max: 4
+    min: 1
+    max: 1
   resource:
     limits:
       cpu: 3000m
