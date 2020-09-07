@@ -75,8 +75,6 @@ spec:
       value: client_credentials
     - name: SCOPE
       value: openid
-    - name: CLIENTID
-      value: 7b9e459e-225f-4fa8-b79f-2a15b993dae8
     - name: CLIENTAUTHMETHOD
       value: client_secret_basic
     - name: ACCEPTEDAUDIENCE
