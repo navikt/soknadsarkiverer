@@ -40,6 +40,8 @@ spec:
         kvPath: /serviceuser/data/dev/srvsoknadarkiverer
       - mountPath: /var/run/secrets/nais.io/kv
         kvPath: /kv/preprod/fss/soknadsarkiverer/default
+      - mountPath: /var/run/secrets/nais.io/vault
+        kvPath: /kv/preprod/fss/soknadsarkiverer/environment
       - mountPath: /var/run/secrets/nais.io/appdynamics
         kvPath: /apikey/appdynamics/dev
 
@@ -70,17 +72,3 @@ spec:
       value: https://dokarkiv-q0.nais.preprod.local
     - name: TOKENENDPOINTURL
       value: https://security-token-service.nais.preprod.local/rest/v1/sts/token
-
-    - name: GRANTTYPE
-      value: client_credentials
-    - name: SCOPE
-      value: openid
-    - name: CLIENTAUTHMETHOD
-      value: client_secret_basic
-    - name: ACCEPTEDAUDIENCE
-      value: 7b9e459e-225f-4fa8-b79f-2a15b993dae8
-    - name: COOKIENAME
-      value: soknadsarkiverer-idtoken
-    - name: DISCOVERYURL
-      value: https://security-token-service.nais.preprod.local/rest/v1/sts/.well-known/openid-configuration
-
