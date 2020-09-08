@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.HttpEntity
 import org.springframework.web.client.RestTemplate
 
-//@Service
 class JournalpostClient(private val appConfiguration: AppConfiguration,
 												@Qualifier("archiveRestTemplate") private val restTemplate: RestTemplate): JournalpostClientInterface {
 

@@ -2,10 +2,8 @@ package no.nav.soknad.arkivering.soknadsarkiverer.config
 
 import com.natpryce.konfig.*
 import com.natpryce.konfig.ConfigurationProperties.Companion.systemProperties
-import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
-import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.core.env.ConfigurableEnvironment
 import java.io.File
@@ -79,18 +77,13 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 	data class Config(
 		val joarkHost: String = readFileAsText("/var/run/secrets/nais.io/kv/JOARK_HOST", "JOARK_HOST".configProperty()),
 		val joarkUrl: String = "JOARK_URL".configProperty(),
-		val tokenEndpointUrl: String = readFileAsText("/var/run/secrets/nais.io/kv/TOKENENDPOINTURL", "TOKENENDPOINTURL".configProperty()),
-		val tokenAuthenticationMethod: String = readFileAsText("/var/run/secrets/nais.io/kv/CLIENTAUTHMETHOD", "CLIENTAUTHMETHOD".configProperty()),
-		val scopes: List<String> = listOf("SCOPES".configProperty()),
-		val grantType: String = readFileAsText("/var/run/secrets/nais.io/kv/GRANTTYPE", "GRANTTYPE".configProperty()),
 		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "SOKNADSARKIVERER_USERNAME".configProperty()),
 		val sharedPassword: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "SHARED_PASSORD".configProperty()),
 		val clientsecret: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "CLIENTSECRET".configProperty()),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
 		val retryTime: List<Int> = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
-		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty(),
-		val discoveryurl: String = readFileAsText("/var/run/secrets/nais.io/kv/DISCOVERYURL", "DISCOVERYURL".configProperty())
+		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty()
 	)
 }
 
@@ -105,10 +98,6 @@ class ConfigConfig(private val env: ConfigurableEnvironment) {
 	fun appConfiguration(): AppConfiguration {
 		val appConfiguration = AppConfiguration()
 		env.setActiveProfiles(appConfiguration.config.profile)
-
-		val discovery = System.getenv("DISCOVERYURL")
-		val tokenurl = System.getenv("TOKENENDPOINTURL")
-		logger.info("appConfiguration: discoveryurl=$discovery, tokenurl=$tokenurl")
 
 		return appConfiguration
 	}
