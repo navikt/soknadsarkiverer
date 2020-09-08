@@ -15,7 +15,7 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.web.client.RestTemplate
 import java.util.ArrayList
 
-@Profile("spring | test")
+@Profile("spring | test | docker")
 @Configuration
 class ArchiveRestTemplateTestConfig(private val appConfiguration: AppConfiguration,
 																		val objectMapper: ObjectMapper) {
@@ -23,7 +23,7 @@ class ArchiveRestTemplateTestConfig(private val appConfiguration: AppConfigurati
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Bean
-	@Profile("spring | test")
+	@Profile("spring | test  | docker")
 	@Qualifier("archiveRestTemplate")
 	@Scope("prototype")
 	@Lazy
