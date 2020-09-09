@@ -29,17 +29,13 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 
 		val responseEntity = restTemplate.postForEntity(url, HttpEntity<Any>(opprettJounalpostRequest), OpprettJournalpostResponse::class.java)
 
-		if (responseEntity != null) {
-			if (responseEntity.body != null) {
-				val journalpostId = responseEntity.body?.journalpostId ?: "-1"
-				logger.info("${key}: Opprettet journalpost med id=${journalpostId} for søknad med behandlingsId=${applicationMessage.getBehandlingsid()}.")
-				return journalpostId
-			}
-			throw ArchivingException(RuntimeException("${key}: Feil ved forsøk på å opprette journalpost for ${applicationMessage.getBehandlingsid()}." +
-				" Response status = ${responseEntity.statusCodeValue}"))
-		} else {
-			throw ArchivingException(RuntimeException("${key}: Feil ved forsøk på å opprette journalpost for ${applicationMessage.getBehandlingsid()}"))
+		if (responseEntity.body != null) {
+			val journalpostId = responseEntity.body?.journalpostId ?: "-1"
+			logger.info("${key}: Opprettet journalpost med id=${journalpostId} for søknad med behandlingsId=${applicationMessage.getBehandlingsid()}.")
+			return journalpostId
 		}
+		throw ArchivingException(RuntimeException("${key}: Feil ved forsøk på å opprette journalpost for ${applicationMessage.getBehandlingsid()}." +
+			" Response status = ${responseEntity.statusCodeValue}"))
 
 	}
 

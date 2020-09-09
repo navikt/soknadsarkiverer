@@ -56,10 +56,5 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 		return "Exception when archiving: '" + e.message + "'\n" + stacktrace
 	}
 
-	private fun getFileIds(data: Soknadarkivschema) =
-		data.getMottatteDokumenter()
-			.flatMap { it.getMottatteVarianter().map { variant -> variant.getUuid() } }
-			.joinToString(",")
-
 
 }

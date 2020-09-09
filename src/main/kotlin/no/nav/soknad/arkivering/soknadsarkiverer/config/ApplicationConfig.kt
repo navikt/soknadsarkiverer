@@ -24,21 +24,14 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_PROCESSING_TOPIC" to "privat-soknadInnsendt-processingEventLog-v1-default",
 	"KAFKA_MESSAGE_TOPIC" to "privat-soknadInnsendt-messages-v1-default",
 
-	"JOARK_HOST" to "http://localhost:8092", // https://dokarkiv-q0.nais.preprod.local
-	"JOARK_URL" to "/joark/save", // /swagger-ui.html#/arkiver-og-journalfoer-rest-controller/opprettJournalpostUsingPOST
+	"JOARK_HOST" to "http://localhost:8092",
+	"JOARK_URL" to "/joark/save",
 	"FILESTORAGE_HOST" to "http://localhost:9042",
 	"FILESTORAGE_URL" to "/filer?ids=",
 	"SHARED_PASSORD" to "password",
 
-	"DISCOVERYURL" to "",
-	"ACCEPTEDAUDIENCE" to "soknadsarkiverer-default",
-	"COOKIENAME" to "idtoken-cookie",
-	"TOKENENDPOINTURL" to "",
-	"GRANTTYPE" to "client_credentials",
-	"SCOPES" to "openid",
 	"CLIENTID" to "",
-	"CLIENTSECRET" to "",
-	"CLIENTAUTHMETHOD" to "client_secret_basic"
+	"CLIENTSECRET" to ""
 
 ))
 
