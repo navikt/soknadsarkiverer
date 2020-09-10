@@ -26,6 +26,7 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 		val opprettJounalpostRequest: OpprettJournalpostRequest = createOpprettJournalpostRequest(applicationMessage, attachedFiles)
 
 		val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
+		logger.info("${key}: joark url=${url}")
 
 		val responseEntity = restTemplate.postForEntity(url, HttpEntity<Any>(opprettJounalpostRequest), OpprettJournalpostResponse::class.java)
 
