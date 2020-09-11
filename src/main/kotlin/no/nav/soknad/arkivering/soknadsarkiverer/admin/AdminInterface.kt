@@ -11,10 +11,13 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
+import java.time.LocalDateTime
 
 @RestController
 @RequestMapping("/admin")
-class AdminInterface(private val taskListService: TaskListService, private val fileService: FileserviceInterface) {
+class AdminInterface(private val taskListService: TaskListService,
+										 private val fileService: FileserviceInterface,
+										 private val kafkaAdminService: KafkaAdminService) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@PostMapping("/rerun/{key}")
@@ -26,25 +29,19 @@ class AdminInterface(private val taskListService: TaskListService, private val f
 
 	@GetMapping("/kafka/events/allEvents")
 	@Unprotected
-	fun allEvents() {
-		//TODO("Not yet implemented")
-	}
+	fun allEvents() = kafkaAdminService.getAllEvents()
 
 	@GetMapping("/kafka/events/unfinishedEvents")
 	@Unprotected
-	fun unfinishedEvents() {
-		//TODO("Not yet implemented")
-	}
+	fun unfinishedEvents() = kafkaAdminService.getUnfinishedEvents()
 
 	@GetMapping("/kafka/events/{key}")
 	@Unprotected
-	fun specificEvent(@PathVariable key: String) {
-		//TODO("Not yet implemented")
-	}
+	fun specificEvent(@PathVariable key: String) = kafkaAdminService.getAllEventsForKey(key)
 
-	@GetMapping("/kafka/events/eventContent/{key}")
+	@GetMapping("/kafka/events/eventContent/{key}/{timestamp}")
 	@Unprotected
-	fun eventContent(@PathVariable key: String) {
+	fun eventContent(@PathVariable key: String, @PathVariable timestamp: LocalDateTime) {
 		//TODO("Not yet implemented")
 	}
 

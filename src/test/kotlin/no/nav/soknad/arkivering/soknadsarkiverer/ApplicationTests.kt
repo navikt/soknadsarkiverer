@@ -5,7 +5,6 @@ import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
-import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
@@ -242,18 +241,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 	}
 
 	private fun verifyProcessingEvents(expectedCount: Int, eventType: EventTypes) {
-		val type = ProcessingEvent(eventType)
-		val getCount = {
-			mockingDetails(kafkaPublisherMock)
-				.invocations.stream()
-				.filter { it.arguments[0] == key }
-				.filter { it.arguments[1] == type }
-				.count()
-				.toInt()
-		}
-
-		val finalCheck = { verify(kafkaPublisherMock, times(expectedCount)).putProcessingEventOnTopic(eq(key), eq(type), any()) }
-		loopAndVerify(expectedCount, getCount, finalCheck)
+		verifyProcessingEvents(kafkaPublisherMock, key, eventType, expectedCount)
 	}
 
 	private fun putDataOnKafkaTopic(data: Soknadarkivschema) {
