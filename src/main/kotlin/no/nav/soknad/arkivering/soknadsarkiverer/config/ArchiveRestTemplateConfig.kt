@@ -15,7 +15,6 @@ import org.springframework.http.client.ClientHttpRequestInterceptor
 import org.springframework.web.client.RestTemplate
 import java.util.*
 
-
 @Profile("prod | dev")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 @Configuration
@@ -27,15 +26,15 @@ class ArchiveRestTemplateConfig(private val appConfiguration: AppConfiguration) 
 	@Profile("prod | dev")
 	@Qualifier("archiveRestTemplate")
 	@Scope("prototype")
-fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
-												oAuth2AccessTokenService: OAuth2AccessTokenService,
-												clientConfigurationProperties: ClientConfigurationProperties): RestTemplate? {
-		val properties: ClientProperties? = clientConfigurationProperties.registration?.get("soknadsarkiverer")
+	fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
+													oAuth2AccessTokenService: OAuth2AccessTokenService,
+													clientConfigurationProperties: ClientConfigurationProperties): RestTemplate? {
 
+		val properties: ClientProperties? = clientConfigurationProperties.registration?.get("soknadsarkiverer")
 		loggClientProperties(properties)
 
 		val clientProperties: ClientProperties = Optional.ofNullable(properties)
-			.orElseThrow({ RuntimeException("could not find oauth2 client config for archiveRestTemplate") })
+			.orElseThrow { RuntimeException("could not find oauth2 client config for archiveRestTemplate") }
 
 		return restTemplateBuilder
 			.additionalInterceptors(bearerTokenInterceptor(clientProperties, oAuth2AccessTokenService))
@@ -46,7 +45,7 @@ fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
 																		 oAuth2AccessTokenService: OAuth2AccessTokenService): ClientHttpRequestInterceptor? {
 		return ClientHttpRequestInterceptor { request: HttpRequest, body: ByteArray?, execution: ClientHttpRequestExecution ->
 			val response: OAuth2AccessTokenResponse = oAuth2AccessTokenService.getAccessToken(clientProperties)
-			request.headers.setBearerAuth(response.getAccessToken())
+			request.headers.setBearerAuth(response.accessToken)
 			execution.execute(request, body!!)
 		}
 	}
@@ -57,9 +56,12 @@ fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
 		logger.info("Properties.scope= ${properties?.scope}")
 		logger.info("Properties.resourceUrl= ${properties?.resourceUrl}")
 		logger.info("Properties.authentication.clientId= ${properties?.authentication?.clientId}")
-		val tmp = if (properties?.authentication?.clientSecret == null || properties?.authentication?.clientSecret == "") "MANGLER" else (if (properties.authentication.clientSecret.equals(appConfiguration.kafkaConfig.password)) "xxxx" else properties.authentication.clientSecret.substring(0,2))
-		logger.info("Properties.authentication.clientSecret= ${tmp}")
+		val clientSecret = when {
+			(properties?.authentication?.clientSecret == null || properties.authentication?.clientSecret == "") -> "MISSING"
+			(properties.authentication.clientSecret == appConfiguration.kafkaConfig.password) -> "xxxx"
+			else -> properties.authentication.clientSecret.substring(0,2)
+		}
+		logger.info("Properties.authentication.clientSecret= $clientSecret")
 		logger.info("Properties.authentication.clientAuthMethod= ${properties?.authentication?.clientAuthMethod}")
 	}
-
 }

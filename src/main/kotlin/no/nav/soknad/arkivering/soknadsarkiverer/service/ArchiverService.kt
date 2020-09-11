@@ -24,7 +24,7 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 
 			val files = filestorageService.getFilesFromFilestorage(key, data)
 
-			val journalpostId = journalpostClient.opprettjournalpost(key, data, files)
+			val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
 			logger.info("${key}: Opprettet journalpostId=${journalpostId} for behandlingsid=${data.getBehandlingsid()}")
 			createProcessingEvent(key, ARCHIVED)
 

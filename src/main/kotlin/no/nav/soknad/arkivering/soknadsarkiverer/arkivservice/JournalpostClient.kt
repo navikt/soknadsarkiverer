@@ -25,7 +25,7 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 		return restTemplate.getForObject("${appConfiguration.config.joarkUrl}/ping", String::class.java)!!
 	}
 
-	override fun opprettjournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FilElementDto>): String {
+	override fun opprettJournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FilElementDto>): String {
 		try {
 			logger.info("$key: Creating journalpost with behandlingsId=${soknadarkivschema.getBehandlingsid()}")
 			val request: OpprettJournalpostRequest = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)

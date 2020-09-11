@@ -10,8 +10,8 @@ class ProcessingEventDto(processingEventStrings: List<String>) {
 	private val values = mutableListOf<ProcessingEvent>()
 
 	init {
-		for (processingEventString in processingEventStrings) {
-			values.add(ProcessingEvent(EventTypes.valueOf(processingEventString)))
+		processingEventStrings.forEach {
+			values.add(ProcessingEvent(EventTypes.valueOf(it)))
 		}
 	}
 

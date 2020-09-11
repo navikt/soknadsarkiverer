@@ -7,5 +7,5 @@ interface JournalpostClientInterface {
 
 	fun ping(): String
 
-	fun opprettjournalpost(key: String, applicationMessage: Soknadarkivschema, attachedFiles: List<FilElementDto>): String
+	fun opprettJournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FilElementDto>): String
 }
