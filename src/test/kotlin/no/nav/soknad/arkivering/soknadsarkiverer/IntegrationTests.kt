@@ -55,7 +55,7 @@ class IntegrationTests {
 	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 	private lateinit var kafkaProducerForBadData: KafkaProducer<String, String>
 
-	private val uuid = UUID.randomUUID().toString()
+	private val fileId = UUID.randomUUID().toString()
 
 
 	@BeforeEach
@@ -76,22 +76,22 @@ class IntegrationTests {
 
 	@Test
 	fun `Happy case - Putting events on Kafka will cause rest calls to Joark`() {
-		mockFilestorageIsWorking(uuid)
+		mockFilestorageIsWorking(fileId)
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		TimeUnit.SECONDS.sleep(1)
 		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(2)
 	}
 
 	@Test
 	fun `Sending in invalid data will not cause processing`() {
-		val invalidData = "this string is not deserializable"
+		mockFilestorageIsWorking(fileId)
+		mockJoarkIsWorking()
 
-		putDataOnKafkaTopic(invalidData)
+		putDataOnKafkaTopic("this string is not deserializable")
 
 		TimeUnit.SECONDS.sleep(1)
 		verifyMockedPostRequests(0, appConfiguration.config.joarkUrl)
@@ -100,13 +100,12 @@ class IntegrationTests {
 
 	@Test
 	fun `Poison pill followed by proper event -- One event discarded, one to Joark`() {
-		mockFilestorageIsWorking(uuid)
+		mockFilestorageIsWorking(fileId)
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic("this is not deserializable")
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		TimeUnit.SECONDS.sleep(1)
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 	}
@@ -116,7 +115,7 @@ class IntegrationTests {
 		verifyMockedDeleteRequests(expectedCount, appConfiguration.config.filestorageUrl.replace("?", "\\?") + ".*")
 	}
 
-	private fun createSoknadarkivschema() = createSoknadarkivschema(uuid)
+	private fun createSoknadarkivschema() = createSoknadarkivschema(fileId)
 
 
 	private fun putDataOnKafkaTopic(soknadarkivschema: Soknadarkivschema) {

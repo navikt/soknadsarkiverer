@@ -4,9 +4,9 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.io.PrintWriter
@@ -55,6 +55,4 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 
 		return "Exception when archiving: '" + e.message + "'\n" + stacktrace
 	}
-
-
 }
