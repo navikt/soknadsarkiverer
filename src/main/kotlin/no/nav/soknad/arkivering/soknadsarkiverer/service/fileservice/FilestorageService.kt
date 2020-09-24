@@ -6,13 +6,14 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import org.apache.tomcat.util.codec.binary.Base64
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.*
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 
 @Service
-class FilestorageService(private val restTemplate: RestTemplate,
+class FilestorageService(@Qualifier("basicRestTemplate") private val restTemplate: RestTemplate,
 												 private val appConfiguration: AppConfiguration) : FileserviceInterface {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
@@ -24,7 +25,7 @@ class FilestorageService(private val restTemplate: RestTemplate,
 
 			val files = getFiles(fileIds)
 
-			logger.info("$key: Received: $files")
+			logger.info("$key: Received files.size: ${files?.size}")
 			return files ?: return arrayListOf()
 
 		} catch (e: Exception) {

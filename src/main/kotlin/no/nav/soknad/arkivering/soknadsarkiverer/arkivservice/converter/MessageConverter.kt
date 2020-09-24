@@ -1,9 +1,13 @@
-package no.nav.soknad.arkivering.soknadsarkiverer.service.converter
+package no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.converter
 
 import no.nav.soknad.arkivering.avroschemas.MottattDokument
 import no.nav.soknad.arkivering.avroschemas.MottattVariant
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.Bruker
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.Dokument
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.DokumentVariant
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.OpprettJournalpostRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.*
 import java.time.Instant
 import java.time.LocalDateTime
@@ -11,14 +15,14 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 
-fun createJoarkData(o: Soknadarkivschema, attachedFiles: List<FilElementDto>): JoarkData {
+fun createOpprettJournalpostRequest(o: Soknadarkivschema, attachedFiles: List<FilElementDto>): OpprettJournalpostRequest {
 	val soknadstype = o.getSoknadstype()
 	val date = DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(o.getInnsendtDato()), ZoneOffset.UTC))
 
 	val documents = createDocuments(o.getMottatteDokumenter(), attachedFiles, soknadstype)
 	val tittel = createTitle(documents, soknadstype)
 
-	return JoarkData(Bruker(o.getFodselsnummer(), "FNR"), date, documents, o.getBehandlingsid(),
+	return OpprettJournalpostRequest(Bruker(o.getFodselsnummer(), "FNR"), date, documents, o.getBehandlingsid(),
 		"INNGAAENDE", "NAV_NO", o.getArkivtema(), tittel)
 }
 
@@ -61,10 +65,14 @@ private fun createDokument(document: MottattDokument, attachedFiles: List<FilEle
 	val dokumentvarianter = document.getMottatteVarianter().map { createDokumentVariant(it, attachedFiles) }
 	val skjemanummer = getSkjemanummer(document, soknadstype)
 
+	if (skjemanummer.isNullOrBlank()) {
+		throw Exception("Skjemanummer is not set. This is neccessary inorder to set brevtype on document in archive")
+	}
+
 	if (dokumentvarianter.isEmpty())
 		throw Exception("Expected there to be at least one DokumentVariant")
 
-	return Dokument(skjemanummer, "SOK", dokumentvarianter, document.getTittel())
+	return Dokument(document.getTittel(), skjemanummer, "SOK", dokumentvarianter)
 }
 
 private fun getSkjemanummer(document: MottattDokument, soknadstype: Soknadstyper): String {
@@ -82,5 +90,11 @@ private fun createDokumentVariant(variant: MottattVariant, attachedFiles: List<F
 	if (attachedFile[0].fil == null)
 		throw Exception("File with uuid '${variant.getUuid()}' was null!")
 
-	return DokumentVariant(variant.getFilnavn(), variant.getFiltype(), attachedFile[0].fil!!, variant.getVariantformat())
+	return DokumentVariant(variant.getFilnavn(), if (variant.getFiltype().equals("PDF/A")) "PDFA" else variant.getFiltype(), attachedFile[0].fil!!, variant.getVariantformat())
 }
+
+data class KodeDto(
+	var kode: String? = null,
+	var dekode: String? = null,
+	var erGyldig: Boolean = true
+)

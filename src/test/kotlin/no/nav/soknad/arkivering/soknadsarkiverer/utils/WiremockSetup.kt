@@ -6,9 +6,9 @@ import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.http.RequestMethod
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import com.github.tomakehurst.wiremock.stubbing.Scenario
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.Dokumenter
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.Dokumenter
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.JoarkResponse
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.OpprettJournalpostResponse
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 
@@ -124,5 +124,5 @@ private fun createFilestorageResponse(uuidsAndResponses: List<Pair<String, Strin
 	)
 
 private fun createJoarkResponse(): String = ObjectMapper().writeValueAsString(
-	JoarkResponse(listOf(Dokumenter("brevkode", "dokumentInfoId", "tittel")),
+	OpprettJournalpostResponse(listOf(Dokumenter("brevkode", "dokumentInfoId", "tittel")),
 		"journalpostId", false, "journalstatus", "null"))

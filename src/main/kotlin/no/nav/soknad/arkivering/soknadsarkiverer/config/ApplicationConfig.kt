@@ -2,8 +2,12 @@ package no.nav.soknad.arkivering.soknadsarkiverer.config
 
 import com.natpryce.konfig.*
 import com.natpryce.konfig.ConfigurationProperties.Companion.systemProperties
+import org.slf4j.LoggerFactory
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.context.annotation.Bean
+import org.springframework.core.env.ConfigurableEnvironment
 import java.io.File
+import javax.annotation.Priority
 
 private val defaultProperties = ConfigurationMap(mapOf(
 	"APP_VERSION" to "",
@@ -15,16 +19,20 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_SECURITY" to "",
 	"KAFKA_SECPROT" to "",
 	"KAFKA_SASLMEC" to "",
-	"APPLICATION_PROFILE" to "",
+	"SPRING_PROFILES_ACTIVE" to "spring",
 	"KAFKA_INPUT_TOPIC" to "privat-soknadInnsendt-v1-default",
 	"KAFKA_PROCESSING_TOPIC" to "privat-soknadInnsendt-processingEventLog-v1-default",
 	"KAFKA_MESSAGE_TOPIC" to "privat-soknadInnsendt-messages-v1-default",
 
 	"JOARK_HOST" to "http://localhost:8092",
-	"JOARK_URL" to "/rest/journalpostapi/v1/journalpost",
+	"JOARK_URL" to "/joark/save",
 	"FILESTORAGE_HOST" to "http://localhost:9042",
 	"FILESTORAGE_URL" to "/filer?ids=",
-	"SHARED_PASSORD" to "password"
+	"SHARED_PASSORD" to "password",
+
+	"CLIENTID" to "",
+	"CLIENTSECRET" to ""
+
 ))
 
 private val secondsBetweenRetries = listOf(1, 25, 60, 120, 600)   // As many retries will be attempted as there are elements in the list.
@@ -40,7 +48,7 @@ val appConfig =
 
 private fun String.configProperty(): String = appConfig[Key(this, stringType)]
 
-fun readFileAsText(fileName: String, default: String = "") = try { File(fileName).readText(Charsets.UTF_8) } catch (e: Exception ) { default }
+fun readFileAsText(fileName: String, default: String = "") = try { File(fileName).readText(Charsets.UTF_8) } catch (e: Exception) { default }
 
 data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val config: Config = Config()) {
 	data class KafkaConfig(
@@ -60,18 +68,31 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 	)
 
 	data class Config(
-		val joarkHost: String = "JOARK_HOST".configProperty(),
+		val joarkHost: String = readFileAsText("/var/run/secrets/nais.io/kv/JOARK_HOST", "JOARK_HOST".configProperty()),
 		val joarkUrl: String = "JOARK_URL".configProperty(),
 		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "SOKNADSARKIVERER_USERNAME".configProperty()),
 		val sharedPassword: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "SHARED_PASSORD".configProperty()),
+		val clientsecret: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "CLIENTSECRET".configProperty()),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
-		val retryTime: List<Int> = if (!"test".equals("APPLICATION_PROFILE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests
+		val retryTime: List<Int> = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
+		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty()
 	)
 }
 
 @org.springframework.context.annotation.Configuration
-class ConfigConfig {
+@ConfigurationPropertiesScan
+@Priority(-1)
+class ConfigConfig(private val env: ConfigurableEnvironment) {
+
+	private val logger = LoggerFactory.getLogger(javaClass)
+
 	@Bean
-	fun appConfiguration() = AppConfiguration()
+	fun appConfiguration(): AppConfiguration {
+		val appConfiguration = AppConfiguration()
+		env.setActiveProfiles(appConfiguration.config.profile)
+
+		return appConfiguration
+	}
+
 }

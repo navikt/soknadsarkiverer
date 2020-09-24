@@ -4,11 +4,8 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
-import no.nav.soknad.arkivering.soknadsarkiverer.service.converter.createJoarkData
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.JoarkData
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -17,7 +14,7 @@ import java.io.StringWriter
 
 @Service
 class ArchiverService(private val filestorageService: FileserviceInterface,
-											private val joarkArchiver: JoarkArchiver,
+											private val journalpostClient: JournalpostClientInterface,
 											private val kafkaPublisher: KafkaPublisher) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -26,12 +23,12 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 			createProcessingEvent(key, STARTED)
 
 			val files = filestorageService.getFilesFromFilestorage(key, data)
-			val joarkData = convertToJoarkData(key, data, files)
 
-			joarkArchiver.putDataInJoark(key, joarkData)
+			val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
+			logger.info("${key}: Opprettet journalpostId=${journalpostId} for behandlingsid=${data.getBehandlingsid()}")
 			createProcessingEvent(key, ARCHIVED)
-			filestorageService.deleteFilesFromFilestorage(key, data)
 
+			filestorageService.deleteFilesFromFilestorage(key, data)
 			createProcessingEvent(key, FINISHED)
 			createMessage(key, "ok")
 
@@ -42,14 +39,6 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 		}
 	}
 
-	private fun convertToJoarkData(key: String, data: Soknadarkivschema, files: List<FilElementDto>): JoarkData {
-		try {
-			return createJoarkData(data, files)
-		} catch (e: Exception) {
-			logger.error("$key: Error when converting message.", e)
-			throw ArchivingException(e)
-		}
-	}
 
 	private fun createProcessingEvent(key: String, type: EventTypes) {
 		kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(type))
@@ -66,4 +55,6 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 
 		return "Exception when archiving: '" + e.message + "'\n" + stacktrace
 	}
+
+
 }

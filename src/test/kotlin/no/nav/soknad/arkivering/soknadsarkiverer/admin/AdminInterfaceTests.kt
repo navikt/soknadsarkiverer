@@ -2,6 +2,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
 import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
+import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.STARTED
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
@@ -19,6 +20,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.context.ActiveProfiles
@@ -28,6 +31,8 @@ import java.util.concurrent.TimeUnit
 
 @ActiveProfiles("test")
 @SpringBootTest
+@ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
+@EnableConfigurationProperties(ClientConfigurationProperties::class)
 class AdminInterfaceTests : TopologyTestDriverTests()  {
 
 	@Value("\${application.mocked-port-for-external-services}")
@@ -35,6 +40,9 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 
 	@MockBean
 	private lateinit var kafkaPublisherMock: KafkaPublisher
+
+	@MockBean
+	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
 
 	@Autowired
 	private lateinit var archiverService: ArchiverService

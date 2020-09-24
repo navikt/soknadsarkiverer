@@ -21,15 +21,15 @@ spec:
     enable: true
     path: /internal/prometheus
   replicas:
-    min: 2
-    max: 4
-  resource:
+    min: 1
+    max: 1
+  resources:
     limits:
       cpu: 3000m
-      memory: 1024Mi
+      memory: 2048Mi
     requests:
-      cpu: 200m
-      memory: 512Mi
+      cpu: 1000m
+      memory: 1024Mi
   ingresses:
     - "https://soknadsarkiverer-q0.nais.preprod.local"
     - "https://soknadsarkiverer-q0.dev-fss.nais.io"
@@ -40,6 +40,8 @@ spec:
         kvPath: /serviceuser/data/dev/srvsoknadarkiverer
       - mountPath: /var/run/secrets/nais.io/kv
         kvPath: /kv/preprod/fss/soknadsarkiverer/default
+      - mountPath: /var/run/secrets/nais.io/vault
+        kvPath: /kv/preprod/fss/soknadsarkiverer/environment
       - mountPath: /var/run/secrets/nais.io/appdynamics
         kvPath: /apikey/appdynamics/dev
 
@@ -56,7 +58,7 @@ spec:
       value: SASL_SSL
     - name: KAFKA_SASLMEC
       value: PLAIN
-    - name: APPLICATION_PROFILE
+    - name: SPRING_PROFILES_ACTIVE
       value: dev
     - name: KAFKA_INPUT_TOPIC
       value: privat-soknadInnsendt-v1-q0

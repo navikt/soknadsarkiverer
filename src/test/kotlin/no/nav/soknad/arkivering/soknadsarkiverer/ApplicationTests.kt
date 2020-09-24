@@ -2,6 +2,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer
 
 import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
+import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
@@ -16,6 +17,8 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.startsWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.context.ActiveProfiles
@@ -25,7 +28,9 @@ import kotlin.properties.Delegates
 
 @ActiveProfiles("test")
 @SpringBootTest
-class ApplicationTests : TopologyTestDriverTests() {
+@ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
+@EnableConfigurationProperties(ClientConfigurationProperties::class)
+class ApplicationTests(): TopologyTestDriverTests() {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
@@ -38,6 +43,9 @@ class ApplicationTests : TopologyTestDriverTests() {
 
 	@MockBean
 	private lateinit var kafkaPublisherMock: KafkaPublisher
+
+	@MockBean
+	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
 
 	private var maxNumberOfAttempts by Delegates.notNull<Int>()
 

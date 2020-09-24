@@ -15,3 +15,52 @@ management:
     export:
       prometheus:
         enabled: true
+
+---
+spring:
+  profiles: test
+
+no.nav.security.jwt:
+  issuer:
+    someshortname:
+      discoveryurl: http://metadata
+      accepted_audience: aud-localhost
+      cookie_name: localhost-idtoken
+
+
+  client:
+    registration:
+      soknadsarkiverer:
+        token-endpoint-url: http://localhost:8181/oauth2/v2.0/token
+        grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
+        scope: scope1
+        authentication:
+          client-id: testclient
+          client-secret: testsecret
+          client-auth-method: client_secret_basic
+
+---
+spring:
+  profiles: spring | default | docker | dev | prod
+
+no.nav.security.jwt:
+  expirythreshold: ${EXPIRYTHRESHOLD} #threshold in minutes until token expires
+
+  issuers: isso
+  issuer:
+    isso:
+      discoveryurl: ${DISCOVERYURL}
+      accepted_audience: ${ACCEPTEDAUDIENCE}
+      cookie_name: ${COOKIENAME}
+
+  client:
+    registration:
+      soknadsarkiverer:
+        token-endpoint-url: ${TOKENENDPOINTURL}
+        grant-type: ${GRANTTYPE}
+        scope: ${SCOPE}
+        authentication:
+          client-id: ${CLIENTID}
+          client-secret: ${CLIENTSECRET}
+          client-auth-method: ${CLIENTAUTHMETHOD}
+

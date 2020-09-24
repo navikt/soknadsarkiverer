@@ -2,6 +2,8 @@ package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import no.nav.security.token.support.core.api.Protected
+import no.nav.security.token.support.core.api.Unprotected
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilestorageExistanceResponse
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
@@ -16,32 +18,38 @@ class AdminInterface(private val taskListService: TaskListService, private val f
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@PostMapping("/rerun/{key}")
+	@Unprotected
 	fun rerun(@PathVariable key: String) {
 		logger.info("$key: Performing forced rerun")
 		GlobalScope.launch { taskListService.pauseAndStart(key) }
 	}
 
 	@GetMapping("/kafka/events/allEvents")
+	@Unprotected
 	fun allEvents() {
 		//TODO("Not yet implemented")
 	}
 
 	@GetMapping("/kafka/events/unfinishedEvents")
+	@Unprotected
 	fun unfinishedEvents() {
 		//TODO("Not yet implemented")
 	}
 
 	@GetMapping("/kafka/events/{key}")
+	@Unprotected
 	fun specificEvent(@PathVariable key: String) {
 		//TODO("Not yet implemented")
 	}
 
 	@GetMapping("/kafka/events/eventContent/{key}")
+	@Unprotected
 	fun eventContent(@PathVariable key: String) {
 		//TODO("Not yet implemented")
 	}
 
 	@GetMapping("/fillager/filesExist/{key}")
+	@Protected
 	fun filesExists(@PathVariable key: String): List<FilestorageExistanceResponse> {
 		val soknadarkivschema = taskListService.getSoknadarkivschema(key)
 		if (soknadarkivschema == null) {
