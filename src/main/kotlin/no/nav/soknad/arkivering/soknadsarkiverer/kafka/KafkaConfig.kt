@@ -129,8 +129,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		val serdeConfig = hashMapOf(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
 		return SpecificAvroSerde<T>().also { it.configure(serdeConfig, false) }
 	}
-
-	companion object {
-		const val KAFKA_PUBLISHER = "kafka.publisher"
-	}
 }
+
+const val KAFKA_PUBLISHER = "kafka.publisher"
+const val MESSAGE_ID = "MESSAGE_ID"

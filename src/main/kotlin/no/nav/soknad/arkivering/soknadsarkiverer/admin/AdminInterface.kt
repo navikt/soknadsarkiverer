@@ -39,11 +39,9 @@ class AdminInterface(private val taskListService: TaskListService,
 	@Unprotected
 	fun specificEvent(@PathVariable key: String) = kafkaAdminService.getAllEventsForKey(key)
 
-	@GetMapping("/kafka/events/eventContent/{key}/{timestamp}")
+	@GetMapping("/kafka/events/eventContent/{messageId}")
 	@Unprotected
-	fun eventContent(@PathVariable key: String, @PathVariable timestamp: LocalDateTime) {
-		//TODO("Not yet implemented")
-	}
+	fun eventContent(@PathVariable messageId: String) = kafkaAdminService.content(messageId)
 
 	@GetMapping("/fillager/filesExist/{key}")
 	@Protected

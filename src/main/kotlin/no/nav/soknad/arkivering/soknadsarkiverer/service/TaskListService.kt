@@ -89,7 +89,9 @@ class TaskListService(private val archiverService: ArchiverService,
 		}
 	}
 
-	internal fun listTasks() = tasks.mapValues { it.value.count to it.value.isRunningLock }
+	internal fun listTasks(key: String? = null) = tasks
+		.filter { if (key != null) it.key == key else true }
+		.mapValues { it.value.count to it.value.isRunningLock }
 
 	fun getSoknadarkivschema(key: String) = tasks[key]?.value
 
