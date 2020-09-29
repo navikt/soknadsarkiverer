@@ -3,10 +3,10 @@ package no.nav.soknad.arkivering.soknadsarkiverer.admin
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
-import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.STARTED
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
@@ -32,7 +32,6 @@ import org.springframework.kafka.test.context.EmbeddedKafka
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.web.server.ResponseStatusException
-import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -41,7 +40,7 @@ import java.util.concurrent.TimeUnit
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
 @Import(EmbeddedKafkaBrokerConfig::class)
 @EmbeddedKafka(topics = ["privat-soknadInnsendt-v1-default", "privat-soknadInnsendt-processingEventLog-v1-default", "privat-soknadInnsendt-messages-v1-default"])
 class AdminInterfaceTests {
@@ -77,7 +76,7 @@ class AdminInterfaceTests {
 
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 
-		maxNumberOfAttempts = appConfiguration.config.retryTime.size
+		maxNumberOfAttempts = appConfiguration.config.retryTime.size + 1
 	}
 
 	@AfterEach
@@ -98,13 +97,12 @@ class AdminInterfaceTests {
 		mockJoarkIsWorking()
 
 		putDataOnTopic(key, soknadarkivschema)
-		verifyProcessingEvents(key, maxNumberOfAttempts, STARTED)
-		loopAndVerify(maxNumberOfAttempts + 1, { getTaskListCount(key) })
+		loopAndVerify(maxNumberOfAttempts, { getTaskListCount(key) })
 
 		mockFilestorageIsWorking(fileUuid)
 		adminInterface.rerun(key)
 
-		loopAndVerify(0, { taskListService.listTasks().size })
+		loopAndVerify(0, { taskListService.listTasks(key).size })
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 	}
 
@@ -117,13 +115,13 @@ class AdminInterfaceTests {
 		mockJoarkIsWorking()
 
 		putDataOnTopic(key, soknadarkivschema)
-		loopAndVerify(0, { taskListService.listTasks().size })
+		loopAndVerify(0, { taskListService.listTasks(key).size })
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 
 		adminInterface.rerun(key)
 
 		TimeUnit.SECONDS.sleep(1)
-		loopAndVerify(0, { taskListService.listTasks().size })
+		loopAndVerify(0, { taskListService.listTasks(key).size })
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 	}
 
@@ -142,7 +140,7 @@ class AdminInterfaceTests {
 
 		val timeTaken = System.currentTimeMillis() - timeBeforeRerun
 		assertTrue(timeTaken < 100, "This operation should spawn a new thread and should return immediately")
-		loopAndVerify(1, { taskListService.listTasks().size })
+		loopAndVerify(1, { taskListService.listTasks(key).size })
 	}
 
 
@@ -150,35 +148,43 @@ class AdminInterfaceTests {
 	fun `No events when requesting allEvents`() {
 		val events = adminInterface.allEvents()
 
-		assertTrue(events.isEmpty()) // TODO: What if there were events before the test is run?
+		assertTrue(events.isEmpty())
 	}
 
 	@Test
 	fun `Can request allEvents`() {
-		val eventsBefore = adminInterface.allEvents()
+		val key0 = UUID.randomUUID().toString()
+		val key1 = UUID.randomUUID().toString()
+		archiveOneEventSuccessfullyAndFailOne(key0, key1)
 
-		archiveOneEventSuccessfullyAndFailOne()
-
-		val eventsAfter = adminInterface.allEvents()
+		val eventsAfter = {
+			adminInterface.allEvents()
+				.filter { it.innsendingKey == key0 || it.innsendingKey == key1 }
+				.count()
+		}
 
 		val numberOfInputs = 2
 		val numberOfMessages = 1 + maxNumberOfAttempts // 1 "ok" message, a number of mocked exceptions
-		val numberOfProcessingEvents = 4 + 1 + 5 // 4 for the first event, 1 received the second, 5 attempts at starting
-		assertEquals(eventsBefore.size + numberOfInputs + numberOfMessages + numberOfProcessingEvents, eventsAfter.size)
+		val numberOfProcessingEvents = 4 + 1 + 6 // 4 for the first event, 1 received the second, 6 attempts at starting
+		loopAndVerify(numberOfInputs + numberOfMessages + numberOfProcessingEvents, eventsAfter)
 	}
 
 	@Test
 	fun `Can request unfinishedEvents`() {
-		val eventsBefore = adminInterface.unfinishedEvents()
+		val key0 = UUID.randomUUID().toString()
+		val key1 = UUID.randomUUID().toString()
+		archiveOneEventSuccessfullyAndFailOne(key0, key1)
 
-		archiveOneEventSuccessfullyAndFailOne()
-
-		val eventsAfter = adminInterface.unfinishedEvents()
+		val eventsAfter = {
+			adminInterface.unfinishedEvents()
+				.filter { it.innsendingKey == key0 || it.innsendingKey == key1 }
+				.count()
+		}
 
 		val numberOfInputs = 1
 		val numberOfMessages = maxNumberOfAttempts // mocked exceptions
-		val numberOfProcessingEvents = 1 + 5 // 4 for the first event, 1 received the second, 5 attempts at starting
-		assertEquals(eventsBefore.size + numberOfInputs + numberOfMessages + numberOfProcessingEvents, eventsAfter.size)
+		val numberOfProcessingEvents = 1 + 6 // 4 for the first event, 1 received the second, 5 attempts at starting
+		loopAndVerify(numberOfInputs + numberOfMessages + numberOfProcessingEvents, eventsAfter)
 	}
 
 	@Test
@@ -196,12 +202,29 @@ class AdminInterfaceTests {
 	}
 
 	@Test
+	fun `Exception returned if illegal messageId is given to eventContent`() {
+		assertThrows<NoSuchElementException> {
+			adminInterface.eventContent("illegal key")
+		}
+	}
+
+	@Test
 	fun `Can request eventContent`() {
-		archiveOneEventSuccessfullyAndFailOne()
+		val unfinishedEventsBefore = adminInterface.unfinishedEvents()
+		val (_, soknadsarkivschema) = archiveOneEventSuccessfullyAndFailOne()
 
-		adminInterface.eventContent(UUID.randomUUID().toString(), LocalDateTime.now())
+		val unfinishedEvents = adminInterface.unfinishedEvents().filter { !unfinishedEventsBefore.contains(it) }
+		val inputEvent = unfinishedEvents.last { it.type == "INPUT" }
+		val messageEvent = unfinishedEvents.last { it.type.contains("Exception") }
+		val processingEvent = unfinishedEvents.last { it.type == "STARTED" }
 
-		//TODO: Create proper test
+		val inputEventContent = adminInterface.eventContent(inputEvent.messageId)
+		val messageEventContent = adminInterface.eventContent(messageEvent.messageId)
+		val processingEventContent = adminInterface.eventContent(processingEvent.messageId)
+
+		assertEquals(soknadsarkivschema.toString(), inputEventContent)
+		assertEquals("{\"type\": \"STARTED\"}", processingEventContent)
+		assertTrue(messageEventContent.contains("Exception"))
 	}
 
 
@@ -234,7 +257,7 @@ class AdminInterfaceTests {
 		mockJoarkIsWorking()
 
 		putDataOnTopic(key, soknadarkivschema)
-		verifyProcessingEvents(key, maxNumberOfAttempts, STARTED)
+		verifyNumberOfStartedEvents(key, maxNumberOfAttempts)
 
 
 		mockFilestorageIsWorking(listOf(fileUuidInFilestorage to "filecontent", fileUuidNotInFilestorage to null))
@@ -250,9 +273,9 @@ class AdminInterfaceTests {
 
 
 	private fun archiveOneEventSuccessfullyAndFailOne(key0: String = UUID.randomUUID().toString(),
-																										key1: String = UUID.randomUUID().toString()) {
+																										key1: String = UUID.randomUUID().toString()): Pair<Soknadarkivschema, Soknadarkivschema> {
 		val fileUuid = UUID.randomUUID().toString()
-		val soknadarkivschema0 = createSoknadarkivschema(listOf(fileUuid))
+		val soknadarkivschema0 = createSoknadarkivschema(fileUuid)
 
 		mockFilestorageIsWorking(fileUuid)
 		mockJoarkIsWorking()
@@ -260,22 +283,27 @@ class AdminInterfaceTests {
 		putDataOnTopic(key0, soknadarkivschema0)
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 
-		val soknadarkivschema1 = createSoknadarkivschema(listOf(fileUuid))
+		val soknadarkivschema1 = createSoknadarkivschema(fileUuid)
 		mockJoarkIsDown()
 
 		putDataOnTopic(key1, soknadarkivschema1)
-		verifyProcessingEvents(key1, maxNumberOfAttempts, STARTED)
+		verifyNumberOfStartedEvents(key1, maxNumberOfAttempts)
+
+		return soknadarkivschema0 to soknadarkivschema1
 	}
 
 
-	private fun verifyProcessingEvents(key: String, expectedCount: Int, eventType: EventTypes) {
-//		verifyProcessingEvents(kafkaPublisherMock, key, eventType, expectedCount)
-		TimeUnit.SECONDS.sleep(10) // TODO
+	private fun verifyNumberOfStartedEvents(key: String, expectedCount: Int) {
+
+		val eventCounter = {
+			adminInterface.specificEvent(key)
+				.filter { it.type == STARTED.name }
+				.count()
+		}
+		loopAndVerify(expectedCount, eventCounter )
 	}
 
-	private fun getTaskListCount(key: String) = getTaskListPair(key).first
-	private fun getTaskListPair (key: String) = taskListService.listTasks()[key] ?: error("Expected to find $key in map")
-
+	private fun getTaskListCount(key: String) = taskListService.listTasks()[key]?.first ?: -1
 
 
 	private fun putDataOnTopic(key: String, value: Soknadarkivschema, headers: Headers = RecordHeaders()): RecordMetadata {
@@ -284,6 +312,7 @@ class AdminInterfaceTests {
 		val topic = appConfiguration.kafkaConfig.inputTopic
 
 		val producerRecord = ProducerRecord(topic, key, value)
+		headers.add(MESSAGE_ID, UUID.randomUUID().toString().toByteArray())
 		headers.forEach { producerRecord.headers().add(it) }
 
 		return kafkaProducer

@@ -5,6 +5,7 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -140,6 +141,7 @@ class IntegrationTests {
 																 kafkaProducer: KafkaProducer<String, T>): RecordMetadata {
 
 		val producerRecord = ProducerRecord(topic, key, value)
+		headers.add(MESSAGE_ID, UUID.randomUUID().toString().toByteArray())
 		headers.forEach { producerRecord.headers().add(it) }
 
 		return kafkaProducer

@@ -1,5 +1,3 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
-import java.time.LocalDateTime
-
-data class KafkaEvent(val key: String, val timestamp: LocalDateTime, val type: String)
+data class KafkaEvent(val sequence: Int, val innsendingKey: String, val messageId: String, val type: String, val timestamp: Long)
