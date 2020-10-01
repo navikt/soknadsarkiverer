@@ -1,7 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
-import no.nav.security.token.support.spring.api.EnableJwtTokenValidation
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.EmbeddedKafkaBrokerConfig
 import org.junit.jupiter.api.Test
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan

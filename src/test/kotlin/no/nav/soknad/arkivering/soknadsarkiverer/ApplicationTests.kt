@@ -30,7 +30,7 @@ import kotlin.properties.Delegates
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
-class ApplicationTests(): TopologyTestDriverTests() {
+class ApplicationTests: TopologyTestDriverTests() {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null

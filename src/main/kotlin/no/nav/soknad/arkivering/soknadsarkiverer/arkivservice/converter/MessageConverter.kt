@@ -65,7 +65,7 @@ private fun createDokument(document: MottattDokument, attachedFiles: List<FilEle
 	val dokumentvarianter = document.getMottatteVarianter().map { createDokumentVariant(it, attachedFiles) }
 	val skjemanummer = getSkjemanummer(document, soknadstype)
 
-	if (skjemanummer.isNullOrBlank()) {
+	if (skjemanummer.isBlank()) {
 		throw Exception("Skjemanummer is not set. This is neccessary inorder to set brevtype on document in archive")
 	}
 
@@ -90,11 +90,5 @@ private fun createDokumentVariant(variant: MottattVariant, attachedFiles: List<F
 	if (attachedFile[0].fil == null)
 		throw Exception("File with uuid '${variant.getUuid()}' was null!")
 
-	return DokumentVariant(variant.getFilnavn(), if (variant.getFiltype().equals("PDF/A")) "PDFA" else variant.getFiltype(), attachedFile[0].fil!!, variant.getVariantformat())
+	return DokumentVariant(variant.getFilnavn(), if (variant.getFiltype() == "PDF/A") "PDFA" else variant.getFiltype(), attachedFile[0].fil!!, variant.getVariantformat())
 }
-
-data class KodeDto(
-	var kode: String? = null,
-	var dekode: String? = null,
-	var erGyldig: Boolean = true
-)
