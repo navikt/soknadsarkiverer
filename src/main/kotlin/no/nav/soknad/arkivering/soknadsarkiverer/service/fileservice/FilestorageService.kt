@@ -25,8 +25,8 @@ class FilestorageService(@Qualifier("basicRestTemplate") private val restTemplat
 
 			val files = getFiles(fileIds)
 
-			logger.info("$key: Received files.size: ${files?.size}")
-			return files ?: return arrayListOf()
+			logger.info("$key: Received files.size: ${files.size}")
+			return files
 
 		} catch (e: Exception) {
 			logger.error("$key: Error retrieving files from file storage", e)
@@ -35,7 +35,7 @@ class FilestorageService(@Qualifier("basicRestTemplate") private val restTemplat
 	}
 
 	override fun deleteFilesFromFilestorage(key: String, data: Soknadarkivschema) {
-		val fileIds = getFileIds(data)
+		val fileIds = getFileIds(data).joinToString(",")
 		try {
 
 			logger.info("$key: Calling file storage to delete '$fileIds'")
@@ -61,9 +61,18 @@ class FilestorageService(@Qualifier("basicRestTemplate") private val restTemplat
 		}
 	}
 
-	private fun getFiles(fileIds: String): List<FilElementDto>? {
-		val response = performRestCall(fileIds, HttpMethod.GET, typeRef<List<FilElementDto>>())
-		return response.body
+	private fun getFiles(fileIds: List<String>): List<FilElementDto> {
+
+		val idChunks = fileIds.chunked(filesInOneRequest).map { it.joinToString(",") }
+		val files = idChunks
+			.mapNotNull { performRestCall(it, HttpMethod.GET, typeRef<List<FilElementDto>>()).body }
+			.flatten()
+
+		if (fileIds.size != files.size) {
+			val fetchedFiles = files.map { it.uuid }
+			throw Exception("Was not able to fetch the files with these ids: ${fileIds.filter { !fetchedFiles.contains(it) }}")
+		}
+		return files
 	}
 
 	private fun deleteFiles(fileIds: String) {
@@ -83,8 +92,9 @@ class FilestorageService(@Qualifier("basicRestTemplate") private val restTemplat
 	private fun getFileIds(data: Soknadarkivschema) =
 		data.getMottatteDokumenter()
 			.flatMap { it.getMottatteVarianter().map { variant -> variant.getUuid() } }
-			.joinToString(",")
 
 
 	private inline fun <reified T : Any> typeRef(): ParameterizedTypeReference<T> = object : ParameterizedTypeReference<T>() {}
 }
+
+const val filesInOneRequest = 5
