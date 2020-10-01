@@ -8,12 +8,15 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.client.RestTemplateBuilder
-import org.springframework.context.annotation.*
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Profile
+import org.springframework.context.annotation.Scope
 import org.springframework.http.HttpRequest
 import org.springframework.http.client.ClientHttpRequestExecution
 import org.springframework.http.client.ClientHttpRequestInterceptor
+import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.web.client.RestTemplate
-import java.util.*
 
 @Profile("prod | dev")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
@@ -30,38 +33,39 @@ class ArchiveRestTemplateConfig(private val appConfiguration: AppConfiguration) 
 													oAuth2AccessTokenService: OAuth2AccessTokenService,
 													clientConfigurationProperties: ClientConfigurationProperties): RestTemplate? {
 
-		val properties: ClientProperties? = clientConfigurationProperties.registration?.get("soknadsarkiverer")
-		loggClientProperties(properties)
+		val properties: ClientProperties = clientConfigurationProperties.registration
+			?. get("soknadsarkiverer")
+			?: throw RuntimeException("Could not find oauth2 client config for archiveRestTemplate")
 
-		val clientProperties: ClientProperties = Optional.ofNullable(properties)
-			.orElseThrow { RuntimeException("could not find oauth2 client config for archiveRestTemplate") }
+		logClientProperties(properties)
+
+		val requestFactory = { SimpleClientHttpRequestFactory().also { it.setBufferRequestBody(false) } }
 
 		return restTemplateBuilder
-			.additionalInterceptors(bearerTokenInterceptor(clientProperties, oAuth2AccessTokenService))
+			.additionalInterceptors(bearerTokenInterceptor(properties, oAuth2AccessTokenService))
+			.requestFactory(requestFactory)
 			.build()
 	}
 
-	private fun bearerTokenInterceptor(clientProperties: ClientProperties,
-																		 oAuth2AccessTokenService: OAuth2AccessTokenService): ClientHttpRequestInterceptor? {
-		return ClientHttpRequestInterceptor { request: HttpRequest, body: ByteArray?, execution: ClientHttpRequestExecution ->
+	private fun bearerTokenInterceptor(clientProperties: ClientProperties, oAuth2AccessTokenService: OAuth2AccessTokenService) =
+		ClientHttpRequestInterceptor { request: HttpRequest, body: ByteArray?, execution: ClientHttpRequestExecution ->
 			val response: OAuth2AccessTokenResponse = oAuth2AccessTokenService.getAccessToken(clientProperties)
 			request.headers.setBearerAuth(response.accessToken)
 			execution.execute(request, body!!)
 		}
-	}
 
-	private fun loggClientProperties(properties: ClientProperties?) {
-		logger.info("Properties.tokenEndpointUrl= ${properties?.tokenEndpointUrl}")
-		logger.info("Properties.grantType= ${properties?.grantType}")
-		logger.info("Properties.scope= ${properties?.scope}")
-		logger.info("Properties.resourceUrl= ${properties?.resourceUrl}")
-		logger.info("Properties.authentication.clientId= ${properties?.authentication?.clientId}")
+	private fun logClientProperties(properties: ClientProperties) {
+		logger.info("Properties.tokenEndpointUrl= ${properties.tokenEndpointUrl}")
+		logger.info("Properties.grantType= ${properties.grantType}")
+		logger.info("Properties.scope= ${properties.scope}")
+		logger.info("Properties.resourceUrl= ${properties.resourceUrl}")
+		logger.info("Properties.authentication.clientId= ${properties.authentication?.clientId}")
 		val clientSecret = when {
-			(properties?.authentication?.clientSecret == null || properties.authentication?.clientSecret == "") -> "MISSING"
+			(properties.authentication?.clientSecret == null || properties.authentication?.clientSecret == "") -> "MISSING"
 			(properties.authentication.clientSecret == appConfiguration.kafkaConfig.password) -> "xxxx"
 			else -> properties.authentication.clientSecret.substring(0,2)
 		}
 		logger.info("Properties.authentication.clientSecret= $clientSecret")
-		logger.info("Properties.authentication.clientAuthMethod= ${properties?.authentication?.clientAuthMethod}")
+		logger.info("Properties.authentication.clientAuthMethod= ${properties.authentication?.clientAuthMethod}")
 	}
 }
