@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
-import java.time.LocalDateTime
 
 @RestController
 @RequestMapping("/admin")
@@ -42,6 +41,10 @@ class AdminInterface(private val taskListService: TaskListService,
 	@GetMapping("/kafka/events/eventContent/{messageId}")
 	@Unprotected
 	fun eventContent(@PathVariable messageId: String) = kafkaAdminService.content(messageId)
+
+	@GetMapping("/kafka/events/search/{searchPhrase}")
+	@Unprotected
+	fun search(@PathVariable searchPhrase: String) = kafkaAdminService.search(searchPhrase.toRegex())
 
 	@GetMapping("/fillager/filesExist/{key}")
 	@Protected
