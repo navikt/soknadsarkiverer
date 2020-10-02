@@ -29,6 +29,7 @@ fun stopMockedNetworkServices() {
 	wiremockServer.stop()
 }
 
+fun verifyMockedGetRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.GET)
 fun verifyMockedPostRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.POST)
 fun verifyMockedDeleteRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.DELETE)
 
@@ -87,7 +88,12 @@ private fun mockJoark(statusCode: Int, responseBody: String, delay: Int) {
 fun mockFilestorageIsWorking(uuid: String) = mockFilestorageIsWorking(listOf(uuid to "apabepa"))
 
 fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>) {
-	val urlPattern = WireMock.urlMatching(filestorageUrl.replace("?", "\\?") + ".*")
+	val ids = uuidsAndResponses.joinToString(",") { it.first }
+	mockFilestorageIsWorking(uuidsAndResponses, ids)
+}
+
+fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>, idsForUrl: String) {
+	val urlPattern = WireMock.urlMatching(filestorageUrl.replace("?", "\\?") + idsForUrl)
 
 	wiremockServer.stubFor(
 		WireMock.get(urlPattern)
@@ -95,6 +101,13 @@ fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>) {
 				.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
 				.withBody(createFilestorageResponse(uuidsAndResponses))
 				.withStatus(HttpStatus.OK.value())))
+
+	mockFilestoreageDeletionIsWorking(uuidsAndResponses.map { it.first })
+}
+
+fun mockFilestoreageDeletionIsWorking(uuids: List<String>) {
+	val ids = uuids.joinToString(",")
+	val urlPattern = WireMock.urlMatching(filestorageUrl.replace("?", "\\?") + ids)
 
 	wiremockServer.stubFor(
 		WireMock.delete(urlPattern)
