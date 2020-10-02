@@ -7,7 +7,6 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes.STARTED
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
-import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.*
@@ -57,8 +56,6 @@ class AdminInterfaceTests {
 	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 
 	@Autowired
-	private lateinit var archiverService: ArchiverService
-	@Autowired
 	private lateinit var appConfiguration: AppConfiguration
 	@Autowired
 	private lateinit var taskListService: TaskListService
@@ -76,7 +73,7 @@ class AdminInterfaceTests {
 
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 
-		maxNumberOfAttempts = appConfiguration.config.retryTime.size + 1
+		maxNumberOfAttempts = appConfiguration.config.retryTime.size
 	}
 
 	@AfterEach
@@ -165,8 +162,8 @@ class AdminInterfaceTests {
 
 		val numberOfInputs = 2
 		val numberOfMessages = 1 + maxNumberOfAttempts // 1 "ok" message, a number of mocked exceptions
-		val numberOfProcessingEvents = 4 + 1 + 6 // 4 for the first event, 1 received the second, 6 attempts at starting
-		loopAndVerify(numberOfInputs + numberOfMessages + numberOfProcessingEvents, eventsAfter)
+		val numberOfProcessingEvents = 4 + 1 + 5 // 4 for the first event, 1 received for the second, 5 attempts at starting
+		loopAndVerifyAtLeast(numberOfInputs + numberOfMessages + numberOfProcessingEvents, eventsAfter)
 	}
 
 	@Test
@@ -183,8 +180,8 @@ class AdminInterfaceTests {
 
 		val numberOfInputs = 1
 		val numberOfMessages = maxNumberOfAttempts // mocked exceptions
-		val numberOfProcessingEvents = 1 + 6 // 4 for the first event, 1 received the second, 5 attempts at starting
-		loopAndVerify(numberOfInputs + numberOfMessages + numberOfProcessingEvents, eventsAfter)
+		val numberOfProcessingEvents = 1 + 5 // 1 received for the second event, 5 attempts at starting
+		loopAndVerifyAtLeast(numberOfInputs + numberOfMessages + numberOfProcessingEvents, eventsAfter)
 	}
 
 	@Test
@@ -300,7 +297,7 @@ class AdminInterfaceTests {
 				.filter { it.type == STARTED.name }
 				.count()
 		}
-		loopAndVerify(expectedCount, eventCounter )
+		loopAndVerifyAtLeast(expectedCount, eventCounter)
 	}
 
 	private fun getTaskListCount(key: String) = taskListService.listTasks()[key]?.first ?: -1
