@@ -123,14 +123,24 @@ class TaskListService(private val archiverService: ArchiverService,
 		try {
 			logger.info("$key: Will now start to archive")
 			archiverService.archive(key, soknadarkivschema)
-			finishTask(key)
 			return
 
 		} catch (e: ArchivingException) {
-			// Do nothing, the Exceptions of this type are supposed to already have been logged
+			// Log nothing, the Exceptions of this type are supposed to already have been logged
+			retry(key)
+
 		} catch (e: Exception) {
 			logger.error("$key: Error when performing scheduled task", e)
+			retry(key)
+
+		} catch (t: Throwable) {
+			logger.error("$key: Serious error when performing scheduled task", t)
+			retry(key)
+			throw t
 		}
+	}
+
+	private fun retry(key: String) {
 		incrementCountAndSetToNotRunning(key)
 		start(key)
 	}
