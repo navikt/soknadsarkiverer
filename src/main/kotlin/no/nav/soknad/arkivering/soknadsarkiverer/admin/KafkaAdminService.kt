@@ -53,6 +53,8 @@ class KafkaAdminService(private val appConfiguration: AppConfiguration) {
 
 	fun getAllEventsForKey(key: String) = getAllEvents { it.key == key }
 
+	fun search(searchPhrase: Regex) = getAllEvents { it.payload.toString().contains(searchPhrase) }
+
 
 	private fun createContentEventList(processingEvents: List<KafkaEventRaw<ProcessingEvent>>,
 																		 inputEvents: List<KafkaEventRaw<Soknadarkivschema>>,

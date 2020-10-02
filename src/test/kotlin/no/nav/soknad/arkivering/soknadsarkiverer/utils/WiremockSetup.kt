@@ -85,7 +85,7 @@ private fun mockJoark(statusCode: Int, responseBody: String, delay: Int) {
 				.withFixedDelay(delay)))
 }
 
-fun mockFilestorageIsWorking(uuid: String) = mockFilestorageIsWorking(listOf(uuid to "apabepa"))
+fun mockFilestorageIsWorking(uuid: String) = mockFilestorageIsWorking(listOf(uuid to "mocked-response-content"))
 
 fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>) {
 	val ids = uuidsAndResponses.joinToString(",") { it.first }

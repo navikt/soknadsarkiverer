@@ -136,7 +136,7 @@ class AdminInterfaceTests {
 		adminInterface.rerun(key)
 
 		val timeTaken = System.currentTimeMillis() - timeBeforeRerun
-		assertTrue(timeTaken < 100, "This operation should spawn a new thread and should return immediately")
+		assertTrue(timeTaken < 200, "This operation should spawn a new thread and should return immediately but took $timeTaken ms")
 		loopAndVerify(1, { taskListService.listTasks(key).size })
 	}
 
@@ -224,6 +224,33 @@ class AdminInterfaceTests {
 		assertTrue(messageEventContent.contains("Exception"))
 	}
 
+	@Test
+	fun `Can search for events`() {
+		val fileUuid = UUID.randomUUID().toString()
+		val key0 = UUID.randomUUID().toString()
+		val key1 = UUID.randomUUID().toString()
+		val soknadarkivschema0 = createSoknadarkivschema(fileUuid)
+		val soknadarkivschema1 = SoknadarkivschemaBuilder()
+				.withBehandlingsid(UUID.randomUUID().toString())
+				.withBehandlingsid("Loussa")
+				.withMottatteDokumenter(MottattDokumentBuilder()
+					.withMottatteVarianter(listOf(MottattVariantBuilder().withUuid(fileUuid).build()))
+				.build())
+			.build()
+		archiveOneEventSuccessfullyAndFailOne(key0, key1, soknadarkivschema0, soknadarkivschema1)
+
+		val events0 = adminInterface.search("Loussa")
+		assertEquals(1, events0.size)
+		assertEquals(key1, events0[0].innsendingKey)
+
+		val events1 = adminInterface.search("phrase with no match")
+		assertEquals(0, events1.size)
+
+		val events2 = adminInterface.search("Lo.*sa")
+		assertEquals(1, events2.size)
+		assertEquals(key1, events2[0].innsendingKey)
+	}
+
 
 	@Test
 	fun `Querying file that does not exist throws 404`() {
@@ -273,20 +300,32 @@ class AdminInterfaceTests {
 																										key1: String = UUID.randomUUID().toString()): Pair<Soknadarkivschema, Soknadarkivschema> {
 		val fileUuid = UUID.randomUUID().toString()
 		val soknadarkivschema0 = createSoknadarkivschema(fileUuid)
+		val soknadarkivschema1 = createSoknadarkivschema(fileUuid)
 
-		mockFilestorageIsWorking(fileUuid)
+		archiveOneEventSuccessfullyAndFailOne(key0, key1, soknadarkivschema0, soknadarkivschema1)
+
+		return soknadarkivschema0 to soknadarkivschema1
+	}
+
+	private fun archiveOneEventSuccessfullyAndFailOne(key0: String, key1: String, soknadarkivschema0: Soknadarkivschema, soknadarkivschema1: Soknadarkivschema) {
+		val uuidsAndResponses = listOf(
+				soknadarkivschema0.getMottatteDokumenter().flatMap { it.getMottatteVarianter().map { variant -> variant.getUuid() } },
+				soknadarkivschema1.getMottatteDokumenter().flatMap { it.getMottatteVarianter().map { variant -> variant.getUuid() } }
+			)
+			.flatten()
+			.distinct()
+			.map { fileUuid -> fileUuid to "mocked-response-content-for-$fileUuid" }
+
+		mockFilestorageIsWorking(uuidsAndResponses)
 		mockJoarkIsWorking()
 
 		putDataOnTopic(key0, soknadarkivschema0)
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 
-		val soknadarkivschema1 = createSoknadarkivschema(fileUuid)
 		mockJoarkIsDown()
 
 		putDataOnTopic(key1, soknadarkivschema1)
 		verifyNumberOfStartedEvents(key1, maxNumberOfAttempts)
-
-		return soknadarkivschema0 to soknadarkivschema1
 	}
 
 
