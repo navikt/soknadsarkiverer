@@ -32,7 +32,8 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 
 			val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
 
-			logger.info("$key: Sending to Joark using url= ${url}, request=${request}")
+			logger.info("$key: Sending to Joark using url= ${url}. " +
+				"Archiving ${request.dokumenter.forEach{it.dokumentvarianter.forEach{ it.filnavn + ":" + it.filtype} }}")
 			val response = sendDataToJoark(request, url)
 			val journalpostId = response?.journalpostId ?: "-1"
 
