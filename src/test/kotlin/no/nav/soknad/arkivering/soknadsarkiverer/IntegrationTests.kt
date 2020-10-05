@@ -72,6 +72,7 @@ class IntegrationTests {
 	}
 
 
+/* TMP
 	@Test
 	fun `Happy case - Putting events on Kafka will cause rest calls to Joark`() {
 		mockFilestorageIsWorking(uuid)
@@ -108,6 +109,7 @@ class IntegrationTests {
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 	}
+TMP */
 
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {

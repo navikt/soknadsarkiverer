@@ -83,6 +83,7 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 		clearInvocations(kafkaPublisherMock)
 	}
 
+/* TMP
 
 	@Test
 	fun `Can call rerun`() {
@@ -207,6 +208,7 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 		assertEquals(fileUuidNotInFilestorage, response[1].id)
 		assertEquals("Does not exist", response[1].status)
 	}
+TMP */
 
 
 	private fun verifyProcessingEvents(key: String, expectedCount: Int, eventType: EventTypes) { // TODO: Duplicated method
