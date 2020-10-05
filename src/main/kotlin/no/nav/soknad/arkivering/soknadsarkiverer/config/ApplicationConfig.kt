@@ -25,7 +25,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_MESSAGE_TOPIC" to "privat-soknadInnsendt-messages-v1-default",
 
 	"JOARK_HOST" to "http://localhost:8092",
-	"JOARK_URL" to "/joark/save",
+	"JOARK_URL" to "/rest/journalpostapi/v1/journalpost",
 	"FILESTORAGE_HOST" to "http://localhost:9042",
 	"FILESTORAGE_URL" to "/filer?ids=",
 	"SHARED_PASSORD" to "password",

@@ -149,14 +149,12 @@ open class TopologyTestDriverTests {
 	fun setupKafkaTopologyTestDriver() = TopologyTestDriverBuilder()
 }
 
-fun createAppConfiguration(): AppConfiguration {
-	val kafkaConfig = AppConfiguration.KafkaConfig(
+fun createAppConfiguration() = AppConfiguration(AppConfiguration.KafkaConfig(
 		inputTopic = "inputTopic",
 		processingTopic = "processingTopic",
 		schemaRegistryUrl = schemaRegistryUrl,
-		servers = "bootstrapServers")
-	return AppConfiguration(kafkaConfig)
-}
+		servers = "bootstrapServers"))
+
 
 const val schemaRegistryScope: String = "mocked-scope"
 const val schemaRegistryUrl = "mock://$schemaRegistryScope"

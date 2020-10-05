@@ -4,7 +4,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import no.nav.security.token.support.core.api.Protected
 import no.nav.security.token.support.core.api.Unprotected
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilestorageExistanceResponse
+import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilestorageExistenceResponse
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import org.slf4j.LoggerFactory
@@ -50,7 +50,7 @@ class AdminInterface(private val taskListService: TaskListService, private val f
 
 	@GetMapping("/fillager/filesExist/{key}")
 	@Protected
-	fun filesExists(@PathVariable key: String): List<FilestorageExistanceResponse> {
+	fun filesExists(@PathVariable key: String): List<FilestorageExistenceResponse> {
 		val soknadarkivschema = taskListService.getSoknadarkivschema(key)
 		if (soknadarkivschema == null) {
 			logger.warn("$key: Failed to find file ids for given key. The task is probably finished.")
@@ -58,6 +58,6 @@ class AdminInterface(private val taskListService: TaskListService, private val f
 		}
 
 		val response = filservice.getFilesFromFilestorage(key, soknadarkivschema)
-		return response.map { FilestorageExistanceResponse(it.uuid, if (it.fil != null) "Exists" else "Does not exist") }
+		return response.map { FilestorageExistenceResponse(it.uuid, if (it.fil != null) "Exists" else "Does not exist") }
 	}
 }
