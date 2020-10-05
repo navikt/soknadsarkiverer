@@ -32,6 +32,7 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 
 			val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
 
+			logger.info("$key: Sending to Joark using url= ${url}")
 			val response = sendDataToJoark(request, url)
 			val journalpostId = response?.journalpostId ?: "-1"
 
