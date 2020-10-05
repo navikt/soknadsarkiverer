@@ -26,7 +26,7 @@ spec:
   resources:
     limits:
       cpu: 3000m
-      memory: 2024Mi
+      memory: 4Gi
     requests:
       cpu: 1000m
       memory: 1024Mi
@@ -41,7 +41,7 @@ spec:
       - mountPath: /var/run/secrets/nais.io/kv
         kvPath: /kv/prod/fss/soknadsarkiverer/default
       - mountPath: /var/run/secrets/nais.io/vault
-        kvPath: /kv/preprod/fss/soknadsarkiverer/environment
+        kvPath: /kv/prod/fss/soknadsarkiverer/environment
       - mountPath: /var/run/secrets/nais.io/appdynamics
         kvPath: /apikey/appdynamics/prod
 

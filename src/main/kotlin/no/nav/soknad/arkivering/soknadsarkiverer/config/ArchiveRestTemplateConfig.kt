@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Scope
 import org.springframework.http.HttpRequest
 import org.springframework.http.client.ClientHttpRequestExecution
 import org.springframework.http.client.ClientHttpRequestInterceptor
+import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.web.client.RestTemplate
 
 @Profile("prod | dev")
@@ -34,12 +35,15 @@ class ArchiveRestTemplateConfig(private val appConfiguration: AppConfiguration) 
 
 		val properties: ClientProperties = clientConfigurationProperties.registration
 			?. get("soknadsarkiverer")
-			?: throw RuntimeException("could not find oauth2 client config for archiveRestTemplate")
+			?: throw RuntimeException("Could not find oauth2 client config for archiveRestTemplate")
 
 		logClientProperties(properties)
 
+		val requestFactory = { SimpleClientHttpRequestFactory().also { it.setBufferRequestBody(false) } }
+
 		return restTemplateBuilder
 			.additionalInterceptors(bearerTokenInterceptor(properties, oAuth2AccessTokenService))
+			.requestFactory(requestFactory)
 			.build()
 	}
 
