@@ -16,6 +16,7 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -30,6 +31,7 @@ import org.springframework.test.context.ActiveProfiles
 import java.util.*
 import java.util.concurrent.TimeUnit
 
+@Disabled // TODO: Enable when JournalpostClient publishes to Joark
 @ActiveProfiles("test")
 @SpringBootTest
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
@@ -72,7 +74,6 @@ class IntegrationTests {
 	}
 
 
-/* TMP
 	@Test
 	fun `Happy case - Putting events on Kafka will cause rest calls to Joark`() {
 		mockFilestorageIsWorking(uuid)
@@ -109,7 +110,6 @@ class IntegrationTests {
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 	}
-TMP */
 
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {

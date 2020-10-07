@@ -13,6 +13,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.startsWith
 import org.springframework.beans.factory.annotation.Autowired
@@ -26,6 +27,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
+@Disabled // TODO: Enable when JournalpostClient publishes to Joark
 @ActiveProfiles("test")
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
@@ -76,7 +78,6 @@ class ApplicationTests: TopologyTestDriverTests() {
 		clearInvocations(kafkaPublisherMock)
 	}
 
-/* TMP
 
 	@Test
 	fun `Happy case - Putting events on Kafka will cause rest calls to Joark`() {
@@ -223,7 +224,6 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyMessageStartsWith(maxNumberOfAttempts, "Exception")
 		verifyMessageStartsWith(0, "ok")
 	}
-TMP */
 
 
 	private fun verifyMessageStartsWith(expectedCount: Int, message: String, key: String = this.key) {
