@@ -2,7 +2,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.config
 
 import com.natpryce.konfig.*
 import com.natpryce.konfig.ConfigurationProperties.Companion.systemProperties
-import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.context.annotation.Bean
 import org.springframework.core.env.ConfigurableEnvironment
@@ -85,8 +84,6 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 @Priority(-1)
 class ConfigConfig(private val env: ConfigurableEnvironment) {
 
-	private val logger = LoggerFactory.getLogger(javaClass)
-
 	@Bean
 	fun appConfiguration(): AppConfiguration {
 		val appConfiguration = AppConfiguration()
@@ -94,5 +91,4 @@ class ConfigConfig(private val env: ConfigurableEnvironment) {
 
 		return appConfiguration
 	}
-
 }

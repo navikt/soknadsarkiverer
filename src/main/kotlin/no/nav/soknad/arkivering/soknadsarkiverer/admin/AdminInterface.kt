@@ -14,7 +14,7 @@ import org.springframework.web.server.ResponseStatusException
 
 @RestController
 @RequestMapping("/admin")
-class AdminInterface(private val taskListService: TaskListService, private val filservice: FileserviceInterface) {
+class AdminInterface(private val taskListService: TaskListService, private val fileService: FileserviceInterface) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@PostMapping("/rerun/{key}")
@@ -57,7 +57,7 @@ class AdminInterface(private val taskListService: TaskListService, private val f
 			throw ResponseStatusException(HttpStatus.NOT_FOUND, "File ids for key $key not found")
 		}
 
-		val response = filservice.getFilesFromFilestorage(key, soknadarkivschema)
+		val response = fileService.getFilesFromFilestorage(key, soknadarkivschema)
 		return response.map { FilestorageExistenceResponse(it.uuid, if (it.fil != null) "Exists" else "Does not exist") }
 	}
 }
