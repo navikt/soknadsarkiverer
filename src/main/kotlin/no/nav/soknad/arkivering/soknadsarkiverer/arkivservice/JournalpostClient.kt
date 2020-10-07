@@ -49,7 +49,6 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 		headers.contentType = MediaType.APPLICATION_JSON
 		val request = HttpEntity(data, headers)
 		logger.info("Midlertidig skipping av kall til arkiv")
-		return null
-//TMP		return restTemplate.postForObject(url, request, OpprettJournalpostResponse::class.java)
+		return restTemplate.postForObject(url, request, OpprettJournalpostResponse::class.java)
 	}
 }
