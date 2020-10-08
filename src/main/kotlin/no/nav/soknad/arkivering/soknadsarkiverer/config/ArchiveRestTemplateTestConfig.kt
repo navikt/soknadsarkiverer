@@ -4,12 +4,12 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.*
 import org.springframework.web.client.RestTemplate
 
-@Profile("spring | test | docker")
+@Profile("spring | test | docker | default")
 @Configuration
 class ArchiveRestTemplateTestConfig {
 
 	@Bean
-	@Profile("spring | test | docker")
+	@Profile("spring | test | docker | default")
 	@Qualifier("archiveRestTemplate")
 	@Scope("prototype")
 	@Lazy
