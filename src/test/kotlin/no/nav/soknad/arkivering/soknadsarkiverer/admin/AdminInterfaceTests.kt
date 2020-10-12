@@ -12,9 +12,12 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
@@ -26,7 +29,6 @@ import org.springframework.web.server.ResponseStatusException
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-@Disabled // TODO: Enable when JournalpostClient publishes to Joark
 @ActiveProfiles("test")
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")

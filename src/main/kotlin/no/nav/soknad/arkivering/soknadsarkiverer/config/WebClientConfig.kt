@@ -7,51 +7,53 @@ import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.properties.EnableConfigurationProperties
-import org.springframework.boot.web.client.RestTemplateBuilder
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Profile
-import org.springframework.context.annotation.Scope
-import org.springframework.http.HttpRequest
-import org.springframework.http.client.ClientHttpRequestExecution
-import org.springframework.http.client.ClientHttpRequestInterceptor
-import org.springframework.http.client.SimpleClientHttpRequestFactory
-import org.springframework.web.client.RestTemplate
+import org.springframework.context.annotation.*
+import org.springframework.web.reactive.function.client.ClientRequest
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction
+import org.springframework.web.reactive.function.client.ExchangeFunction
+import org.springframework.web.reactive.function.client.WebClient
 
-@Profile("prod | dev")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 @Configuration
-class ArchiveRestTemplateConfig(private val appConfiguration: AppConfiguration) {
+class WebClientConfig(private val appConfiguration: AppConfiguration) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Bean
-	@Profile("prod | dev")
-	@Qualifier("archiveRestTemplate")
+	@Qualifier("basicWebClient")
+	fun createWebClient() = WebClient.builder().build()
+
+	@Bean
+	@Profile("spring | test | docker | default")
+	@Qualifier("archiveWebClient")
 	@Scope("prototype")
-	fun archiveRestTemplate(restTemplateBuilder: RestTemplateBuilder,
-													oAuth2AccessTokenService: OAuth2AccessTokenService,
-													clientConfigurationProperties: ClientConfigurationProperties): RestTemplate? {
+	@Lazy
+	fun archiveTestWebClient() = createWebClient()
+
+
+	@Bean
+	@Profile("prod | dev")
+	@Qualifier("archiveWebClient")
+	@Scope("prototype")
+	fun archiveWebClient(oAuth2AccessTokenService: OAuth2AccessTokenService,
+											 clientConfigurationProperties: ClientConfigurationProperties): WebClient {
 
 		val properties: ClientProperties = clientConfigurationProperties.registration
 			?. get("soknadsarkiverer")
-			?: throw RuntimeException("Could not find oauth2 client config for archiveRestTemplate")
+			?: throw RuntimeException("Could not find oauth2 client config for archiveWebClient")
 
 		logClientProperties(properties)
 
-		val requestFactory = { SimpleClientHttpRequestFactory().also { it.setBufferRequestBody(false) } }
-
-		return restTemplateBuilder
-			.additionalInterceptors(bearerTokenInterceptor(properties, oAuth2AccessTokenService))
-			.requestFactory(requestFactory)
+		return WebClient.builder()
+			.filter(bearerTokenFilter(properties, oAuth2AccessTokenService))
 			.build()
 	}
 
-	private fun bearerTokenInterceptor(clientProperties: ClientProperties, oAuth2AccessTokenService: OAuth2AccessTokenService) =
-		ClientHttpRequestInterceptor { request: HttpRequest, body: ByteArray?, execution: ClientHttpRequestExecution ->
+	private fun bearerTokenFilter(clientProperties: ClientProperties, oAuth2AccessTokenService: OAuth2AccessTokenService) =
+		ExchangeFilterFunction { request: ClientRequest, exchangeFunction: ExchangeFunction ->
 			val response: OAuth2AccessTokenResponse = oAuth2AccessTokenService.getAccessToken(clientProperties)
-			request.headers.setBearerAuth(response.accessToken)
-			execution.execute(request, body!!)
+			request.headers().setBearerAuth(response.accessToken)
+			exchangeFunction.exchange(request)
 		}
 
 	private fun logClientProperties(properties: ClientProperties) {

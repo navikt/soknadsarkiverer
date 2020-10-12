@@ -79,8 +79,8 @@ class FilestorageServiceTests {
 	@Test
 	fun `getFilesFromFilestorage - Asking for 6 files - Makes two requests - List of 6 is returned`() {
 		val numberOfFiles = 6
-		mockFilestorageIsWorking(fileIdsAndResponses.take(filesInOneRequest))
-		mockFilestorageIsWorking(fileIdsAndResponses.drop(filesInOneRequest).take(1))
+		mockFilestorageIsWorking(fileIdsAndResponses.take(filesInOneRequestToFilestorage))
+		mockFilestorageIsWorking(fileIdsAndResponses.drop(filesInOneRequestToFilestorage).take(1))
 		mockFilestoreageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 
@@ -88,16 +88,16 @@ class FilestorageServiceTests {
 
 		assertEquals(numberOfFiles, files.size)
 		assertFileContentIsCorrect(files)
-		verifyMockedGetRequests(1, makeUrl(fileIdsAndResponses.take(filesInOneRequest)))
-		verifyMockedGetRequests(1, makeUrl(fileIdsAndResponses.drop(filesInOneRequest).take(1)))
+		verifyMockedGetRequests(1, makeUrl(fileIdsAndResponses.take(filesInOneRequestToFilestorage)))
+		verifyMockedGetRequests(1, makeUrl(fileIdsAndResponses.drop(filesInOneRequestToFilestorage).take(1)))
 	}
 
 	@Test
 	fun `getFilesFromFilestorage - Asking for 11 files - Makes three requests - List of 11 is returned`() {
 		val numberOfFiles = 11
-		mockFilestorageIsWorking(fileIdsAndResponses.take(filesInOneRequest))
-		mockFilestorageIsWorking(fileIdsAndResponses.drop(filesInOneRequest).take(filesInOneRequest))
-		mockFilestorageIsWorking(fileIdsAndResponses.drop(filesInOneRequest * 2).take(1))
+		mockFilestorageIsWorking(fileIdsAndResponses.take(filesInOneRequestToFilestorage))
+		mockFilestorageIsWorking(fileIdsAndResponses.drop(filesInOneRequestToFilestorage).take(filesInOneRequestToFilestorage))
+		mockFilestorageIsWorking(fileIdsAndResponses.drop(filesInOneRequestToFilestorage * 2).take(1))
 		mockFilestoreageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 
@@ -105,9 +105,9 @@ class FilestorageServiceTests {
 
 		assertEquals(numberOfFiles, files.size)
 		assertFileContentIsCorrect(files)
-		verifyMockedGetRequests(1, makeUrl(fileIdsAndResponses.take(filesInOneRequest)))
-		verifyMockedGetRequests(1, makeUrl(fileIdsAndResponses.drop(filesInOneRequest).take(filesInOneRequest)))
-		verifyMockedGetRequests(1, makeUrl(fileIdsAndResponses.drop(filesInOneRequest * 2).take(1)))
+		verifyMockedGetRequests(1, makeUrl(fileIdsAndResponses.take(filesInOneRequestToFilestorage)))
+		verifyMockedGetRequests(1, makeUrl(fileIdsAndResponses.drop(filesInOneRequestToFilestorage).take(filesInOneRequestToFilestorage)))
+		verifyMockedGetRequests(1, makeUrl(fileIdsAndResponses.drop(filesInOneRequestToFilestorage * 2).take(1)))
 	}
 
 	@Test
