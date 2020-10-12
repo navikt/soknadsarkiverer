@@ -4,6 +4,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import no.nav.security.token.support.core.api.Protected
 import no.nav.security.token.support.core.api.Unprotected
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilestorageExistenceResponse
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
@@ -16,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException
 @RequestMapping("/admin")
 class AdminInterface(private val taskListService: TaskListService,
 										 private val fileService: FileserviceInterface,
+										 private val joarkService: JournalpostClientInterface,
 										 private val kafkaAdminService: KafkaAdminService) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -45,6 +47,10 @@ class AdminInterface(private val taskListService: TaskListService,
 	@GetMapping("/kafka/events/search/{searchPhrase}")
 	@Unprotected
 	fun search(@PathVariable searchPhrase: String) = kafkaAdminService.search(searchPhrase.toRegex())
+
+	@GetMapping("/joark/ping")
+	@Unprotected
+	fun joarkPing() = joarkService.ping()
 
 	@GetMapping("/fillager/filesExist/{key}")
 	@Protected
