@@ -5,6 +5,7 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -16,6 +17,7 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -30,6 +32,7 @@ import org.springframework.test.context.ActiveProfiles
 import java.util.*
 import java.util.concurrent.TimeUnit
 
+@Disabled // TODO: Enable when JournalpostClient publishes to Joark
 @ActiveProfiles("test")
 @SpringBootTest
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
@@ -53,7 +56,7 @@ class IntegrationTests {
 	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 	private lateinit var kafkaProducerForBadData: KafkaProducer<String, String>
 
-	private val uuid = UUID.randomUUID().toString()
+	private val fileId = UUID.randomUUID().toString()
 
 
 	@BeforeEach
@@ -74,22 +77,22 @@ class IntegrationTests {
 
 	@Test
 	fun `Happy case - Putting events on Kafka will cause rest calls to Joark`() {
-		mockFilestorageIsWorking(uuid)
+		mockFilestorageIsWorking(fileId)
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		TimeUnit.SECONDS.sleep(1)
 		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(2)
 	}
 
 	@Test
 	fun `Sending in invalid data will not cause processing`() {
-		val invalidData = "this string is not deserializable"
+		mockFilestorageIsWorking(fileId)
+		mockJoarkIsWorking()
 
-		putDataOnKafkaTopic(invalidData)
+		putDataOnKafkaTopic("this string is not deserializable")
 
 		TimeUnit.SECONDS.sleep(1)
 		verifyMockedPostRequests(0, appConfiguration.config.joarkUrl)
@@ -98,13 +101,12 @@ class IntegrationTests {
 
 	@Test
 	fun `Poison pill followed by proper event -- One event discarded, one to Joark`() {
-		mockFilestorageIsWorking(uuid)
+		mockFilestorageIsWorking(fileId)
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic("this is not deserializable")
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		TimeUnit.SECONDS.sleep(1)
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 	}
@@ -114,7 +116,7 @@ class IntegrationTests {
 		verifyMockedDeleteRequests(expectedCount, appConfiguration.config.filestorageUrl.replace("?", "\\?") + ".*")
 	}
 
-	private fun createSoknadarkivschema() = createSoknadarkivschema(uuid)
+	private fun createSoknadarkivschema() = createSoknadarkivschema(fileId)
 
 
 	private fun putDataOnKafkaTopic(soknadarkivschema: Soknadarkivschema) {
@@ -139,6 +141,7 @@ class IntegrationTests {
 																 kafkaProducer: KafkaProducer<String, T>): RecordMetadata {
 
 		val producerRecord = ProducerRecord(topic, key, value)
+		headers.add(MESSAGE_ID, UUID.randomUUID().toString().toByteArray())
 		headers.forEach { producerRecord.headers().add(it) }
 
 		return kafkaProducer

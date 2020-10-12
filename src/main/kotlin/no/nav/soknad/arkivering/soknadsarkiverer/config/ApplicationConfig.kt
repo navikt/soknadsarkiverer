@@ -2,7 +2,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.config
 
 import com.natpryce.konfig.*
 import com.natpryce.konfig.ConfigurationProperties.Companion.systemProperties
-import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.context.annotation.Bean
 import org.springframework.core.env.ConfigurableEnvironment
@@ -25,7 +24,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_MESSAGE_TOPIC" to "privat-soknadInnsendt-messages-v1-default",
 
 	"JOARK_HOST" to "http://localhost:8092",
-	"JOARK_URL" to "/joark/save",
+	"JOARK_URL" to "/rest/journalpostapi/v1/journalpost",
 	"FILESTORAGE_HOST" to "http://localhost:9042",
 	"FILESTORAGE_URL" to "/filer?ids=",
 	"SHARED_PASSORD" to "password",
@@ -36,7 +35,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 ))
 
 private val secondsBetweenRetries = listOf(1, 25, 60, 120, 600)   // As many retries will be attempted as there are elements in the list.
-private val secondsBetweenRetriesForTests = listOf(0, 0, 0, 0, 0) // As many retries will be attempted as there are elements in the list.
+private val secondsBetweenRetriesForTests = listOf(1, 1, 1, 1, 1) // As many retries will be attempted as there are elements in the list.
 
 
 val appConfig =
@@ -85,8 +84,6 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 @Priority(-1)
 class ConfigConfig(private val env: ConfigurableEnvironment) {
 
-	private val logger = LoggerFactory.getLogger(javaClass)
-
 	@Bean
 	fun appConfiguration(): AppConfiguration {
 		val appConfiguration = AppConfiguration()
@@ -94,5 +91,4 @@ class ConfigConfig(private val env: ConfigurableEnvironment) {
 
 		return appConfiguration
 	}
-
 }

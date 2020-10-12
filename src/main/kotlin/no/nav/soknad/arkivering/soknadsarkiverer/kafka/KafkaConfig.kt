@@ -20,7 +20,6 @@ import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler
 import org.apache.kafka.streams.kstream.Consumed
 import org.apache.kafka.streams.kstream.Joined
-import org.apache.kafka.streams.kstream.KStream
 import org.apache.kafka.streams.kstream.Materialized
 import org.apache.kafka.streams.state.KeyValueStore
 import org.slf4j.LoggerFactory
@@ -41,7 +40,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	private val soknadarkivschemaSerde = createSoknadarkivschemaSerde()
 	private val mutableListSerde: Serde<MutableList<String>> = MutableListSerde()
 
-	fun kafkaStreams(streamsBuilder: StreamsBuilder): KStream<String, Soknadarkivschema> {
+	fun kafkaStreams(streamsBuilder: StreamsBuilder) {
 
 		val joined = Joined.with(stringSerde, intSerde, soknadarkivschemaSerde, "SoknadsarkivCountJoined")
 		val materialized = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("ProcessingEventDtos").withValueSerde(mutableListSerde)
@@ -80,8 +79,6 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 			.leftJoin(inputTable, { count, soknadarkivschema -> soknadarkivschema to (count ?: 0) }, joined)
 			.peek { key, pair -> logger.info("$key: About to schedule - $pair") }
 			.foreach { key, (soknadsarkivschema, count) -> schedulerService.addOrUpdateTask(key, soknadsarkivschema, count) }
-
-		return inputTopicStream
 	}
 
 	@Bean
@@ -106,7 +103,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = LogAndContinueExceptionHandler::class.java
 		it[StreamsConfig.COMMIT_INTERVAL_MS_CONFIG] = 1000
 
-		if ("TRUE" == appConfiguration.kafkaConfig.secure) {
+		if (appConfiguration.kafkaConfig.secure == "TRUE") {
 			it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = appConfiguration.kafkaConfig.protocol
 			it[SaslConfigs.SASL_JAAS_CONFIG] = appConfiguration.kafkaConfig.saslJaasConfig
 			it[SaslConfigs.SASL_MECHANISM] = appConfiguration.kafkaConfig.salsmec
@@ -126,8 +123,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		val serdeConfig = hashMapOf(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
 		return SpecificAvroSerde<T>().also { it.configure(serdeConfig, false) }
 	}
-
-	companion object {
-		const val KAFKA_PUBLISHER = "kafka.publisher"
-	}
 }
+
+const val KAFKA_PUBLISHER = "kafka.publisher"
+const val MESSAGE_ID = "MESSAGE_ID"

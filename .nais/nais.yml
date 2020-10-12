@@ -41,7 +41,7 @@ spec:
       - mountPath: /var/run/secrets/nais.io/kv
         kvPath: /kv/prod/fss/soknadsarkiverer/default
       - mountPath: /var/run/secrets/nais.io/vault
-        kvPath: /kv/preprod/fss/soknadsarkiverer/environment
+        kvPath: /kv/prod/fss/soknadsarkiverer/environment
       - mountPath: /var/run/secrets/nais.io/appdynamics
         kvPath: /apikey/appdynamics/prod
 
