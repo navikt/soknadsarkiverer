@@ -23,7 +23,7 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 	override fun ping(): String {
 		return webClient
 			.get()
-			.uri("${appConfiguration.config.joarkUrl}/ping")
+			.uri(appConfiguration.config.joarkHost + "/isAlive")
 			.retrieve()
 			.bodyToMono(String::class.java)
 			.block()!!
