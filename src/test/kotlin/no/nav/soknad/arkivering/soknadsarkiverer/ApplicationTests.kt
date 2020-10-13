@@ -1,5 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
@@ -7,11 +9,16 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.Bruker
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.Dokument
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.DokumentVariant
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.OpprettJournalpostRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.startsWith
@@ -22,6 +29,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.context.ActiveProfiles
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
@@ -40,6 +51,9 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 	@Autowired
 	private lateinit var taskListService: TaskListService
+
+	@Autowired
+	private lateinit var objectMapper: ObjectMapper
 
 	@MockBean
 	private lateinit var kafkaPublisherMock: KafkaPublisher
@@ -81,8 +95,9 @@ class ApplicationTests: TopologyTestDriverTests() {
 	fun `Happy case - Putting events on Kafka will cause rest calls to Joark`() {
 		mockFilestorageIsWorking(fileUuid)
 		mockJoarkIsWorking()
+		val soknadsarkivschema = createSoknadarkivschema()
 
-		putDataOnKafkaTopic(createSoknadarkivschema())
+		putDataOnKafkaTopic(soknadsarkivschema)
 
 		verifyProcessingEvents(1, RECEIVED)
 		verifyProcessingEvents(1, STARTED)
@@ -92,6 +107,10 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "ok")
 		verifyMessageStartsWith(0, "Exception")
+		val requests = verifyPostRequest(appConfiguration.config.joarkUrl)
+		assertEquals(1, requests.size)
+		val request = objectMapper.readValue<OpprettJournalpostRequest>(requests[0].body)
+		verifyRequestDataToJoark(soknadsarkivschema, request)
 	}
 
 	@Test
@@ -267,4 +286,33 @@ class ApplicationTests: TopologyTestDriverTests() {
 	}
 
 	private fun createSoknadarkivschema() = createSoknadarkivschema(fileUuid)
+
+
+	private fun verifyRequestDataToJoark(soknadsarkivschema: Soknadarkivschema, requestData: OpprettJournalpostRequest) {
+		val expected = OpprettJournalpostRequest(
+			Bruker(soknadsarkivschema.getFodselsnummer(), "FNR"),
+			DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(soknadsarkivschema.getInnsendtDato()), ZoneOffset.UTC)),
+			listOf(
+				Dokument(
+					soknadsarkivschema.getMottatteDokumenter()[0].getTittel(),
+					soknadsarkivschema.getMottatteDokumenter()[0].getSkjemanummer(),
+					"SOK",
+					listOf(
+						DokumentVariant(
+							soknadsarkivschema.getMottatteDokumenter()[0].getMottatteVarianter()[0].getFilnavn(),
+							"PDFA",
+							filestorageContent.toByteArray(),
+							soknadsarkivschema.getMottatteDokumenter()[0].getMottatteVarianter()[0].getVariantformat()
+						)
+					)
+				)
+			),
+			soknadsarkivschema.getBehandlingsid(),
+			"INNGAAENDE",
+			"NAV_NO",
+			soknadsarkivschema.getArkivtema(),
+			"Søknad til " + soknadsarkivschema.getMottatteDokumenter()[0].getTittel()
+		)
+		assertEquals(expected, requestData)
+	}
 }

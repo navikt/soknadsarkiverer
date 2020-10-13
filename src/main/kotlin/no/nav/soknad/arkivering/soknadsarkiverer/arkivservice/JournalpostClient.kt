@@ -54,7 +54,7 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 			.uri(uri)
 			.contentType(APPLICATION_JSON)
 			.accept(APPLICATION_JSON)
-			.body(BodyInserters.fromValue(data)) // TODO: Add test that checks that the body is as expected
+			.body(BodyInserters.fromValue(data))
 			.retrieve()
 			.bodyToMono(OpprettJournalpostResponse::class.java)
 			.block()
