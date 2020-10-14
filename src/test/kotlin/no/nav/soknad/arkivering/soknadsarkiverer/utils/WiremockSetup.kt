@@ -6,6 +6,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.http.RequestMethod
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import com.github.tomakehurst.wiremock.stubbing.Scenario
+import com.github.tomakehurst.wiremock.verification.LoggedRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.Dokumenter
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.OpprettJournalpostResponse
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
@@ -42,7 +43,7 @@ private fun verifyMockedRequests(expectedCount: Int, url: String, requestMethod:
 	loopAndVerify(expectedCount, getCount)
 }
 
-fun verifyPostRequest(url: String) = wiremockServer.findAll(postRequestedFor(urlMatching(url)))
+fun verifyPostRequest(url: String): List<LoggedRequest> = wiremockServer.findAll(postRequestedFor(urlMatching(url)))
 
 
 fun mockJoarkIsWorking(delay: Int = 0) {
