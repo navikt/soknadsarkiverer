@@ -22,7 +22,7 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	override fun ping(): String {
-		return restTemplate.getForObject("${appConfiguration.config.joarkUrl}/isAlive", String::class.java)!!
+		return restTemplate.getForObject("${appConfiguration.config.joarkHost}/isAlive", String::class.java)!!
 	}
 
 	override fun opprettJournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FilElementDto>): String {
