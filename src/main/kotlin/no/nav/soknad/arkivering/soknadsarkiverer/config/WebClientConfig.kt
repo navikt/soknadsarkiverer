@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.*
 import org.springframework.web.reactive.function.client.ClientRequest
-import org.springframework.web.reactive.function.client.ExchangeFilterFunction
 import org.springframework.web.reactive.function.client.ExchangeFunction
 import org.springframework.web.reactive.function.client.WebClient
 
@@ -21,14 +20,18 @@ class WebClientConfig(private val appConfiguration: AppConfiguration) {
 
 	@Bean
 	@Qualifier("basicWebClient")
-	fun createWebClient() = WebClient.builder().build()
+	fun createWebClient() = WebClient.builder()
+		.codecs { configurer -> configurer
+			.defaultCodecs()
+			.maxInMemorySize(10 * 1024 * 1024) }
+		.build()
 
 	@Bean
 	@Profile("spring | test | docker | default")
 	@Qualifier("archiveWebClient")
 	@Scope("prototype")
 	@Lazy
-	fun archiveTestWebClient() = createWebClient()
+	fun archiveTestWebClient() = WebClient.builder().build()
 
 
 	@Bean
@@ -50,10 +53,13 @@ class WebClientConfig(private val appConfiguration: AppConfiguration) {
 	}
 
 	private fun bearerTokenFilter(clientProperties: ClientProperties, oAuth2AccessTokenService: OAuth2AccessTokenService) =
-		ExchangeFilterFunction { request: ClientRequest, exchangeFunction: ExchangeFunction ->
+		{ request: ClientRequest, next: ExchangeFunction ->
 			val response: OAuth2AccessTokenResponse = oAuth2AccessTokenService.getAccessToken(clientProperties)
-			request.headers().setBearerAuth(response.accessToken)
-			exchangeFunction.exchange(request)
+
+			val filtered = ClientRequest.from(request)
+				.headers { it.setBearerAuth(response.accessToken) }
+				.build()
+			next.exchange(filtered)
 		}
 
 	private fun logClientProperties(properties: ClientProperties) {
