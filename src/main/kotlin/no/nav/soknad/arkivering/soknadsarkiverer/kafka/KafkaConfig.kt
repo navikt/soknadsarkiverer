@@ -78,10 +78,16 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 			.toStream()
 			.peek { key, count -> logger.info("$key: Processing Events - $count") }
 			.leftJoin(inputTable, { count, soknadarkivschema -> soknadarkivschema to (count ?: 0) }, joined)
+			.filter { key, (soknadsarkiveschema, _) -> filterSoknadsarkivschemaThatAreNull(key, soknadsarkiveschema) }
 			.peek { key, pair -> logger.info("$key: About to schedule - $pair") }
 			.foreach { key, (soknadsarkivschema, count) -> schedulerService.addOrUpdateTask(key, soknadsarkivschema, count) }
 
 		return inputTopicStream
+	}
+
+	private fun filterSoknadsarkivschemaThatAreNull(key: String, soknadsarkiveschema: Soknadarkivschema?): Boolean {
+		logger.error("$key: Soknadsarkivschema is null!")
+		return soknadsarkiveschema != null
 	}
 
 	@Bean
