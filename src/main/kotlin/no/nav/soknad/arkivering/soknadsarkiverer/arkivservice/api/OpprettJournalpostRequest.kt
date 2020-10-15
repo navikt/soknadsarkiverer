@@ -1,10 +1,12 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api
 
-data class OpprettJournalpostRequest(val bruker: Bruker, val datoMottatt: String, val dokumenter: List<Dokument>,
+data class OpprettJournalpostRequest(val avsenderMottaker: AvsenderMottaker, val bruker: Bruker, val datoMottatt: String, val dokumenter: List<Dokument>,
                                      val eksternReferanseId: String, val journalpostType: String, val kanal: String,
                                      val tema: String, val tittel: String)
 
 data class Bruker(val id: String, val idType: String)
+
+data class AvsenderMottaker(val id: String, val idType: String, val navn: String? = null, val land: String? = null)
 
 data class Dokument(
 	val tittel: String,

@@ -4,10 +4,7 @@ import no.nav.soknad.arkivering.avroschemas.MottattDokument
 import no.nav.soknad.arkivering.avroschemas.MottattVariant
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
-import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.Bruker
-import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.Dokument
-import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.DokumentVariant
-import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.OpprettJournalpostRequest
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.*
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.*
 import java.time.Instant
 import java.time.LocalDateTime
@@ -22,7 +19,7 @@ fun createOpprettJournalpostRequest(o: Soknadarkivschema, attachedFiles: List<Fi
 	val documents = createDocuments(o.getMottatteDokumenter(), attachedFiles, soknadstype)
 	val tittel = createTitle(documents, soknadstype)
 
-	return OpprettJournalpostRequest(Bruker(o.getFodselsnummer(), "FNR"), date, documents, o.getBehandlingsid(),
+	return OpprettJournalpostRequest(AvsenderMottaker(o.getFodselsnummer(), "FNR"), Bruker(o.getFodselsnummer(), "FNR"), date, documents, o.getBehandlingsid(),
 		"INNGAAENDE", "NAV_NO", o.getArkivtema(), tittel)
 }
 
