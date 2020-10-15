@@ -2,17 +2,19 @@ package no.nav.soknad.arkivering.soknadsarkiverer.utils
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.WireMock
+import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.http.RequestMethod
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import com.github.tomakehurst.wiremock.stubbing.Scenario
+import com.github.tomakehurst.wiremock.verification.LoggedRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.Dokumenter
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.OpprettJournalpostResponse
+import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 
 
+const val filestorageContent = "filestoragecontent"
 private lateinit var wiremockServer: WireMockServer
 private lateinit var joarkUrl: String
 private lateinit var filestorageUrl: String
@@ -35,11 +37,14 @@ fun verifyMockedDeleteRequests(expectedCount: Int, url: String) = verifyMockedRe
 
 private fun verifyMockedRequests(expectedCount: Int, url: String, requestMethod: RequestMethod) {
 
-	val requestPattern = RequestPatternBuilder.newRequestPattern(requestMethod, WireMock.urlMatching(url)).build()
+	val requestPattern = RequestPatternBuilder.newRequestPattern(requestMethod, urlMatching(url)).build()
 	val getCount = { wiremockServer.countRequestsMatching(requestPattern).count }
 
 	loopAndVerify(expectedCount, getCount)
 }
+
+fun verifyPostRequest(url: String): List<LoggedRequest> = wiremockServer.findAll(postRequestedFor(urlMatching(url)))
+
 
 fun mockJoarkIsWorking(delay: Int = 0) {
 	mockJoark(HttpStatus.OK.value(), createJoarkResponse(), delay)
@@ -58,18 +63,18 @@ fun mockJoarkRespondsAfterAttempts(attempts: Int) {
 	val stateNames = listOf(Scenario.STARTED).plus((0 until attempts).map { "iteration_$it" })
 	for (attempt in (0 until stateNames.size - 1)) {
 		wiremockServer.stubFor(
-			WireMock.post(WireMock.urlEqualTo(joarkUrl))
+			post(urlEqualTo(joarkUrl))
 				.inScenario("integrationTest").whenScenarioStateIs(stateNames[attempt])
-				.willReturn(WireMock.aResponse()
+				.willReturn(aResponse()
 					.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
 					.withBody("Mocked exception, attempt $attempt")
 					.withStatus(HttpStatus.NOT_FOUND.value()))
 				.willSetStateTo(stateNames[attempt + 1]))
 	}
 	wiremockServer.stubFor(
-		WireMock.post(WireMock.urlEqualTo(joarkUrl))
+		post(urlEqualTo(joarkUrl))
 			.inScenario("integrationTest").whenScenarioStateIs(stateNames.last())
-			.willReturn(WireMock.aResponse()
+			.willReturn(aResponse()
 				.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
 				.withBody(createJoarkResponse())
 				.withStatus(HttpStatus.OK.value())))
@@ -77,15 +82,15 @@ fun mockJoarkRespondsAfterAttempts(attempts: Int) {
 
 private fun mockJoark(statusCode: Int, responseBody: String, delay: Int) {
 	wiremockServer.stubFor(
-		WireMock.post(WireMock.urlEqualTo(joarkUrl))
-			.willReturn(WireMock.aResponse()
+		post(urlEqualTo(joarkUrl))
+			.willReturn(aResponse()
 				.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
 				.withBody(responseBody)
 				.withStatus(statusCode)
 				.withFixedDelay(delay)))
 }
 
-fun mockFilestorageIsWorking(uuid: String) = mockFilestorageIsWorking(listOf(uuid to "mocked-response-content"))
+fun mockFilestorageIsWorking(uuid: String) = mockFilestorageIsWorking(listOf(uuid to filestorageContent))
 
 fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>) {
 	val ids = uuidsAndResponses.joinToString(",") { it.first }
@@ -93,11 +98,11 @@ fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>) {
 }
 
 fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>, idsForUrl: String) {
-	val urlPattern = WireMock.urlMatching(filestorageUrl.replace("?", "\\?") + idsForUrl)
+	val urlPattern = urlMatching(filestorageUrl.replace("?", "\\?") + idsForUrl)
 
 	wiremockServer.stubFor(
-		WireMock.get(urlPattern)
-			.willReturn(WireMock.aResponse()
+		get(urlPattern)
+			.willReturn(aResponse()
 				.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
 				.withBody(createFilestorageResponse(uuidsAndResponses))
 				.withStatus(HttpStatus.OK.value())))
@@ -107,26 +112,26 @@ fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>, ids
 
 fun mockFilestoreageDeletionIsWorking(uuids: List<String>) {
 	val ids = uuids.joinToString(",")
-	val urlPattern = WireMock.urlMatching(filestorageUrl.replace("?", "\\?") + ids)
+	val urlPattern = urlMatching(filestorageUrl.replace("?", "\\?") + ids)
 
 	wiremockServer.stubFor(
-		WireMock.delete(urlPattern)
-			.willReturn(WireMock.aResponse()
+		delete(urlPattern)
+			.willReturn(aResponse()
 				.withStatus(HttpStatus.OK.value())))
 }
 
 fun mockFilestorageDeletionIsNotWorking() {
 	wiremockServer.stubFor(
-		WireMock.delete(WireMock.urlMatching(filestorageUrl.replace("?", "\\?") + ".*"))
-			.willReturn(WireMock.aResponse()
+		delete(urlMatching(filestorageUrl.replace("?", "\\?") + ".*"))
+			.willReturn(aResponse()
 				.withBody("Mocked exception for deletion")
 				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
 }
 
 fun mockFilestorageIsDown() {
 	wiremockServer.stubFor(
-		WireMock.get(WireMock.urlMatching(filestorageUrl.replace("?", "\\?") + ".*"))
-			.willReturn(WireMock.aResponse()
+		get(urlMatching(filestorageUrl.replace("?", "\\?") + ".*"))
+			.willReturn(aResponse()
 				.withBody("Mocked exception for filestorage")
 				.withStatus(HttpStatus.SERVICE_UNAVAILABLE.value())))
 }

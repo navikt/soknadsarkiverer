@@ -9,6 +9,13 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
+import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.clients.producer.RecordMetadata
+import org.apache.kafka.common.header.Headers
+import org.apache.kafka.common.header.internals.RecordHeaders
+import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.*
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -34,7 +41,7 @@ import org.springframework.web.server.ResponseStatusException
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-@Disabled // TODO: Enable when JournalpostClient publishes to Joark
+@Disabled // TODO: These crash on Github Actions when building q0-pipeline
 @ActiveProfiles("test")
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")

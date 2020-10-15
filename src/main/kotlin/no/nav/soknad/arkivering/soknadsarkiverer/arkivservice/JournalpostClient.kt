@@ -9,20 +9,24 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.http.HttpEntity
-import org.springframework.http.HttpHeaders
-import org.springframework.http.MediaType
+import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.stereotype.Service
-import org.springframework.web.client.RestTemplate
+import org.springframework.web.reactive.function.BodyInserters
+import org.springframework.web.reactive.function.client.WebClient
 
 @Service
 class JournalpostClient(private val appConfiguration: AppConfiguration,
-												@Qualifier("archiveRestTemplate") private val restTemplate: RestTemplate): JournalpostClientInterface {
+												@Qualifier("archiveWebClient") private val webClient: WebClient): JournalpostClientInterface {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	override fun ping(): String {
-		return restTemplate.getForObject("${appConfiguration.config.joarkUrl}/ping", String::class.java)!!
+		return webClient
+			.get()
+			.uri(appConfiguration.config.joarkHost + "/isAlive")
+			.retrieve()
+			.bodyToMono(String::class.java)
+			.block()!!
 	}
 
 	override fun opprettJournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FilElementDto>): String {
@@ -31,10 +35,6 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 			val request: OpprettJournalpostRequest = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)
 
 			val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
-
-			val filListe = request.dokumenter.map{it.dokumentvarianter.map{ it.filnavn +  ":"  + it.filtype +":" +it.fysiskDokument?.size + ":" + it.variantformat} }.toList()
-			logger.info("$key: Sending to Joark using url= ${url}. " +
-			"Archiving ${filListe.joinToString()}")
 
 			val response = sendDataToJoark(request, url)
 			val journalpostId = response?.journalpostId ?: "-1"
@@ -48,11 +48,14 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 		}
 	}
 
-	private fun sendDataToJoark(data: OpprettJournalpostRequest, url: String): OpprettJournalpostResponse? {
-		val headers = HttpHeaders()
-		headers.contentType = MediaType.APPLICATION_JSON
-		val request = HttpEntity(data, headers)
-		logger.info("Midlertidig skipping av kall til arkiv")
-		return restTemplate.postForObject(url, request, OpprettJournalpostResponse::class.java)
-	}
+	private fun sendDataToJoark(data: OpprettJournalpostRequest, uri: String) =
+		webClient
+			.post()
+			.uri(uri)
+			.contentType(APPLICATION_JSON)
+			.accept(APPLICATION_JSON)
+			.body(BodyInserters.fromValue(data))
+			.retrieve()
+			.bodyToMono(OpprettJournalpostResponse::class.java)
+			.block()
 }
