@@ -22,6 +22,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_INPUT_TOPIC" to "privat-soknadInnsendt-v1-default",
 	"KAFKA_PROCESSING_TOPIC" to "privat-soknadInnsendt-processingEventLog-v1-default",
 	"KAFKA_MESSAGE_TOPIC" to "privat-soknadInnsendt-messages-v1-default",
+	"MAX_MESSAGE_SIZE" to (1024 * 1024 * 300).toString(),
 
 	"JOARK_HOST" to "http://localhost:8092",
 	"JOARK_URL" to "/rest/journalpostapi/v1/journalpost",
@@ -75,7 +76,8 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
 		val retryTime: List<Int> = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
-		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty()
+		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty(),
+		val maxMessageSize: Int = "MAX_MESSAGE_SIZE".configProperty().toInt()
 	)
 }
 
