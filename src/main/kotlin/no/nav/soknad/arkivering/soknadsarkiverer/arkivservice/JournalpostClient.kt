@@ -1,8 +1,5 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.arkivservice
 
-import io.netty.channel.ChannelOption
-import io.netty.handler.timeout.ReadTimeoutHandler
-import io.netty.handler.timeout.WriteTimeoutHandler
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.OpprettJournalpostRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.OpprettJournalpostResponse
@@ -13,15 +10,9 @@ import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.MediaType.APPLICATION_JSON
-import org.springframework.http.client.reactive.ReactorClientHttpConnector
-import org.springframework.http.codec.ClientCodecConfigurer
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
-import org.springframework.web.reactive.function.client.ExchangeStrategies
 import org.springframework.web.reactive.function.client.WebClient
-import reactor.netty.Connection
-import reactor.netty.http.client.HttpClient
-import reactor.netty.tcp.TcpClient
 
 @Service
 class JournalpostClient(private val appConfiguration: AppConfiguration,
@@ -58,31 +49,14 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 	}
 
 	private fun sendDataToJoark(data: OpprettJournalpostRequest, uri: String) =
-		defaultWebClient(uri)
+		webClient
 			.post()
+			.uri(uri)
 			.contentType(APPLICATION_JSON)
 			.accept(APPLICATION_JSON)
 			.body(BodyInserters.fromValue(data))
 			.retrieve()
 			.bodyToMono(OpprettJournalpostResponse::class.java)
 			.block()
-
-
-	private fun defaultWebClient(uri: String): WebClient {
-		val tcpClient = TcpClient.create()
-			.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000)
-			.doOnConnected { connection: Connection ->
-				connection.addHandlerLast(ReadTimeoutHandler(2))
-					.addHandlerLast(WriteTimeoutHandler(2))
-			}
-
-		val exchangeStrategies = ExchangeStrategies.builder()
-			.codecs { configurer: ClientCodecConfigurer -> configurer.defaultCodecs().maxInMemorySize(appConfiguration.config.maxMessageSize) }.build()
-		return WebClient.builder()
-			.baseUrl(uri)
-			.exchangeStrategies(exchangeStrategies)
-			.clientConnector(ReactorClientHttpConnector(HttpClient.from(tcpClient)))
-			.build()
-	}
 
 }
