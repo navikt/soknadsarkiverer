@@ -17,6 +17,7 @@ import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.springframework.beans.factory.annotation.Autowired
