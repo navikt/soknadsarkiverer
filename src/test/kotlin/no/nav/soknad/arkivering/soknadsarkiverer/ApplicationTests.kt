@@ -9,10 +9,7 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.Bruker
-import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.Dokument
-import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.DokumentVariant
-import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.OpprettJournalpostRequest
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.*
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
@@ -291,6 +288,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 	private fun verifyRequestDataToJoark(soknadsarkivschema: Soknadarkivschema, requestData: OpprettJournalpostRequest) {
 		val expected = OpprettJournalpostRequest(
+			AvsenderMottaker(soknadsarkivschema.getFodselsnummer(), "FNR"),
 			Bruker(soknadsarkivschema.getFodselsnummer(), "FNR"),
 			DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(soknadsarkivschema.getInnsendtDato()), ZoneOffset.UTC)),
 			listOf(
