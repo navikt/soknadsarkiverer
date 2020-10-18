@@ -50,6 +50,7 @@ class WebClientConfig(private val appConfiguration: AppConfiguration) {
 	fun archiveWebClient(oAuth2AccessTokenService: OAuth2AccessTokenService,
 											 clientConfigurationProperties: ClientConfigurationProperties): WebClient {
 
+		logger.info("Initialiserer archiveWebClient")
 		val properties: ClientProperties = clientConfigurationProperties.registration
 			?. get("soknadsarkiverer")
 			?: throw RuntimeException("Could not find oauth2 client config for archiveWebClient")
@@ -70,18 +71,6 @@ class WebClientConfig(private val appConfiguration: AppConfiguration) {
 			.clientConnector(ReactorClientHttpConnector(HttpClient.from(tcpClient)))
 			.build()
 	}
-
-	/*
-
-		val exchangeStrategies = ExchangeStrategies.builder()
-			.codecs { configurer: ClientCodecConfigurer -> configurer.defaultCodecs().maxInMemorySize(appConfiguration.config.maxMessageSize) }.build()
-		return WebClient.builder()
-			.baseUrl(uri)
-			.exchangeStrategies(exchangeStrategies)
-			.clientConnector(ReactorClientHttpConnector(HttpClient.from(tcpClient)))
-			.build()
-
-	 */
 
 	private fun bearerTokenFilter(clientProperties: ClientProperties, oAuth2AccessTokenService: OAuth2AccessTokenService) =
 		{ request: ClientRequest, next: ExchangeFunction ->
