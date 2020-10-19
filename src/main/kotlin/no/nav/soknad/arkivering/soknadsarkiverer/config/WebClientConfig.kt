@@ -30,7 +30,6 @@ class WebClientConfig(private val appConfiguration: AppConfiguration) {
 		.codecs { configurer -> configurer
 			.defaultCodecs()
 			.maxInMemorySize(50 * 1024 * 1024) }
-		.filter(ExchangeFilterFunctions.basicAuthentication(appConfiguration.config.username, appConfiguration.config.sharedPassword))
 		.build()
 
 	@Bean
