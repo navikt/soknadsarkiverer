@@ -20,6 +20,8 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
+	private val SKIP_JOARK_IF_ENVIRONMENT: String = "prod"
+
 	override fun ping(): String {
 		return webClient
 			.get()
@@ -36,11 +38,17 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 
 			val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
 
-			val response = sendDataToJoark(request, url)
-			val journalpostId = response?.journalpostId ?: "-1"
+			if (SKIP_JOARK_IF_ENVIRONMENT.equals(appConfiguration.config.profile, true)) {
+				val journalpostId = "-1"
+				logger.info("$key: Skipped saving to Joark, fake the following journalpostId: '$journalpostId'")
+				return "-1"
+			} else {
+				val response = sendDataToJoark(request, url)
+				val journalpostId = response?.journalpostId ?: "-1"
 
-			logger.info("$key: Saved to Joark, got the following journalpostId: '$journalpostId'")
-			return journalpostId
+				logger.info("$key: Saved to Joark, got the following journalpostId: '$journalpostId'")
+				return journalpostId
+			}
 
 		} catch (e: Exception) {
 			logger.error("$key: Error sending to Joark", e)
