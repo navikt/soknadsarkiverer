@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.stereotype.Service
+import org.springframework.web.reactive.function.client.ExchangeFilterFunctions
 import org.springframework.web.reactive.function.client.WebClient
 
 @Service
@@ -81,16 +82,18 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 	private fun setupWebClient(fileIds: String, method: HttpMethod): WebClient.RequestBodySpec {
 		val uri = appConfiguration.config.filestorageHost + appConfiguration.config.filestorageUrl + fileIds
 
+/*
 		val auth = "${appConfiguration.config.username}:${appConfiguration.config.sharedPassword}"
 		val encodedAuth: ByteArray = Base64.encodeBase64(auth.toByteArray())
 		val authHeader = "Basic " + String(encodedAuth)
+*/
 
 		return webClient
 			.method(method)
 			.uri(uri)
 			.contentType(APPLICATION_JSON)
 			.accept(APPLICATION_JSON)
-			.header("Authorization", authHeader)
+			//.header("Authorization", authHeader)
 	}
 
 
