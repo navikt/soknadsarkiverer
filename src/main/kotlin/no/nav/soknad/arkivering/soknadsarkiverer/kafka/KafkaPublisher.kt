@@ -44,7 +44,7 @@ class KafkaPublisher(private val appConfiguration: AppConfiguration) {
 
 		return kafkaProducer
 			.send(producerRecord)
-			.get(1000, TimeUnit.MILLISECONDS) // Blocking call
+			.get(9000, TimeUnit.MILLISECONDS) // Blocking call
 	}
 
 	private fun kafkaConfigMap(): MutableMap<String, Any> {
