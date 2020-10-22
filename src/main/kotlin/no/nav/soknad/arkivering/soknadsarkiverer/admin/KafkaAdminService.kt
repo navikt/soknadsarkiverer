@@ -7,11 +7,13 @@ import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.getConfigForKey
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.config.SaslConfigs
+import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.serialization.Deserializer
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.slf4j.LoggerFactory
@@ -25,30 +27,28 @@ class KafkaAdminService(private val appConfiguration: AppConfiguration) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
+	val topics = listOf(
+		appConfiguration.kafkaConfig.inputTopic,
+		appConfiguration.kafkaConfig.processingTopic,
+		appConfiguration.kafkaConfig.messageTopic)
+
+
 	fun getAllEvents() = getAllEvents { true }
 
 	private fun getAllEvents(itemFiler: (KafkaEventRaw<*>) -> Boolean): List<KafkaEvent> {
-
-		val processingEvents = getAllKafkaRecords(appConfiguration.kafkaConfig.processingTopic, "PROCESSINGEVENT", createProcessingEventSerde().deserializer())
-		val inputEvents = getAllKafkaRecords(appConfiguration.kafkaConfig.inputTopic, "INPUT", createSoknadarkivschemaSerde().deserializer())
-		val messageEvents = getAllKafkaRecords(appConfiguration.kafkaConfig.messageTopic, "MESSAGE", StringDeserializer())
-
-		return createContentEventList(processingEvents, inputEvents, messageEvents, itemFiler)
+		return createContentEventList(getAllKafkaRecords(topics), itemFiler)
 	}
 
 	fun getUnfinishedEvents(): List<KafkaEvent> {
+		val events = getAllKafkaRecords(topics)
 
-		val processingEvents = getAllKafkaRecords(appConfiguration.kafkaConfig.processingTopic, "PROCESSINGEVENT", createProcessingEventSerde().deserializer())
-		val inputEvents = getAllKafkaRecords(appConfiguration.kafkaConfig.inputTopic, "INPUT", createSoknadarkivschemaSerde().deserializer())
-		val messageEvents = getAllKafkaRecords(appConfiguration.kafkaConfig.messageTopic, "MESSAGE", StringDeserializer())
-
-
-		val finishedKeys = processingEvents
-			.filter { (_, _, _, processingEvent) -> processingEvent.getType() == FINISHED }
+		val finishedKeys = events
+			.filter { it.payload is ProcessingEvent }
+			.filter { (_, _, _, processingEvent) -> (processingEvent as ProcessingEvent).getType() == FINISHED }
 			.map { (key, _, _, _) -> key }
 
 
-		return createContentEventList(processingEvents, inputEvents, messageEvents) { event -> !finishedKeys.contains(event.key) }
+		return createContentEventList(events) { event -> !finishedKeys.contains(event.key) }
 	}
 
 	fun getAllEventsForKey(key: String) = getAllEvents { it.key == key }
@@ -56,16 +56,13 @@ class KafkaAdminService(private val appConfiguration: AppConfiguration) {
 	fun search(searchPhrase: Regex) = getAllEvents { it.payload.toString().contains(searchPhrase) }
 
 
-	private fun createContentEventList(processingEvents: List<KafkaEventRaw<ProcessingEvent>>,
-																		 inputEvents: List<KafkaEventRaw<Soknadarkivschema>>,
-																		 messageEvents: List<KafkaEventRaw<String>>,
+	private fun createContentEventList(events: List<KafkaEventRaw<Any>>,
 																		 itemFiler: (KafkaEventRaw<*>) -> Boolean): List<KafkaEvent> {
 
 		val sequence = generateSequence(0) { it + 1 }
-			.take(processingEvents.size + inputEvents.size + messageEvents.size).toList()
+			.take(events.size).toList()
 
-		return listOf(processingEvents, inputEvents, messageEvents)
-			.flatten()
+		return events
 			.filter { itemFiler.invoke(it) }
 			.sortedBy { it.timestamp }
 			.zip(sequence) { event, seq -> KafkaEvent(seq, event.key, event.messageId, getTypeRepresentation(event.payload), event.timestamp.toInstant(ZoneOffset.UTC).toEpochMilli()) }
@@ -88,43 +85,33 @@ class KafkaAdminService(private val appConfiguration: AppConfiguration) {
 
 
 	fun content(messageId: String): String {
-		val inputEvents = getAllKafkaRecords(appConfiguration.kafkaConfig.inputTopic, "INPUT", createSoknadarkivschemaSerde().deserializer())
+		val events = getAllKafkaRecords(topics)
 			.firstOrNull { it.messageId == messageId }
-		if (inputEvents != null)
-			return inputEvents.payload.toString()
-
-		val messageEvents = getAllKafkaRecords(appConfiguration.kafkaConfig.messageTopic, "MESSAGE", StringDeserializer())
-			.firstOrNull { it.messageId == messageId }
-		if (messageEvents != null)
-			return messageEvents.payload
-
-		val processingEvents = getAllKafkaRecords(appConfiguration.kafkaConfig.processingTopic, "PROCESSINGEVENT", createProcessingEventSerde().deserializer())
-			.firstOrNull { it.messageId == messageId }
-		if (processingEvents != null)
-			return processingEvents.payload.toString()
+		if (events != null)
+			return events.payload.toString()
 
 		throw NoSuchElementException("Could not find message with id $messageId")
 	}
 
 
-	internal fun <T> getAllKafkaRecords(topic: String, recordType: String, valueDeserializer: Deserializer<T>): List<KafkaEventRaw<T>> {
-		val records = mutableListOf<KafkaEventRaw<T>>()
+	internal fun getAllKafkaRecords(topics: List<String>): List<KafkaEventRaw<Any>> {
+		val records = mutableListOf<KafkaEventRaw<Any>>()
 		try {
-			val applicationId = "soknadsarkiverer-admin-$recordType-${UUID.randomUUID()}"
+			val applicationId = "soknadsarkiverer-admin-${UUID.randomUUID()}"
 
-			KafkaConsumer<Key, T>(kafkaConfig(applicationId, valueDeserializer)).use {
-				it.subscribe(listOf(topic))
+			KafkaConsumer<Key, Any>(kafkaConfig(applicationId)).use {
+				it.subscribe(topics)
 				records.addAll(retrieveKafkaRecords(it))
 			}
 
 		} catch (e: Exception) {
-			logger.error("Error getting $recordType", e)
+			logger.error("Error when consuming Kafka events", e)
 		}
 		return records
 	}
 
-	private fun <T> retrieveKafkaRecords(kafkaConsumer: KafkaConsumer<Key, T>): List<KafkaEventRaw<T>> {
-		val records = mutableListOf<KafkaEventRaw<T>>()
+	private fun retrieveKafkaRecords(kafkaConsumer: KafkaConsumer<Key, Any>): List<KafkaEventRaw<Any>> {
+		val records = mutableListOf<KafkaEventRaw<Any>>()
 
 		val consumerRecords = kafkaConsumer.poll(Duration.ofSeconds(1))
 		for (record in consumerRecords) {
@@ -136,13 +123,16 @@ class KafkaAdminService(private val appConfiguration: AppConfiguration) {
 		return records
 	}
 
-	private fun <T> kafkaConfig(applicationId: String, valueDeserializer: Deserializer<T>) = Properties().also {
+	private fun kafkaConfig(applicationId: String) = Properties().also {
+		it[kafkaInputTopic] = appConfiguration.kafkaConfig.inputTopic
+		it[kafkaProcessingTopic] = appConfiguration.kafkaConfig.processingTopic
+		it[kafkaMessageTopic] = appConfiguration.kafkaConfig.messageTopic
 		it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
 		it[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
 		it[ConsumerConfig.GROUP_ID_CONFIG] = applicationId
 		it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers
 		it[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
-		it[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = valueDeserializer::class.java
+		it[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = MultiDeserializer::class.java
 
 		if (appConfiguration.kafkaConfig.secure == "TRUE") {
 			it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = appConfiguration.kafkaConfig.protocol
@@ -150,14 +140,52 @@ class KafkaAdminService(private val appConfiguration: AppConfiguration) {
 			it[SaslConfigs.SASL_MECHANISM] = appConfiguration.kafkaConfig.salsmec
 		}
 	}
+}
+
+
+class MultiDeserializer : Deserializer<Any> {
+	private lateinit var inputTopic: String
+	private lateinit var processingEventLogTopic: String
+	private lateinit var messageTopic: String
+	private lateinit var schemaRegistryUrl: String
+	private lateinit var processingEventSerdeDeserializer: Deserializer<ProcessingEvent>
+	private lateinit var soknadarkivschemaSerdeDeserializer: Deserializer<Soknadarkivschema>
+	private lateinit var stringSerdeDeserializer: Deserializer<String>
+
+	override fun configure(configs: Map<String, *>, isKey: Boolean) {
+		schemaRegistryUrl = getConfigForKey(configs, AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG) as String
+		inputTopic = getConfigForKey(configs, kafkaInputTopic) as String
+		processingEventLogTopic = getConfigForKey(configs, kafkaProcessingTopic) as String
+		messageTopic = getConfigForKey(configs, kafkaMessageTopic) as String
+
+		processingEventSerdeDeserializer = createProcessingEventSerde().deserializer()
+		soknadarkivschemaSerdeDeserializer = createSoknadarkivschemaSerde().deserializer()
+		stringSerdeDeserializer = StringDeserializer()
+	}
+
+	override fun deserialize(topic: String, headers: Headers, data: ByteArray) = deserialize(topic, data)
+
+	override fun deserialize(topic: String, data: ByteArray): Any {
+		return when (topic) {
+			inputTopic -> soknadarkivschemaSerdeDeserializer.deserialize(topic, data)
+			processingEventLogTopic -> processingEventSerdeDeserializer.deserialize(topic, data)
+			messageTopic -> stringSerdeDeserializer.deserialize(topic, data)
+			else -> throw Exception("Found no deserializer for topic '$topic'")
+		}
+	}
 
 	private fun createProcessingEventSerde(): SpecificAvroSerde<ProcessingEvent> = createAvroSerde()
 	private fun createSoknadarkivschemaSerde(): SpecificAvroSerde<Soknadarkivschema> = createAvroSerde()
 
 	private fun <T : SpecificRecord> createAvroSerde(): SpecificAvroSerde<T> {
-		val serdeConfig = hashMapOf(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
+		val serdeConfig = hashMapOf(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to schemaRegistryUrl)
 		return SpecificAvroSerde<T>().also { it.configure(serdeConfig, false) }
 	}
 }
 
+
 private typealias Key = String
+
+const val kafkaInputTopic =	"KAFKA_INPUT_TOPIC"
+const val kafkaProcessingTopic = "KAFKA_PROCESSING_TOPIC"
+const val kafkaMessageTopic = "KAFKA_MESSAGE_TOPIC"
