@@ -32,6 +32,8 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 									private val schedulerService: TaskListService,
 									private val kafkaPublisher: KafkaPublisher) {
 
+	private val logger = LoggerFactory.getLogger(javaClass)
+
 	private val intSerde = Serdes.IntegerSerde()
 	private val stringSerde = Serdes.StringSerde()
 	private val processingEventSerde = createProcessingEventSerde()
@@ -81,8 +83,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	}
 
 	private fun filterSoknadsarkivschemaThatAreNull(key: String, soknadsarkiveschema: Soknadarkivschema?): Boolean {
-		if (soknadsarkiveschema == null)
-			logger.error("$key: Soknadsarkivschema is null!")
+		logger.error("$key: Soknadsarkivschema is null!")
 		return soknadsarkiveschema != null
 	}
 
@@ -129,19 +130,6 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		return SpecificAvroSerde<T>().also { it.configure(serdeConfig, false) }
 	}
 }
-
-fun getConfigForKey(configs: Map<String, *>, key: String): Any? {
-	if (configs.containsKey(key)) {
-		return configs[key]
-	} else {
-		val msg = "Could not find key '${key}' in configuration!"
-		logger.error(msg)
-		throw Exception(msg)
-	}
-}
-
-private val logger = LoggerFactory.getLogger(KafkaConfig::class.java)
-
 
 const val KAFKA_PUBLISHER = "kafka.publisher"
 const val MESSAGE_ID = "MESSAGE_ID"

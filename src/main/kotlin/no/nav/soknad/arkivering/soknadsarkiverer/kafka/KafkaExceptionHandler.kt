@@ -47,4 +47,14 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 	override fun configure(configs: Map<String, *>) {
 		kafkaPublisher = getConfigForKey(configs, KAFKA_PUBLISHER) as KafkaPublisher
 	}
+
+	private fun getConfigForKey(configs: Map<String, *>, key: String): Any? {
+		if (configs.containsKey(key)) {
+			return configs[key]
+		} else {
+			val msg = "Could not find key '${key}' in configuration! Won't be able to create event on Message topic!"
+			logger.error(msg)
+			throw Exception(msg)
+		}
+	}
 }
