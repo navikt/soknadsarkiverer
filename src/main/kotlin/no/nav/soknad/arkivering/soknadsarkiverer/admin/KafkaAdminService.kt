@@ -143,7 +143,7 @@ class KafkaAdminService(private val appConfiguration: AppConfiguration) {
 }
 
 
-private class MultiDeserializer : Deserializer<Any> {
+class MultiDeserializer : Deserializer<Any> {
 	private lateinit var inputTopic: String
 	private lateinit var processingEventLogTopic: String
 	private lateinit var messageTopic: String
@@ -186,6 +186,6 @@ private class MultiDeserializer : Deserializer<Any> {
 
 private typealias Key = String
 
-private const val kafkaInputTopic =	"KAFKA_INPUT_TOPIC"
-private const val kafkaProcessingTopic = "KAFKA_PROCESSING_TOPIC"
-private const val kafkaMessageTopic = "KAFKA_MESSAGE_TOPIC"
+const val kafkaInputTopic =	"KAFKA_INPUT_TOPIC"
+const val kafkaProcessingTopic = "KAFKA_PROCESSING_TOPIC"
+const val kafkaMessageTopic = "KAFKA_MESSAGE_TOPIC"
