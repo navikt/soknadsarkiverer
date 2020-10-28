@@ -4,6 +4,7 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.Metrics
 import org.apache.tomcat.util.codec.binary.Base64
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
@@ -19,6 +20,7 @@ class FilestorageService(@Qualifier("basicRestTemplate") private val restTemplat
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): List<FilElementDto> {
+		val timer = Metrics.filestorageGetLatencyStart()
 		try {
 			val fileIds = getFileIds(data)
 			logger.info("$key: Getting files with ids: '$fileIds'")
@@ -26,15 +28,22 @@ class FilestorageService(@Qualifier("basicRestTemplate") private val restTemplat
 			val files = getFiles(fileIds)
 
 			logger.info("$key: Received files.size: ${files.size}")
+			Metrics.incGetFilestorageSuccesses()
 			return files
 
 		} catch (e: Exception) {
+			Metrics.incGetFilestorageErrors()
 			logger.error("$key: Error retrieving files from file storage", e)
 			throw ArchivingException(e)
+
+		} finally {
+		    Metrics.endTimer(timer)
 		}
 	}
 
 	override fun deleteFilesFromFilestorage(key: String, data: Soknadarkivschema) {
+		val timer = Metrics.filestorageDelLatencyStart()
+
 		val fileIds = getFileIds(data).joinToString(",")
 		try {
 
@@ -42,9 +51,14 @@ class FilestorageService(@Qualifier("basicRestTemplate") private val restTemplat
 			deleteFiles(fileIds)
 			logger.info("$key: The files: $fileIds are deleted")
 
+			Metrics.incDelFilestorageSuccesses()
 		} catch (e: Exception) {
+			Metrics.incDelFilestorageErrors()
 			logger.warn("$key: Failed to delete files from file storage. Everything is saved to Joark correctly, " +
 				"so this error will be ignored. Affected file ids: '$fileIds'", e)
+
+		} finally {
+		    Metrics.endTimer(timer)
 		}
 	}
 

@@ -10,8 +10,10 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.Metrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
@@ -128,6 +130,14 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 	@Test
 	fun `Failing to get files from Filestorage will cause retries`() {
+		val tasksBefore = Metrics.getTasks()
+		val tasksGivenUpOnBefore = Metrics.getTasksGivenUpOn()
+		val getFilestorageErrorsBefore = Metrics.getGetFilestorageErrors()
+		val getFilestorageSuccessesBefore = Metrics.getGetFilestorageSuccesses()
+		val delFilestorageSuccessesBefore = Metrics.getDelFilestorageSuccesses()
+		val joarkSuccessesBefore = Metrics.getJoarkSuccesses()
+		val joarkErrorsBefore = Metrics.getJoarkErrors()
+
 		mockFilestorageIsDown()
 		mockJoarkIsWorking()
 
@@ -139,6 +149,14 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(maxNumberOfAttempts, "Exception")
 		verifyMessageStartsWith(0, "ok")
+
+		assertEquals(getFilestorageErrorsBefore + maxNumberOfAttempts, Metrics.getGetFilestorageErrors())
+		assertEquals(getFilestorageSuccessesBefore + 0, Metrics.getGetFilestorageSuccesses())
+		assertEquals(delFilestorageSuccessesBefore + 0, Metrics.getDelFilestorageSuccesses())
+		assertEquals(joarkErrorsBefore + 0, Metrics.getJoarkErrors())
+		assertEquals(joarkSuccessesBefore + 0, Metrics.getJoarkSuccesses())
+		assertEquals(tasksBefore + 1, Metrics.getTasks())
+		assertEquals(tasksGivenUpOnBefore + 1, Metrics.getTasksGivenUpOn())
 	}
 
 	@Test
@@ -161,6 +179,13 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 	@Test
 	fun `First attempt to Joark fails, the second succeeds`() {
+		val tasksBefore = Metrics.getTasks()
+		val tasksGivenUpOnBefore = Metrics.getTasksGivenUpOn()
+		val getFilestorageSuccessesBefore = Metrics.getGetFilestorageSuccesses()
+		val delFilestorageSuccessesBefore = Metrics.getDelFilestorageSuccesses()
+		val joarkSuccessesBefore = Metrics.getJoarkSuccesses()
+		val joarkErrorsBefore = Metrics.getJoarkErrors()
+
 		mockFilestorageIsWorking(fileUuid)
 		mockJoarkRespondsAfterAttempts(1)
 
@@ -173,6 +198,13 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "Exception")
 		verifyMessageStartsWith(1, "ok")
+
+		assertEquals(getFilestorageSuccessesBefore + 2, Metrics.getGetFilestorageSuccesses())
+		assertEquals(delFilestorageSuccessesBefore + 1, Metrics.getDelFilestorageSuccesses())
+		assertEquals(joarkErrorsBefore + 1, Metrics.getJoarkErrors())
+		assertEquals(joarkSuccessesBefore + 1, Metrics.getJoarkSuccesses())
+		assertEquals(tasksBefore + 0, Metrics.getTasks(), "Should have created and finished task")
+		assertEquals(tasksGivenUpOnBefore + 0, Metrics.getTasksGivenUpOn(), "Should not have given up on any task")
 	}
 
 	@Test
@@ -194,6 +226,12 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 	@Test
 	fun `Everything works, but Filestorage cannot delete files -- Message is nevertheless marked as finished`() {
+		val getFilestorageSuccessesBefore = Metrics.getGetFilestorageSuccesses()
+		val delFilestorageSuccessesBefore = Metrics.getDelFilestorageSuccesses()
+		val delFilestorageErrorsBefore = Metrics.getDelFilestorageErrors()
+		val joarkSuccessesBefore = Metrics.getJoarkSuccesses()
+		val joarkErrorsBefore = Metrics.getJoarkErrors()
+
 		mockFilestorageIsWorking(fileUuid)
 		mockFilestorageDeletionIsNotWorking()
 		mockJoarkIsWorking()
@@ -207,6 +245,12 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "ok")
 		verifyMessageStartsWith(0, "Exception")
+
+		assertEquals(getFilestorageSuccessesBefore + 1, Metrics.getGetFilestorageSuccesses())
+		assertEquals(delFilestorageSuccessesBefore + 0, Metrics.getDelFilestorageSuccesses())
+		assertEquals(delFilestorageErrorsBefore + 1, Metrics.getDelFilestorageErrors())
+		assertEquals(joarkErrorsBefore + 0, Metrics.getJoarkErrors())
+		assertEquals(joarkSuccessesBefore + 1, Metrics.getJoarkSuccesses())
 	}
 
 	@Test
