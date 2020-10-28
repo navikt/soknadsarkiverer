@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Configuration
 import java.time.*
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.NoSuchElementException
 
 @Configuration
@@ -108,30 +109,55 @@ class KafkaAdminService(private val appConfiguration: AppConfiguration) {
 
 
 	internal fun <T> getAllKafkaRecords(topic: String, recordType: String, valueDeserializer: Deserializer<T>): List<KafkaEventRaw<T>> {
-		val records = mutableListOf<KafkaEventRaw<T>>()
 		try {
 			val applicationId = "soknadsarkiverer-admin-$recordType-${UUID.randomUUID()}"
 
-			KafkaConsumer<Key, T>(kafkaConfig(applicationId, valueDeserializer)).use {
-				it.subscribe(listOf(topic))
-				records.addAll(retrieveKafkaRecords(it))
-			}
+			KafkaConsumer<Key, T>(kafkaConfig(applicationId, valueDeserializer))
+				.use {
+					val startTime = System.currentTimeMillis()
+					it.subscribe(listOf(topic))
+
+					val records = loopUntilKafkaRecordsAreRetrieved(it)
+
+					logger.info("Found ${records.size} records in ${System.currentTimeMillis() - startTime}ms")
+					return records
+				}
 
 		} catch (e: Exception) {
 			logger.error("Error getting $recordType", e)
+			return emptyList()
 		}
-		return records
+	}
+
+	private fun <T> loopUntilKafkaRecordsAreRetrieved(kafkaConsumer: KafkaConsumer<Key, T>): List<KafkaEventRaw<T>> {
+		val startTime = System.currentTimeMillis()
+		val timeout = 10 * 1000
+
+		while (System.currentTimeMillis() < startTime + timeout) {
+			val records = retrieveKafkaRecords(kafkaConsumer)
+
+			if (records.isNotEmpty())
+				return records
+			TimeUnit.MILLISECONDS.sleep(100)
+		}
+		return emptyList()
 	}
 
 	private fun <T> retrieveKafkaRecords(kafkaConsumer: KafkaConsumer<Key, T>): List<KafkaEventRaw<T>> {
+		logger.info("Retrieving Kafka records")
 		val records = mutableListOf<KafkaEventRaw<T>>()
 
 		val consumerRecords = kafkaConsumer.poll(Duration.ofSeconds(1))
+		logger.info("Found ${consumerRecords.count()} consumerRecords")
 		for (record in consumerRecords) {
 			val timestamp = LocalDateTime.ofInstant(Instant.ofEpochMilli(record.timestamp()), ZoneId.systemDefault())
 
 			val messageId = StringDeserializer().deserialize("", record.headers().headers(MESSAGE_ID).firstOrNull()?.value()) ?: "null"
-			records.add(KafkaEventRaw(record.key(), messageId, timestamp, record.value()))
+
+			if (record.key() != null)
+				records.add(KafkaEventRaw(record.key(), messageId, timestamp, record.value()))
+			else
+				logger.error("Key was null for record: $record")
 		}
 		return records
 	}
