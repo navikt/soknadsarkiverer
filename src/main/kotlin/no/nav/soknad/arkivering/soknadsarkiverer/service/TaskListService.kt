@@ -128,13 +128,10 @@ class TaskListService(private val archiverService: ArchiverService,
 	}
 
 	internal fun tryToArchive(key: String, soknadarkivschema: Soknadarkivschema) {
+		val timer = Metrics.archivingLatencyStart()
 		try {
-			val timer = Metrics.archivingLatencyStart()
 			logger.info("$key: Will now start to archive")
-
 			archiverService.archive(key, soknadarkivschema)
-
-			Metrics.endTimer(timer)
 
 		} catch (e: ArchivingException) {
 			// Log nothing, the Exceptions of this type are supposed to already have been logged
@@ -148,6 +145,9 @@ class TaskListService(private val archiverService: ArchiverService,
 			logger.error("$key: Serious error when performing scheduled task", t)
 			retry(key)
 			throw t
+
+		} finally {
+			Metrics.endTimer(timer)
 		}
 	}
 
