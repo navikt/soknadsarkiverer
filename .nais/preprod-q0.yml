@@ -31,6 +31,8 @@ spec:
       cpu: 1000m
       memory: 1024Mi
   ingresses:
+    - "https://soknadsarkiverer-q0.nais.preprod.local"
+    - "https://soknadsarkiverer-q0.dev-fss.nais.io"
     - "https://soknadsarkiverer-q0.dev.adeo.no"
   vault:
     enabled: true
