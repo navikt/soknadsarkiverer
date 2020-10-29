@@ -9,7 +9,6 @@ import org.apache.tomcat.util.codec.binary.Base64
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.HttpMethod
-import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
@@ -86,7 +85,7 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 		webClient
 			.retrieve()
 			.onStatus(
-				{ httpStatus -> httpStatus != HttpStatus.OK },
+				{ httpStatus -> httpStatus.is4xxClientError || httpStatus.is5xxServerError },
 				{ response -> response.bodyToMono(String::class.java).map { Exception("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'") } })
 			.bodyToMono(String::class.java)
 			.block() // TODO Do we need to block?
@@ -100,7 +99,7 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 		return webClient
 			.retrieve()
 			.onStatus(
-				{ httpStatus -> httpStatus != HttpStatus.OK },
+				{ httpStatus -> httpStatus.is4xxClientError || httpStatus.is5xxServerError },
 				{ response -> response.bodyToMono(String::class.java).map { Exception("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'") } })
 			.bodyToFlux(FilElementDto::class.java)
 			.collectList()
