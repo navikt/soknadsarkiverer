@@ -7,6 +7,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.converter.createOp
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.Metrics
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.MediaType.APPLICATION_JSON
@@ -32,6 +33,7 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 	}
 
 	override fun opprettJournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FilElementDto>): String {
+		val timer = Metrics.joarkLatencyStart()
 		try {
 			logger.info("$key: Creating journalpost with behandlingsId=${soknadarkivschema.getBehandlingsid()}")
 			val request: OpprettJournalpostRequest = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)
@@ -41,18 +43,23 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 			if (SKIP_JOARK_IF_ENVIRONMENT.equals(appConfiguration.config.profile, true)) {
 				val journalpostId = "-1"
 				logger.info("$key: Skipped saving to Joark, fake the following journalpostId: '$journalpostId'")
+				Metrics.incJoarkSuccesses()
 				return "-1"
 			} else {
 				val response = sendDataToJoark(request, url)
 				val journalpostId = response?.journalpostId ?: "-1"
 
 				logger.info("$key: Saved to Joark, got the following journalpostId: '$journalpostId'")
+				Metrics.incJoarkSuccesses()
 				return journalpostId
 			}
 
 		} catch (e: Exception) {
+			Metrics.incJoarkErrors()
 			logger.error("$key: Error sending to Joark", e)
 			throw ArchivingException(e)
+		} finally {
+		    Metrics.endTimer(timer)
 		}
 	}
 
@@ -66,5 +73,4 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 			.retrieve()
 			.bodyToMono(OpprettJournalpostResponse::class.java)
 			.block()
-
 }

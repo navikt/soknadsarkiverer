@@ -6,6 +6,7 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.Metrics
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_SINGLETON
 import org.springframework.context.annotation.Scope
@@ -28,7 +29,10 @@ class TaskListService(private val archiverService: ArchiverService,
 	fun addOrUpdateTask(key: String, soknadarkivschema: Soknadarkivschema, count: Int) {
 		if (!tasks.containsKey(key)) {
 			tasks[key] = Task(soknadarkivschema, count, LocalDateTime.now(), Semaphore(1).also { it.acquire() })
+
+			Metrics.addTask()
 			logger.info("$key: Created task")
+
 			GlobalScope.launch { startNewlyCreatedTask(key) }
 		} else {
 			updateCount(key, count)
@@ -77,13 +81,17 @@ class TaskListService(private val archiverService: ArchiverService,
 		val task = tasks[key]
 		if (task != null && task.count < newCount) {
 			tasks[key] = Task(task.value, newCount, task.timeStarted, task.isRunningLock)
+			Metrics.setTasksGivenUpOn(tasks.values.filter { it.count > appConfiguration.config.retryTime.size }.count().toDouble())
 		}
 	}
 
 	fun finishTask(key: String) {
 		if (tasks.containsKey(key)) {
+
 			logger.info("$key: Finishing task")
 			tasks.remove(key)
+			Metrics.removeTask()
+
 		} else {
 			logger.info("$key: Tried to finish task, but it is already finished")
 		}
@@ -122,10 +130,10 @@ class TaskListService(private val archiverService: ArchiverService,
 	}
 
 	internal fun tryToArchive(key: String, soknadarkivschema: Soknadarkivschema) {
+		val timer = Metrics.archivingLatencyStart()
 		try {
 			logger.info("$key: Will now start to archive")
 			archiverService.archive(key, soknadarkivschema)
-			return
 
 		} catch (e: ArchivingException) {
 			// Log nothing, the Exceptions of this type are supposed to already have been logged
@@ -139,6 +147,9 @@ class TaskListService(private val archiverService: ArchiverService,
 			logger.error("$key: Serious error when performing scheduled task", t)
 			retry(key)
 			throw t
+
+		} finally {
+			Metrics.endTimer(timer)
 		}
 	}
 
