@@ -8,13 +8,13 @@ import no.nav.soknad.arkivering.soknadsarkiverer.supervision.Metrics
 import org.apache.tomcat.util.codec.binary.Base64
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.core.ParameterizedTypeReference
-import org.springframework.http.*
+import org.springframework.http.HttpMethod
+import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.stereotype.Service
-import org.springframework.web.client.RestTemplate
+import org.springframework.web.reactive.function.client.WebClient
 
 @Service
-class FilestorageService(@Qualifier("basicRestTemplate") private val restTemplate: RestTemplate,
+class FilestorageService(@Qualifier("basicWebClient") private val webClient: WebClient,
 												 private val appConfiguration: AppConfiguration) : FileserviceInterface {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
@@ -62,24 +62,12 @@ class FilestorageService(@Qualifier("basicRestTemplate") private val restTemplat
 		}
 	}
 
-	private fun createHeaders(username: String, password: String): HttpHeaders {
-		return object : HttpHeaders() {
-			init {
-				val auth = "$username:$password"
-				val encodedAuth: ByteArray = Base64.encodeBase64(auth.toByteArray())
-				val authHeader = "Basic " + String(encodedAuth)
-				set("Authorization", authHeader)
-				set(CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-				set(ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-			}
-		}
-	}
 
 	private fun getFiles(fileIds: List<String>): List<FilElementDto> {
 
-		val idChunks = fileIds.chunked(filesInOneRequest).map { it.joinToString(",") }
+		val idChunks = fileIds.chunked(filesInOneRequestToFilestorage).map { it.joinToString(",") }
 		val files = idChunks
-			.mapNotNull { performRestCall(it, HttpMethod.GET, typeRef<List<FilElementDto>>()).body }
+			.mapNotNull { performGetCall(it) }
 			.flatten()
 
 		if (fileIds.size != files.size) {
@@ -90,25 +78,39 @@ class FilestorageService(@Qualifier("basicRestTemplate") private val restTemplat
 	}
 
 	private fun deleteFiles(fileIds: String) {
-		performRestCall(fileIds, HttpMethod.DELETE, typeRef<String>())
+		val webClient = setupWebClient(fileIds, HttpMethod.DELETE)
+		webClient.retrieve().bodyToMono(String::class.java).block()
 	}
 
-	private fun <T> performRestCall(fileIds: String, method: HttpMethod, type: ParameterizedTypeReference<T>): ResponseEntity<T> {
-		val username = appConfiguration.config.username
-		val sharedPassword = appConfiguration.config.sharedPassword
-		val url = appConfiguration.config.filestorageHost + appConfiguration.config.filestorageUrl + fileIds
+	private fun performGetCall(fileIds: String): List<FilElementDto>? {
+		val webClient = setupWebClient(fileIds, HttpMethod.GET)
 
-		val request = HttpEntity<Any>(url, createHeaders(username, sharedPassword))
-		return restTemplate.exchange(url, method, request, type)
+		return webClient
+			.retrieve()
+			.bodyToFlux(FilElementDto::class.java)
+			.collectList()
+			.block() // TODO Do we need to block?
+	}
+
+	private fun setupWebClient(fileIds: String, method: HttpMethod): WebClient.RequestBodySpec {
+		val uri = appConfiguration.config.filestorageHost + appConfiguration.config.filestorageUrl + fileIds
+
+		val auth = "${appConfiguration.config.username}:${appConfiguration.config.sharedPassword}"
+		val encodedAuth: ByteArray = Base64.encodeBase64(auth.toByteArray())
+		val authHeader = "Basic " + String(encodedAuth)
+
+		return webClient
+			.method(method)
+			.uri(uri)
+			.contentType(APPLICATION_JSON)
+			.accept(APPLICATION_JSON)
+			.header("Authorization", authHeader)
 	}
 
 
 	private fun getFileIds(data: Soknadarkivschema) =
 		data.getMottatteDokumenter()
 			.flatMap { it.getMottatteVarianter().map { variant -> variant.getUuid() } }
-
-
-	private inline fun <reified T : Any> typeRef(): ParameterizedTypeReference<T> = object : ParameterizedTypeReference<T>() {}
 }
 
-const val filesInOneRequest = 5
+const val filesInOneRequestToFilestorage = 5

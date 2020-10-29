@@ -1,18 +1,23 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
-import com.nhaarman.mockitokotlin2.*
-import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
-import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.STARTED
-import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
-import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
-import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
+import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
+import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.clients.producer.RecordMetadata
+import org.apache.kafka.common.header.Headers
+import org.apache.kafka.common.header.internals.RecordHeaders
+import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.springframework.beans.factory.annotation.Autowired
@@ -21,64 +26,62 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.context.annotation.Import
+import org.springframework.kafka.test.context.EmbeddedKafka
+import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.web.server.ResponseStatusException
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-@Disabled // TODO: Enable when JournalpostClient publishes to Joark
+@Disabled // TODO: These crash on Github Actions when building q0-pipeline
 @ActiveProfiles("test")
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
-class AdminInterfaceTests : TopologyTestDriverTests()  {
+@DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
+@Import(EmbeddedKafkaBrokerConfig::class)
+@EmbeddedKafka(topics = ["privat-soknadInnsendt-v1-default", "privat-soknadInnsendt-processingEventLog-v1-default", "privat-soknadInnsendt-messages-v1-default"])
+class AdminInterfaceTests {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
 
-	@MockBean
-	private lateinit var kafkaPublisherMock: KafkaPublisher
+	@Value("\${spring.embedded.kafka.brokers}")
+	private val kafkaBrokers: String? = null
 
 	@MockBean
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
 
-	@Autowired
-	private lateinit var archiverService: ArchiverService
+	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 
 	@Autowired
-	private lateinit var fileservice: FileserviceInterface
-
-	private val appConfiguration = createAppConfiguration()
-	private val scheduler = mock<Scheduler>()
+	private lateinit var appConfiguration: AppConfiguration
+	@Autowired
 	private lateinit var taskListService: TaskListService
+	@Autowired
 	private lateinit var adminInterface: AdminInterface
 
-	private val maxNumberOfAttempts = appConfiguration.config.retryTime.size
+	private var maxNumberOfAttempts = 0
+	private val keysSentToKafka = mutableListOf<String>()
 
 	@BeforeEach
 	fun setup() {
 		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
 
-		taskListService = TaskListService(archiverService, appConfiguration, scheduler)
-		adminInterface = AdminInterface(taskListService, fileservice)
+		assertEquals(kafkaBrokers, appConfiguration.kafkaConfig.servers, "The Kafka bootstrap server property is misconfigured!")
 
-		setupKafkaTopologyTestDriver()
-			.withAppConfiguration(appConfiguration)
-			.withTaskListService(taskListService)
-			.withKafkaPublisher(kafkaPublisherMock)
-			.runScheduledTasksOnScheduling(scheduler)
-			.putProcessingEventLogsOnTopic()
-			.setup()
+		kafkaProducer = KafkaProducer(kafkaConfigMap())
+
+		maxNumberOfAttempts = appConfiguration.config.retryTime.size
 	}
 
 	@AfterEach
 	fun teardown() {
 		stopMockedNetworkServices()
-		closeTestDriver()
-		MockSchemaRegistry.dropScope(schemaRegistryScope)
 
-		reset(kafkaPublisherMock)
-		clearInvocations(kafkaPublisherMock)
+		keysSentToKafka.forEach { taskListService.finishTask(it) }
+		keysSentToKafka.clear()
 	}
 
 
@@ -90,14 +93,13 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 		mockFilestorageIsDown()
 		mockJoarkIsWorking()
 
-		putDataOnInputTopic(key, soknadarkivschema)
-		verifyProcessingEvents(key, maxNumberOfAttempts, STARTED)
-		loopAndVerify(maxNumberOfAttempts + 1, { getTaskListCount(key) })
+		putDataOnTopic(key, soknadarkivschema)
+		loopAndVerify(maxNumberOfAttempts, { getTaskListCount(key) })
 
 		mockFilestorageIsWorking(fileUuid)
 		adminInterface.rerun(key)
 
-		loopAndVerify(0, { taskListService.listTasks().size })
+		loopAndVerify(0, { taskListService.listTasks(key).size })
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 	}
 
@@ -109,14 +111,14 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 		mockFilestorageIsWorking(fileUuid)
 		mockJoarkIsWorking()
 
-		putDataOnInputTopic(key, soknadarkivschema)
-		loopAndVerify(0, { taskListService.listTasks().size })
+		putDataOnTopic(key, soknadarkivschema)
+		loopAndVerify(0, { taskListService.listTasks(key).size })
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 
 		adminInterface.rerun(key)
 
 		TimeUnit.SECONDS.sleep(1)
-		loopAndVerify(0, { taskListService.listTasks().size })
+		loopAndVerify(0, { taskListService.listTasks(key).size })
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 	}
 
@@ -128,38 +130,125 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 		mockFilestorageIsWorking(fileUuid)
 		mockJoarkIsWorking(10_000)
 
-		putDataOnInputTopic(key, soknadarkivschema)
+		putDataOnTopic(key, soknadarkivschema)
 
 		val timeBeforeRerun = System.currentTimeMillis()
 		adminInterface.rerun(key)
 
-		loopAndVerify(1, { taskListService.listTasks().size })
-		assertTrue(System.currentTimeMillis() - timeBeforeRerun < 100, "This operation should not take a long time to perform")
+		val timeTaken = System.currentTimeMillis() - timeBeforeRerun
+		assertTrue(timeTaken < 200, "This operation should spawn a new thread and should return immediately but took $timeTaken ms")
+		loopAndVerify(1, { taskListService.listTasks(key).size })
 	}
 
 
 	@Test
+	fun `No events when requesting allEvents`() {
+		val events = adminInterface.allEvents()
+
+		assertTrue(events.isEmpty())
+	}
+
+	@Test
 	fun `Can request allEvents`() {
-		adminInterface.allEvents()
-		//TODO: Make proper test
+		val key0 = UUID.randomUUID().toString()
+		val key1 = UUID.randomUUID().toString()
+		archiveOneEventSuccessfullyAndFailOne(key0, key1)
+
+		val eventsAfter = {
+			adminInterface.allEvents()
+				.filter { it.innsendingKey == key0 || it.innsendingKey == key1 }
+				.count()
+		}
+
+		val numberOfInputs = 2
+		val numberOfMessages = 1 + maxNumberOfAttempts // 1 "ok" message, a number of mocked exceptions
+		val numberOfProcessingEvents = 4 + 1 + 5 // 4 for the first event, 1 received for the second, 5 attempts at starting
+		loopAndVerifyAtLeast(numberOfInputs + numberOfMessages + numberOfProcessingEvents, eventsAfter)
 	}
 
 	@Test
 	fun `Can request unfinishedEvents`() {
-		adminInterface.unfinishedEvents()
-		//TODO: Make proper test
+		val key0 = UUID.randomUUID().toString()
+		val key1 = UUID.randomUUID().toString()
+		archiveOneEventSuccessfullyAndFailOne(key0, key1)
+
+		val eventsAfter = {
+			adminInterface.unfinishedEvents()
+				.filter { it.innsendingKey == key0 || it.innsendingKey == key1 }
+				.count()
+		}
+
+		val numberOfInputs = 1
+		val numberOfMessages = maxNumberOfAttempts // mocked exceptions
+		val numberOfProcessingEvents = 1 + 5 // 1 received for the second event, 5 attempts at starting
+		loopAndVerifyAtLeast(numberOfInputs + numberOfMessages + numberOfProcessingEvents, eventsAfter)
 	}
 
 	@Test
 	fun `Can request specific event`() {
-		adminInterface.specificEvent(UUID.randomUUID().toString())
-		//TODO: Make proper test
+		val key0 = UUID.randomUUID().toString()
+		val key1 = UUID.randomUUID().toString()
+		archiveOneEventSuccessfullyAndFailOne(key0, key1)
+
+		val events = adminInterface.specificEvent(key0)
+
+		val numberOfInputs = 1
+		val numberOfMessages = 1 // "ok" message
+		val numberOfProcessingEvents = 4
+		assertEquals(numberOfInputs + numberOfMessages + numberOfProcessingEvents, events.size)
+	}
+
+	@Test
+	fun `Exception returned if illegal messageId is given to eventContent`() {
+		assertThrows<NoSuchElementException> {
+			adminInterface.eventContent("illegal key")
+		}
 	}
 
 	@Test
 	fun `Can request eventContent`() {
-		adminInterface.eventContent(UUID.randomUUID().toString())
-		//TODO: Make proper test
+		val unfinishedEventsBefore = adminInterface.unfinishedEvents()
+		val (_, soknadsarkivschema) = archiveOneEventSuccessfullyAndFailOne()
+
+		val unfinishedEvents = adminInterface.unfinishedEvents().filter { !unfinishedEventsBefore.contains(it) }
+		val inputEvent = unfinishedEvents.last { it.type == "INPUT" }
+		val messageEvent = unfinishedEvents.last { it.type.contains("Exception") }
+		val processingEvent = unfinishedEvents.last { it.type == "STARTED" }
+
+		val inputEventContent = adminInterface.eventContent(inputEvent.messageId)
+		val messageEventContent = adminInterface.eventContent(messageEvent.messageId)
+		val processingEventContent = adminInterface.eventContent(processingEvent.messageId)
+
+		assertEquals(soknadsarkivschema.toString(), inputEventContent)
+		assertEquals("{\"type\": \"STARTED\"}", processingEventContent)
+		assertTrue(messageEventContent.contains("Exception"))
+	}
+
+	@Test
+	fun `Can search for events`() {
+		val fileUuid = UUID.randomUUID().toString()
+		val key0 = UUID.randomUUID().toString()
+		val key1 = UUID.randomUUID().toString()
+		val soknadarkivschema0 = createSoknadarkivschema(fileUuid)
+		val soknadarkivschema1 = SoknadarkivschemaBuilder()
+				.withBehandlingsid(UUID.randomUUID().toString())
+				.withBehandlingsid("Loussa")
+				.withMottatteDokumenter(MottattDokumentBuilder()
+					.withMottatteVarianter(listOf(MottattVariantBuilder().withUuid(fileUuid).build()))
+				.build())
+			.build()
+		archiveOneEventSuccessfullyAndFailOne(key0, key1, soknadarkivschema0, soknadarkivschema1)
+
+		val events0 = adminInterface.search("Loussa")
+		assertEquals(1, events0.size)
+		assertEquals(key1, events0[0].innsendingKey)
+
+		val events1 = adminInterface.search("phrase with no match")
+		assertEquals(0, events1.size)
+
+		val events2 = adminInterface.search("Lo.*sa")
+		assertEquals(1, events2.size)
+		assertEquals(key1, events2[0].innsendingKey)
 	}
 
 
@@ -171,7 +260,7 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 		mockFilestorageIsWorking(fileUuid)
 		mockJoarkIsWorking()
 
-		putDataOnInputTopic(key, soknadarkivschema)
+		putDataOnTopic(key, soknadarkivschema)
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 
 
@@ -180,19 +269,19 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 		}
 	}
 
+
 	@Test
 	fun `Can query if file exists`() {
-		mockFilestorageIsDown()
-		mockJoarkIsWorking()
-
 		val key = UUID.randomUUID().toString()
 		val fileUuidInFilestorage = UUID.randomUUID().toString()
 		val fileUuidNotInFilestorage = UUID.randomUUID().toString()
 
 		val soknadarkivschema = createSoknadarkivschema(listOf(fileUuidInFilestorage, fileUuidNotInFilestorage))
+		mockFilestorageIsDown()
+		mockJoarkIsWorking()
 
-		putDataOnInputTopic(key, soknadarkivschema)
-		verifyProcessingEvents(key, maxNumberOfAttempts, STARTED)
+		putDataOnTopic(key, soknadarkivschema)
+		verifyNumberOfStartedEvents(key, maxNumberOfAttempts)
 
 
 		mockFilestorageIsWorking(listOf(fileUuidInFilestorage to "filecontent", fileUuidNotInFilestorage to null))
@@ -207,21 +296,72 @@ class AdminInterfaceTests : TopologyTestDriverTests()  {
 	}
 
 
-	private fun verifyProcessingEvents(key: String, expectedCount: Int, eventType: EventTypes) { // TODO: Duplicated method
-		val type = ProcessingEvent(eventType)
-		val getCount = {
-			mockingDetails(kafkaPublisherMock)
-				.invocations.stream()
-				.filter { it.arguments[0] == key }
-				.filter { it.arguments[1] == type }
-				.count()
-				.toInt()
-		}
+	private fun archiveOneEventSuccessfullyAndFailOne(key0: String = UUID.randomUUID().toString(),
+																										key1: String = UUID.randomUUID().toString()): Pair<Soknadarkivschema, Soknadarkivschema> {
+		val fileUuid = UUID.randomUUID().toString()
+		val soknadarkivschema0 = createSoknadarkivschema(fileUuid)
+		val soknadarkivschema1 = createSoknadarkivschema(fileUuid)
 
-		val finalCheck = { verify(kafkaPublisherMock, times(expectedCount)).putProcessingEventOnTopic(eq(key), eq(type), any()) }
-		loopAndVerify(expectedCount, getCount, finalCheck)
+		archiveOneEventSuccessfullyAndFailOne(key0, key1, soknadarkivschema0, soknadarkivschema1)
+
+		return soknadarkivschema0 to soknadarkivschema1
 	}
 
-	private fun getTaskListCount(key: String) = getTaskListPair(key).first
-	private fun getTaskListPair (key: String) = taskListService.listTasks()[key] ?: error("Expected to find $key in map")
+	private fun archiveOneEventSuccessfullyAndFailOne(key0: String, key1: String, soknadarkivschema0: Soknadarkivschema, soknadarkivschema1: Soknadarkivschema) {
+		val uuidsAndResponses = listOf(
+				soknadarkivschema0.getMottatteDokumenter().flatMap { it.getMottatteVarianter().map { variant -> variant.getUuid() } },
+				soknadarkivschema1.getMottatteDokumenter().flatMap { it.getMottatteVarianter().map { variant -> variant.getUuid() } }
+			)
+			.flatten()
+			.distinct()
+			.map { fileUuid -> fileUuid to "mocked-response-content-for-$fileUuid" }
+
+		mockFilestorageIsWorking(uuidsAndResponses)
+		mockJoarkIsWorking()
+
+		putDataOnTopic(key0, soknadarkivschema0)
+		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
+
+		mockJoarkIsDown()
+
+		putDataOnTopic(key1, soknadarkivschema1)
+		verifyNumberOfStartedEvents(key1, maxNumberOfAttempts)
+	}
+
+
+	private fun verifyNumberOfStartedEvents(key: String, expectedCount: Int) {
+
+		val eventCounter = {
+			adminInterface.specificEvent(key)
+				.filter { it.type == STARTED.name }
+				.count()
+		}
+		loopAndVerifyAtLeast(expectedCount, eventCounter)
+	}
+
+	private fun getTaskListCount(key: String) = taskListService.listTasks()[key]?.first ?: -1
+
+
+	private fun putDataOnTopic(key: String, value: Soknadarkivschema, headers: Headers = RecordHeaders()): RecordMetadata {
+		keysSentToKafka.add(key)
+
+		val topic = appConfiguration.kafkaConfig.inputTopic
+
+		val producerRecord = ProducerRecord(topic, key, value)
+		headers.add(MESSAGE_ID, UUID.randomUUID().toString().toByteArray())
+		headers.forEach { producerRecord.headers().add(it) }
+
+		return kafkaProducer
+			.send(producerRecord)
+			.get(1000, TimeUnit.MILLISECONDS) // Blocking call
+	}
+
+	private fun kafkaConfigMap(): MutableMap<String, Any> {
+		return HashMap<String, Any>().also {
+			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = "mock://mocked-scope"
+			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers
+			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
+			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java
+		}
+	}
 }

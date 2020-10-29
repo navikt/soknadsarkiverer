@@ -22,12 +22,13 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_INPUT_TOPIC" to "privat-soknadInnsendt-v1-default",
 	"KAFKA_PROCESSING_TOPIC" to "privat-soknadInnsendt-processingEventLog-v1-default",
 	"KAFKA_MESSAGE_TOPIC" to "privat-soknadInnsendt-messages-v1-default",
+	"MAX_MESSAGE_SIZE" to (1024 * 1024 * 300).toString(),
 
 	"JOARK_HOST" to "http://localhost:8092",
 	"JOARK_URL" to "/rest/journalpostapi/v1/journalpost",
 	"FILESTORAGE_HOST" to "http://localhost:9042",
 	"FILESTORAGE_URL" to "/filer?ids=",
-	"SHARED_PASSORD" to "password",
+	"SHARED_PASSWORD" to "password",
 
 	"CLIENTID" to "",
 	"CLIENTSECRET" to ""
@@ -35,7 +36,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 ))
 
 private val secondsBetweenRetries = listOf(1, 25, 60, 120, 600)   // As many retries will be attempted as there are elements in the list.
-private val secondsBetweenRetriesForTests = listOf(0, 0, 0, 0, 0) // As many retries will be attempted as there are elements in the list.
+private val secondsBetweenRetriesForTests = listOf(1, 1, 1, 1, 1) // As many retries will be attempted as there are elements in the list.
 
 
 val appConfig =
@@ -70,12 +71,13 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val joarkHost: String = readFileAsText("/var/run/secrets/nais.io/kv/JOARK_HOST", "JOARK_HOST".configProperty()),
 		val joarkUrl: String = "JOARK_URL".configProperty(),
 		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "SOKNADSARKIVERER_USERNAME".configProperty()),
-		val sharedPassword: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "SHARED_PASSORD".configProperty()),
+		val sharedPassword: String = readFileAsText("/var/run/secrets/nais.io/kv/SHARED_PASSWORD","SHARED_PASSWORD".configProperty()),
 		val clientsecret: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "CLIENTSECRET".configProperty()),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
 		val retryTime: List<Int> = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
-		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty()
+		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty(),
+		val maxMessageSize: Int = "MAX_MESSAGE_SIZE".configProperty().toInt()
 	)
 }
 

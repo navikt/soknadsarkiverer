@@ -4,6 +4,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import no.nav.security.token.support.core.api.Protected
 import no.nav.security.token.support.core.api.Unprotected
+import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilestorageExistenceResponse
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
@@ -14,7 +15,10 @@ import org.springframework.web.server.ResponseStatusException
 
 @RestController
 @RequestMapping("/admin")
-class AdminInterface(private val taskListService: TaskListService, private val fileService: FileserviceInterface) {
+class AdminInterface(private val taskListService: TaskListService,
+										 private val fileService: FileserviceInterface,
+										 private val joarkService: JournalpostClientInterface,
+										 private val kafkaAdminService: KafkaAdminService) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@PostMapping("/rerun/{key}")
@@ -26,27 +30,27 @@ class AdminInterface(private val taskListService: TaskListService, private val f
 
 	@GetMapping("/kafka/events/allEvents")
 	@Unprotected
-	fun allEvents() {
-		//TODO("Not yet implemented")
-	}
+	fun allEvents() = kafkaAdminService.getAllEvents()
 
 	@GetMapping("/kafka/events/unfinishedEvents")
 	@Unprotected
-	fun unfinishedEvents() {
-		//TODO("Not yet implemented")
-	}
+	fun unfinishedEvents() = kafkaAdminService.getUnfinishedEvents()
 
 	@GetMapping("/kafka/events/{key}")
 	@Unprotected
-	fun specificEvent(@PathVariable key: String) {
-		//TODO("Not yet implemented")
-	}
+	fun specificEvent(@PathVariable key: String) = kafkaAdminService.getAllEventsForKey(key)
 
-	@GetMapping("/kafka/events/eventContent/{key}")
+	@GetMapping("/kafka/events/eventContent/{messageId}")
 	@Unprotected
-	fun eventContent(@PathVariable key: String) {
-		//TODO("Not yet implemented")
-	}
+	fun eventContent(@PathVariable messageId: String) = kafkaAdminService.content(messageId)
+
+	@GetMapping("/kafka/events/search/{searchPhrase}")
+	@Unprotected
+	fun search(@PathVariable searchPhrase: String) = kafkaAdminService.search(searchPhrase.toRegex())
+
+	@GetMapping("/joark/ping")
+	@Unprotected
+	fun joarkPing() = joarkService.ping()
 
 	@GetMapping("/fillager/filesExist/{key}")
 	@Protected

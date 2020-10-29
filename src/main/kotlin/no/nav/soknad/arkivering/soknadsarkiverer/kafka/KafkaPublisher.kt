@@ -14,7 +14,9 @@ import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.springframework.stereotype.Service
+import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.collections.HashMap
 
 @Service
 class KafkaPublisher(private val appConfiguration: AppConfiguration) {
@@ -37,11 +39,12 @@ class KafkaPublisher(private val appConfiguration: AppConfiguration) {
 																 kafkaProducer: KafkaProducer<String, T>): RecordMetadata {
 
 		val producerRecord = ProducerRecord(topic, key, value)
+		headers.add(MESSAGE_ID, UUID.randomUUID().toString().toByteArray())
 		headers.forEach { h -> producerRecord.headers().add(h) }
 
 		return kafkaProducer
 			.send(producerRecord)
-			.get(1000, TimeUnit.MILLISECONDS) // Blocking call
+			.get(9000, TimeUnit.MILLISECONDS) // Blocking call
 	}
 
 	private fun kafkaConfigMap(): MutableMap<String, Any> {
