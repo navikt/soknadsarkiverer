@@ -25,10 +25,14 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 	fun archive(key: String, data: Soknadarkivschema) {
 		try {
 			createProcessingEvent(key, STARTED)
+		} catch (e: Exception) {
+			createMessage(key, createExceptionMessage(e))
+			throw e
+		}
 
-			val files = filestorageService.getFilesFromFilestorage(key, data)
-
+		try {
 			if (busyInc(appConfiguration)) {
+				val files = filestorageService.getFilesFromFilestorage(key, data)
 				val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
 				logger.info("${key}: Opprettet journalpostId=${journalpostId} for behandlingsid=${data.getBehandlingsid()}")
 				createProcessingEvent(key, ARCHIVED)
@@ -38,8 +42,8 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 				createProcessingEvent(key, FINISHED)
 				createMessage(key, "ok")
 			}
-
 		} catch (e: Exception) {
+			busyDec(appConfiguration)
 			createMessage(key, createExceptionMessage(e))
 			throw e
 		}

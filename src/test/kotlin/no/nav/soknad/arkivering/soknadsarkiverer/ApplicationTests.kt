@@ -11,6 +11,7 @@ import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.*
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.stop
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.Metrics
@@ -33,6 +34,7 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.timerTask
 import kotlin.properties.Delegates
 
 @ActiveProfiles("test")
@@ -69,6 +71,8 @@ class ApplicationTests: TopologyTestDriverTests() {
 		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
 
 		maxNumberOfAttempts = appConfiguration.config.retryTime.size
+		appConfiguration.state.busyCounter=0
+		appConfiguration.state.stopping=false
 
 		setupKafkaTopologyTestDriver()
 			.withAppConfiguration(appConfiguration)
@@ -282,6 +286,23 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyMessageStartsWith(0, "ok")
 	}
 
+
+	@Test
+	fun `When StopDelay hook is called messages not sent to Joark`() {
+		mockFilestorageIsWorking(fileUuid)
+		mockJoarkIsWorking()
+		val soknadsarkivschema = createSoknadarkivschema()
+
+		stop(appConfiguration)
+		putDataOnKafkaTopic(soknadsarkivschema)
+
+		verifyProcessingEvents(1, RECEIVED)
+		verifyProcessingEvents(1, STARTED)
+		verifyProcessingEvents(0, ARCHIVED)
+		verifyProcessingEvents(0, FINISHED)
+		verifyMockedPostRequests(0, appConfiguration.config.joarkUrl)
+		verifyDeleteRequestsToFilestorage(0)
+	}
 
 	private fun verifyMessageStartsWith(expectedCount: Int, message: String, key: String = this.key) {
 		val getCount = {
