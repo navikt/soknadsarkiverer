@@ -83,7 +83,8 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	}
 
 	private fun filterSoknadsarkivschemaThatAreNull(key: String, soknadsarkiveschema: Soknadarkivschema?): Boolean {
-		logger.error("$key: Soknadsarkivschema is null!")
+		if (soknadsarkiveschema == null)
+			logger.error("$key: Soknadsarkivschema is null!")
 		return soknadsarkiveschema != null
 	}
 
