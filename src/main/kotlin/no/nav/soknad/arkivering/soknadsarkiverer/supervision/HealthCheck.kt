@@ -35,10 +35,11 @@ class HealthCheck(private val appConfiguration: AppConfiguration) {
 		logger.info("Get ready for shutdown")
 		stop(appConfiguration)
 		while (isBusy(appConfiguration)) {
+			logger.info("Waiting for shutdown")
 			val timer = Timer()
 			timer.schedule(timerTask { }, 1000)
 		}
-		logger.info("Ready for shutdown")
+		logger.info("POD is ready for shutdown")
 	}
 
 
