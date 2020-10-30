@@ -17,7 +17,6 @@ import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.*
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.springframework.beans.factory.annotation.Autowired
@@ -30,7 +29,6 @@ import org.springframework.context.annotation.Import
 import org.springframework.kafka.test.context.EmbeddedKafka
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.web.server.ResponseStatusException
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -253,7 +251,7 @@ class AdminInterfaceTests {
 
 
 	@Test
-	fun `Querying file that does not exist throws 404`() {
+	fun `Querying file that does not exist return message`() {
 		val key = UUID.randomUUID().toString()
 		val fileUuid = UUID.randomUUID().toString()
 		val soknadarkivschema = createSoknadarkivschema(fileUuid)
@@ -264,9 +262,12 @@ class AdminInterfaceTests {
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 
 
-		assertThrows<ResponseStatusException> {
-			adminInterface.filesExists(UUID.randomUUID().toString())
-		}
+		val nonExistingKey = "non-existing-key"
+		val response = adminInterface.filesExists(nonExistingKey)
+
+		assertEquals(1, response.size)
+		assertEquals(nonExistingKey, response[0].id)
+		assertEquals("$nonExistingKey: Failed to find file ids for given key. The task is probably finished.", response[0].status)
 	}
 
 
