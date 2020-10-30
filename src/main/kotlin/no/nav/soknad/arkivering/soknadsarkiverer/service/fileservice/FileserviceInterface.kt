@@ -4,6 +4,7 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 
 interface FileserviceInterface {
+	fun ping(): String
 
 	fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): List<FilElementDto>
 

@@ -19,6 +19,14 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
+	override fun ping() = webClient
+			.get()
+			.uri(appConfiguration.config.filestorageHost + "/isAlive")
+			.retrieve()
+			.bodyToMono(String::class.java)
+			.block()!!
+
+
 	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): List<FilElementDto> {
 		val timer = Metrics.filestorageGetLatencyStart()
 		try {
