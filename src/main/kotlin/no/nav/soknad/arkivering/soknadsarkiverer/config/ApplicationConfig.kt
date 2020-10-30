@@ -50,7 +50,7 @@ private fun String.configProperty(): String = appConfig[Key(this, stringType)]
 
 fun readFileAsText(fileName: String, default: String = "") = try { File(fileName).readText(Charsets.UTF_8) } catch (e: Exception) { default }
 
-data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val config: Config = Config()) {
+data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val config: Config = Config(), val state: State = State() ) {
 	data class KafkaConfig(
 		val version: String = "APP_VERSION".configProperty(),
 		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "SOKNADSARKIVERER_USERNAME".configProperty()),
@@ -79,6 +79,13 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty(),
 		val maxMessageSize: Int = "MAX_MESSAGE_SIZE".configProperty().toInt()
 	)
+
+	data class State(
+		var up: Boolean = false,
+		var ready: Boolean = false,
+		var stopping: Boolean = false,
+		var busyCounter: Int = 0
+	)
 }
 
 @org.springframework.context.annotation.Configuration
@@ -90,7 +97,34 @@ class ConfigConfig(private val env: ConfigurableEnvironment) {
 	fun appConfiguration(): AppConfiguration {
 		val appConfiguration = AppConfiguration()
 		env.setActiveProfiles(appConfiguration.config.profile)
+		appConfiguration.state.ready = true
+		appConfiguration.state.up = true
 
 		return appConfiguration
 	}
+}
+
+@Synchronized
+fun busyInc(appConfiguration: AppConfiguration): Boolean {
+	if (appConfiguration.state.stopping) {
+		return false
+	} else {
+		appConfiguration.state.busyCounter++
+		return true
+	}
+}
+
+@Synchronized
+fun busyDec(appConfiguration: AppConfiguration) {
+	if (appConfiguration.state.busyCounter > 0) appConfiguration.state.busyCounter--
+}
+
+@Synchronized
+fun stop(appConfiguration: AppConfiguration) {
+	appConfiguration.state.stopping = true
+}
+
+@Synchronized
+fun isBusy(appConfiguration: AppConfiguration): Boolean {
+	return (appConfiguration.state.busyCounter <= 0)
 }

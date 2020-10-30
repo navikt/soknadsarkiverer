@@ -1,13 +1,21 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
 import no.nav.security.token.support.core.api.Unprotected
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.isBusy
+import no.nav.soknad.arkivering.soknadsarkiverer.config.stop
+import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.util.*
+import kotlin.concurrent.timerTask
 
 @RestController
 @RequestMapping(value = ["/internal"])
-class HealthCheck {
+class HealthCheck(private val appConfiguration: AppConfiguration) {
+
+	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@GetMapping("/isAlive")
 	@Unprotected
@@ -20,4 +28,19 @@ class HealthCheck {
 	@GetMapping("/isReady")
 	@Unprotected
 	fun isReady() = "Ready for actions"
+
+	@GetMapping("/stop")
+	@Unprotected
+	fun stop() {
+		logger.info("Get ready for shutdown")
+		stop(appConfiguration)
+		while (isBusy(appConfiguration)) {
+			val timer = Timer()
+			timer.schedule(timerTask { }, 1000)
+		}
+		logger.info("Ready for shutdown")
+	}
+
+
+
 }

@@ -45,6 +45,7 @@ spec:
         kvPath: /kv/preprod/fss/soknadsarkiverer/environment
       - mountPath: /var/run/secrets/nais.io/appdynamics
         kvPath: /apikey/appdynamics/dev
+  preStopHookPath: /internal/stop
 
   env:
     - name: APP_VERSION
