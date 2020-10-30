@@ -17,6 +17,7 @@ spec:
     path: /internal/isReady
     initialDelay: 100
     timeout: 20
+  preStopHookPath: /internal/stop
   prometheus:
     enable: true
     path: /internal/prometheus
@@ -45,7 +46,6 @@ spec:
         kvPath: /kv/preprod/fss/soknadsarkiverer/environment
       - mountPath: /var/run/secrets/nais.io/appdynamics
         kvPath: /apikey/appdynamics/dev
-  preStopHookPath: /internal/stop
 
   env:
     - name: APP_VERSION
