@@ -1,5 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import no.nav.security.token.support.core.api.Unprotected
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.isBusy
@@ -34,16 +36,16 @@ class HealthCheck(private val appConfiguration: AppConfiguration) {
 	fun stop() {
 		logger.info("Get ready for shutdown")
 		stop(appConfiguration)
-		while (isBusy(appConfiguration)) {
-			logger.info("Waiting for shutdown")
-			val timer = Timer()
-			timer.schedule(timerTask { }, 1000)
-		}
+		ventTilFerdigMedArkivering()
 		logger.info("POD is ready for shutdown")
-		val timer = Timer()
-		timer.schedule(timerTask { }, 1000)
 	}
 
 
+	private fun ventTilFerdigMedArkivering() {
+		while (isBusy(appConfiguration)) {
+			logger.info("Waiting for shutdown")
+			Thread.sleep(1000)
+		}
+	}
 
 }
