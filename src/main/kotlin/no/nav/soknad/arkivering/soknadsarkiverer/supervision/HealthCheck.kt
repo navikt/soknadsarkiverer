@@ -2,6 +2,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import no.nav.security.token.support.core.api.Unprotected
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.isBusy
@@ -10,8 +11,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import java.util.*
-import kotlin.concurrent.timerTask
 
 @RestController
 @RequestMapping(value = ["/internal"])
@@ -33,19 +32,15 @@ class HealthCheck(private val appConfiguration: AppConfiguration) {
 
 	@GetMapping("/stop")
 	@Unprotected
-	fun stop() {
-		logger.info("Get ready for shutdown")
-		stop(appConfiguration)
-		ventTilFerdigMedArkivering()
-		logger.info("POD is ready for shutdown")
-	}
-
-
-	private fun ventTilFerdigMedArkivering() {
-		while (isBusy(appConfiguration)) {
-			logger.info("Waiting for shutdown")
-			Thread.sleep(1000)
+	fun stop() = runBlocking {
+		launch {
+			while (isBusy(appConfiguration)) {
+				logger.info("Waiting for shutdown")
+				delay(1000L)
+			}
+			logger.info("POD is ready for shutdown")
 		}
+		logger.info("Get ready for shutdown")
 	}
 
 }
