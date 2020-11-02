@@ -6,7 +6,6 @@ import kotlinx.coroutines.runBlocking
 import no.nav.security.token.support.core.api.Unprotected
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.isBusy
-import no.nav.soknad.arkivering.soknadsarkiverer.config.stop
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -36,7 +35,7 @@ class HealthCheck(private val appConfiguration: AppConfiguration) {
 		launch {
 			while (isBusy(appConfiguration)) {
 				logger.info("Waiting for shutdown")
-				delay(1000L)
+				delay(2000L)
 			}
 			logger.info("POD is ready for shutdown")
 		}

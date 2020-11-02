@@ -126,5 +126,5 @@ fun stop(appConfiguration: AppConfiguration) {
 
 @Synchronized
 fun isBusy(appConfiguration: AppConfiguration): Boolean {
-	return (appConfiguration.state.busyCounter <= 0)
+	return (appConfiguration.state.busyCounter > 0)
 }
