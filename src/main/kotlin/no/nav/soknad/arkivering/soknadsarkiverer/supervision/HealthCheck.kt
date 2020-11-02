@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
+import io.swagger.v3.oas.annotations.Hidden
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -18,14 +19,17 @@ class HealthCheck(private val appConfiguration: AppConfiguration) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
+	@Hidden
 	@GetMapping("/isAlive")
 	@Unprotected
 	fun isAlive() = "Ok"
 
+	@Hidden
 	@GetMapping("/ping")
 	@Unprotected
 	fun ping() = "pong"
 
+	@Hidden
 	@GetMapping("/isReady")
 	@Unprotected
 	fun isReady() = "Ready for actions"
