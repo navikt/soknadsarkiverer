@@ -16,6 +16,12 @@ management:
       prometheus:
         enabled: true
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+
 ---
 spring:
   profiles: test
