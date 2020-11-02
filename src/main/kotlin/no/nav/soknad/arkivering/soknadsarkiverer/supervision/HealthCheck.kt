@@ -40,6 +40,8 @@ class HealthCheck(private val appConfiguration: AppConfiguration) {
 			timer.schedule(timerTask { }, 1000)
 		}
 		logger.info("POD is ready for shutdown")
+		val timer = Timer()
+		timer.schedule(timerTask { }, 1000)
 	}
 
 
