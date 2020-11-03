@@ -49,7 +49,7 @@ class AdminInterface(private val taskListService: TaskListService,
 	fun search(@PathVariable searchPhrase: String) = kafkaAdminService.search(searchPhrase.toRegex())
 
 	@GetMapping("/joark/ping")
-	@Unprotected
+	//@Unprotected
 	fun joarkPing() = joarkService.ping()
 
 	@GetMapping("/fillager/filesExist/{key}")
