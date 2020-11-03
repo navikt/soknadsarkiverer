@@ -22,38 +22,30 @@ class AdminInterface(private val taskListService: TaskListService,
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@PostMapping("/rerun/{key}")
-	@Unprotected
 	fun rerun(@PathVariable key: String) {
 		logger.info("$key: Performing forced rerun")
 		GlobalScope.launch { taskListService.pauseAndStart(key) }
 	}
 
 	@GetMapping("/kafka/events/allEvents")
-	@Unprotected
 	fun allEvents() = kafkaAdminService.getAllEvents()
 
 	@GetMapping("/kafka/events/unfinishedEvents")
-	@Unprotected
 	fun unfinishedEvents() = kafkaAdminService.getUnfinishedEvents()
 
 	@GetMapping("/kafka/events/{key}")
-	@Unprotected
 	fun specificEvent(@PathVariable key: String) = kafkaAdminService.getAllEventsForKey(key)
 
 	@GetMapping("/kafka/events/eventContent/{messageId}")
-	@Unprotected
 	fun eventContent(@PathVariable messageId: String) = kafkaAdminService.content(messageId)
 
 	@GetMapping("/kafka/events/search/{searchPhrase}")
-	@Unprotected
 	fun search(@PathVariable searchPhrase: String) = kafkaAdminService.search(searchPhrase.toRegex())
 
 	@GetMapping("/joark/ping")
-	//@Unprotected
 	fun joarkPing() = joarkService.ping()
 
 	@GetMapping("/fillager/filesExist/{key}")
-	@Protected
 	fun filesExists(@PathVariable key: String): List<FilestorageExistenceResponse> {
 		val soknadarkivschema = taskListService.getSoknadarkivschema(key)
 		if (soknadarkivschema == null) {
