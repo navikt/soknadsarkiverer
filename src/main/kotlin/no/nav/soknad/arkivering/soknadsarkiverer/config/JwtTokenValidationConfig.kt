@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
 
 @EnableOAuth2Client(cacheEnabled = true)
-@EnableJwtTokenValidation
+@EnableJwtTokenValidation(ignore = ["/admin"])
 @Profile("dev | prod")
 @Configuration
 class SecurityConfiguration
