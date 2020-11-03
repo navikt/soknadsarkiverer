@@ -22,6 +22,7 @@ class RestSecurityConfig(private val config: AppConfiguration) : WebSecurityConf
 			.antMatchers(HttpMethod.POST, "/login", "/register").permitAll()
 			.antMatchers("/maintenance").authenticated()
 			.antMatchers("/admin").hasAnyRole("USER", "ADMIN")
+			.antMatchers("/admin").authenticated()
 			.and()
 			.httpBasic()
 			.and()
