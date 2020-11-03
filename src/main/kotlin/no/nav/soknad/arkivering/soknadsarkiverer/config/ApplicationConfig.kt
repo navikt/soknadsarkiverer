@@ -30,6 +30,9 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"FILESTORAGE_URL" to "/filer?ids=",
 	"SHARED_PASSWORD" to "password",
 
+	"ADMIN_USER" to "admin",
+	"ADMIN_USER_PASSWORD" to "password",
+
 	"CLIENTID" to "",
 	"CLIENTSECRET" to ""
 
@@ -77,7 +80,9 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
 		val retryTime: List<Int> = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
 		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty(),
-		val maxMessageSize: Int = "MAX_MESSAGE_SIZE".configProperty().toInt()
+		val maxMessageSize: Int = "MAX_MESSAGE_SIZE".configProperty().toInt(),
+		val adminUser: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER","ADMIN_USER".configProperty()),
+		val adminUserPassword: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER_PASSWORD","ADMIN_USER_PASSWORD".configProperty())
 	)
 }
 

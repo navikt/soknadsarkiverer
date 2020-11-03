@@ -21,6 +21,7 @@ class RestSecurityConfig(private val config: AppConfiguration) : WebSecurityConf
 			.requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
 			.antMatchers(HttpMethod.POST, "/login", "/register").permitAll()
 			.antMatchers("/maintenance").authenticated()
+			.antMatchers("/admin").hasAnyRole("USER", "ADMIN")
 			.and()
 			.httpBasic()
 			.and()
@@ -35,6 +36,10 @@ class RestSecurityConfig(private val config: AppConfiguration) : WebSecurityConf
 		auth.inMemoryAuthentication()
 			.withUser(user)
 			.password("{noop}$password")
-			.roles("ADMIN")
+			.roles("USER")
+			.and()
+			.withUser(config.config.adminUser)
+			.password("{noop}${config.config.adminUserPassword}")
+			.roles("USER")
 	}
 }
