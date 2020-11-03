@@ -46,7 +46,7 @@ class AdminInterface(private val kafkaAdminService: KafkaAdminService) {
 			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
 	@GetMapping("/kafka/events/allEvents/before/{timestamp}")
 	@Unprotected
-	fun allEventsBefore(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long): List<KafkaEvent> = TODO("Not implemented yet")
+	fun allEventsBefore(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long): List<KafkaEvent> = emptyList() //TODO("Not implemented yet")
 
 
 	@Operation(summary = "Lists $maxNumberOfEventsReturned events from all topics that happened after a given timestamp.", tags = ["events"])
@@ -59,7 +59,7 @@ class AdminInterface(private val kafkaAdminService: KafkaAdminService) {
 			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
 	@GetMapping("/kafka/events/allEvents/after/{timestamp}")
 	@Unprotected
-	fun allEventsAfter(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long): List<KafkaEvent> = TODO("Not implemented yet")
+	fun allEventsAfter(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long): List<KafkaEvent> = emptyList() // TODO("Not implemented yet")
 
 
 	@Operation(summary = "Lists the $maxNumberOfEventsReturned most recent events from all topics, that have not been " +
@@ -85,7 +85,7 @@ class AdminInterface(private val kafkaAdminService: KafkaAdminService) {
 			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
 	@GetMapping("/kafka/events/unfinishedEvents/before/{timestamp}")
 	@Unprotected
-	fun unfinishedEventsBefore(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long): List<KafkaEvent> = TODO("Not implemented yet")
+	fun unfinishedEventsBefore(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long): List<KafkaEvent> = emptyList() //TODO("Not implemented yet")
 
 
 	@Operation(summary = "Lists $maxNumberOfEventsReturned events from all topics that happened after a given " +
@@ -98,7 +98,7 @@ class AdminInterface(private val kafkaAdminService: KafkaAdminService) {
 			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
 	@GetMapping("/kafka/events/unfinishedEvents/after/{timestamp}")
 	@Unprotected
-	fun unfinishedEventsAfter(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long): List<KafkaEvent> = TODO("Not implemented yet")
+	fun unfinishedEventsAfter(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long): List<KafkaEvent> = emptyList() //TODO("Not implemented yet")
 
 
 	@Operation(summary = "Lists all events from all topics that have a given key.", tags = ["events"])
