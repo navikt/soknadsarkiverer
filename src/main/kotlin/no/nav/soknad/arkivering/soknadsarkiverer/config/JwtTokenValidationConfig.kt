@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
 
 @EnableOAuth2Client(cacheEnabled = true)
-@EnableJwtTokenValidation(ignore = ["java.lang.reflect.Method.joarkPing"])
+//@EnableJwtTokenValidation(ignore = ["java.lang.reflect.Method.joarkPing"])
 @Profile("dev | prod")
 @Configuration
 class SecurityConfiguration
