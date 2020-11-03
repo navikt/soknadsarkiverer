@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
 
 @RestController
-@PreAuthorize("isAuthenticated")
 @RequestMapping("/admin")
 class AdminInterface(private val taskListService: TaskListService,
 										 private val fileService: FileserviceInterface,
