@@ -20,7 +20,6 @@ class RestSecurityConfig(private val config: AppConfiguration) : WebSecurityConf
 			.authorizeRequests()
 			.requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
 			.antMatchers(HttpMethod.POST, "/login", "/register").permitAll()
-			.antMatchers("/maintenance").authenticated()
 			.antMatchers("/admin").hasAnyRole("USER", "ADMIN")
 			.antMatchers("/admin").authenticated()
 			.and()
