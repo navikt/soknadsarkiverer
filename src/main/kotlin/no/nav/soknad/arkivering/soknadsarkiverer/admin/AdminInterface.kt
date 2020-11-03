@@ -10,10 +10,12 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
 
 @RestController
+@PreAuthorize("isAuthenticated")
 @RequestMapping("/admin")
 class AdminInterface(private val taskListService: TaskListService,
 										 private val fileService: FileserviceInterface,
