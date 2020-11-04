@@ -12,9 +12,13 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.Fileservice
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.HealthCheck
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.util.*
+import java.util.concurrent.Semaphore
 
 class ArchiverServiceTests {
 
@@ -35,25 +39,64 @@ class ArchiverServiceTests {
 
 	@Test
 	fun `Shutdown requested during protected segment - will still publish Archived event`() {
-		mockShutdownSignalWhileSendingToJoark()
+		sendShutdownSignalWhileSendingToJoark()
 
 		archiverService.archive(key, createSoknadarkivschema())
 
+		assertEquals(0, appConfiguration.state.busyCounter)
 		verify(kafkaPublisher, times(1)).putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.ARCHIVED)), any())
 	}
 
 	@Test
 	fun `Shutdown requested before protected segment - will not call Joark or publish Archived event`() {
-		mockShutdownSignalWhenStartingToArchive()
+		sendShutdownSignalWhenStartingToArchive()
 
 		archiverService.archive(key, createSoknadarkivschema())
 
+		assertEquals(0, appConfiguration.state.busyCounter)
 		verify(journalpostClient, times(0)).opprettJournalpost(eq(key), any(), any())
 		verify(kafkaPublisher, times(0)).putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.ARCHIVED)), any())
 	}
 
+	@Test
+	fun `Protected segment throws exception - busyCounter is still 0 afterwards`() {
+		mockExceptionIsThrownWhileSendingToJoark()
 
-	private fun mockShutdownSignalWhileSendingToJoark() {
+		assertThrows<RuntimeException> {
+			archiverService.archive(key, createSoknadarkivschema())
+		}
+
+		assertEquals(0, appConfiguration.state.busyCounter)
+	}
+
+	@Test
+	fun `Two events - Shutdown requested during protected segment of the first one, before second has begun - will publish Archived event of the first but not second`() {
+		val key1 = UUID.randomUUID().toString()
+		val key2 = UUID.randomUUID().toString()
+		val event2StartLock = Semaphore(1).also { it.acquire() }
+		val lockEvent1Finished = Semaphore(1).also { it.acquire() }
+		val lockEvent2Finished = Semaphore(1).also { it.acquire() }
+
+		sendShutdownSignalWhileSendingToJoarkAndReleaseLockForSecondEvent(key1, event2StartLock)
+		mockDelayWhenStartingToArchive(key2, event2StartLock)
+
+		GlobalScope.launch { archiverService.archive(key1, createSoknadarkivschema()); lockEvent1Finished.release() }
+		GlobalScope.launch { archiverService.archive(key2, createSoknadarkivschema()); lockEvent2Finished.release() }
+
+		lockEvent1Finished.acquire() // Do not verify until event is finished
+		lockEvent2Finished.acquire() // Do not verify until event is finished
+		assertEquals(0, appConfiguration.state.busyCounter)
+		verify(kafkaPublisher, times(1)).putProcessingEventOnTopic(eq(key1), eq(ProcessingEvent(EventTypes.ARCHIVED)), any())
+		verify(kafkaPublisher, times(0)).putProcessingEventOnTopic(eq(key2), eq(ProcessingEvent(EventTypes.ARCHIVED)), any())
+	}
+
+
+	private fun mockExceptionIsThrownWhileSendingToJoark() {
+		whenever(journalpostClient.opprettJournalpost(eq(key), any(), any()))
+			.thenThrow(RuntimeException("Mocked exception"))
+	}
+
+	private fun sendShutdownSignalWhileSendingToJoark() {
 		whenever(journalpostClient.opprettJournalpost(eq(key), any(), any()))
 			.thenAnswer {
 				val returnedJournalpostId = UUID.randomUUID().toString()
@@ -62,19 +105,32 @@ class ArchiverServiceTests {
 			}
 	}
 
-	private fun mockShutdownSignalWhenStartingToArchive() {
+	private fun sendShutdownSignalWhenStartingToArchive() {
 		whenever(kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.STARTED)), any()))
 			.then {
 				signalShutdown()
-				assertIsShuttingDown()
+			}
+	}
+
+	private fun sendShutdownSignalWhileSendingToJoarkAndReleaseLockForSecondEvent(key: String, lock: Semaphore) {
+		whenever(journalpostClient.opprettJournalpost(eq(key), any(), any()))
+			.thenAnswer {
+				val returnedJournalpostId = UUID.randomUUID().toString()
+				signalShutdown()
+				lock.release() // Release lock, allowing second event to proceed
+				returnedJournalpostId
+			}
+	}
+
+	private fun mockDelayWhenStartingToArchive(key: String, lock: Semaphore) {
+		whenever(kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.STARTED)), any()))
+			.then {
+				lock.acquire() // Only proceed when it is possible to acquire lock
 			}
 	}
 
 	private fun signalShutdown() {
 		GlobalScope.launch { healthCheck.stop() }
-	}
-
-	private fun assertIsShuttingDown() {
 		loopAndVerify(1, { if (appConfiguration.state.stopping) 1 else 0 })
 	}
 }

@@ -35,9 +35,11 @@ fun isBusy(appConfiguration: AppConfiguration) = appConfiguration.state.busyCoun
  */
 fun <T> protectFromShutdownInterruption(appConfiguration: AppConfiguration, function: () -> T): T {
 	if (busyInc(appConfiguration)) {
-		val returnValue = function.invoke()
-		busyDec(appConfiguration)
-		return returnValue
+		try {
+			return function.invoke()
+		} finally {
+			busyDec(appConfiguration)
+		}
 	}
 	throw ShuttingDownException("Application is shutting down")
 }

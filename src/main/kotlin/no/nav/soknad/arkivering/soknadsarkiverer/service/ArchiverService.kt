@@ -7,7 +7,6 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ShuttingDownException
-import no.nav.soknad.arkivering.soknadsarkiverer.config.busyDec
 import no.nav.soknad.arkivering.soknadsarkiverer.config.protectFromShutdownInterruption
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
@@ -43,7 +42,6 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 			logger.warn("$key: Will not start to archive - application is shutting down.")
 
 		} catch (e: Exception) {
-			busyDec(appConfiguration)
 			createMessage(key, createExceptionMessage(e))
 			throw e
 		}
