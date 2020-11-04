@@ -78,22 +78,35 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 	}
 
 	private fun deleteFiles(fileIds: String) {
-		val webClient = setupWebClient(fileIds, HttpMethod.DELETE)
-		webClient.retrieve().bodyToMono(String::class.java).block()
+		val uri = appConfiguration.config.filestorageHost + appConfiguration.config.filestorageUrl + fileIds
+		val method = HttpMethod.DELETE
+		val webClient = setupWebClient(uri, method)
+
+		webClient
+			.retrieve()
+			.onStatus(
+				{ httpStatus -> httpStatus.is4xxClientError || httpStatus.is5xxServerError },
+				{ response -> response.bodyToMono(String::class.java).map { Exception("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'") } })
+			.bodyToMono(String::class.java)
+			.block() // TODO Do we need to block?
 	}
 
 	private fun performGetCall(fileIds: String): List<FilElementDto>? {
-		val webClient = setupWebClient(fileIds, HttpMethod.GET)
+		val uri = appConfiguration.config.filestorageHost + appConfiguration.config.filestorageUrl + fileIds
+		val method = HttpMethod.GET
+		val webClient = setupWebClient(uri, method)
 
 		return webClient
 			.retrieve()
+			.onStatus(
+				{ httpStatus -> httpStatus.is4xxClientError || httpStatus.is5xxServerError },
+				{ response -> response.bodyToMono(String::class.java).map { Exception("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'") } })
 			.bodyToFlux(FilElementDto::class.java)
 			.collectList()
 			.block() // TODO Do we need to block?
 	}
 
-	private fun setupWebClient(fileIds: String, method: HttpMethod): WebClient.RequestBodySpec {
-		val uri = appConfiguration.config.filestorageHost + appConfiguration.config.filestorageUrl + fileIds
+	private fun setupWebClient(uri: String, method: HttpMethod): WebClient.RequestBodySpec {
 
 		val auth = "${appConfiguration.config.username}:${appConfiguration.config.sharedPassword}"
 		val encodedAuth: ByteArray = Base64.encodeBase64(auth.toByteArray())
