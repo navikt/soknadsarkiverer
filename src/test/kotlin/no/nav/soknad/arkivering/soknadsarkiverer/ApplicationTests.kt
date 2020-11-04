@@ -4,17 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
-import kotlinx.coroutines.*
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.*
-import no.nav.soknad.arkivering.soknadsarkiverer.config.*
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
-import no.nav.soknad.arkivering.soknadsarkiverer.supervision.HealthCheck
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.Metrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
@@ -48,9 +46,6 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 	@Autowired
 	private lateinit var appConfiguration: AppConfiguration
-
-	@Autowired
-	private lateinit var healthCheck: HealthCheck
 
 	@Autowired
 	private lateinit var taskListService: TaskListService
@@ -290,50 +285,6 @@ class ApplicationTests: TopologyTestDriverTests() {
 	}
 
 
-	@Test
-	fun `When StopDelay hook is called messages not sent to Joark`() {
-		mockFilestorageIsWorking(fileUuid)
-		mockJoarkIsWorking()
-		val soknadsarkivschema = createSoknadarkivschema()
-
-		stop(appConfiguration)
-		putDataOnKafkaTopic(soknadsarkivschema)
-
-		verifyProcessingEvents(1, RECEIVED)
-		verifyProcessingEvents(1, STARTED)
-		verifyProcessingEvents(0, ARCHIVED)
-		verifyProcessingEvents(0, FINISHED)
-		verifyMockedPostRequests(0, appConfiguration.config.joarkUrl)
-		verifyDeleteRequestsToFilestorage(0)
-	}
-
-	@Test
-	fun `When StopDelay hook is called its delayed if busy`() {
-		mockFilestorageIsWorking(fileUuid)
-		mockJoarkIsWorking()
-
-		putDataOnKafkaTopic(createSoknadarkivschema())
-		putDataOnKafkaTopic(createSoknadarkivschema())
-		val start = System.currentTimeMillis()
-		GlobalScope.launch { simulerTidskrevendeSoknad() }
-		healthCheck.stop()
-		System.out.println("Tid brukt= ${System.currentTimeMillis() - start}")
-
-		verifyProcessingEvents(2, RECEIVED)
-		verifyProcessingEvents(1, STARTED)
-		verifyProcessingEvents(1, ARCHIVED)
-		verifyProcessingEvents(1, FINISHED)
-		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
-		verifyDeleteRequestsToFilestorage(1)
-	}
-
-	suspend fun simulerTidskrevendeSoknad() {
-		busyInc(appConfiguration)
-		delay(2000L)
-		busyDec(appConfiguration)
-	}
-
-
 	private fun verifyMessageStartsWith(expectedCount: Int, message: String, key: String = this.key) {
 		val getCount = {
 			mockingDetails(kafkaPublisherMock)
@@ -408,5 +359,4 @@ class ApplicationTests: TopologyTestDriverTests() {
 		)
 		assertEquals(expected, requestData)
 	}
-
 }
