@@ -18,6 +18,7 @@ class RestSecurityConfig(private val config: AppConfiguration) : WebSecurityConf
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	override fun configure(http: HttpSecurity) {
+		logger.info("In configure")
 		http
 			.csrf().disable()
 			.authorizeRequests()
