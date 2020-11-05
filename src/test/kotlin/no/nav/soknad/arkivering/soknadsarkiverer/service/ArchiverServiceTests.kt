@@ -4,6 +4,7 @@ import com.nhaarman.mockitokotlin2.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import no.nav.soknad.arkivering.avroschemas.EventTypes
+import no.nav.soknad.arkivering.avroschemas.EventTypes.ARCHIVED
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
@@ -12,7 +13,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.Fileservice
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.HealthCheck
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -44,7 +44,7 @@ class ArchiverServiceTests {
 		archiverService.archive(key, createSoknadarkivschema())
 
 		assertEquals(0, appConfiguration.state.busyCounter)
-		verify(kafkaPublisher, times(1)).putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.ARCHIVED)), any())
+		verify(kafkaPublisher, times(1)).putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(ARCHIVED)), any())
 	}
 
 	@Test
@@ -55,7 +55,7 @@ class ArchiverServiceTests {
 
 		assertEquals(0, appConfiguration.state.busyCounter)
 		verify(journalpostClient, times(0)).opprettJournalpost(eq(key), any(), any())
-		verify(kafkaPublisher, times(0)).putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.ARCHIVED)), any())
+		verify(kafkaPublisher, times(0)).putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(ARCHIVED)), any())
 	}
 
 	@Test
@@ -70,7 +70,7 @@ class ArchiverServiceTests {
 	}
 
 	@Test
-	fun `Two events - Shutdown requested during protected segment of the first one, before second has begun - will publish Archived event of the first but not second`() {
+	fun `If Shutdown is requested during protected segment of one event, a second may not enter protected segment afterwards`() {
 		val key1 = UUID.randomUUID().toString()
 		val key2 = UUID.randomUUID().toString()
 		val event2StartLock = Semaphore(1).also { it.acquire() }
@@ -86,8 +86,8 @@ class ArchiverServiceTests {
 		lockEvent1Finished.acquire() // Do not verify until event is finished
 		lockEvent2Finished.acquire() // Do not verify until event is finished
 		assertEquals(0, appConfiguration.state.busyCounter)
-		verify(kafkaPublisher, times(1)).putProcessingEventOnTopic(eq(key1), eq(ProcessingEvent(EventTypes.ARCHIVED)), any())
-		verify(kafkaPublisher, times(0)).putProcessingEventOnTopic(eq(key2), eq(ProcessingEvent(EventTypes.ARCHIVED)), any())
+		verify(kafkaPublisher, times(1)).putProcessingEventOnTopic(eq(key1), eq(ProcessingEvent(ARCHIVED)), any()) // First event finishes fine
+		verify(kafkaPublisher, times(0)).putProcessingEventOnTopic(eq(key2), eq(ProcessingEvent(ARCHIVED)), any()) // Second event did not enter protected segment
 	}
 
 
