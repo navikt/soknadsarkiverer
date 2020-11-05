@@ -32,7 +32,6 @@ private val defaultProperties = ConfigurationMap(mapOf(
 
 	"CLIENTID" to "",
 	"CLIENTSECRET" to ""
-
 ))
 
 private val secondsBetweenRetries = listOf(1, 25, 60, 120, 600)   // As many retries will be attempted as there are elements in the list.
@@ -102,29 +101,4 @@ class ConfigConfig(private val env: ConfigurableEnvironment) {
 
 		return appConfiguration
 	}
-}
-
-@Synchronized
-fun busyInc(appConfiguration: AppConfiguration): Boolean {
-	if (appConfiguration.state.stopping) {
-		return false
-	} else {
-		appConfiguration.state.busyCounter++
-		return true
-	}
-}
-
-@Synchronized
-fun busyDec(appConfiguration: AppConfiguration) {
-	if (appConfiguration.state.busyCounter > 0) appConfiguration.state.busyCounter--
-}
-
-@Synchronized
-fun stop(appConfiguration: AppConfiguration) {
-	appConfiguration.state.stopping = true
-}
-
-@Synchronized
-fun isBusy(appConfiguration: AppConfiguration): Boolean {
-	return (appConfiguration.state.busyCounter > 0)
 }

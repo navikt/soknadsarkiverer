@@ -41,7 +41,7 @@ class HealthCheck(private val appConfiguration: AppConfiguration) {
 			}
 			logger.info("POD is ready for shutdown")
 		}
+		stop(appConfiguration)
 		logger.info("POD is getting ready for shutdown")
 	}
-
 }
