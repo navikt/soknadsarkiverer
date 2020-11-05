@@ -296,7 +296,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		mockJoarkIsWorking()
 		val soknadsarkivschema = createSoknadarkivschema()
 
-		stop(appConfiguration)
+		healthCheck.stop()
 		putDataOnKafkaTopic(soknadsarkivschema)
 
 		verifyProcessingEvents(1, RECEIVED)
@@ -313,9 +313,10 @@ class ApplicationTests: TopologyTestDriverTests() {
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
-		putDataOnKafkaTopic(createSoknadarkivschema())
+		ventSlikAtTopicBlirLestOgProssesert()
 		val start = System.currentTimeMillis()
 		GlobalScope.launch { simulerTidskrevendeSoknad() }
+		putDataOnKafkaTopic(createSoknadarkivschema())
 		healthCheck.stop()
 		System.out.println("Tid brukt= ${System.currentTimeMillis() - start}")
 
@@ -327,9 +328,11 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyDeleteRequestsToFilestorage(1)
 	}
 
+	fun ventSlikAtTopicBlirLestOgProssesert() = Thread.sleep(2000L)
+
 	suspend fun simulerTidskrevendeSoknad() {
 		busyInc(appConfiguration)
-		delay(2000L)
+		delay(1000L)
 		busyDec(appConfiguration)
 	}
 
