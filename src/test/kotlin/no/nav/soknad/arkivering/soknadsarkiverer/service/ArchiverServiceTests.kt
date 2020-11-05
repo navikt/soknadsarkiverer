@@ -1,8 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import com.nhaarman.mockitokotlin2.*
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.ARCHIVED
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
@@ -74,17 +73,16 @@ class ArchiverServiceTests {
 		val key1 = UUID.randomUUID().toString()
 		val key2 = UUID.randomUUID().toString()
 		val event2StartLock = Semaphore(1).also { it.acquire() }
-		val lockEvent1Finished = Semaphore(1).also { it.acquire() }
-		val lockEvent2Finished = Semaphore(1).also { it.acquire() }
 
 		sendShutdownSignalWhileSendingToJoarkAndReleaseLockForSecondEvent(key1, event2StartLock)
 		mockDelayWhenStartingToArchive(key2, event2StartLock)
 
-		GlobalScope.launch { archiverService.archive(key1, createSoknadarkivschema()); lockEvent1Finished.release() }
-		GlobalScope.launch { archiverService.archive(key2, createSoknadarkivschema()); lockEvent2Finished.release() }
+		runBlocking {
+			val task1 = async { archiverService.archive(key1, createSoknadarkivschema()) }
+			val task2 = async { archiverService.archive(key2, createSoknadarkivschema()) }
+			awaitAll(task1, task2)
+		}
 
-		lockEvent1Finished.acquire() // Do not verify until event is finished
-		lockEvent2Finished.acquire() // Do not verify until event is finished
 		assertEquals(0, appConfiguration.state.busyCounter)
 		verify(kafkaPublisher, times(1)).putProcessingEventOnTopic(eq(key1), eq(ProcessingEvent(ARCHIVED)), any()) // First event finishes fine
 		verify(kafkaPublisher, times(0)).putProcessingEventOnTopic(eq(key2), eq(ProcessingEvent(ARCHIVED)), any()) // Second event did not enter protected segment
