@@ -9,17 +9,13 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.context.annotation.Import
 import org.springframework.test.context.ActiveProfiles
 import java.util.*
 
 @ActiveProfiles("test")
 @SpringBootTest
-@Import(EmbeddedKafkaBrokerConfig::class)
-@ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class FilestorageServiceTests {
 
