@@ -17,6 +17,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.HealthCheck
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.Metrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -307,32 +308,32 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyDeleteRequestsToFilestorage(0)
 	}
 
+	val simulertTidForArkiveringAvSoknad = 2000L
+
 	@Test
 	fun `When StopDelay hook is called its delayed if busy`() {
 		mockFilestorageIsWorking(fileUuid)
 		mockJoarkIsWorking()
 
-		putDataOnKafkaTopic(createSoknadarkivschema())
-		ventSlikAtTopicBlirLestOgProssesert()
+		putDataOnKafkaTopic(createSoknadarkivschema()) // Legges på kø, tar ca. 1000 ms før den blir behandlet
+
+		GlobalScope.launch { simulerTidskrevendeSoknad() } // Venter simulertTidForArkiveringAvSoknad ms før behandling av søknad er over
 		val start = System.currentTimeMillis()
-		GlobalScope.launch { simulerTidskrevendeSoknad() }
-		putDataOnKafkaTopic(createSoknadarkivschema())
-		healthCheck.stop()
-		System.out.println("Tid brukt= ${System.currentTimeMillis() - start}")
+		healthCheck.stop() // Stopp av behandling av nye søknader vil bli satt før meldinger på kø blir forsøkt arkivert
+		val tidbrukt = System.currentTimeMillis() - start
 
-		verifyProcessingEvents(2, RECEIVED)
+		assertThat(tidbrukt>simulertTidForArkiveringAvSoknad)
+		verifyProcessingEvents(1, RECEIVED)
 		verifyProcessingEvents(1, STARTED)
-		verifyProcessingEvents(1, ARCHIVED)
-		verifyProcessingEvents(1, FINISHED)
-		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
-		verifyDeleteRequestsToFilestorage(1)
+		verifyProcessingEvents(0, ARCHIVED)
+		verifyProcessingEvents(0, FINISHED)
+		verifyMockedPostRequests(0, appConfiguration.config.joarkUrl)
+		verifyDeleteRequestsToFilestorage(0)
 	}
-
-	fun ventSlikAtTopicBlirLestOgProssesert() = Thread.sleep(2000L)
 
 	suspend fun simulerTidskrevendeSoknad() {
 		busyInc(appConfiguration)
-		delay(1000L)
+		delay(simulertTidForArkiveringAvSoknad)
 		busyDec(appConfiguration)
 	}
 
