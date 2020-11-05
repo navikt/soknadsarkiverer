@@ -15,7 +15,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.*
@@ -70,7 +69,6 @@ class ArchiverServiceTests {
 		assertEquals(0, appConfiguration.state.busyCounter)
 	}
 
-	@Disabled
 	@Test
 	fun `If Shutdown is requested during protected segment of one event, a second may not enter protected segment afterwards`() {
 		val key1 = UUID.randomUUID().toString()
