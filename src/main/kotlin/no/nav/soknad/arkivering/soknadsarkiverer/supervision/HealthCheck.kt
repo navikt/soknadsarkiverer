@@ -33,7 +33,6 @@ class HealthCheck(private val appConfiguration: AppConfiguration) {
 	@GetMapping("/stop")
 	@Unprotected
 	fun stop() = runBlocking {
-		stop(appConfiguration)
 		launch {
 			while (isBusy(appConfiguration)) {
 				logger.info("Waiting for shutdown")
