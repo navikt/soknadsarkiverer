@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
 
 @RestController
-@Unprotected
+//@Unprotected
 @RequestMapping("/admin")
 class AdminInterface(private val taskListService: TaskListService,
 										 private val fileService: FileserviceInterface,
