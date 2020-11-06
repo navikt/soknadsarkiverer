@@ -4,17 +4,20 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
+import kotlinx.coroutines.*
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.*
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.*
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.HealthCheck
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.Metrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -48,6 +51,9 @@ class ApplicationTests: TopologyTestDriverTests() {
 	private lateinit var appConfiguration: AppConfiguration
 
 	@Autowired
+	private lateinit var healthCheck: HealthCheck
+
+	@Autowired
 	private lateinit var taskListService: TaskListService
 
 	@Autowired
@@ -69,6 +75,8 @@ class ApplicationTests: TopologyTestDriverTests() {
 		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
 
 		maxNumberOfAttempts = appConfiguration.config.retryTime.size
+		appConfiguration.state.busyCounter = 0
+		appConfiguration.state.stopping = false
 
 		setupKafkaTopologyTestDriver()
 			.withAppConfiguration(appConfiguration)
@@ -283,6 +291,53 @@ class ApplicationTests: TopologyTestDriverTests() {
 	}
 
 
+	@Test
+	fun `When StopDelay hook is called messages not sent to Joark`() {
+		mockFilestorageIsWorking(fileUuid)
+		mockJoarkIsWorking()
+		val soknadsarkivschema = createSoknadarkivschema()
+
+		healthCheck.stop()
+		putDataOnKafkaTopic(soknadsarkivschema)
+
+		verifyProcessingEvents(1, RECEIVED)
+		verifyProcessingEvents(1, STARTED)
+		verifyProcessingEvents(0, ARCHIVED)
+		verifyProcessingEvents(0, FINISHED)
+		verifyMockedPostRequests(0, appConfiguration.config.joarkUrl)
+		verifyDeleteRequestsToFilestorage(0)
+	}
+
+	val simulertTidForArkiveringAvSoknad = 2000L
+
+	@Test
+	fun `When StopDelay hook is called its delayed if busy`() {
+		mockFilestorageIsWorking(fileUuid)
+		mockJoarkIsWorking()
+
+		putDataOnKafkaTopic(createSoknadarkivschema()) // Legges på kø, tar ca. 1000 ms før den blir behandlet
+
+		GlobalScope.launch { simulerTidskrevendeSoknad() } // Venter simulertTidForArkiveringAvSoknad ms før behandling av søknad er over
+		val start = System.currentTimeMillis()
+		healthCheck.stop() // Stopp av behandling av nye søknader vil bli satt før meldinger på kø blir forsøkt arkivert
+		val tidbrukt = System.currentTimeMillis() - start
+
+		assertThat(tidbrukt>simulertTidForArkiveringAvSoknad)
+		verifyProcessingEvents(1, RECEIVED)
+		verifyProcessingEvents(1, STARTED)
+		verifyProcessingEvents(0, ARCHIVED)
+		verifyProcessingEvents(0, FINISHED)
+		verifyMockedPostRequests(0, appConfiguration.config.joarkUrl)
+		verifyDeleteRequestsToFilestorage(0)
+	}
+
+	suspend fun simulerTidskrevendeSoknad() {
+		busyInc(appConfiguration)
+		delay(simulertTidForArkiveringAvSoknad)
+		busyDec(appConfiguration)
+	}
+
+
 	private fun verifyMessageStartsWith(expectedCount: Int, message: String, key: String = this.key) {
 		val getCount = {
 			mockingDetails(kafkaPublisherMock)
@@ -357,4 +412,5 @@ class ApplicationTests: TopologyTestDriverTests() {
 		)
 		assertEquals(expected, requestData)
 	}
+
 }
