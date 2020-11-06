@@ -17,6 +17,7 @@ spec:
     path: /internal/isReady
     initialDelay: 100
     timeout: 20
+  preStopHookPath: /internal/stop
   prometheus:
     enable: true
     path: /internal/prometheus
@@ -33,6 +34,7 @@ spec:
   ingresses:
     - "https://soknadsarkiverer.nais.preprod.local"
     - "https://soknadsarkiverer.dev-fss.nais.io"
+    - "https://soknadsarkiverer.dev.adeo.no"
   vault:
     enabled: true
     paths:

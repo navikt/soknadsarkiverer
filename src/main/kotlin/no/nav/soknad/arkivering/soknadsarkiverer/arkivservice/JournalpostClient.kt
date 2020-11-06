@@ -10,6 +10,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.Metrics
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
@@ -63,14 +64,19 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 		}
 	}
 
-	private fun sendDataToJoark(data: OpprettJournalpostRequest, uri: String) =
-		webClient
-			.post()
+	private fun sendDataToJoark(data: OpprettJournalpostRequest, uri: String): OpprettJournalpostResponse? {
+		val method = HttpMethod.POST
+		return webClient
+			.method(method)
 			.uri(uri)
 			.contentType(APPLICATION_JSON)
 			.accept(APPLICATION_JSON)
 			.body(BodyInserters.fromValue(data))
 			.retrieve()
+			.onStatus(
+				{ httpStatus -> httpStatus.is4xxClientError || httpStatus.is5xxServerError },
+				{ response -> response.bodyToMono(String::class.java).map { Exception("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'") } })
 			.bodyToMono(OpprettJournalpostResponse::class.java)
 			.block()
+	}
 }

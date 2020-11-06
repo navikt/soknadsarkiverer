@@ -35,7 +35,6 @@ private val defaultProperties = ConfigurationMap(mapOf(
 
 	"CLIENTID" to "",
 	"CLIENTSECRET" to ""
-
 ))
 
 private val secondsBetweenRetries = listOf(1, 25, 60, 120, 600)   // As many retries will be attempted as there are elements in the list.
@@ -53,7 +52,7 @@ private fun String.configProperty(): String = appConfig[Key(this, stringType)]
 
 fun readFileAsText(fileName: String, default: String = "") = try { File(fileName).readText(Charsets.UTF_8) } catch (e: Exception) { default }
 
-data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val config: Config = Config()) {
+data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val config: Config = Config(), val state: State = State() ) {
 	data class KafkaConfig(
 		val version: String = "APP_VERSION".configProperty(),
 		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "SOKNADSARKIVERER_USERNAME".configProperty()),
@@ -84,6 +83,13 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val adminUser: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER","ADMIN_USER".configProperty()),
 		val adminUserPassword: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER_PASSWORD","ADMIN_USER_PASSWORD".configProperty())
 	)
+
+	data class State(
+		var up: Boolean = false,
+		var ready: Boolean = false,
+		var stopping: Boolean = false,
+		var busyCounter: Int = 0
+	)
 }
 
 @org.springframework.context.annotation.Configuration
@@ -95,6 +101,8 @@ class ConfigConfig(private val env: ConfigurableEnvironment) {
 	fun appConfiguration(): AppConfiguration {
 		val appConfiguration = AppConfiguration()
 		env.setActiveProfiles(appConfiguration.config.profile)
+		appConfiguration.state.ready = true
+		appConfiguration.state.up = true
 
 		return appConfiguration
 	}

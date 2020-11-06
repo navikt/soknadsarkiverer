@@ -5,6 +5,9 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ShuttingDownException
+import no.nav.soknad.arkivering.soknadsarkiverer.config.protectFromShutdownInterruption
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import org.slf4j.LoggerFactory
@@ -13,7 +16,8 @@ import java.io.PrintWriter
 import java.io.StringWriter
 
 @Service
-class ArchiverService(private val filestorageService: FileserviceInterface,
+class ArchiverService(private val appConfiguration: AppConfiguration,
+											private val filestorageService: FileserviceInterface,
 											private val journalpostClient: JournalpostClientInterface,
 											private val kafkaPublisher: KafkaPublisher) {
 	private val logger = LoggerFactory.getLogger(javaClass)
@@ -21,19 +25,23 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 	fun archive(key: String, data: Soknadarkivschema) {
 		try {
 			createProcessingEvent(key, STARTED)
-
 			val files = filestorageService.getFilesFromFilestorage(key, data)
 
-			val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
-			logger.info("${key}: Opprettet journalpostId=${journalpostId} for behandlingsid=${data.getBehandlingsid()}")
-			createProcessingEvent(key, ARCHIVED)
+			val journalpostId = protectFromShutdownInterruption(appConfiguration) {
+				val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
+				createProcessingEvent(key, ARCHIVED)
+				journalpostId
+			}
+			logger.info("$key: Opprettet journalpostId=${journalpostId} for behandlingsid=${data.getBehandlingsid()}")
 
 			filestorageService.deleteFilesFromFilestorage(key, data)
 			createProcessingEvent(key, FINISHED)
 			createMessage(key, "ok")
 
-		} catch (e: Exception) {
+		} catch (e: ShuttingDownException) {
+			logger.warn("$key: Will not start to archive - application is shutting down.")
 
+		} catch (e: Exception) {
 			createMessage(key, createExceptionMessage(e))
 			throw e
 		}
