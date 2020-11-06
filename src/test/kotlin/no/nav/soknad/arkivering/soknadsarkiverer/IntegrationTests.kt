@@ -14,10 +14,8 @@ import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
-import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
@@ -25,6 +23,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
+import org.springframework.kafka.test.EmbeddedKafkaBroker
 import org.springframework.kafka.test.context.EmbeddedKafka
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
@@ -33,12 +32,16 @@ import java.util.concurrent.TimeUnit
 
 @ActiveProfiles("test")
 @SpringBootTest
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @Import(EmbeddedKafkaBrokerConfig::class)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 @EmbeddedKafka(topics = ["privat-soknadInnsendt-v1-default", "privat-soknadInnsendt-processingEventLog-v1-default", "privat-soknadInnsendt-messages-v1-default"], controlledShutdown = true)
 class IntegrationTests {
+
+	@Autowired
+	private val embeddedKafka: EmbeddedKafkaBroker? = null
 
 	@MockBean
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
@@ -72,6 +75,10 @@ class IntegrationTests {
 		stopMockedNetworkServices()
 	}
 
+	@AfterAll
+	fun stopEmbeddedKafka() {
+		embeddedKafka?.destroy()
+	}
 
 	@Test
 	fun `Happy case - Putting events on Kafka will cause rest calls to Joark`() {
