@@ -6,18 +6,16 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
+//@Unprotected
 @RequestMapping(value = ["/internal"])
 class HealthCheck {
 
 	@GetMapping("/isAlive")
-	@Unprotected
 	fun isAlive() = "Ok"
 
 	@GetMapping("/ping")
-	@Unprotected
 	fun ping() = "pong"
 
 	@GetMapping("/isReady")
-	@Unprotected
 	fun isReady() = "Ready for actions"
 }
