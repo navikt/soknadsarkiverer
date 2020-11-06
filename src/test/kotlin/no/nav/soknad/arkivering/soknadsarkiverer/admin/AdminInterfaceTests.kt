@@ -16,9 +16,12 @@ import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
@@ -32,7 +35,6 @@ import org.springframework.test.context.ActiveProfiles
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-@Disabled // TODO: These crash on Github Actions when building q0-pipeline
 @ActiveProfiles("test")
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
@@ -111,31 +113,14 @@ class AdminInterfaceTests {
 
 		putDataOnTopic(key, soknadarkivschema)
 		loopAndVerify(0, { taskListService.listTasks(key).size })
-		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
+		verifyMockedDeleteRequests(1, appConfiguration.config.filestorageUrl.replace("?", "\\?") + ".*")
+		TimeUnit.SECONDS.sleep(2) // Give the system 2 seconds to finish the task after the deletion occurred.
 
 		adminInterface.rerun(key)
 
 		TimeUnit.SECONDS.sleep(1)
 		loopAndVerify(0, { taskListService.listTasks(key).size })
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
-	}
-
-	@Test
-	fun `Rerunning blocked task wont block caller`() {
-		val key = UUID.randomUUID().toString()
-		val fileUuid = UUID.randomUUID().toString()
-		val soknadarkivschema = createSoknadarkivschema(fileUuid)
-		mockFilestorageIsWorking(fileUuid)
-		mockJoarkIsWorking(10_000)
-
-		putDataOnTopic(key, soknadarkivschema)
-
-		val timeBeforeRerun = System.currentTimeMillis()
-		adminInterface.rerun(key)
-
-		val timeTaken = System.currentTimeMillis() - timeBeforeRerun
-		assertTrue(timeTaken < 200, "This operation should spawn a new thread and should return immediately but took $timeTaken ms")
-		loopAndVerify(1, { taskListService.listTasks(key).size })
 	}
 
 
