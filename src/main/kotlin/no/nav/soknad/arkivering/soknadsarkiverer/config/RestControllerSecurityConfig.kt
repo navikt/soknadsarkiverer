@@ -13,7 +13,7 @@ import org.springframework.security.config.http.SessionCreationPolicy
 
 @Configuration
 @EnableGlobalMethodSecurity(securedEnabled = true, prePostEnabled = true)
-class RestSecurityConfig(private val config: AppConfiguration) : WebSecurityConfigurerAdapter() {
+class RestControllerSecurityConfig(private val config: AppConfiguration) : WebSecurityConfigurerAdapter() {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -25,8 +25,8 @@ class RestSecurityConfig(private val config: AppConfiguration) : WebSecurityConf
 			.requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
 			.antMatchers(HttpMethod.POST, "/login", "/register").permitAll()
 			.antMatchers(HttpMethod.GET, "/internal").permitAll()
-			.antMatchers("/admin").hasAnyRole()
-			.antMatchers("/admin").authenticated()
+			.antMatchers("/admin/*").hasAnyRole()
+			.antMatchers("/admin/*").authenticated()
 			.and()
 			.httpBasic()
 			.and()
