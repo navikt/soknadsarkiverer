@@ -36,8 +36,6 @@ spec:
       cpu: 1000m
       memory: 1024Mi
   ingresses:
-    - "https://soknadsarkiverer.nais.preprod.local"
-    - "https://soknadsarkiverer.dev-fss.nais.io"
     - "https://soknadsarkiverer.dev.adeo.no"
   vault:
     enabled: true
@@ -73,6 +71,6 @@ spec:
     - name: KAFKA_MESSAGE_TOPIC
       value: privat-soknadInnsendt-messages-v1-default
     - name: FILESTORAGE_HOST
-      value: https://soknadsfillager.nais.preprod.local
+      value: https://soknadsfillager.dev.adeo.no
     - name: JOARK_HOST
-      value: https://dokarkiv-q0.nais.preprod.local
+      value: https://dokarkiv-q0.dev.adeo.no
