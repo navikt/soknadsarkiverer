@@ -1,10 +1,10 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
-import no.nav.security.token.support.core.api.Unprotected
+import no.nav.security.token.support.core.api.ProtectedWithClaims
 import org.springframework.web.bind.annotation.*
 
 @RestController
-//@Unprotected
+@ProtectedWithClaims(issuer = "azuread")
 @RequestMapping("/admin")
 class AdminInterface(private val kafkaAdminService: KafkaAdminService) {
 
