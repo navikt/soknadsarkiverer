@@ -118,18 +118,53 @@ class AdminInterface(private val kafkaAdminService: KafkaAdminService) {
 			(Content(mediaType = "application/plain", schema = Schema(implementation = String::class)))])])
 	@GetMapping("/kafka/events/eventContent/{messageId}")
 	@Unprotected
+	@Deprecated("This should be returned as part of the KafkaEvent.") // TODO: Remove api method.
 	fun eventContent(@Parameter(description = "messageId of event to get content for.") @PathVariable messageId: String) = kafkaAdminService.content(messageId)
 
 
 	@Operation(summary = "Searches so that only events that matches the given search phrase are returned. The search phrase " +
-		"will be converted to a Kotlin Regex, to allow more advanced searching with e.g. wildcards.", tags = ["events"])
+		"will be converted to a Kotlin Regex, to allow more advanced searching with e.g. wildcards. Will return the " +
+		"$maxNumberOfEventsReturned most recent matching events.", tags = ["events"])
 	@ApiResponses(value = [
-		ApiResponse(responseCode = "200", description = "A list of all events from all topics that matches the search phrase " +
-			"will be returned. An empty list is returned if there ar no events matching the search phrase.", content = [
+		ApiResponse(responseCode = "200", description = "A list of the $maxNumberOfEventsReturned events from all topics " +
+			"that matches the search phrase will be returned. An empty list is returned if there ar no events matching the " +
+			"search phrase.", content = [
 			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
 	@GetMapping("/kafka/events/search/{searchPhrase}")
 	@Unprotected
 	fun search(@Parameter(description = "Search phrase (Regex)") @PathVariable searchPhrase: String) = kafkaAdminService.search(searchPhrase.toRegex())
+
+
+	@Operation(summary = "Searches so that only events that matches the given search phrase are returned. The search phrase " +
+		"will be converted to a Kotlin Regex, to allow more advanced searching with e.g. wildcards. Will return the " +
+		"$maxNumberOfEventsReturned events before the given timestamp, that match the search phrase.", tags = ["events"])
+	@ApiResponses(value = [
+		ApiResponse(responseCode = "200", description = "A list of the $maxNumberOfEventsReturned events from all topics " +
+			"that matches the search phrase, and that occurred before the given timestamp will be returned. Any events that " +
+			"happened ON the given timestamp will also be returned." +
+			"\n\n" +
+			"An empty list is returned if there ar no events matching the search phrase.", content = [
+			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@GetMapping("/kafka/events/search/before/{timestamp}/{searchPhrase}")
+	@Unprotected
+	fun searchBefore(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long,
+									 @Parameter(description = "Search phrase (Regex)") @PathVariable searchPhrase: String): List<KafkaEvent> = TODO("Not implemented yet")
+
+
+	@Operation(summary = "Searches so that only events that matches the given search phrase are returned. The search phrase " +
+		"will be converted to a Kotlin Regex, to allow more advanced searching with e.g. wildcards. Will return the " +
+		"$maxNumberOfEventsReturned events after the given timestamp, that match the search phrase.", tags = ["events"])
+	@ApiResponses(value = [
+		ApiResponse(responseCode = "200", description = "A list of the $maxNumberOfEventsReturned events from all topics " +
+			"that matches the search phrase, and that occurred after the given timestamp will be returned. Any events that " +
+			"happened ON the given timestamp will also be returned." +
+			"\n\n" +
+			"An empty list is returned if there ar no events matching the search phrase.", content = [
+			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@GetMapping("/kafka/events/search/after/{timestamp}/{searchPhrase}")
+	@Unprotected
+	fun searchAfter(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long,
+									@Parameter(description = "Search phrase (Regex)") @PathVariable searchPhrase: String): List<KafkaEvent> = TODO("Not implemented yet")
 
 
 	@Operation(summary = "Pings Joark to see if it is up.", tags = ["ping"])
