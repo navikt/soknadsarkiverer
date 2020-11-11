@@ -49,16 +49,14 @@ spring:
 no.nav.security.jwt:
   expirythreshold: ${EXPIRYTHRESHOLD} #threshold in minutes until token expires
 
-  issuers: isso, azureread
-  issuer:
-    isso:
+  issuer.isso:
       discoveryurl: ${DISCOVERYURL}
       accepted_audience: ${ACCEPTEDAUDIENCE}
       cookie_name: ${COOKIENAME}
-    azureread:
+  issuer.azuread:
       discoveryurl: ${AZURE_APP_WELL_KNOWN_URL}
       accepted_audience: ${AZURE_APP_CLIENT_ID}, api://${AZURE_APP_CLIENT_ID}
-
+      cookie_name: azure_token
   client:
     registration:
       soknadsarkiverer:
@@ -69,12 +67,12 @@ no.nav.security.jwt:
           client-id: ${CLIENTID}
           client-secret: ${CLIENTSECRET}
           client-auth-method: ${CLIENTAUTHMETHOD}
-      onbehalfof:
-        token-endpoint-url: https://login.microsoftonline.com/${AZURE_APP_TENANT_ID}/oauth2/v2.0/token
-        grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
-        scope: https://graph.microsoft.com/.default
-        authentication:
-          client-id: ${AZURE_APP_CLIENT_ID}
-          client-secret: ${AZURE_APP_CLIENT_SECRET}
-          client-auth-method: client_secret_basic
+      #onbehalfof:
+      #  token-endpoint-url: https://login.microsoftonline.com/${AZURE_APP_TENANT_ID}/oauth2/v2.0/token
+      #  grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
+      #  scope: https://graph.microsoft.com/.default
+      #  authentication:
+      #    client-id: ${AZURE_APP_CLIENT_ID}
+      #    client-secret: ${AZURE_APP_CLIENT_SECRET}
+      #    client-auth-method: client_secret_basic
 
