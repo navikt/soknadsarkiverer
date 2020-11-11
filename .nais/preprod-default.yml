@@ -2,7 +2,7 @@ apiVersion: "nais.io/v1alpha1"
 kind: "Application"
 metadata:
   name: soknadsarkiverer
-  namespace: default
+  namespace: team-soknad
   labels:
     team: team-soknad
 spec:
@@ -37,6 +37,13 @@ spec:
       memory: 1024Mi
   ingresses:
     - "https://soknadsarkiverer.dev.adeo.no"
+  accessPolicy:
+    inbound:
+      rules:
+        - application: soknadsadmins
+    outbound:
+      rules:
+        - application: soknadsfillager
   vault:
     enabled: true
     paths:
