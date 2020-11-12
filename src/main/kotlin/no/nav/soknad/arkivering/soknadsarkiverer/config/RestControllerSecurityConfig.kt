@@ -31,7 +31,7 @@ class RestControllerSecurityConfig(private val config: AppConfiguration) : WebSe
 			.requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
 			.antMatchers(HttpMethod.POST, "/login", "/register").permitAll()
 			.antMatchers(HttpMethod.GET, "/internal").permitAll()
-			.antMatchers("/admin/**").authenticated()
+			//.antMatchers("/admin/**").authenticated()
 			.and()
 			.httpBasic().authenticationEntryPoint(authenticationEntryPoint())
 			.and()
