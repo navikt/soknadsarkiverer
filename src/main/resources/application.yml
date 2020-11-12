@@ -54,8 +54,8 @@ no.nav.security.jwt:
       accepted_audience: ${ACCEPTEDAUDIENCE}
       cookie_name: ${COOKIENAME}
   issuer.azuread:
-      discoveryurl: ${AZURE_APP_WELL_KNOWN_URL}
-      accepted_audience: ${AZURE_APP_CLIENT_ID}, api://${AZURE_APP_CLIENT_ID}
+      discoveryurl: ${AZURE_WELL_KNOWN_URL}
+      accepted_audience: ${ACCEPTEDAUDIENCE}, api://${ACCEPTEDAUDIENCE}
       cookie_name: azure_token
   client:
     registration:
