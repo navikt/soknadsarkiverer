@@ -12,6 +12,8 @@ spec:
 #    application:
 #      enabled: true
 #      tenant: trygdeetaten.no
+  webproxy:
+    true
   liveliness:
     path: /internal/isAlive
     initialDelay: 100
