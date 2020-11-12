@@ -4,6 +4,7 @@ import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
@@ -34,17 +35,31 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 	private val messageTopic = appConfiguration.kafkaConfig.messageTopic
 
 
-	internal fun getAllKafkaRecords(): List<KafkaEventRaw<*>> {
+	internal fun getAllKafkaRecords(eventCollectionBuilder: EventCollection.Builder): List<KafkaEventRaw<*>> {
 		return runBlocking {
-			listOf(getAllInputRecordsAsync().await(), getAllProcessingRecordsAsync().await(), getAllMessageRecordsAsync().await())
-				.flatten()
+			val records = awaitAll(
+				getAllInputRecordsAsync(eventCollectionBuilder),
+				getAllProcessingRecordsAsync(eventCollectionBuilder),
+				getAllMessageRecordsAsync(eventCollectionBuilder)
+			)
+
+			val eventCollection = eventCollectionBuilder.build<Any>()
+			eventCollection.addEvents(records.flatten() as List<KafkaEventRaw<Any>>) // TODO: Fix warning with Reified?
+
+			eventCollection.getEvents()
 		}
 	}
-	internal fun getAllInputRecordsAsync() = GlobalScope.async { getAllKafkaRecords(inputTopic, "INPUT", createSoknadarkivschemaSerde().deserializer()) }
-	internal fun getAllProcessingRecordsAsync() = GlobalScope.async { getAllKafkaRecords(processingTopic, "PROCESSINGEVENT", createProcessingEventSerde().deserializer()) }
-	internal fun getAllMessageRecordsAsync() = GlobalScope.async { getAllKafkaRecords(messageTopic, "MESSAGE", StringDeserializer()) }
+	private fun getAllInputRecordsAsync(eventCollectionBuilder: EventCollection.Builder) = GlobalScope.async {
+		getAllKafkaRecords(inputTopic, "INPUT", createSoknadarkivschemaSerde().deserializer(), eventCollectionBuilder.build())
+	}
+	internal fun getAllProcessingRecordsAsync(eventCollectionBuilder: EventCollection.Builder) = GlobalScope.async {
+		getAllKafkaRecords(processingTopic, "PROCESSINGEVENT", createProcessingEventSerde().deserializer(), eventCollectionBuilder.build())
+	}
+	private fun getAllMessageRecordsAsync(eventCollectionBuilder: EventCollection.Builder) = GlobalScope.async {
+		getAllKafkaRecords(messageTopic, "MESSAGE", StringDeserializer(), eventCollectionBuilder.build())
+	}
 
-	private fun <T> getAllKafkaRecords(topic: String, recordType: String, valueDeserializer: Deserializer<T>): List<KafkaEventRaw<T>> {
+	private fun <T> getAllKafkaRecords(topic: String, recordType: String, valueDeserializer: Deserializer<T>, eventCollection: EventCollection<T>): List<KafkaEventRaw<T>> {
 		try {
 			val applicationId = "soknadsarkiverer-admin-$recordType-${UUID.randomUUID()}"
 
@@ -53,7 +68,7 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 					val startTime = System.currentTimeMillis()
 					it.subscribe(listOf(topic))
 
-					val records = loopUntilKafkaRecordsAreRetrieved(it)
+					val records = loopUntilKafkaRecordsAreRetrieved(it, eventCollection)
 
 					logger.info("Found ${records.size} records in ${System.currentTimeMillis() - startTime}ms")
 					return records
@@ -65,18 +80,19 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 		}
 	}
 
-	private fun <T> loopUntilKafkaRecordsAreRetrieved(kafkaConsumer: KafkaConsumer<Key, T>): List<KafkaEventRaw<T>> {
+	private fun <T> loopUntilKafkaRecordsAreRetrieved(kafkaConsumer: KafkaConsumer<Key, T>, eventCollection: EventCollection<T>): List<KafkaEventRaw<T>> {
 		val startTime = System.currentTimeMillis()
 		val timeout = 10 * 1000
 
 		while (System.currentTimeMillis() < startTime + timeout) {
 			val records = retrieveKafkaRecords(kafkaConsumer)
 
-			if (records.isNotEmpty())
-				return records
+			val shouldStop = eventCollection.addEvents(records)
+			if (shouldStop)
+				break
 			TimeUnit.MILLISECONDS.sleep(100)
 		}
-		return emptyList()
+		return eventCollection.getEvents()
 	}
 
 	private fun <T> retrieveKafkaRecords(kafkaConsumer: KafkaConsumer<Key, T>): List<KafkaEventRaw<T>> {

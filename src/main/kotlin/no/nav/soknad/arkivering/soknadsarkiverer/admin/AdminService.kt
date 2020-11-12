@@ -15,10 +15,10 @@ import org.springframework.context.annotation.Configuration
 import java.time.ZoneOffset
 
 @Configuration
-class KafkaAdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
-												private val taskListService: TaskListService,
-												private val fileService: FileserviceInterface,
-												private val joarkService: JournalpostClientInterface) {
+class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
+									 private val taskListService: TaskListService,
+									 private val fileService: FileserviceInterface,
+									 private val joarkService: JournalpostClientInterface) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -44,46 +44,43 @@ class KafkaAdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 	}
 
 
-	fun getAllEvents() = getAllEvents { true }
+	internal fun getUnfinishedEvents(builder: EventCollection.Builder): List<KafkaEvent> {
+		val finishedKeys = getAllFinishedKeys()
+		builder.withFilter { event -> !finishedKeys.contains(event.key) }
 
-	fun getUnfinishedEvents(): List<KafkaEvent> {
-		val processingEvents = runBlocking { kafkaAdminConsumer.getAllProcessingRecordsAsync().await() }
-		val events = runBlocking {
-			listOf(kafkaAdminConsumer.getAllInputRecordsAsync().await(), kafkaAdminConsumer.getAllMessageRecordsAsync().await(), processingEvents)
-				.flatten()
-		}
-
-		val finishedKeys = processingEvents
-			.filter { (_, _, _, processingEvent) -> processingEvent.getType() == FINISHED }
-			.map { (key, _, _, _) -> key }
-
-		return createContentEventList(events) { event -> !finishedKeys.contains(event.key) }
+		return getAllRequestedEvents(builder)
 	}
 
-	fun getAllEventsForKey(key: String) = getAllEvents { it.key == key }
+	private fun getAllFinishedKeys(): List<String> {
+		val processingEventCollectionBuilder = EventCollection.Builder()
+			.withoutCapacity()
+			.withFilter { (it as KafkaEventRaw<ProcessingEvent>).payload.getType() == FINISHED }
 
-	fun search(searchPhrase: Regex) = getAllEvents { it.payload.toString().contains(searchPhrase) }
+		return runBlocking { kafkaAdminConsumer.getAllProcessingRecordsAsync(processingEventCollectionBuilder).await() }
+			.map { it.key }
+	}
 
-	fun content(messageId: String): String {
-		val event = getAllKafkaRecords().firstOrNull { it.messageId == messageId }
+
+	@Deprecated("Event content should be returned as part of the KafkaEvent")
+	internal fun content(builder: EventCollection.Builder): String {
+
+		val event = kafkaAdminConsumer.getAllKafkaRecords(builder).firstOrNull()
 		if (event != null)
 			return event.payload.toString()
 
-		throw NoSuchElementException("Could not find message with id $messageId")
+		throw NoSuchElementException("Could not find message with id")
 	}
 
 
-	private fun getAllEvents(itemFiler: (KafkaEventRaw<*>) -> Boolean): List<KafkaEvent> =
-		createContentEventList(getAllKafkaRecords(), itemFiler)
+	internal fun getAllRequestedEvents(builder: EventCollection.Builder): List<KafkaEvent> =
+		createContentEventList(kafkaAdminConsumer.getAllKafkaRecords(builder))
 
-	private fun createContentEventList(events: List<KafkaEventRaw<*>>,
-																		 itemFiler: (KafkaEventRaw<*>) -> Boolean): List<KafkaEvent> {
+	private fun createContentEventList(events: List<KafkaEventRaw<*>>): List<KafkaEvent> {
 
 		val sequence = generateSequence(0) { it + 1 }
 			.take(events.size).toList()
 
 		return events
-			.filter { itemFiler.invoke(it) }
 			.sortedBy { it.timestamp }
 			.zip(sequence) { event, seq -> KafkaEvent(seq, event.key, event.messageId, getTypeRepresentation(event.payload), event.timestamp.toInstant(ZoneOffset.UTC).toEpochMilli()) }
 	}
@@ -102,7 +99,4 @@ class KafkaAdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 			else -> "UNKNOWN"
 		}
 	}
-
-
-	private fun getAllKafkaRecords() = kafkaAdminConsumer.getAllKafkaRecords()
 }
