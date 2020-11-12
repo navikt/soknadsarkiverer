@@ -4,7 +4,7 @@ import no.nav.security.token.support.core.api.ProtectedWithClaims
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@ProtectedWithClaims(issuer = "azuread")
+//@ProtectedWithClaims(issuer = "azuread")
 @RequestMapping("/admin")
 class AdminInterface(private val kafkaAdminService: KafkaAdminService) {
 

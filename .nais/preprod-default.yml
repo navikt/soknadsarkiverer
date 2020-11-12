@@ -8,10 +8,6 @@ metadata:
 spec:
   image: {{image}}
   port: 8091
-#  azure:
-#    application:
-#      enabled: true
-#      tenant: trygdeetaten.no
   webproxy:
     true
   liveliness:

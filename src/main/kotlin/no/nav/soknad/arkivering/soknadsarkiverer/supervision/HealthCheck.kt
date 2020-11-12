@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-//@Unprotected
 @RequestMapping(value = ["/internal"])
 class HealthCheck(private val appConfiguration: AppConfiguration) {
 
