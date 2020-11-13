@@ -54,7 +54,10 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 	private fun getAllFinishedKeys(): List<String> {
 		val processingEventCollectionBuilder = EventCollection.Builder()
 			.withoutCapacity()
-			.withFilter { (it as KafkaEventRaw<ProcessingEvent>).payload.getType() == FINISHED }
+			.withFilter {
+				@Suppress("UNCHECKED_CAST") // This is applied only to the ProcessingEvents, so the cast is safe.
+				(it as KafkaEventRaw<ProcessingEvent>).payload.getType() == FINISHED
+			}
 
 		return runBlocking { kafkaAdminConsumer.getAllProcessingRecordsAsync(processingEventCollectionBuilder).await() }
 			.map { it.key }

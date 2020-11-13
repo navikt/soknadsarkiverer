@@ -34,6 +34,7 @@ class HealthCheck(private val appConfiguration: AppConfiguration) {
 	@Unprotected
 	fun isReady() = "Ready for actions"
 
+	@Hidden
 	@GetMapping("/stop")
 	@Unprotected
 	fun stop() = runBlocking {
