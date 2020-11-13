@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
 import kotlinx.coroutines.GlobalScope
@@ -20,35 +21,36 @@ import org.apache.kafka.common.serialization.StringDeserializer
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Configuration
 import java.time.Duration
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
 import java.util.*
 import java.util.concurrent.TimeUnit
 
 @Configuration
 class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 	private val logger = LoggerFactory.getLogger(javaClass)
+	private val objectMapper = ObjectMapper().also { it.writerWithDefaultPrettyPrinter() } // TODO: Pretty print properly
 
 	private val inputTopic = appConfiguration.kafkaConfig.inputTopic
 	private val processingTopic = appConfiguration.kafkaConfig.processingTopic
 	private val messageTopic = appConfiguration.kafkaConfig.messageTopic
 
 
-	internal fun getAllKafkaRecords(eventCollectionBuilder: EventCollection.Builder): List<KafkaEventRaw<*>> {
+	internal fun getAllKafkaRecords(eventCollectionBuilder: EventCollection.Builder): List<KafkaEvent<String>> {
 		return runBlocking {
+
 			val records = awaitAll(
 				getAllInputRecordsAsync(eventCollectionBuilder),
 				getAllProcessingRecordsAsync(eventCollectionBuilder),
 				getAllMessageRecordsAsync(eventCollectionBuilder)
 			)
+				.flatten()
+				.map { KafkaEvent(it.sequence, it.innsendingKey, it.messageId, it.timestamp, it.type, objectMapper.writeValueAsString(it.payload.toString())) }
 
-			val eventCollection = eventCollectionBuilder.build<Any>()
-			eventCollection.addEvents(records.flatten() as List<KafkaEventRaw<Any>>) // TODO: Fix warning with Reified?
-
+			val eventCollection = eventCollectionBuilder.build<String>()
+			eventCollection.addEvents(records)
 			eventCollection.getEvents()
 		}
 	}
+
 	private fun getAllInputRecordsAsync(eventCollectionBuilder: EventCollection.Builder) = GlobalScope.async {
 		getAllKafkaRecords(inputTopic, "INPUT", createSoknadarkivschemaSerde().deserializer(), eventCollectionBuilder.build())
 	}
@@ -59,7 +61,7 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 		getAllKafkaRecords(messageTopic, "MESSAGE", StringDeserializer(), eventCollectionBuilder.build())
 	}
 
-	private fun <T> getAllKafkaRecords(topic: String, recordType: String, valueDeserializer: Deserializer<T>, eventCollection: EventCollection<T>): List<KafkaEventRaw<T>> {
+	private fun <T> getAllKafkaRecords(topic: String, recordType: String, valueDeserializer: Deserializer<T>, eventCollection: EventCollection<T>): List<KafkaEvent<T>> {
 		try {
 			val applicationId = "soknadsarkiverer-admin-$recordType-${UUID.randomUUID()}"
 
@@ -75,12 +77,13 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 				}
 
 		} catch (e: Exception) {
+			// TODO: Seek past poison-pills!
 			logger.error("Error getting $recordType", e)
 			return emptyList()
 		}
 	}
 
-	private fun <T> loopUntilKafkaRecordsAreRetrieved(kafkaConsumer: KafkaConsumer<Key, T>, eventCollection: EventCollection<T>): List<KafkaEventRaw<T>> {
+	private fun <T> loopUntilKafkaRecordsAreRetrieved(kafkaConsumer: KafkaConsumer<Key, T>, eventCollection: EventCollection<T>): List<KafkaEvent<T>> {
 		val startTime = System.currentTimeMillis()
 		val timeout = 10 * 1000
 
@@ -95,19 +98,18 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 		return eventCollection.getEvents()
 	}
 
-	private fun <T> retrieveKafkaRecords(kafkaConsumer: KafkaConsumer<Key, T>): List<KafkaEventRaw<T>> {
+	private fun <T> retrieveKafkaRecords(kafkaConsumer: KafkaConsumer<Key, T>): List<KafkaEvent<T>> {
 		logger.info("Retrieving Kafka records")
-		val records = mutableListOf<KafkaEventRaw<T>>()
+		val records = mutableListOf<KafkaEvent<T>>()
 
 		val consumerRecords = kafkaConsumer.poll(Duration.ofSeconds(1))
 		logger.info("Found ${consumerRecords.count()} consumerRecords")
 		for (record in consumerRecords) {
-			val timestamp = LocalDateTime.ofInstant(Instant.ofEpochMilli(record.timestamp()), ZoneId.systemDefault())
 
 			val messageId = StringDeserializer().deserialize("", record.headers().headers(MESSAGE_ID).firstOrNull()?.value()) ?: "null"
 
 			if (record.key() != null)
-				records.add(KafkaEventRaw(record.key(), messageId, timestamp, record.value()))
+				records.add(KafkaEvent(record.key(), messageId, record.timestamp(), record.value()))
 			else
 				logger.error("Key was null for record: $record")
 		}

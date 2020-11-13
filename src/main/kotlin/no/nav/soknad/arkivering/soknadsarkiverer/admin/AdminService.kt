@@ -5,14 +5,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import no.nav.soknad.arkivering.avroschemas.EventTypes.FINISHED
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
-import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.admin.FilestorageExistenceStatus.*
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilestorageExistenceResponse
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Configuration
-import java.time.ZoneOffset
 
 @Configuration
 class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
@@ -36,17 +34,17 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 		val soknadarkivschema = taskListService.getSoknadarkivschema(key)
 		if (soknadarkivschema == null) {
 			logger.warn("$key: Failed to find file ids for given key. The task is probably finished.")
-			return listOf(FilestorageExistenceResponse(key, "$key: Failed to find file ids for given key. The task is probably finished."))
+			return listOf(FilestorageExistenceResponse(key, FAILED_TO_FIND_FILE_IDS))
 		}
 
 		val response = fileService.getFilesFromFilestorage(key, soknadarkivschema)
-		return response.map { FilestorageExistenceResponse(it.uuid, if (it.fil != null) "Exists" else "Does not exist") }
+		return response.map { FilestorageExistenceResponse(it.uuid, if (it.fil != null) EXISTS else DOES_NOT_EXIST) }
 	}
 
 
-	internal fun getUnfinishedEvents(builder: EventCollection.Builder): List<KafkaEvent> {
+	internal fun getUnfinishedEvents(builder: EventCollection.Builder): List<KafkaEvent<String>> {
 		val finishedKeys = getAllFinishedKeys()
-		builder.withFilter { event -> !finishedKeys.contains(event.key) }
+		builder.withFilter { event -> !finishedKeys.contains(event.innsendingKey) }
 
 		return getAllRequestedEvents(builder)
 	}
@@ -56,50 +54,14 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 			.withoutCapacity()
 			.withFilter {
 				@Suppress("UNCHECKED_CAST") // This is applied only to the ProcessingEvents, so the cast is safe.
-				(it as KafkaEventRaw<ProcessingEvent>).payload.getType() == FINISHED
+				(it as KafkaEvent<ProcessingEvent>).payload.getType() == FINISHED
 			}
 
 		return runBlocking { kafkaAdminConsumer.getAllProcessingRecordsAsync(processingEventCollectionBuilder).await() }
-			.map { it.key }
+			.map { it.innsendingKey }
 	}
 
 
-	@Deprecated("Event content should be returned as part of the KafkaEvent")
-	internal fun content(builder: EventCollection.Builder): String {
-
-		val event = kafkaAdminConsumer.getAllKafkaRecords(builder).firstOrNull()
-		if (event != null)
-			return event.payload.toString()
-
-		throw NoSuchElementException("Could not find message with id")
-	}
-
-
-	internal fun getAllRequestedEvents(builder: EventCollection.Builder): List<KafkaEvent> =
-		createContentEventList(kafkaAdminConsumer.getAllKafkaRecords(builder))
-
-	private fun createContentEventList(events: List<KafkaEventRaw<*>>): List<KafkaEvent> {
-
-		val sequence = generateSequence(0) { it + 1 }
-			.take(events.size).toList()
-
-		return events
-			.sortedBy { it.timestamp }
-			.zip(sequence) { event, seq -> KafkaEvent(seq, event.key, event.messageId, getTypeRepresentation(event.payload), event.timestamp.toInstant(ZoneOffset.UTC).toEpochMilli()) }
-	}
-
-	private fun getTypeRepresentation(data: Any?): String {
-		return when(data) {
-			is ProcessingEvent -> data.getType().name
-			is Soknadarkivschema -> "INPUT"
-			is String -> {
-				"MESSAGE " + when {
-					data.startsWith("ok", true) -> "Ok"
-					data.startsWith("Exception", true) -> "Exception"
-					else -> "Unknown"
-				}
-			}
-			else -> "UNKNOWN"
-		}
-	}
+	internal fun getAllRequestedEvents(builder: EventCollection.Builder): List<KafkaEvent<String>> =
+		kafkaAdminConsumer.getAllKafkaRecords(builder)
 }

@@ -1,10 +1,9 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
 import no.nav.soknad.arkivering.soknadsarkiverer.admin.EventCollection.TimeSelector
-import java.time.LocalDateTime
 
 /**
- * This class acts as a collection of [KafkaEventRaw]'s, and with the method [addEvents(List)][addEvents], new elements
+ * This class acts as a collection of [KafkaEvent]'s, and with the method [addEvents(List)][addEvents], new elements
  * can be added. The collection can have a fixed [capacity], which it will not exceed, or it can be unbounded
  * (when *[capacity] < 0*).
  *
@@ -21,21 +20,22 @@ import java.time.LocalDateTime
 internal class EventCollection<T> private constructor(
 	private val capacity: Int,
 	private val timeSelector: TimeSelector,
-	private val timestamp: LocalDateTime,
-	private val filter: (KafkaEventRaw<*>) -> Boolean
+	private val timestamp: Long,
+	private val filter: (KafkaEvent<*>) -> Boolean
 ) {
 
-	private var events: MutableList<KafkaEventRaw<T>> = mutableListOf()
+	private var events: MutableList<KafkaEvent<T>> = mutableListOf()
 
 	/**
-	 * @return The collection of [KafkaEventRaw]'s, sorted by timestamp.
+	 * @return The collection of [KafkaEvent]'s, sorted by timestamp.
 	 */
-	fun getEvents() = events.toList()
+	fun getEvents() = events
+		.mapIndexed { index, event -> KafkaEvent(index, event.innsendingKey, event.messageId, event.timestamp, event.type, event.payload) }
 
 	/**
-	 * Adds the [KafkaEventRaw]'s in [list] that fulfill the class's filters to the collection.
+	 * Adds the [KafkaEvent]'s in [list] that fulfill the class's filters to the collection.
 	 *
-	 * @param [list] List of [KafkaEventRaw]'s to add to the collection.
+	 * @param [list] List of [KafkaEvent]'s to add to the collection.
 	 * @return A boolean signalling whether the [EventCollection] is now satisfied. If it is satisfied, there is no more
 	 * need to feed the collection with new elements. This is given by the following logic:
 	 * 1. If the collection of [events] have items previously, and [list] is empty, it returns true.
@@ -43,7 +43,7 @@ internal class EventCollection<T> private constructor(
 	 * it should continue to consume for as long as there are new elements to feed it with).
 	 * 2. Otherwise it returns true if the number of elements in the collection is now [capacity], and false otherwise.
 	 */
-	fun addEvents(list: List<KafkaEventRaw<T>>): Boolean {
+	fun addEvents(list: List<KafkaEvent<T>>): Boolean {
 		events.addAll(filterIncomingEvents(list))
 
 		events = when {
@@ -55,17 +55,17 @@ internal class EventCollection<T> private constructor(
 		return isSatisfied(list)
 	}
 
-	private fun filterIncomingEvents(list: List<KafkaEventRaw<T>>): List<KafkaEventRaw<T>> {
+	private fun filterIncomingEvents(list: List<KafkaEvent<T>>): List<KafkaEvent<T>> {
 		val timeFilteredList = when (timeSelector) {
-			TimeSelector.BEFORE -> list.filter { it.timestamp.isBefore(timestamp) || it.timestamp.isEqual(timestamp) }
-			TimeSelector.AFTER -> list.filter { it.timestamp.isAfter(timestamp) || it.timestamp.isEqual(timestamp) }
+			TimeSelector.BEFORE -> list.filter { it.timestamp <= timestamp }
+			TimeSelector.AFTER -> list.filter { it.timestamp >= timestamp }
 			TimeSelector.ANY -> list
 		}
 		return timeFilteredList.filter { filter.invoke(it) }
 	}
 
 
-	private fun isSatisfied(list: List<KafkaEventRaw<T>>): Boolean {
+	private fun isSatisfied(list: List<KafkaEvent<T>>): Boolean {
 		return when {
 				eventsHaveBeenPreviousAddedButThisOneWasEmpty(list) -> true
 				timeSelector == TimeSelector.ANY -> false // We found new events in this call, but TimeSelector ANY means there can always be more relevant events
@@ -79,16 +79,16 @@ internal class EventCollection<T> private constructor(
 	internal data class Builder(
 		private var capacity: Int = 0,
 		private var timeSelector: TimeSelector = TimeSelector.ANY,
-		private var timestamp: LocalDateTime = LocalDateTime.MIN,
-		private var filter: (KafkaEventRaw<*>) -> Boolean = { true },
+		private var timestamp: Long = 0,
+		private var filter: (KafkaEvent<*>) -> Boolean = { true },
 	) {
 
 		fun withoutCapacity() = apply { this.capacity = -1 }
 		fun withCapacity(capacity: Int) = apply { this.capacity = capacity }
-		fun withEventsBefore(timestamp: LocalDateTime) = apply { this.timestamp = timestamp; this.timeSelector = TimeSelector.BEFORE }
-		fun withEventsAfter(timestamp: LocalDateTime) = apply { this.timestamp = timestamp; this.timeSelector = TimeSelector.AFTER }
+		fun withEventsBefore(timestamp: Long) = apply { this.timestamp = timestamp; this.timeSelector = TimeSelector.BEFORE }
+		fun withEventsAfter(timestamp: Long) = apply { this.timestamp = timestamp; this.timeSelector = TimeSelector.AFTER }
 		fun withMostRecentEvents() = apply { this.timeSelector = TimeSelector.ANY }
-		fun withFilter(filter: (KafkaEventRaw<*>) -> Boolean) = apply { this.filter = filter }
+		fun withFilter(filter: (KafkaEvent<*>) -> Boolean) = apply { this.filter = filter }
 
 		fun <T> build() = EventCollection<T>(capacity, timeSelector, timestamp, filter)
 	}
