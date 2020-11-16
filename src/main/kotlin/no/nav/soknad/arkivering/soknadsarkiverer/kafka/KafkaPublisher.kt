@@ -22,8 +22,6 @@ import kotlin.collections.HashMap
 @Service
 class KafkaPublisher(private val appConfiguration: AppConfiguration) {
 
-	private val logger = LoggerFactory.getLogger(javaClass)
-
 	private val kafkaProcessingEventProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap())
 	private val kafkaMessageProducer = KafkaProducer<String, String>(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 
@@ -52,8 +50,6 @@ class KafkaPublisher(private val appConfiguration: AppConfiguration) {
 	}
 
 	private fun kafkaConfigMap(): MutableMap<String, Any> {
-		val psw = System.getenv("AZURE_APP_CLIENT_SECRET")
-		logger.info("Er azure_app_client_secret lik password = ${appConfiguration.kafkaConfig.password == psw}")
 		return HashMap<String, Any>().also {
 			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
 			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers

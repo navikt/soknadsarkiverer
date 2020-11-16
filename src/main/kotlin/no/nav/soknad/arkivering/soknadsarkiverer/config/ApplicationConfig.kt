@@ -2,6 +2,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.config
 
 import com.natpryce.konfig.*
 import com.natpryce.konfig.ConfigurationProperties.Companion.systemProperties
+import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.context.annotation.Bean
 import org.springframework.core.env.ConfigurableEnvironment
@@ -97,9 +98,19 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 @Priority(-1)
 class ConfigConfig(private val env: ConfigurableEnvironment) {
 
+	private val logger = LoggerFactory.getLogger(javaClass)
+
 	@Bean
 	fun appConfiguration(): AppConfiguration {
 		val appConfiguration = AppConfiguration()
+//TMP->
+		val azurePsw = env.getProperty("AZURE_APP_CLIENT_SECRET")
+		val pswCmp = azurePsw == appConfiguration.kafkaConfig.password
+		if (!pswCmp) {
+			val start = azurePsw?.substring(0,1)
+			logger.info("Azure_app_client_secret ikke lik password. Start = ${start}")
+		}
+//<-TMP
 		env.setActiveProfiles(appConfiguration.config.profile)
 		appConfiguration.state.ready = true
 		appConfiguration.state.up = true
