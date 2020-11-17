@@ -85,7 +85,8 @@ jobs:
           cp docker_tag/.docker_tag .
           TAG=`cat .docker_tag`
           echo $TAG
-          echo ::set-env name=TAG::`cat .docker_tag`
+          echo "{TAG}={`cat .docker_tag`}" >> $GITHUB_ENV
+          # echo ::set-env name=TAG::`cat .docker_tag`
       - name: Checkout code
         uses: actions/checkout@v1
       - name: Login to Github Package Registry
