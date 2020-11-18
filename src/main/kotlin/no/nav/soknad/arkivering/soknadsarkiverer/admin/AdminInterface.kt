@@ -221,7 +221,7 @@ class AdminInterface(private val adminService: AdminService) {
 		val eventCollectionBuilder = EventCollection.Builder()
 			.withCapacity(maxNumberOfEventsReturned)
 			.withMostRecentEvents()
-			.withFilter { it.payload.toString().contains(searchPhrase.toRegex()) }
+			.withFilter { it.content.toString().contains(searchPhrase.toRegex()) }
 
 		return adminService.getAllRequestedEvents(eventCollectionBuilder)
 	}
@@ -245,7 +245,7 @@ class AdminInterface(private val adminService: AdminService) {
 		val eventCollectionBuilder = EventCollection.Builder()
 			.withCapacity(maxNumberOfEventsReturned)
 			.withEventsBefore(timestamp)
-			.withFilter { it.payload.toString().contains(searchPhrase.toRegex()) }
+			.withFilter { it.content.toString().contains(searchPhrase.toRegex()) }
 
 		return adminService.getAllRequestedEvents(eventCollectionBuilder)
 	}
@@ -269,7 +269,7 @@ class AdminInterface(private val adminService: AdminService) {
 		val eventCollectionBuilder = EventCollection.Builder()
 			.withCapacity(maxNumberOfEventsReturned)
 			.withEventsAfter(timestamp)
-			.withFilter { it.payload.toString().contains(searchPhrase.toRegex()) }
+			.withFilter { it.content.toString().contains(searchPhrase.toRegex()) }
 
 		return adminService.getAllRequestedEvents(eventCollectionBuilder)
 	}

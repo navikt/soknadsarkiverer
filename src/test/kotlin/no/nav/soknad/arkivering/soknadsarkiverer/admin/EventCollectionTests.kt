@@ -72,7 +72,7 @@ class EventCollectionTests {
 
 	@Test
 	fun `Get 3 latest filtered events`() {
-		val filter = { kafkaEvent: KafkaEvent<*> -> kafkaEvent.payload.toString().contains("o", true) }
+		val filter = { kafkaEvent: KafkaEvent<*> -> kafkaEvent.content.toString().contains("o", true) }
 
 		val eventCollection = EventCollection.Builder()
 			.withCapacity(3)
@@ -90,7 +90,7 @@ class EventCollectionTests {
 
 	@Test
 	fun `Get 3 filtered events before timestamp`() {
-		val filter = { kafkaEvent: KafkaEvent<*> -> kafkaEvent.payload.toString().contains("o", true) }
+		val filter = { kafkaEvent: KafkaEvent<*> -> kafkaEvent.content.toString().contains("o", true) }
 
 		val eventCollection = EventCollection.Builder()
 			.withCapacity(3)
@@ -108,7 +108,7 @@ class EventCollectionTests {
 
 	@Test
 	fun `Get 3 filtered events after timestamp`() {
-		val filter = { kafkaEvent: KafkaEvent<*> -> kafkaEvent.payload.toString().contains("o", true) }
+		val filter = { kafkaEvent: KafkaEvent<*> -> kafkaEvent.content.toString().contains("o", true) }
 
 		val eventCollection = EventCollection.Builder()
 			.withCapacity(3)
@@ -191,9 +191,9 @@ class EventCollectionTests {
 	@Test
 	fun `Several adds, get 4 latest filtered events`() {
 		val payloadIsOddNumberOrContainsTheLetterO = { kafkaEvent: KafkaEvent<*> ->
-			when (kafkaEvent.payload) {
-				is Int -> kafkaEvent.payload as Int % 2 != 0
-				else -> kafkaEvent.payload.toString().contains("o", true)
+			when (kafkaEvent.content) {
+				is Int -> kafkaEvent.content as Int % 2 != 0
+				else -> kafkaEvent.content.toString().contains("o", true)
 			}
 		}
 
@@ -221,9 +221,9 @@ class EventCollectionTests {
 	@Test
 	fun `Several adds, get 4 filtered events before timestamp`() {
 		val payloadIsOddNumberOrContainsTheLetterO = { kafkaEvent: KafkaEvent<*> ->
-			when (kafkaEvent.payload) {
-				is Int -> kafkaEvent.payload as Int % 2 != 0
-				else -> kafkaEvent.payload.toString().contains("o", true)
+			when (kafkaEvent.content) {
+				is Int -> kafkaEvent.content as Int % 2 != 0
+				else -> kafkaEvent.content.toString().contains("o", true)
 			}
 		}
 
@@ -252,9 +252,9 @@ class EventCollectionTests {
 	@Test
 	fun `Several adds, get 4 filtered events after timestamp`() {
 		val payloadIsOddNumberOrContainsTheLetterO = { kafkaEvent: KafkaEvent<*> ->
-			when (kafkaEvent.payload) {
-				is Int -> kafkaEvent.payload as Int % 2 != 0
-				else -> kafkaEvent.payload.toString().contains("o", true)
+			when (kafkaEvent.content) {
+				is Int -> kafkaEvent.content as Int % 2 != 0
+				else -> kafkaEvent.content.toString().contains("o", true)
 			}
 		}
 
@@ -308,7 +308,7 @@ class EventCollectionTests {
 		assertEquals(expected.size, actual.size)
 		expected.forEachIndexed { index, expectedEvent ->
 			val ae = actual[index]
-			val actualEventWithoutSequence = KafkaEvent(-1, ae.innsendingKey, ae.messageId, ae.timestamp, ae.type, ae.payload)
+			val actualEventWithoutSequence = KafkaEvent(-1, ae.innsendingKey, ae.messageId, ae.timestamp, ae.type, ae.content)
 			assertEquals(expectedEvent, actualEventWithoutSequence)
 		}
 	}

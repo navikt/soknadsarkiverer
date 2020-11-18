@@ -40,7 +40,7 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 				getAllMessageRecordsAsync(eventCollectionBuilder)
 			)
 				.flatten()
-				.map { KafkaEvent(it.sequence, it.innsendingKey, it.messageId, it.timestamp, it.type, it.payload.toString()) }
+				.map { KafkaEvent(it.sequence, it.innsendingKey, it.messageId, it.timestamp, it.type, it.content.toString()) }
 
 			val eventCollection = eventCollectionBuilder.build<String>()
 			eventCollection.addEvents(records)

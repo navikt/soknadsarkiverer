@@ -5,7 +5,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.admin.EventCollection.TimeSelec
 /**
  * This class acts as a collection of [KafkaEvent]'s, and with the method [addEvents(List)][addEvents], new elements
  * can be added. The collection can have a fixed [capacity], which it will not exceed, or it can be unbounded
- * (when *[capacity] < 0*).
+ * (when `capacity < 0`).
  *
  * Two types of filters can be applied:
  *
@@ -14,7 +14,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.admin.EventCollection.TimeSelec
  * occurring ON the timestamp are also included. By setting [timeSelector] to [TimeSelector.ANY], no events are
  * discarded based on time, and [timestamp] will not be taken into account.
  *
- * 2. A custom filter. By setting [filter], one can discard events using custom logic. Set *[filter] = { true }* to
+ * 2. A custom filter. By setting [filter], one can discard events using custom logic. Set `filter = { true }` to
  * include all events.
  */
 internal class EventCollection<T> private constructor(
@@ -30,7 +30,7 @@ internal class EventCollection<T> private constructor(
 	 * @return The collection of [KafkaEvent]'s, sorted by timestamp.
 	 */
 	fun getEvents() = events
-		.mapIndexed { index, event -> KafkaEvent(index, event.innsendingKey, event.messageId, event.timestamp, event.type, event.payload) }
+		.mapIndexed { index, event -> KafkaEvent(index, event.innsendingKey, event.messageId, event.timestamp, event.type, event.content) }
 
 	/**
 	 * Adds the [KafkaEvent]'s in [list] that fulfill the class's filters to the collection.
@@ -38,7 +38,7 @@ internal class EventCollection<T> private constructor(
 	 * @param [list] List of [KafkaEvent]'s to add to the collection.
 	 * @return A boolean signalling whether the [EventCollection] is now satisfied. If it is satisfied, there is no more
 	 * need to feed the collection with new elements. This is given by the following logic:
-	 * 1. If the collection of [events] have items previously, and [list] is empty, it returns true.
+	 * 1. If the collection of [events] had items previously, and [list] is empty, it returns true.
 	 * 2. If [timeSelector] is [TimeSelector.ANY], and [list] is not empty, it returns false ([TimeSelector.ANY] means
 	 * it should continue to consume for as long as there are new elements to feed it with).
 	 * 2. Otherwise it returns true if the number of elements in the collection is now [capacity], and false otherwise.
@@ -58,8 +58,8 @@ internal class EventCollection<T> private constructor(
 	private fun filterIncomingEvents(list: List<KafkaEvent<T>>): List<KafkaEvent<T>> {
 		val timeFilteredList = when (timeSelector) {
 			TimeSelector.BEFORE -> list.filter { it.timestamp <= timestamp }
-			TimeSelector.AFTER -> list.filter { it.timestamp >= timestamp }
-			TimeSelector.ANY -> list
+			TimeSelector.AFTER  -> list.filter { it.timestamp >= timestamp }
+			TimeSelector.ANY    -> list
 		}
 		return timeFilteredList.filter { filter.invoke(it) }
 	}

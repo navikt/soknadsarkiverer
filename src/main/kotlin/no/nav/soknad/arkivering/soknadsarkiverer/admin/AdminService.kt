@@ -3,8 +3,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.admin
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import no.nav.soknad.arkivering.avroschemas.EventTypes.FINISHED
-import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.admin.FilestorageExistenceStatus.*
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
@@ -52,10 +50,7 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 	private fun getAllFinishedKeys(): List<String> {
 		val processingEventCollectionBuilder = EventCollection.Builder()
 			.withoutCapacity()
-			.withFilter {
-				@Suppress("UNCHECKED_CAST") // This is applied only to the ProcessingEvents, so the cast is safe.
-				(it as KafkaEvent<ProcessingEvent>).payload.getType() == FINISHED
-			}
+			.withFilter { it.type == PayloadType.FINISHED }
 
 		return runBlocking { kafkaAdminConsumer.getAllProcessingRecordsAsync(processingEventCollectionBuilder).await() }
 			.map { it.innsendingKey }

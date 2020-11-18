@@ -6,9 +6,10 @@ import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import javax.validation.constraints.NotBlank
 
+// NOTE! This class is exposed via a rest-service. Any changes to this class must be reflected in the frontend.
 data class KafkaEvent<T>(
 	@Schema(description = "Incrementing number beginning at 0. Each element in a list has its own number.",
-		example = "1", required = true)
+		example = "0", required = true)
 	@NotBlank
 	val sequence: Int,
 
@@ -26,12 +27,12 @@ data class KafkaEvent<T>(
 	val timestamp: Long,
 
 	@Schema(description = "This denotes the type of Kafka event.",
-		example = "INPUT", required = true)
+		example = "STARTED", required = true)
 	val type: PayloadType,
 
 	@Schema(description = "The payload of the Kafka Event",
 		example = "{\\\"type\\\": \\\"STARTED\\\"}", required = true)
-	val payload: T,
+	val content: T,
 ) {
 	constructor(innsendingKey: String, messageId: String, timestamp: Long, payload: T):
 		this(-1, innsendingKey, messageId, timestamp, getTypeRepresentation(payload), payload)
