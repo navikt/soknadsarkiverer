@@ -34,7 +34,7 @@ spec:
       cpu: 1000m
       memory: 1024Mi
   ingresses:
-    - "https://soknadsarkiverer.dev.adeo.no"
+    - "https://soknadsarkiverer-team.dev.adeo.no"
   accessPolicy:
     inbound:
       rules:
