@@ -6,7 +6,11 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
 
 @EnableOAuth2Client(cacheEnabled = true)
-@EnableJwtTokenValidation
+@EnableJwtTokenValidation(ignore = [
+	"org.springframework",
+	"no.nav.soknad.arkivering.soknadsarkiverer.supervision.HealthCheck",
+	"io.swagger",
+	"springfox.documentation.swagger.web.ApiResourceController"])
 @Profile("dev | prod")
 @Configuration
 class SecurityConfiguration
