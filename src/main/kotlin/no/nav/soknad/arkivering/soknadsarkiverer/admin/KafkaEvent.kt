@@ -1,9 +1,12 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
 import io.swagger.v3.oas.annotations.media.Schema
+import no.nav.soknad.arkivering.avroschemas.EventTypes
+import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
+import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import javax.validation.constraints.NotBlank
 
-data class KafkaEvent(
+data class KafkaEvent<T>(
 	@Schema(description = "Incrementing number beginning at 0. Each element in a list has its own number.",
 		example = "1", required = true)
 	@NotBlank
@@ -18,11 +21,43 @@ data class KafkaEvent(
 		example = "81328274-d593-463a-89d1-309bc663a1a9", required = true)
 	val messageId: String,
 
-	@Schema(description = "This denotes the type of Kafka event.", // TODO: Introduce enum? enum class Type { INPUT, RECEIVED, STARTED, ARCHIVED, FINISHED, MESSAGE_OK, MESSAGE_EXCEPTION }
-		example = "Input", required = true)
-	val type: String,
-
 	@Schema(description = "Milliseconds since epoch, UTC",
 		example = "1604334716511", required = true)
-	val timestamp: Long
-)
+	val timestamp: Long,
+
+	@Schema(description = "This denotes the type of Kafka event.",
+		example = "INPUT", required = true)
+	val type: PayloadType,
+
+	@Schema(description = "The payload of the Kafka Event",
+		example = "{\\\"type\\\": \\\"STARTED\\\"}", required = true)
+	val payload: T,
+) {
+	constructor(innsendingKey: String, messageId: String, timestamp: Long, payload: T):
+		this(-1, innsendingKey, messageId, timestamp, getTypeRepresentation(payload), payload)
+}
+
+private fun getTypeRepresentation(data: Any?): PayloadType {
+	return when(data) {
+		is Soknadarkivschema -> PayloadType.INPUT
+		is ProcessingEvent -> {
+			when (data.getType()) {
+				EventTypes.RECEIVED -> PayloadType.RECEIVED
+				EventTypes.STARTED  -> PayloadType.STARTED
+				EventTypes.ARCHIVED -> PayloadType.ARCHIVED
+				EventTypes.FINISHED -> PayloadType.FINISHED
+				else -> PayloadType.UNKNOWN
+			}
+		}
+		is String -> {
+			when {
+				data.startsWith("ok", true) -> PayloadType.MESSAGE_OK
+				data.startsWith("Exception", true) -> PayloadType.MESSAGE_EXCEPTION
+				else -> PayloadType.UNKNOWN
+			}
+		}
+		else -> PayloadType.UNKNOWN
+	}
+}
+
+enum class PayloadType { INPUT, RECEIVED, STARTED, ARCHIVED, FINISHED, MESSAGE_OK, MESSAGE_EXCEPTION, UNKNOWN }

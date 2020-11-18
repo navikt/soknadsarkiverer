@@ -1,4 +1,4 @@
-package no.nav.soknad.arkivering.soknadsarkiverer.dto
+package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
 import io.swagger.v3.oas.annotations.media.Schema
 import javax.validation.constraints.NotBlank
@@ -9,7 +9,9 @@ data class FilestorageExistenceResponse(
 	@NotBlank
 	val id: String,
 
-	@Schema(description = "Whether the file exists or not.", //TODO: Introduce enum?
-		example = "Does not exist", required = true)
+	@Schema(description = "Whether the file exists or not.",
+		example = "DOES_NOT_EXIST", required = true)
 	@NotBlank
-	val status: String)
+	val status: FilestorageExistenceStatus)
+
+enum class FilestorageExistenceStatus { EXISTS, DOES_NOT_EXIST, FAILED_TO_FIND_FILE_IDS }
