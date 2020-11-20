@@ -25,7 +25,6 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 	private val SKIP_JOARK_IF_ENVIRONMENT: String = "prod"
 
 	override fun ping(): String {
-		logger.info("Kalle Joark Ping tjeneste")
 		return webClient
 			.get()
 			.uri(appConfiguration.config.joarkHost + "/isAlive")

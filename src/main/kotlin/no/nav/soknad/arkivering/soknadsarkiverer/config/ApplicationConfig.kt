@@ -98,8 +98,6 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 @Priority(-1)
 class ConfigConfig(private val env: ConfigurableEnvironment) {
 
-	private val logger = LoggerFactory.getLogger(javaClass)
-
 	@Bean
 	fun appConfiguration(): AppConfiguration {
 		val appConfiguration = AppConfiguration()
@@ -107,7 +105,6 @@ class ConfigConfig(private val env: ConfigurableEnvironment) {
 		appConfiguration.state.ready = true
 		appConfiguration.state.up = true
 
-		logger.info("MaxMessageSize=${appConfiguration.config.maxMessageSize}")
 		return appConfiguration
 	}
 }

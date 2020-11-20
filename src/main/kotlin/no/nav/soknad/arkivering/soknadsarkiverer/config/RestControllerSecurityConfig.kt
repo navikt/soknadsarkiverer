@@ -15,7 +15,7 @@ import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.security.web.authentication.www.BasicAuthenticationEntryPoint
 
-
+// Det er mulig denne filen kan slettes i og med at vi bruker token, og ikke basic aut til å beskytte rest endepunktene.
 @Configuration
 @Order(1)
 @EnableGlobalMethodSecurity(securedEnabled = true, prePostEnabled = true)
@@ -31,7 +31,6 @@ class RestControllerSecurityConfig(private val config: AppConfiguration) : WebSe
 			.requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
 			.antMatchers(HttpMethod.POST, "/login", "/register").permitAll()
 			.antMatchers(HttpMethod.GET, "/internal").permitAll()
-			//.antMatchers("/admin/**").authenticated()
 			.and()
 			.httpBasic().authenticationEntryPoint(authenticationEntryPoint())
 			.and()
