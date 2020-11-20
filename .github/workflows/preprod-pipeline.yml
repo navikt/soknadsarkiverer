@@ -26,9 +26,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo ::set-env name=IMAGE_REGISTRY::docker.pkg.github.com/$(echo ${GITHUB_REPOSITORY})
-          echo ::set-env name=IMAGE_NAME::$(echo ${GITHUB_REPOSITORY##*/})
-          echo ::set-env name=IMAGE_VERSION::$(echo ${GITHUB_WORKFLOW})-$(echo ${GITHUB_SHA})
+          echo "IMAGE_REGISTRY=docker.pkg.github.com/$(echo ${GITHUB_REPOSITORY})" >> $GITHUB_ENV
+          echo "IMAGE_NAME=$(echo ${GITHUB_REPOSITORY##/*})" >> $GITHUB_ENV
+          echo "IMAGE_VERSION=$(echo ${GITHUB_WORKFLOW})-$(echo ${GITHUB_SHA})" >> $GITHUB_ENV
       - name: Read/save .m2 cache
         uses: actions/cache@v1
         with:
@@ -78,9 +78,8 @@ jobs:
       - name: Unpack
         run: |
           cp docker_tag/.docker_tag .
-          TAG=`cat .docker_tag`
-          echo $TAG
-          echo ::set-env name=TAG::`cat .docker_tag`
+          TAG=$(cat .docker_tag)
+          echo "TAG=${TAG}" >> $GITHUB_ENV
       - name: Checkout code
         uses: actions/checkout@v1
       - name: Login to Github Package Registry
@@ -113,9 +112,8 @@ jobs:
       - name: Unpack
         run: |
           cp docker_tag/.docker_tag .
-          TAG=`cat .docker_tag`
-          echo $TAG
-          echo ::set-env name=TAG::`cat .docker_tag`
+          TAG=$(cat .docker_tag)
+          echo "TAG=${TAG}" >> $GITHUB_ENV
       - name: Checkout code
         uses: actions/checkout@v1
       - name: Login to Github Package Registry
