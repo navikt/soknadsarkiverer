@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Profile
 import org.springframework.core.annotation.Order
 import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder
@@ -17,7 +18,7 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationEn
 
 // Det er mulig denne filen kan slettes i og med at vi bruker token, og ikke basic aut til å beskytte rest endepunktene.
 @Configuration
-@Order(1)
+//@Profile("default | spring | docker")
 @EnableGlobalMethodSecurity(securedEnabled = true, prePostEnabled = true)
 class RestControllerSecurityConfig(private val config: AppConfiguration) : WebSecurityConfigurerAdapter() {
 
@@ -30,7 +31,8 @@ class RestControllerSecurityConfig(private val config: AppConfiguration) : WebSe
 			.authorizeRequests()
 			.requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
 			.antMatchers(HttpMethod.POST, "/login", "/register").permitAll()
-			.antMatchers(HttpMethod.GET, "/internal").permitAll()
+			.antMatchers(HttpMethod.GET, "/internal/**").permitAll()
+			.antMatchers(HttpMethod.GET, "/swagger-ui.html/**").permitAll()
 			.and()
 			.httpBasic().authenticationEntryPoint(authenticationEntryPoint())
 			.and()

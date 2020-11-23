@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Hidden
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import no.nav.security.token.support.core.api.Unprotected
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.isBusy
 import no.nav.soknad.arkivering.soknadsarkiverer.config.stop
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping(value = ["/internal"])
+@Unprotected
 class HealthCheck(private val appConfiguration: AppConfiguration) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
