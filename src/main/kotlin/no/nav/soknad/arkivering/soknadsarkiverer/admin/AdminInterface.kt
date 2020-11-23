@@ -20,7 +20,6 @@ class AdminInterface(private val adminService: AdminService) {
 	@ApiResponses(value = [ApiResponse(responseCode = "200", description = "Will always return successfully, but the " +
 		"actual rerun will be triggered some time in the future.")])
 	@PostMapping("/rerun/{key}")
-	fun rerun(@PathVariable key: String) = kafkaAdminService.rerun(key)
 	fun rerun(@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String) = adminService.rerun(key)
 
 
@@ -32,7 +31,6 @@ class AdminInterface(private val adminService: AdminService) {
 			"An empty list is returned if there are no events on any topics.", content = [
 			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
 	@GetMapping("/kafka/events/allEvents")
-	fun allEvents() = kafkaAdminService.getAllEvents()
 	fun allEvents(): List<KafkaEvent<String>> {
 
 		val eventCollectionBuilder = EventCollection.Builder()
@@ -90,7 +88,6 @@ class AdminInterface(private val adminService: AdminService) {
 			"An empty list is returned if there are no unfinished events.", content = [
 			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
 	@GetMapping("/kafka/events/unfinishedEvents")
-	fun unfinishedEvents() = kafkaAdminService.getUnfinishedEvents()
 	fun unfinishedEvents(): List<KafkaEvent<String>> {
 
 		val eventCollectionBuilder = EventCollection.Builder()
@@ -116,8 +113,6 @@ class AdminInterface(private val adminService: AdminService) {
 			.withCapacity(maxNumberOfEventsReturned)
 			.withEventsBefore(timestamp)
 
-	@GetMapping("/kafka/events/{key}")
-	fun specificEvent(@PathVariable key: String) = kafkaAdminService.getAllEventsForKey(key)
 		return adminService.getUnfinishedEvents(eventCollectionBuilder)
 	}
 
@@ -137,8 +132,6 @@ class AdminInterface(private val adminService: AdminService) {
 			.withCapacity(maxNumberOfEventsReturned)
 			.withEventsAfter(timestamp)
 
-	@GetMapping("/kafka/events/eventContent/{messageId}")
-	fun eventContent(@PathVariable messageId: String) = kafkaAdminService.content(messageId)
 		return adminService.getUnfinishedEvents(eventCollectionBuilder)
 	}
 
@@ -213,7 +206,6 @@ class AdminInterface(private val adminService: AdminService) {
 			"search phrase.", content = [
 			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
 	@GetMapping("/kafka/events/search/{searchPhrase}")
-	fun search(@PathVariable searchPhrase: String) = kafkaAdminService.search(searchPhrase.toRegex())
 	fun search(@Parameter(description = "Search phrase (Regex)") @PathVariable searchPhrase: String): List<KafkaEvent<String>> {
 
 		val eventCollectionBuilder = EventCollection.Builder()
@@ -273,13 +265,11 @@ class AdminInterface(private val adminService: AdminService) {
 
 	@Operation(summary = "Pings Joark to see if it is up.", tags = ["ping"])
 	@GetMapping("/joark/ping")
-	fun pingJoark() = kafkaAdminService.pingJoark()
 	fun pingJoark() = adminService.pingJoark()
 
 
 	@Operation(summary = "Pings Filestorage to see if it is up.", tags = ["ping"])
 	@GetMapping("/fillager/ping")
-	fun pingFilestorage() = kafkaAdminService.pingFilestorage()
 	fun pingFilestorage() = adminService.pingFilestorage()
 
 
@@ -294,7 +284,7 @@ class AdminInterface(private val adminService: AdminService) {
 			"could not be found.", content = [
 			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = FilestorageExistenceResponse::class)))))])])
 	@GetMapping("/fillager/filesExist/{key}")
-	fun filesExists(@PathVariable key: String) = kafkaAdminService.filesExist(key)
+	fun filesExists(@PathVariable key: String) = adminService.filesExist(key)
 }
 
 const val maxNumberOfEventsReturned = 50
