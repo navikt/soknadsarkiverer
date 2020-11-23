@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.Hidden
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import no.nav.security.token.support.core.api.Unprotected
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.isBusy
 import no.nav.soknad.arkivering.soknadsarkiverer.config.stop
@@ -33,7 +32,6 @@ class HealthCheck(private val appConfiguration: AppConfiguration) {
 
 	@Hidden
 	@GetMapping("/stop")
-	@Unprotected
 	fun stop() = runBlocking {
 		launch {
 			while (isBusy(appConfiguration)) {
