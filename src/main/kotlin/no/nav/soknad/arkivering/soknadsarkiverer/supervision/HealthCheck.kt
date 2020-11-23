@@ -21,17 +21,14 @@ class HealthCheck(private val appConfiguration: AppConfiguration) {
 
 	@Hidden
 	@GetMapping("/isAlive")
-	@Unprotected
 	fun isAlive() = "Ok"
 
 	@Hidden
 	@GetMapping("/ping")
-	@Unprotected
 	fun ping() = "pong"
 
 	@Hidden
 	@GetMapping("/isReady")
-	@Unprotected
 	fun isReady() = "Ready for actions"
 
 	@Hidden

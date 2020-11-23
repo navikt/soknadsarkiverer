@@ -8,6 +8,8 @@ metadata:
 spec:
   image: {{image}}
   port: 8091
+  webproxy:
+    true
   liveliness:
     path: /internal/isAlive
     initialDelay: 100
@@ -33,6 +35,13 @@ spec:
       memory: 1024Mi
   ingresses:
     - "https://soknadsarkiverer-q0.dev.adeo.no"
+  accessPolicy:
+    inbound:
+      rules:
+        - application: soknadsadmins
+    outbound:
+      rules:
+        - application: soknadsfillager
   vault:
     enabled: true
     paths:

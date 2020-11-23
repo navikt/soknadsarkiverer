@@ -13,4 +13,4 @@ import org.springframework.context.annotation.Profile
 	"springfox.documentation.swagger.web.ApiResourceController"])
 @Profile("dev | prod")
 @Configuration
-class SecurityConfiguration
+class JwtTokenValidationConfig
