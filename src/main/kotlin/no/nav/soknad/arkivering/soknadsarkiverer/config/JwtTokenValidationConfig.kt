@@ -10,8 +10,10 @@ import org.springframework.context.annotation.Profile
 	"org.springframework",
 	"no.nav.soknad.arkivering.soknadsarkiverer.supervision.HealthCheck",
 	"io.swagger",
-	"java.lang.annotation",
-	"springfox.documentation.swagger.web.ApiResourceController"])
+	"org.apache.felix",
+	"springfox.documentation.swagger.web.ApiResourceController",
+	"javax.validation.constraints"
+])
 @Profile("dev | prod")
 @Configuration
 class JwtTokenValidationConfig
