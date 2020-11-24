@@ -2,7 +2,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.config
 
 import com.natpryce.konfig.*
 import com.natpryce.konfig.ConfigurationProperties.Companion.systemProperties
-import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.context.annotation.Bean
 import org.springframework.core.env.ConfigurableEnvironment
@@ -53,7 +52,7 @@ private fun String.configProperty(): String = appConfig[Key(this, stringType)]
 
 fun readFileAsText(fileName: String, default: String = "") = try { File(fileName).readText(Charsets.UTF_8) } catch (e: Exception) { default }
 
-data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val config: Config = Config(), val state: State = State() ) {
+data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val config: Config = Config(), val state: State = State()) {
 	data class KafkaConfig(
 		val version: String = "APP_VERSION".configProperty(),
 		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "SOKNADSARKIVERER_USERNAME".configProperty()),
@@ -74,15 +73,15 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val joarkHost: String = readFileAsText("/var/run/secrets/nais.io/kv/JOARK_HOST", "JOARK_HOST".configProperty()),
 		val joarkUrl: String = "JOARK_URL".configProperty(),
 		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "SOKNADSARKIVERER_USERNAME".configProperty()),
-		var sharedPassword: String = readFileAsText("/var/run/secrets/nais.io/kv/SHARED_PASSWORD","SHARED_PASSWORD".configProperty()),
+		var sharedPassword: String = readFileAsText("/var/run/secrets/nais.io/kv/SHARED_PASSWORD", "SHARED_PASSWORD".configProperty()),
 		var clientsecret: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "CLIENTSECRET".configProperty()),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
 		val retryTime: List<Int> = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
 		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty(),
 		val maxMessageSize: Int = "MAX_MESSAGE_SIZE".configProperty().toInt(),
-		val adminUser: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER","ADMIN_USER".configProperty()),
-		var adminUserPassword: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER_PASSWORD","ADMIN_USER_PASSWORD".configProperty())
+		val adminUser: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER", "ADMIN_USER".configProperty()),
+		var adminUserPassword: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER_PASSWORD", "ADMIN_USER_PASSWORD".configProperty())
 	)
 
 	data class State(
