@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Profile
 	"io.swagger",
 	"org.apache.felix",
 	"springfox.documentation.swagger.web.ApiResourceController",
+	"org.webjars.swagger-ui",
 	"javax.validation.constraints"
 ])
 @Profile("dev | prod")
