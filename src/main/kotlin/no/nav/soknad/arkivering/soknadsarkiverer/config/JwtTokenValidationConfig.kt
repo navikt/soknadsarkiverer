@@ -11,7 +11,6 @@ import org.springframework.context.annotation.Profile
 	"no.nav.soknad.arkivering.soknadsarkiverer.supervision.HealthCheck",
 	"io.swagger",
 	"org.springdoc",
-	"springfox.documentation.swagger.web.ApiResourceController",
 	"org.webjars.swagger-ui"
 ])
 @Profile("dev | prod")
