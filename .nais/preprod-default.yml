@@ -8,8 +8,6 @@ metadata:
 spec:
   image: {{image}}
   port: 8091
-#  webproxy:
-#    true
   liveliness:
     path: /internal/isAlive
     initialDelay: 100
