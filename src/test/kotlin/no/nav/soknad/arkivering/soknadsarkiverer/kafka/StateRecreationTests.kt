@@ -31,7 +31,6 @@ class StateRecreationTests : TopologyTestDriverTests() {
 		setupKafkaTopologyTestDriver()
 			.withAppConfiguration(appConfiguration)
 			.withTaskListService(taskListService)
-			.withMockedKafkaPublisher()
 			.runScheduledTasksOnScheduling(scheduler)
 			.setup()
 	}
