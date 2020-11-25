@@ -26,7 +26,10 @@ no.nav.security.jwt:
       discoveryurl: http://metadata
       accepted_audience: aud-localhost
       cookie_name: localhost-idtoken
-
+    azuread:
+      discoveryurl: http://metadata
+      accepted_audience: aud-localhost
+      cookie_name: localhost-idtoken
 
   client:
     registration:
@@ -46,13 +49,15 @@ spring:
 no.nav.security.jwt:
   expirythreshold: ${EXPIRYTHRESHOLD} #threshold in minutes until token expires
 
-  issuers: isso
-  issuer:
-    isso:
+  issuer.isso:
       discoveryurl: ${DISCOVERYURL}
       accepted_audience: ${ACCEPTEDAUDIENCE}
       cookie_name: ${COOKIENAME}
-
+  issuer.azuread:
+      discoveryurl: ${AZURE_WELL_KNOWN_URL}
+      accepted_audience: ${ACCEPTEDAUDIENCE}, api://${ACCEPTEDAUDIENCE}
+      proxyurl: http://webproxy-nais.nav.no:8088
+      cookie_name: azure_token
   client:
     registration:
       soknadsarkiverer:

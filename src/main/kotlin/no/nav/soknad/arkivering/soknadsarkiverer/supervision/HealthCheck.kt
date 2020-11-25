@@ -19,15 +19,12 @@ class HealthCheck(private val appConfiguration: AppConfiguration) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@GetMapping("/isAlive")
-	@Unprotected
 	fun isAlive() = "Ok"
 
 	@GetMapping("/ping")
-	@Unprotected
 	fun ping() = "pong"
 
 	@GetMapping("/isReady")
-	@Unprotected
 	fun isReady() = "Ready for actions"
 
 	@GetMapping("/stop")
