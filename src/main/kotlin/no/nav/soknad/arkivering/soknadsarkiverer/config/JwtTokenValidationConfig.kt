@@ -10,10 +10,9 @@ import org.springframework.context.annotation.Profile
 	"org.springframework",
 	"no.nav.soknad.arkivering.soknadsarkiverer.supervision.HealthCheck",
 	"io.swagger",
-	"org.apache.felix",
+	"org.springdoc",
 	"springfox.documentation.swagger.web.ApiResourceController",
-	"org.webjars.swagger-ui",
-	"javax.validation.constraints"
+	"org.webjars.swagger-ui"
 ])
 @Profile("dev | prod")
 @Configuration
