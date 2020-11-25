@@ -86,62 +86,35 @@ open class TopologyTestDriverTests {
 
 	inner class TopologyTestDriverBuilder {
 		private var appConfiguration = createAppConfiguration()
-		private lateinit var taskListService: TaskListService
-		private lateinit var kafkaPublisher: KafkaPublisher
+		private var taskListService: TaskListService = mock()
+		private var kafkaPublisher: KafkaPublisher = mock()
 
-		fun withAppConfiguration(appConfiguration: AppConfiguration): TaskListServiceStep {
-			this.appConfiguration = appConfiguration
-			return TaskListServiceStep()
+		fun withAppConfiguration(appConfiguration: AppConfiguration) = apply { this.appConfiguration = appConfiguration }
+		fun withTaskListService(taskListService: TaskListService) = apply { this.taskListService = taskListService }
+		fun withKafkaPublisher(kafkaPublisher: KafkaPublisher) = apply { this.kafkaPublisher = kafkaPublisher }
+
+		fun runScheduledTasksOnScheduling(scheduler: Scheduler): TopologyTestDriverBuilder {
+			val captor = argumentCaptor<() -> Unit>()
+			whenever(scheduler.schedule(capture(captor), any()))
+				.then { captor.value.invoke() }
+			return this
 		}
 
-		inner class TaskListServiceStep {
-			fun withTaskListService(theTaskListService: TaskListService): KafkaPublisherStep {
-				taskListService = theTaskListService
-				return KafkaPublisherStep()
-			}
-
-			fun withMockedTaskListService(): KafkaPublisherStep {
-				taskListService = mock()
-				return KafkaPublisherStep()
-			}
+		fun putProcessingEventLogsOnTopic(): TopologyTestDriverBuilder {
+			putProcessingEventLogOnTopic(EventTypes.RECEIVED)
+			putProcessingEventLogOnTopic(EventTypes.STARTED)
+			putProcessingEventLogOnTopic(EventTypes.FINISHED)
+			return this
 		}
 
-		inner class KafkaPublisherStep {
-			fun withKafkaPublisher(theKafkaPublisher: KafkaPublisher): BehaviourStep {
-				kafkaPublisher = theKafkaPublisher
-				return BehaviourStep()
-			}
-
-			fun withMockedKafkaPublisher(): BehaviourStep {
-				kafkaPublisher = mock()
-				return BehaviourStep()
-			}
+		private fun putProcessingEventLogOnTopic(eventType: EventTypes) {
+			val captor = argumentCaptor<String>()
+			whenever(kafkaPublisher.putProcessingEventOnTopic(capture(captor), eq(ProcessingEvent(eventType)), any()))
+				.then { processingEventTopic.pipeInput(captor.value, ProcessingEvent(eventType)) }
 		}
 
-		inner class BehaviourStep {
-			fun runScheduledTasksOnScheduling(scheduler: Scheduler): BehaviourStep {
-				val captor = argumentCaptor<() -> Unit>()
-				whenever(scheduler.schedule(capture(captor), any()))
-					.then { captor.value.invoke() }
-				return this
-			}
-
-			fun putProcessingEventLogsOnTopic(): BehaviourStep {
-				putProcessingEventLogOnTopic(EventTypes.RECEIVED)
-				putProcessingEventLogOnTopic(EventTypes.STARTED)
-				putProcessingEventLogOnTopic(EventTypes.FINISHED)
-				return this
-			}
-
-			private fun putProcessingEventLogOnTopic(eventType: EventTypes) {
-				val captor = argumentCaptor<String>()
-				whenever(kafkaPublisher.putProcessingEventOnTopic(capture(captor), eq(ProcessingEvent(eventType)), any()))
-					.then { processingEventTopic.pipeInput(captor.value, ProcessingEvent(eventType)) }
-			}
-
-			fun setup() {
-				setupKafkaTopologyTestDriver(appConfiguration, taskListService, kafkaPublisher)
-			}
+		fun setup() {
+			setupKafkaTopologyTestDriver(appConfiguration, taskListService, kafkaPublisher)
 		}
 
 		private inline fun <reified T> argumentCaptor(): ArgumentCaptor<T> = ArgumentCaptor.forClass(T::class.java)
