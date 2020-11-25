@@ -5,8 +5,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Profile
-import org.springframework.core.annotation.Order
 import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity
@@ -18,7 +16,6 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationEn
 
 // Det er mulig denne filen kan slettes i og med at vi bruker token, og ikke basic aut til å beskytte rest endepunktene.
 @Configuration
-//@Profile("default | spring | docker")
 @EnableGlobalMethodSecurity(securedEnabled = true, prePostEnabled = true)
 class RestControllerSecurityConfig(private val config: AppConfiguration) : WebSecurityConfigurerAdapter() {
 
