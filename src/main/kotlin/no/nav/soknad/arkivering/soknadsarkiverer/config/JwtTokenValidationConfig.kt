@@ -9,7 +9,10 @@ import org.springframework.context.annotation.Profile
 @EnableJwtTokenValidation(ignore = [
 	"org.springframework",
 	"no.nav.soknad.arkivering.soknadsarkiverer.supervision.HealthCheck",
-	"springfox.documentation.swagger.web.ApiResourceController"])
+	"io.swagger",
+	"org.springdoc",
+	"org.webjars.swagger-ui"
+])
 @Profile("dev | prod")
 @Configuration
 class JwtTokenValidationConfig

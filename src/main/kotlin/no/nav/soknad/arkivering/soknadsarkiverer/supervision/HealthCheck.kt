@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
+import io.swagger.v3.oas.annotations.Hidden
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -14,21 +15,25 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping(value = ["/internal"])
+@Unprotected
 class HealthCheck(private val appConfiguration: AppConfiguration) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
+	@Hidden
 	@GetMapping("/isAlive")
 	fun isAlive() = "Ok"
 
+	@Hidden
 	@GetMapping("/ping")
 	fun ping() = "pong"
 
+	@Hidden
 	@GetMapping("/isReady")
 	fun isReady() = "Ready for actions"
 
+	@Hidden
 	@GetMapping("/stop")
-	@Unprotected
 	fun stop() = runBlocking {
 		launch {
 			while (isBusy(appConfiguration)) {
