@@ -284,7 +284,7 @@ class AdminInterface(private val adminService: AdminService) {
 			"could not be found.", content = [
 			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = FilestorageExistenceResponse::class)))))])])
 	@GetMapping("/fillager/filesExist/{key}")
-	fun filesExists(@PathVariable key: String) = adminService.filesExist(key)
+	fun filesExists(@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String) = adminService.filesExist(key)
 }
 
 const val maxNumberOfEventsReturned = 50
