@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import no.nav.security.token.support.core.api.ProtectedWithClaims
+import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -29,8 +30,8 @@ class AdminInterface(private val adminService: AdminService) {
 			"all topics will be returned." +
 			"\n\n" +
 			"An empty list is returned if there are no events on any topics.", content = [
-			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
-	@GetMapping("/kafka/events/allEvents")
+			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@GetMapping("/kafka/events/allEvents", produces = [APPLICATION_JSON_VALUE])
 	fun allEvents(): List<KafkaEvent<String>> {
 
 		val eventCollectionBuilder = EventCollection.Builder()
@@ -48,8 +49,8 @@ class AdminInterface(private val adminService: AdminService) {
 			"be returned." +
 			"\n\n" +
 			"An empty list is returned if there are no events on any topics.", content = [
-			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
-	@GetMapping("/kafka/events/allEvents/before/{timestamp}")
+			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@GetMapping("/kafka/events/allEvents/before/{timestamp}", produces = [APPLICATION_JSON_VALUE])
 	fun allEventsBefore(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long): List<KafkaEvent<String>> {
 
 		val eventCollectionBuilder = EventCollection.Builder()
@@ -67,8 +68,8 @@ class AdminInterface(private val adminService: AdminService) {
 			"be returned." +
 			"\n\n" +
 			"An empty list is returned if there are no events on any topics.", content = [
-			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
-	@GetMapping("/kafka/events/allEvents/after/{timestamp}")
+			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@GetMapping("/kafka/events/allEvents/after/{timestamp}", produces = [APPLICATION_JSON_VALUE])
 	fun allEventsAfter(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long): List<KafkaEvent<String>> {
 
 		val eventCollectionBuilder = EventCollection.Builder()
@@ -86,8 +87,8 @@ class AdminInterface(private val adminService: AdminService) {
 			"all topics that have not been successfully archived will be returned." +
 			"\n\n" +
 			"An empty list is returned if there are no unfinished events.", content = [
-			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
-	@GetMapping("/kafka/events/unfinishedEvents")
+			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@GetMapping("/kafka/events/unfinishedEvents", produces = [APPLICATION_JSON_VALUE])
 	fun unfinishedEvents(): List<KafkaEvent<String>> {
 
 		val eventCollectionBuilder = EventCollection.Builder()
@@ -105,8 +106,8 @@ class AdminInterface(private val adminService: AdminService) {
 			"happened before a given timestamp, and have not been successfully archived will be returned." +
 			"\n\n" +
 			"An empty list is returned if there are no unfinished events.", content = [
-			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
-	@GetMapping("/kafka/events/unfinishedEvents/before/{timestamp}")
+			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@GetMapping("/kafka/events/unfinishedEvents/before/{timestamp}", produces = [APPLICATION_JSON_VALUE])
 	fun unfinishedEventsBefore(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long): List<KafkaEvent<String>> {
 
 		val eventCollectionBuilder = EventCollection.Builder()
@@ -124,8 +125,8 @@ class AdminInterface(private val adminService: AdminService) {
 			"happened after a given timestamp, and have not been successfully archived will be returned." +
 			"\n\n" +
 			"An empty list is returned if there are no unfinished events.", content = [
-			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
-	@GetMapping("/kafka/events/unfinishedEvents/after/{timestamp}")
+			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@GetMapping("/kafka/events/unfinishedEvents/after/{timestamp}", produces = [APPLICATION_JSON_VALUE])
 	fun unfinishedEventsAfter(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long): List<KafkaEvent<String>> {
 
 		val eventCollectionBuilder = EventCollection.Builder()
@@ -140,8 +141,8 @@ class AdminInterface(private val adminService: AdminService) {
 	@ApiResponses(value = [
 		ApiResponse(responseCode = "200", description = "A list of the $maxNumberOfEventsReturned most recent events from " +
 			"all topics that have a given key. An empty list is returned if the key is not found.", content = [
-			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
-	@GetMapping("/kafka/events/key/{key}")
+			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@GetMapping("/kafka/events/key/{key}", produces = [APPLICATION_JSON_VALUE])
 	fun specificEvent(@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String): List<KafkaEvent<String>> {
 
 		val eventCollectionBuilder = EventCollection.Builder()
@@ -161,8 +162,8 @@ class AdminInterface(private val adminService: AdminService) {
 			"ON the given timestamp will also be returned." +
 			"\n\n" +
 			"An empty list is returned if the key is not found.", content = [
-			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
-	@GetMapping("/kafka/events/key/before/{timestamp}/{key}")
+			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@GetMapping("/kafka/events/key/before/{timestamp}/{key}", produces = [APPLICATION_JSON_VALUE])
 	fun specificEventBefore(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long,
 													@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String): List<KafkaEvent<String>> {
 
@@ -183,8 +184,8 @@ class AdminInterface(private val adminService: AdminService) {
 			"ON the given timestamp will also be returned." +
 			"\n\n" +
 			"An empty list is returned if the key is not found.", content = [
-			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
-	@GetMapping("/kafka/events/key/after/{timestamp}/{key}")
+			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@GetMapping("/kafka/events/key/after/{timestamp}/{key}", produces = [APPLICATION_JSON_VALUE])
 	fun specificEventAfter(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long,
 												 @Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String): List<KafkaEvent<String>> {
 
@@ -204,8 +205,8 @@ class AdminInterface(private val adminService: AdminService) {
 		ApiResponse(responseCode = "200", description = "A list of the $maxNumberOfEventsReturned events from all topics " +
 			"that matches the search phrase will be returned. An empty list is returned if there are no events matching the " +
 			"search phrase.", content = [
-			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
-	@GetMapping("/kafka/events/search/{searchPhrase}")
+			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@GetMapping("/kafka/events/search/{searchPhrase}", produces = [APPLICATION_JSON_VALUE])
 	fun search(@Parameter(description = "Search phrase (Regex)") @PathVariable searchPhrase: String): List<KafkaEvent<String>> {
 
 		val eventCollectionBuilder = EventCollection.Builder()
@@ -226,8 +227,8 @@ class AdminInterface(private val adminService: AdminService) {
 			"happened ON the given timestamp will also be returned." +
 			"\n\n" +
 			"An empty list is returned if there are no events matching the search phrase.", content = [
-			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
-	@GetMapping("/kafka/events/search/before/{timestamp}/{searchPhrase}")
+			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@GetMapping("/kafka/events/search/before/{timestamp}/{searchPhrase}", produces = [APPLICATION_JSON_VALUE])
 	fun searchBefore(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long,
 									 @Parameter(description = "Search phrase (Regex)") @PathVariable searchPhrase: String): List<KafkaEvent<String>> {
 
@@ -249,8 +250,8 @@ class AdminInterface(private val adminService: AdminService) {
 			"happened ON the given timestamp will also be returned." +
 			"\n\n" +
 			"An empty list is returned if there are no events matching the search phrase.", content = [
-			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
-	@GetMapping("/kafka/events/search/after/{timestamp}/{searchPhrase}")
+			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@GetMapping("/kafka/events/search/after/{timestamp}/{searchPhrase}", produces = [APPLICATION_JSON_VALUE])
 	fun searchAfter(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long,
 									@Parameter(description = "Search phrase (Regex)") @PathVariable searchPhrase: String): List<KafkaEvent<String>> {
 
@@ -282,8 +283,8 @@ class AdminInterface(private val adminService: AdminService) {
 			"In case the Filestorage keys could not be looked up (most likely because the task is already finished and archived " +
 			"to Joark), the returned list will consist of one element and an error message explaining that Filestorage keys " +
 			"could not be found.", content = [
-			(Content(mediaType = "application/json", array = (ArraySchema(schema = Schema(implementation = FilestorageExistenceResponse::class)))))])])
-	@GetMapping("/fillager/filesExist/{key}")
+			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = FilestorageExistenceResponse::class)))))])])
+	@GetMapping("/fillager/filesExist/{key}", produces = [APPLICATION_JSON_VALUE])
 	fun filesExists(@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String) = adminService.filesExist(key)
 }
 
