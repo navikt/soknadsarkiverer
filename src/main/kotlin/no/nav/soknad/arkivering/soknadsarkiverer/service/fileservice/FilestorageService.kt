@@ -41,7 +41,7 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 
 		} catch (e: Exception) {
 			Metrics.incGetFilestorageErrors()
-			logger.error("$key: Error retrieving files from file storage", e)
+			logger.error("$key: Error retrieving files from the file storage", e)
 			throw ArchivingException(e)
 
 		} finally {
