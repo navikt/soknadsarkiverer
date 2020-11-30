@@ -37,11 +37,11 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"CLIENTSECRET" to ""
 ))
 
-private val secondsBetweenRetries = listOf(1, 25, 60, 120, 600, 1200)   // As many retries will be attempted as there are elements in the list.
-private val secondsBetweenRetriesForTests = listOf(1, 1, 1, 1, 1, 1) // As many retries will be attempted as there are elements in the list.
+private val secondsBetweenRetries = listOf(1, 25, 60, 120, 600, 1200) // As many retries will be attempted as there are elements in the list.
+private val secondsBetweenRetriesForTests = listOf(1, 1, 1, 1, 1, 1)  // Note! Also update end-to-end-tests if the list size is changed!
 
 
-val appConfig =
+private val appConfig =
 	EnvironmentVariables() overriding
 		systemProperties() overriding
 		ConfigurationProperties.fromResource(Configuration::class.java, "/application.yml") overriding

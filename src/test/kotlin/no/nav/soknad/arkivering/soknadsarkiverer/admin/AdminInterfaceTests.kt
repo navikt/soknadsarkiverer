@@ -143,7 +143,7 @@ class AdminInterfaceTests {
 
 		val numberOfInputs = 2
 		val numberOfMessages = 1 + maxNumberOfAttempts // 1 "ok" message, a number of mocked exceptions
-		val numberOfProcessingEvents = 4 + 1 + 5 // 4 for the first event, 1 received for the second, 5 attempts at starting
+		val numberOfProcessingEvents = 4 + 1 + maxNumberOfAttempts // 4 for the first event, 1 received for the second, a number of attempts at starting
 		loopAndVerifyAtLeast(numberOfInputs + numberOfMessages + numberOfProcessingEvents, eventsAfter)
 	}
 
@@ -161,7 +161,7 @@ class AdminInterfaceTests {
 
 		val numberOfInputs = 1
 		val numberOfMessages = maxNumberOfAttempts // mocked exceptions
-		val numberOfProcessingEvents = 1 + 5 // 1 received for the second event, 5 attempts at starting
+		val numberOfProcessingEvents = 1 + maxNumberOfAttempts // 1 received for the second event, a number of attempts at starting
 		loopAndVerifyAtLeast(numberOfInputs + numberOfMessages + numberOfProcessingEvents, eventsAfter)
 	}
 
