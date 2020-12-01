@@ -210,7 +210,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "Exception")
-		verifyMessageStartsWith(1, "ok")
+		//verifyMessageStartsWith(1, "ok")
 
 		assertEquals(getFilestorageSuccessesBefore + 2, Metrics.getGetFilestorageSuccesses())
 		assertEquals(delFilestorageSuccessesBefore + 1, Metrics.getDelFilestorageSuccesses())
