@@ -217,7 +217,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		assertEquals(joarkErrorsBefore + 1, Metrics.getJoarkErrors())
 		assertEquals(joarkSuccessesBefore + 1, Metrics.getJoarkSuccesses())
 		assertEquals(tasksBefore + 0, Metrics.getTasks(), "Should have created and finished task")
-		//assertEquals(tasksGivenUpOnBefore + 0, Metrics.getTasksGivenUpOn(), "Should not have given up on any task")
+		assertEquals(tasksGivenUpOnBefore + 0, Metrics.getTasksGivenUpOn(), "Should not have given up on any task")
 	}
 
 	@Test
