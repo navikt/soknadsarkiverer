@@ -4,15 +4,15 @@
 		<encoder class="net.logstash.logback.encoder.LogstashEncoder" />
 	</appender>
 
-	<logger name="org.apache" level="${log.level.org.apache:-ERROR}" />
-	<logger name="org.apache.kafka" level="${log.level.org.apache.kafka:-WARN}" />
-	<logger name="ch.qos.logback" level="${log.level.ch.qos.logback:-WARN}" />
+	<logger name="org.apache" level="${log.level.org.apache:-INFO}" />
+	<logger name="org.apache.kafka" level="${log.level.org.apache.kafka:-INFO}" />
+	<logger name="ch.qos.logback" level="${log.level.ch.qos.logback:-INFO}" />
 
-	<logger name="io" level="ERROR"/>
-	<logger name="org" level="ERROR"/>
-	<logger name="com" level="ERROR"/>
-	<logger name="no.nav" level="INFO"/>
-	<logger name="no.nav.soknad.arkivering" level="INFO"/>
+	<logger name="io" level="INFO"/>
+	<logger name="org" level="INFO"/>
+	<logger name="com" level="INFO"/>
+	<logger name="no.nav" level="DEBUG"/>
+	<logger name="no.nav.soknad.arkivering" level="DEBUG"/>
 
 	<root level="INFO">
 		<appender-ref ref="STDOUT_JSON"/>
