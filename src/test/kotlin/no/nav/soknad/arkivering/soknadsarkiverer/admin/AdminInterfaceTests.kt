@@ -2,6 +2,10 @@ package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
@@ -194,16 +198,24 @@ class AdminInterfaceTests {
 			.build()
 		archiveOneEventSuccessfullyAndFailOne(key0, key1, soknadarkivschema0, soknadarkivschema1)
 
-		val events0 = adminInterface.search("Loussa")
-		assertEquals(1, events0.size)
-		assertEquals(key1, events0[0].innsendingKey)
+		val events0 = searchAsync("Loussa")
+		val events1 = searchAsync("phrase with no match")
+		val events2 = searchAsync("Lo.*sa")
 
-		val events1 = adminInterface.search("phrase with no match")
-		assertEquals(0, events1.size)
+		runBlocking {
+			val results = awaitAll(events0, events1, events2)
 
-		val events2 = adminInterface.search("Lo.*sa")
-		assertEquals(1, events2.size)
-		assertEquals(key1, events2[0].innsendingKey)
+			val result0 = results[0]
+			assertEquals(1, result0.size)
+			assertEquals(key1, result0[0].innsendingKey)
+
+			val result1 = results[1]
+			assertEquals(0, result1.size)
+
+			val result2 = results[2]
+			assertEquals(1, result2.size)
+			assertEquals(key1, result2[0].innsendingKey)
+		}
 	}
 
 
@@ -253,6 +265,8 @@ class AdminInterfaceTests {
 		assertEquals(FilestorageExistenceStatus.DOES_NOT_EXIST, response[1].status)
 	}
 
+
+	private fun searchAsync(phrase: String) = GlobalScope.async { adminInterface.search(phrase) }
 
 	private fun archiveOneEventSuccessfullyAndFailOne(key0: String = UUID.randomUUID().toString(),
 																										key1: String = UUID.randomUUID().toString()): Pair<Soknadarkivschema, Soknadarkivschema> {
