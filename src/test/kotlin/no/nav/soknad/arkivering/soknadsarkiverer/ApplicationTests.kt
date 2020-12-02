@@ -13,7 +13,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.*
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
-import no.nav.soknad.arkivering.soknadsarkiverer.supervision.HealthCheck
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.Metrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
@@ -49,9 +48,6 @@ class ApplicationTests: TopologyTestDriverTests() {
 	private lateinit var appConfiguration: AppConfiguration
 
 	@Autowired
-	private lateinit var healthCheck: HealthCheck
-
-	@Autowired
 	private lateinit var taskListService: TaskListService
 
 	@Autowired
@@ -73,8 +69,6 @@ class ApplicationTests: TopologyTestDriverTests() {
 		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
 
 		maxNumberOfAttempts = appConfiguration.config.retryTime.size
-		appConfiguration.state.busyCounter = 0
-		appConfiguration.state.stopping = false
 
 		setupKafkaTopologyTestDriver()
 			.withAppConfiguration(appConfiguration)
