@@ -15,6 +15,10 @@ import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 @Service
 class JournalpostClient(private val appConfiguration: AppConfiguration,
@@ -41,7 +45,7 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 
 			val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
 
-			if (SKIP_JOARK_IF_ENVIRONMENT.equals(appConfiguration.config.profile, true)) {
+			if (SKIP_JOARK_IF_ENVIRONMENT.equals(appConfiguration.config.profile, true) && skip_until(soknadarkivschema.getInnsendtDato())) {
 				val journalpostId = "-1"
 				logger.info("$key: Skipped saving to Joark, fake the following journalpostId: '$journalpostId'")
 				Metrics.incJoarkSuccesses()
@@ -78,5 +82,11 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 				{ response -> response.bodyToMono(String::class.java).map { Exception("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'") } })
 			.bodyToMono(OpprettJournalpostResponse::class.java)
 			.block()
+	}
+
+
+	private fun skip_until(innsendtDato: Long): Boolean {
+		val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+		return (LocalDateTime.ofInstant(Instant.ofEpochSecond(innsendtDato), ZoneOffset.UTC)).isAfter(LocalDateTime.parse(appConfiguration.config.startArkivering, formatter))
 	}
 }
