@@ -21,7 +21,7 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 
 	override fun ping() = webClient
 			.get()
-			.uri(appConfiguration.config.filestorageHost + "/isAlive")
+			.uri(appConfiguration.config.filestorageHost + "/internal/ping")
 			.retrieve()
 			.bodyToMono(String::class.java)
 			.block()!!

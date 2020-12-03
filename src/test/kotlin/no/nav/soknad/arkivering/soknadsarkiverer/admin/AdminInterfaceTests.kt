@@ -3,7 +3,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.admin
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
-import no.nav.soknad.arkivering.avroschemas.EventTypes.STARTED
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
@@ -16,9 +15,11 @@ import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
@@ -32,7 +33,6 @@ import org.springframework.test.context.ActiveProfiles
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-@Disabled // TODO: These crash on Github Actions when building q0-pipeline
 @ActiveProfiles("test")
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
@@ -111,31 +111,14 @@ class AdminInterfaceTests {
 
 		putDataOnTopic(key, soknadarkivschema)
 		loopAndVerify(0, { taskListService.listTasks(key).size })
-		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
+		verifyMockedDeleteRequests(1, appConfiguration.config.filestorageUrl.replace("?", "\\?") + ".*")
+		TimeUnit.SECONDS.sleep(2) // Give the system 2 seconds to finish the task after the deletion occurred.
 
 		adminInterface.rerun(key)
 
 		TimeUnit.SECONDS.sleep(1)
 		loopAndVerify(0, { taskListService.listTasks(key).size })
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
-	}
-
-	@Test
-	fun `Rerunning blocked task wont block caller`() {
-		val key = UUID.randomUUID().toString()
-		val fileUuid = UUID.randomUUID().toString()
-		val soknadarkivschema = createSoknadarkivschema(fileUuid)
-		mockFilestorageIsWorking(fileUuid)
-		mockJoarkIsWorking(10_000)
-
-		putDataOnTopic(key, soknadarkivschema)
-
-		val timeBeforeRerun = System.currentTimeMillis()
-		adminInterface.rerun(key)
-
-		val timeTaken = System.currentTimeMillis() - timeBeforeRerun
-		assertTrue(timeTaken < 200, "This operation should spawn a new thread and should return immediately but took $timeTaken ms")
-		loopAndVerify(1, { taskListService.listTasks(key).size })
 	}
 
 
@@ -196,31 +179,6 @@ class AdminInterfaceTests {
 		assertEquals(numberOfInputs + numberOfMessages + numberOfProcessingEvents, events.size)
 	}
 
-	@Test
-	fun `Exception returned if illegal messageId is given to eventContent`() {
-		assertThrows<NoSuchElementException> {
-			adminInterface.eventContent("illegal key")
-		}
-	}
-
-	@Test
-	fun `Can request eventContent`() {
-		val unfinishedEventsBefore = adminInterface.unfinishedEvents()
-		val (_, soknadsarkivschema) = archiveOneEventSuccessfullyAndFailOne()
-
-		val unfinishedEvents = adminInterface.unfinishedEvents().filter { !unfinishedEventsBefore.contains(it) }
-		val inputEvent = unfinishedEvents.last { it.type == "INPUT" }
-		val messageEvent = unfinishedEvents.last { it.type.contains("Exception") }
-		val processingEvent = unfinishedEvents.last { it.type == "STARTED" }
-
-		val inputEventContent = adminInterface.eventContent(inputEvent.messageId)
-		val messageEventContent = adminInterface.eventContent(messageEvent.messageId)
-		val processingEventContent = adminInterface.eventContent(processingEvent.messageId)
-
-		assertEquals(soknadsarkivschema.toString(), inputEventContent)
-		assertEquals("{\"type\": \"STARTED\"}", processingEventContent)
-		assertTrue(messageEventContent.contains("Exception"))
-	}
 
 	@Test
 	fun `Can search for events`() {
@@ -229,7 +187,6 @@ class AdminInterfaceTests {
 		val key1 = UUID.randomUUID().toString()
 		val soknadarkivschema0 = createSoknadarkivschema(fileUuid)
 		val soknadarkivschema1 = SoknadarkivschemaBuilder()
-				.withBehandlingsid(UUID.randomUUID().toString())
 				.withBehandlingsid("Loussa")
 				.withMottatteDokumenter(MottattDokumentBuilder()
 					.withMottatteVarianter(listOf(MottattVariantBuilder().withUuid(fileUuid).build()))
@@ -267,7 +224,7 @@ class AdminInterfaceTests {
 
 		assertEquals(1, response.size)
 		assertEquals(nonExistingKey, response[0].id)
-		assertEquals("$nonExistingKey: Failed to find file ids for given key. The task is probably finished.", response[0].status)
+		assertEquals(FilestorageExistenceStatus.FAILED_TO_FIND_FILE_IDS, response[0].status)
 	}
 
 
@@ -291,9 +248,9 @@ class AdminInterfaceTests {
 
 		assertEquals(2, response.size)
 		assertEquals(fileUuidInFilestorage, response[0].id)
-		assertEquals("Exists", response[0].status)
+		assertEquals(FilestorageExistenceStatus.EXISTS, response[0].status)
 		assertEquals(fileUuidNotInFilestorage, response[1].id)
-		assertEquals("Does not exist", response[1].status)
+		assertEquals(FilestorageExistenceStatus.DOES_NOT_EXIST, response[1].status)
 	}
 
 
@@ -334,7 +291,7 @@ class AdminInterfaceTests {
 
 		val eventCounter = {
 			adminInterface.specificEvent(key)
-				.filter { it.type == STARTED.name }
+				.filter { it.type == PayloadType.STARTED }
 				.count()
 		}
 		loopAndVerifyAtLeast(expectedCount, eventCounter)

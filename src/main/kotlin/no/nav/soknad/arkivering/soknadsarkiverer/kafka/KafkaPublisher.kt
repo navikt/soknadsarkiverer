@@ -20,6 +20,7 @@ import kotlin.collections.HashMap
 
 @Service
 class KafkaPublisher(private val appConfiguration: AppConfiguration) {
+
 	private val kafkaProcessingEventProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap())
 	private val kafkaMessageProducer = KafkaProducer<String, String>(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 
