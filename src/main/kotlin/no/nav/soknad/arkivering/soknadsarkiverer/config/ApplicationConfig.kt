@@ -34,14 +34,16 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"ADMIN_USER_PASSWORD" to "password",
 
 	"CLIENTID" to "",
-	"CLIENTSECRET" to ""
+	"CLIENTSECRET" to "",
+
+	"START_ARKIVERING" to "2099-12-31 59:59:59"
 ))
 
-private val secondsBetweenRetries = listOf(1, 25, 60, 120, 600)   // As many retries will be attempted as there are elements in the list.
-private val secondsBetweenRetriesForTests = listOf(1, 1, 1, 1, 1) // As many retries will be attempted as there are elements in the list.
+private val secondsBetweenRetries = listOf(1, 25, 60, 120, 600, 1200) // As many retries will be attempted as there are elements in the list.
+private val secondsBetweenRetriesForTests = listOf(1, 1, 1, 1, 1, 1)  // Note! Also update end-to-end-tests if the list size is changed!
 
 
-val appConfig =
+private val appConfig =
 	EnvironmentVariables() overriding
 		systemProperties() overriding
 		ConfigurationProperties.fromResource(Configuration::class.java, "/application.yml") overriding
@@ -81,7 +83,8 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty(),
 		val maxMessageSize: Int = "MAX_MESSAGE_SIZE".configProperty().toInt(),
 		val adminUser: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER", "ADMIN_USER".configProperty()),
-		var adminUserPassword: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER_PASSWORD", "ADMIN_USER_PASSWORD".configProperty())
+		var adminUserPassword: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER_PASSWORD", "ADMIN_USER_PASSWORD".configProperty()),
+		val startArkivering: String = readFileAsText("/var/run/secrets/nais.io/kv/START_ARKIVERING", "START_ARKIVERING".configProperty())
 	)
 
 	data class State(
