@@ -25,7 +25,7 @@ class ArchiverServiceTests {
 	private val journalpostClient = mock<JournalpostClientInterface>()
 	private val kafkaPublisher = mock<KafkaPublisher>()
 	private val appConfiguration = AppConfiguration()
-	private val healthCheck = HealthCheck(appConfiguration)
+	private val healthCheck = HealthCheck(appConfiguration, filestorage, journalpostClient)
 
 	private val key = UUID.randomUUID().toString()
 
