@@ -25,7 +25,7 @@ class ArchiverServiceTests {
 	private val journalpostClient = mock<JournalpostClientInterface>()
 	private val kafkaPublisher = mock<KafkaPublisher>()
 	private val appConfiguration = AppConfiguration()
-	private val healthCheck = HealthCheck(appConfiguration)
+	private val healthCheck = HealthCheck(appConfiguration, filestorage, journalpostClient)
 
 	private val key = UUID.randomUUID().toString()
 
@@ -33,6 +33,8 @@ class ArchiverServiceTests {
 
 	@BeforeEach
 	fun setup() {
+		whenever(filestorage.ping()).thenReturn("pong")
+		whenever(journalpostClient.ping()).thenReturn("pong")
 		archiverService = ArchiverService(appConfiguration, filestorage, journalpostClient, kafkaPublisher)
 	}
 

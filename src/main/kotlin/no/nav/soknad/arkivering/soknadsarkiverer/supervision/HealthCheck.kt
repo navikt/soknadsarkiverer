@@ -34,7 +34,7 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 		val fileServicePong = fileService.ping()
 		val joarkServicePong = joarkService.ping()
 		logger.info("Ping called: fileServicePong=${fileServicePong}, joarkServicePong=${joarkServicePong}")
-		return if (fileServicePong != null && joarkServicePong != null) {
+		return if (fileServicePong.equals("pong", true) && joarkServicePong.equals("pong", true)) {
 			"pong"
 		} else {
 			"down"
