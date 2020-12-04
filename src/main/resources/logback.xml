@@ -7,6 +7,7 @@
 	<logger name="org.apache" level="${log.level.org.apache:-INFO}" />
 	<logger name="org.apache.kafka" level="${log.level.org.apache.kafka:-INFO}" />
 	<logger name="ch.qos.logback" level="${log.level.ch.qos.logback:-INFO}" />
+	<logger name="org.springframework" level="${log.level.org.springframework:-INFO}" />
 
 	<logger name="io" level="INFO"/>
 	<logger name="org" level="INFO"/>

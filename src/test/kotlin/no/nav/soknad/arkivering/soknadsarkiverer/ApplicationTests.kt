@@ -191,7 +191,6 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyMessageStartsWith(1, "ok", key)
 	}
 
-	@Disabled("Until test is more stable")
 	@Test
 	fun `First attempt to Joark fails, the second succeeds`() {
 		val tasksBefore = Metrics.getTasks()
