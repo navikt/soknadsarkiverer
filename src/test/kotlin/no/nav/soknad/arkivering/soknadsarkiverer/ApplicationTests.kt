@@ -354,7 +354,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 			"INNGAAENDE",
 			"NAV_NO",
 			soknadsarkivschema.getArkivtema(),
-			"Søknad til " + soknadsarkivschema.getMottatteDokumenter()[0].getTittel()
+			soknadsarkivschema.getMottatteDokumenter()[0].getTittel()
 		)
 		assertEquals(expected, requestData)
 	}

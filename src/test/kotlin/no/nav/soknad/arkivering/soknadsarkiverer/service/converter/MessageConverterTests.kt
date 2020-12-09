@@ -1,5 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.converter
 
+import com.google.gson.Gson
+import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.converter.createOpprettJournalpostRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
@@ -37,9 +39,9 @@ class MessageConverterTests {
 
 		val joarkData = createOpprettJournalpostRequest(schema, files)
 
-		assertEquals("Søknad til $tittel", joarkData.tittel)
+		assertEquals("$tittel", joarkData.tittel)
 		assertEquals(1, joarkData.dokumenter.size)
-		assertEquals(tittel, joarkData.dokumenter[0].tittel)
+		assertEquals(joarkData.tittel, joarkData.dokumenter[0].tittel)
 		assertEquals(skjemanummer, joarkData.dokumenter[0].brevkode)
 	}
 
@@ -65,7 +67,7 @@ class MessageConverterTests {
 
 		assertEquals("Ettersendelse til $tittel", joarkData.tittel)
 		assertEquals(1, joarkData.dokumenter.size)
-		assertEquals(tittel, joarkData.dokumenter[0].tittel)
+		assertEquals(joarkData.tittel, joarkData.dokumenter[0].tittel)
 		assertEquals("NAVe 11-13.06", joarkData.dokumenter[0].brevkode)
 	}
 
@@ -139,7 +141,7 @@ class MessageConverterTests {
 		assertEquals(innsendtDate.format(DateTimeFormatter.ISO_DATE), joarkData.datoMottatt)
 		assertEquals(schema.getBehandlingsid(), joarkData.eksternReferanseId)
 		assertEquals(schema.getArkivtema(), joarkData.tema)
-		assertEquals("Søknad til Apa bepa", joarkData.tittel)
+		assertEquals(joarkData.tittel, joarkData.dokumenter[0].tittel)
 
 		assertEquals(3, joarkData.dokumenter.size)
 		assertEquals(schema.getMottatteDokumenter()[0].getTittel(), joarkData.dokumenter[0].tittel)
@@ -319,4 +321,31 @@ class MessageConverterTests {
             createOpprettJournalpostRequest(schema, files)
 		}
 	}
+
+
+	private fun convertJsonTilInnsendtSoknad(): Soknadarkivschema {
+		val innsendtSoknadJson = "{\"behandlingsid\": \"10010G1MJ\", \"fodselsnummer\": \"\", \"arkivtema\": \"BIL\", \"innsendtDato\": 1607419847, \"soknadstype\": \"ETTERSENDING\", \"mottatteDokumenter\": [{\"skjemanummer\": \"NAV 10-07.40\", \"erHovedskjema\": true, \"tittel\": \"Søknad om stønad til anskaffelse av motorkjøretøy\", \"mottatteVarianter\": [{\"uuid\": \"43121902-305c-4b31-b9ab-581f89f8da2c\", \"filnavn\": \"NAV 10-07.40.pdfa\", \"filtype\": \"PDF/A\", \"variantformat\": \"ARKIV\"}]}, {\"skjemanummer\": \"L9\", \"erHovedskjema\": false, \"tittel\": \"Legeerklæring\", \"mottatteVarianter\": [{\"uuid\": \"6e8db379-91c0-4395-ad95-c72dabea421c\", \"filnavn\": \"L9\", \"filtype\": \"PDF\", \"variantformat\": \"ARKIV\"}]}, {\"skjemanummer\": \"Z3\", \"erHovedskjema\": false, \"tittel\": \"Beskrivelse av funksjonsnedsettelse\", \"mottatteVarianter\": [{\"uuid\": \"31115802-706f-4cde-8392-cd19b0edc777\", \"filnavn\": \"Z3\", \"filtype\": \"PDF\", \"variantformat\": \"ARKIV\"}]}, {\"skjemanummer\": \"L7\", \"erHovedskjema\": false, \"tittel\": \"Kvitteringsside for dokumentinnsending\", \"mottatteVarianter\": [{\"uuid\": \"7311e586-c424-4898-a6b1-a2085ecf461d\", \"filnavn\": \"L7\", \"filtype\": \"PDF\", \"variantformat\": \"ARKIV\"}]}]}"
+		val gson = Gson()
+
+		return gson.fromJson(innsendtSoknadJson, Soknadarkivschema::class.java)
+	}
+
+	@Test
+	fun `Real case - Ettersending - should convert correctly`() {
+		val excpeted = "NAVe 10-07.40"
+		val files = listOf(FilElementDto("43121902-305c-4b31-b9ab-581f89f8da2c", "apa".toByteArray()),
+			FilElementDto("6e8db379-91c0-4395-ad95-c72dabea421c", "apa".toByteArray()),
+			FilElementDto("31115802-706f-4cde-8392-cd19b0edc777", "apa".toByteArray()),
+			FilElementDto("7311e586-c424-4898-a6b1-a2085ecf461d", "apa".toByteArray())
+		)
+
+		val schema = convertJsonTilInnsendtSoknad()
+
+		val joarkData = createOpprettJournalpostRequest(schema, files)
+
+		assertEquals(4, joarkData.dokumenter.size)
+		assertEquals(excpeted, joarkData.dokumenter[0].brevkode)
+	}
+
+
 }
