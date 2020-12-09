@@ -19,8 +19,8 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping(value = ["/internal"])
 @Unprotected
 class HealthCheck(private val appConfiguration: AppConfiguration,
-									private val fileService: FileserviceInterface,
-									private val joarkService: JournalpostClientInterface) {
+	private val fileService: FileserviceInterface,
+	private val joarkService: JournalpostClientInterface) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -34,11 +34,7 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 		val fileServicePong = fileService.ping()
 		val joarkServicePong = joarkService.ping()
 		logger.info("Ping called: fileServicePong=${fileServicePong}, joarkServicePong=${joarkServicePong}")
-		return if (fileServicePong.equals("pong", true) && joarkServicePong.equals("Application", true)) {
-			"pong"
-		} else {
-			"down"
-		}
+		return "pong"
 	}
 
 	@Hidden

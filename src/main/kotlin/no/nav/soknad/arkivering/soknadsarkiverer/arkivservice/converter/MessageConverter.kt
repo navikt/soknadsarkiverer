@@ -17,17 +17,21 @@ fun createOpprettJournalpostRequest(o: Soknadarkivschema, attachedFiles: List<Fi
 	val date = DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(o.getInnsendtDato()), ZoneOffset.UTC))
 
 	val documents = createDocuments(o.getMottatteDokumenter(), attachedFiles, soknadstype)
-	val tittel = createTitle(documents, soknadstype)
+	val tittel = getTitleFromMainDocument(documents)
 
 	return OpprettJournalpostRequest(AvsenderMottaker(o.getFodselsnummer(), "FNR"), Bruker(o.getFodselsnummer(), "FNR"), date, documents, o.getBehandlingsid(),
 		"INNGAAENDE", "NAV_NO", o.getArkivtema(), tittel)
 }
 
-private fun createTitle(documents: List<Dokument>, soknadstype: Soknadstyper): String {
+private fun getTitleFromMainDocument(documents: List<Dokument>): String {
+	return documents[0].tittel
+}
+
+private fun renameTitleDependingOnSoknadstype(tittel: String, soknadstype: Soknadstyper): String {
 	return if (soknadstype == Soknadstyper.ETTERSENDING) {
-		"Ettersendelse til " + documents[0].tittel
+		"Ettersendelse til " + tittel
 	} else {
-		"Søknad til " + documents[0].tittel
+		tittel
 	}
 }
 
@@ -69,7 +73,7 @@ private fun createDokument(document: MottattDokument, attachedFiles: List<FilEle
 	if (dokumentvarianter.isEmpty())
 		throw Exception("Expected there to be at least one DokumentVariant")
 
-	return Dokument(document.getTittel(), skjemanummer, "SOK", dokumentvarianter)
+	return Dokument(renameTitleDependingOnSoknadstype(document.getTittel(), soknadstype), skjemanummer, "SOK", dokumentvarianter)
 }
 
 private fun getSkjemanummer(document: MottattDokument, soknadstype: Soknadstyper): String {

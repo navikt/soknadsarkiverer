@@ -70,4 +70,4 @@ spec:
     - name: FILESTORAGE_HOST
       value: https://soknadsfillager.nais.adeo.no
     - name: JOARK_HOST
-      value: https://tjenester.nav.no/dokarkiv
+      value: https://dokarkiv.nais.adeo.no

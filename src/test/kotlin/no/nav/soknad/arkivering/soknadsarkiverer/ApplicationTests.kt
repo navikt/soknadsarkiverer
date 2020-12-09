@@ -18,6 +18,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.startsWith
 import org.springframework.beans.factory.annotation.Autowired
@@ -353,7 +354,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 			"INNGAAENDE",
 			"NAV_NO",
 			soknadsarkivschema.getArkivtema(),
-			"Søknad til " + soknadsarkivschema.getMottatteDokumenter()[0].getTittel()
+			soknadsarkivschema.getMottatteDokumenter()[0].getTittel()
 		)
 		assertEquals(expected, requestData)
 	}
