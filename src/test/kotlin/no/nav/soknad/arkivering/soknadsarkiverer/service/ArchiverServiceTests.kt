@@ -37,6 +37,8 @@ class ArchiverServiceTests {
 
 	@BeforeEach
 	fun setup() {
+		whenever(filestorage.ping()).thenReturn("pong")
+		whenever(journalpostClient.ping()).thenReturn("pong")
 		archiverService = ArchiverService(appConfiguration, filestorage, journalpostClient, kafkaPublisher)
 	}
 
