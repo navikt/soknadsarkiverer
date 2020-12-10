@@ -27,9 +27,9 @@ private fun getTitleFromMainDocument(documents: List<Dokument>): String {
 	return documents[0].tittel
 }
 
-private fun renameTitleDependingOnSoknadstype(tittel: String, soknadstype: Soknadstyper): String {
-	return if (soknadstype == Soknadstyper.ETTERSENDING) {
-		"Ettersendelse til " + tittel
+private fun renameTitleDependingOnSoknadstype(tittel: String, soknadstype: Soknadstyper, erHovedskjema: Boolean): String {
+	return if (soknadstype == Soknadstyper.ETTERSENDING && erHovedskjema) {
+		"Ettersendelse til " + tittel.replaceFirst(tittel[0], tittel[0].toLowerCase())
 	} else {
 		tittel
 	}
@@ -73,7 +73,7 @@ private fun createDokument(document: MottattDokument, attachedFiles: List<FilEle
 	if (dokumentvarianter.isEmpty())
 		throw Exception("Expected there to be at least one DokumentVariant")
 
-	return Dokument(renameTitleDependingOnSoknadstype(document.getTittel(), soknadstype), skjemanummer, "SOK", dokumentvarianter)
+	return Dokument(renameTitleDependingOnSoknadstype(document.getTittel(), soknadstype, document.getErHovedskjema()), skjemanummer, "SOK", dokumentvarianter)
 }
 
 private fun getSkjemanummer(document: MottattDokument, soknadstype: Soknadstyper): String {
