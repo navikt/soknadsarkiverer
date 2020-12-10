@@ -65,7 +65,7 @@ class MessageConverterTests {
 
 		val joarkData = createOpprettJournalpostRequest(schema, files)
 
-		assertEquals("Ettersendelse til $tittel", joarkData.tittel)
+		assertEquals("Ettersendelse til apa bepa", joarkData.tittel)
 		assertEquals(1, joarkData.dokumenter.size)
 		assertEquals(joarkData.tittel, joarkData.dokumenter[0].tittel)
 		assertEquals("NAVe 11-13.06", joarkData.dokumenter[0].brevkode)
@@ -345,6 +345,11 @@ class MessageConverterTests {
 
 		assertEquals(4, joarkData.dokumenter.size)
 		assertEquals(excpeted, joarkData.dokumenter[0].brevkode)
+		assertEquals(joarkData.dokumenter[0].tittel, joarkData.tittel)
+		assertEquals("Ettersendelse til søknad om stønad til anskaffelse av motorkjøretøy", joarkData.tittel)
+		assertEquals(joarkData.dokumenter[1].tittel, "Legeerklæring")
+		assertEquals(joarkData.dokumenter[2].tittel, "Beskrivelse av funksjonsnedsettelse")
+
 	}
 
 
