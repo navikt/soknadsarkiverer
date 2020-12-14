@@ -12,7 +12,7 @@
 	<logger name="io" level="INFO"/>
 	<logger name="org" level="INFO"/>
 	<logger name="com" level="INFO"/>
-	<logger name="no.nav" level="DEBUG"/>
+	<logger name="no.nav" level="INFO"/>
 	<logger name="no.nav.soknad.arkivering" level="DEBUG"/>
 
 	<root level="INFO">
