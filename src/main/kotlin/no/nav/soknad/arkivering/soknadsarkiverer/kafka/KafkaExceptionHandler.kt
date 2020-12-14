@@ -1,7 +1,9 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
 import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.apache.kafka.common.errors.TopicAuthorizationException
 import org.apache.kafka.common.serialization.Serdes
+import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.errors.DeserializationExceptionHandler
 import org.apache.kafka.streams.processor.ProcessorContext
 import org.slf4j.LoggerFactory
@@ -13,6 +15,7 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	private lateinit var kafkaPublisher: KafkaPublisher
+	private lateinit var kafkaStreamsInstance: KafkaStreams
 
 
 	override fun uncaughtException(t: Thread, e: Throwable) {
@@ -21,6 +24,16 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 		logger.error(message)
 
 		kafkaPublisher.putMessageOnTopic(null, message)
+
+		if (e is TopicAuthorizationException) {
+			// Every once in a while, it seems that Kafka throws a TopicAuthorizationException. The remedy seems to be to
+			// restart the kafka streams instance.
+			logger.error("Got TopicAuthorizationException. Will attempt to restart the Kafka Streams Instance.")
+			kafkaStreamsInstance.close()
+			kafkaStreamsInstance.cleanUp()
+			kafkaStreamsInstance.start()
+			logger.info("Kafka Streams Instance restarted.")
+		}
 	}
 
 	override fun handle(context: ProcessorContext, record: ConsumerRecord<ByteArray, ByteArray>, exception: Exception): DeserializationExceptionHandler.DeserializationHandlerResponse {
@@ -46,13 +59,14 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 
 	override fun configure(configs: Map<String, *>) {
 		kafkaPublisher = getConfigForKey(configs, KAFKA_PUBLISHER) as KafkaPublisher
+		kafkaStreamsInstance = getConfigForKey(configs, KAFKA_STREAMS_INSTANCE) as KafkaStreams
 	}
 
 	private fun getConfigForKey(configs: Map<String, *>, key: String): Any? {
 		if (configs.containsKey(key)) {
 			return configs[key]
 		} else {
-			val msg = "Could not find key '${key}' in configuration! Won't be able to create event on Message topic!"
+			val msg = "Could not find key '${key}' in configuration!"
 			logger.error(msg)
 			throw Exception(msg)
 		}

@@ -102,7 +102,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		val topology = streamsBuilder.build()
 
 		val kafkaStreams = KafkaStreams(topology, kafkaConfig("soknadsarkiverer-streams-${UUID.randomUUID()}"))
-		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
+		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler(kafkaStreams))
 		kafkaStreams.start()
 		Runtime.getRuntime().addShutdownHook(Thread(kafkaStreams::close))
 		return kafkaStreams
@@ -126,8 +126,12 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		it[KAFKA_PUBLISHER] = kafkaPublisher
 	}
 
-	private fun kafkaExceptionHandler() = KafkaExceptionHandler().also {
-		it.configure(kafkaConfig("soknadsarkiverer-exception").map { (k, v) -> k.toString() to v }.toMap())
+	private fun kafkaExceptionHandler(kafkaStreams: KafkaStreams) = KafkaExceptionHandler().also {
+		it.configure(
+			kafkaConfig("soknadsarkiverer-exception")
+				.also { config -> config[KAFKA_STREAMS_INSTANCE] = kafkaStreams }
+				.map { (k, v) -> k.toString() to v }.toMap()
+		)
 	}
 
 	private fun createProcessingEventSerde(): SpecificAvroSerde<ProcessingEvent> = createAvroSerde()
@@ -139,5 +143,6 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	}
 }
 
+const val KAFKA_STREAMS_INSTANCE = "kafka.streams.instance"
 const val KAFKA_PUBLISHER = "kafka.publisher"
 const val MESSAGE_ID = "MESSAGE_ID"
