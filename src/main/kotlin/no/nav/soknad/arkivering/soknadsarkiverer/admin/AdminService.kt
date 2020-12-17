@@ -24,7 +24,7 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 		GlobalScope.launch { taskListService.pauseAndStart(key) }
 	}
 
-	fun pingJoark() = joarkService.ping()
+	fun pingJoark() = joarkService.isAlive()
 
 	fun pingFilestorage() = fileService.ping()
 

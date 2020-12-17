@@ -12,14 +12,10 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.Fileservice
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.HealthCheck
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.Semaphore
 
@@ -37,8 +33,6 @@ class ArchiverServiceTests {
 
 	@BeforeEach
 	fun setup() {
-		whenever(filestorage.ping()).thenReturn("pong")
-		whenever(journalpostClient.ping()).thenReturn("pong")
 		archiverService = ArchiverService(appConfiguration, filestorage, journalpostClient, kafkaPublisher)
 	}
 
@@ -137,34 +131,4 @@ class ArchiverServiceTests {
 		GlobalScope.launch { healthCheck.stop() }
 		loopAndVerify(1, { if (appConfiguration.state.stopping) 1 else 0 })
 	}
-
-	val SKIP_JOARK_IF_ENVIRONMENT = "prod"
-
-	@Test
-	public fun `timerTest før start`() {
-		val innsendtDato = 1607110047L
-
-		assertTrue(SKIP_JOARK_IF_ENVIRONMENT.equals("prod", true) && isBeforeArchivingStart(innsendtDato))
-
-	}
-
-	@Test
-	public fun `timerTest etter start`() {
-		val innsendtDatoStreng = "2020-12-07 09:10:00"
-
-		assertFalse (SKIP_JOARK_IF_ENVIRONMENT.equals("prod", true) && isBeforeArchivingStart(innsendtDatoStreng))
-	}
-
-	private fun isBeforeArchivingStart(innsendtDatoStreng: String): Boolean {
-		val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-		return isBeforeArchivingStart(LocalDateTime.parse(innsendtDatoStreng, formatter).toEpochSecond(ZoneOffset.UTC))
-	}
-
-	private fun isBeforeArchivingStart(innsendtDato: Long): Boolean {
-		val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-		val startDato = "2020-12-07 09:00:00"
-
-		 return (LocalDateTime.ofInstant(Instant.ofEpochSecond(innsendtDato), ZoneOffset.UTC)).isBefore(LocalDateTime.parse(startDato, formatter))
-	}
-
 }

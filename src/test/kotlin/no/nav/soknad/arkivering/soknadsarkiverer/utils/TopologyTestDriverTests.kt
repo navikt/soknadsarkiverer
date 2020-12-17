@@ -12,7 +12,10 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.*
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import org.apache.kafka.common.serialization.Serdes
-import org.apache.kafka.streams.*
+import org.apache.kafka.streams.StreamsBuilder
+import org.apache.kafka.streams.StreamsConfig
+import org.apache.kafka.streams.TestInputTopic
+import org.apache.kafka.streams.TopologyTestDriver
 import org.mockito.ArgumentCaptor
 import java.util.*
 
@@ -38,7 +41,7 @@ open class TopologyTestDriverTests {
 			it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = KafkaExceptionHandler::class.java
 			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
 			it[KAFKA_PUBLISHER] = kafkaPublisher
-			it[KAFKA_STREAMS_INSTANCE] = mock<KafkaStreams>()
+			it[APP_CONFIGURATION] = appConfiguration
 		}
 
 		// Create test driver

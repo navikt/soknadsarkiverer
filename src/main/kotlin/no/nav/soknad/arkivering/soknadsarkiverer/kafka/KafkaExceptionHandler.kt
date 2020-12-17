@@ -1,9 +1,8 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.common.errors.TopicAuthorizationException
 import org.apache.kafka.common.serialization.Serdes
-import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.errors.DeserializationExceptionHandler
 import org.apache.kafka.streams.processor.ProcessorContext
 import org.slf4j.LoggerFactory
@@ -15,7 +14,7 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	private lateinit var kafkaPublisher: KafkaPublisher
-	private lateinit var kafkaStreamsInstance: KafkaStreams
+	private lateinit var appConfiguration: AppConfiguration
 
 
 	override fun uncaughtException(t: Thread, e: Throwable) {
@@ -23,17 +22,10 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 		val message = createMessage("Uncaught exception", e)
 		logger.error(message)
 
-		kafkaPublisher.putMessageOnTopic(null, message)
+		kafkaPublisher.putMessageOnTopic("null", message)
 
-		if (e is TopicAuthorizationException) {
-			// Every once in a while, it seems that Kafka throws a TopicAuthorizationException. The remedy seems to be to
-			// restart the kafka streams instance.
-			logger.error("Got TopicAuthorizationException. Will attempt to restart the Kafka Streams Instance.")
-			kafkaStreamsInstance.close()
-			kafkaStreamsInstance.cleanUp()
-			kafkaStreamsInstance.start()
-			logger.info("Kafka Streams Instance restarted.")
-		}
+
+		appConfiguration.state.up = false // Set state.up=false, which (through the Health Endpoint) will trigger a restart of this app instance
 	}
 
 	override fun handle(context: ProcessorContext, record: ConsumerRecord<ByteArray, ByteArray>, exception: Exception): DeserializationExceptionHandler.DeserializationHandlerResponse {
@@ -59,7 +51,7 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 
 	override fun configure(configs: Map<String, *>) {
 		kafkaPublisher = getConfigForKey(configs, KAFKA_PUBLISHER) as KafkaPublisher
-		kafkaStreamsInstance = getConfigForKey(configs, KAFKA_STREAMS_INSTANCE) as KafkaStreams
+		appConfiguration = getConfigForKey(configs, APP_CONFIGURATION) as AppConfiguration
 	}
 
 	private fun getConfigForKey(configs: Map<String, *>, key: String): Any? {
