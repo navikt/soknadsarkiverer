@@ -88,7 +88,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 	)
 
 	data class State(
-		var up: Boolean = false,
+		var up: Boolean = true,
 		var ready: Boolean = false,
 		var stopping: Boolean = false,
 		var busyCounter: Int = 0

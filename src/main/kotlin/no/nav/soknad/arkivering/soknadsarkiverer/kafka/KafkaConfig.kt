@@ -127,7 +127,11 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	}
 
 	private fun kafkaExceptionHandler() = KafkaExceptionHandler().also {
-		it.configure(kafkaConfig("soknadsarkiverer-exception").map { (k, v) -> k.toString() to v }.toMap())
+		it.configure(
+			kafkaConfig("soknadsarkiverer-exception")
+				.also { config -> config[APP_CONFIGURATION] = appConfiguration }
+				.map { (k, v) -> k.toString() to v }.toMap()
+		)
 	}
 
 	private fun createProcessingEventSerde(): SpecificAvroSerde<ProcessingEvent> = createAvroSerde()
@@ -139,5 +143,6 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	}
 }
 
+const val APP_CONFIGURATION = "app_configuration"
 const val KAFKA_PUBLISHER = "kafka.publisher"
 const val MESSAGE_ID = "MESSAGE_ID"

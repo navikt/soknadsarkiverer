@@ -19,12 +19,14 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	override fun ping() = webClient
-			.get()
-			.uri(appConfiguration.config.filestorageHost + "/internal/ping")
-			.retrieve()
-			.bodyToMono(String::class.java)
-			.block()!!
+	override fun ping() = healthCheck(appConfiguration.config.filestorageHost + "/internal/ping")
+	override fun isReady() = healthCheck(appConfiguration.config.filestorageHost + "/internal/isReady")
+	private fun healthCheck(uri: String) = webClient
+		.get()
+		.uri(uri)
+		.retrieve()
+		.bodyToMono(String::class.java)
+		.block()!!
 
 
 	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): List<FilElementDto> {

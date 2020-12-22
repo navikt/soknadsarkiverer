@@ -136,6 +136,55 @@ fun mockFilestorageIsDown() {
 				.withStatus(HttpStatus.SERVICE_UNAVAILABLE.value())))
 }
 
+fun mockFilestoragePingIsWorking() {
+	wiremockServer.stubFor(
+		get("/internal/ping")
+			.willReturn(aResponse()
+				.withBody("pong")
+				.withStatus(HttpStatus.OK.value())))
+}
+
+fun mockFilestoragePingIsNotWorking() {
+	wiremockServer.stubFor(
+		get("/internal/ping")
+			.willReturn(aResponse()
+				.withBody("Mocked ping error response for filestorage")
+				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
+}
+
+fun mockFilestorageIsReadyIsWorking() {
+	wiremockServer.stubFor(
+		get("/internal/isReady")
+			.willReturn(aResponse()
+				.withBody("Holla, si Ready")
+				.withStatus(HttpStatus.OK.value())))
+}
+
+fun mockFilestorageIsReadyIsNotWorking() {
+	wiremockServer.stubFor(
+		get("/internal/isReady")
+			.willReturn(aResponse()
+				.withBody("Mocked isReady error response for filestorage")
+				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
+}
+
+fun mockJoarkIsAliveIsWorking() {
+	wiremockServer.stubFor(
+		get("/isAlive")
+			.willReturn(aResponse()
+				.withBody("Application is alive!")
+				.withStatus(HttpStatus.OK.value())))
+}
+
+fun mockJoarkIsAliveIsNotWorking() {
+	wiremockServer.stubFor(
+		get("/isAlive")
+			.willReturn(aResponse()
+				.withBody("Mocked isAlive error response for filestorage")
+				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
+}
+
+
 private fun createFilestorageResponse(uuidsAndResponses: List<Pair<String, String?>>): String =
 	ObjectMapper().writeValueAsString(
 		uuidsAndResponses.map { (uuid, response) -> FilElementDto(uuid, response?.toByteArray()) }
