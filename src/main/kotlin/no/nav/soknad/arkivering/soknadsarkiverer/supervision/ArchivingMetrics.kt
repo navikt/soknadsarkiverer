@@ -44,7 +44,7 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 	private val SUMMARY_FILESTORAGE_DEL_LATENCY = "latency_filestorage_del_operations"
 	private val SUMMARY_FILESTORAGE_DEL_LATENCY_DESC = "Latency for deleting from filestorage"
 
-	private val COUNTER_JOARK_SUCCESS = "counter_joark_succerr"
+	private val COUNTER_JOARK_SUCCESS = "counter_joark_success"
 	private val COUNTER_JOARK_SUCCESS_DESC = "Number of successes when sending to Joark"
 
 	private val COUNTER_JOARK_ERROR = "counter_joark_error"
