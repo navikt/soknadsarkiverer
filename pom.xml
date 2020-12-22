@@ -50,6 +50,15 @@
 			<artifactId>spring-boot-starter-webflux</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-prometheus</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.prometheus</groupId>
+			<artifactId>simpleclient</artifactId>
+			<version>${prometheus.client.version}</version>
+		</dependency>
+		<dependency>
 			<groupId>org.jetbrains.kotlin</groupId>
 			<artifactId>kotlin-reflect</artifactId>
 		</dependency>
@@ -66,11 +75,6 @@
 			<groupId>com.natpryce</groupId>
 			<artifactId>konfig</artifactId>
 			<version>${konfig.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>io.prometheus</groupId>
-			<artifactId>simpleclient</artifactId>
-			<version>${prometheus.client.version}</version>
 		</dependency>
 
 		<dependency>

@@ -2,12 +2,14 @@ package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
 import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
+import io.prometheus.client.CollectorRegistry
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.streams.StreamsBuilder
 import org.junit.jupiter.api.AfterEach
@@ -22,12 +24,14 @@ class StateRecreationTests : TopologyTestDriverTests() {
 	private val appConfiguration = createAppConfiguration()
 	private val archiverService = mock<ArchiverService>()
 	private val scheduler = mock<Scheduler>()
-	private val taskListService = TaskListService(archiverService, appConfiguration, scheduler)
+	private val metrics = ArchivingMetrics(CollectorRegistry.defaultRegistry)
+	private val taskListService = TaskListService(archiverService, appConfiguration, scheduler, metrics)
 
 	private val soknadarkivschema = createSoknadarkivschema()
 
 	@BeforeEach
 	fun setup() {
+
 		setupKafkaTopologyTestDriver()
 			.withAppConfiguration(appConfiguration)
 			.withTaskListService(taskListService)
@@ -39,6 +43,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 	fun teardown() {
 		closeTestDriver()
 		MockSchemaRegistry.dropScope(schemaRegistryScope)
+		metrics.unregister()
 	}
 
 
