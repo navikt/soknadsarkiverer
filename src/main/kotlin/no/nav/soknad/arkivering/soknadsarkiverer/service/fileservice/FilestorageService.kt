@@ -4,7 +4,7 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
-import no.nav.soknad.arkivering.soknadsarkiverer.supervision.Metrics
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.apache.tomcat.util.codec.binary.Base64
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
@@ -15,7 +15,9 @@ import org.springframework.web.reactive.function.client.WebClient
 
 @Service
 class FilestorageService(@Qualifier("basicWebClient") private val webClient: WebClient,
-												 private val appConfiguration: AppConfiguration) : FileserviceInterface {
+												 private val appConfiguration: AppConfiguration,
+												 private val metrics: ArchivingMetrics
+) : FileserviceInterface {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -30,7 +32,7 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 
 
 	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): List<FilElementDto> {
-		val timer = Metrics.filestorageGetLatencyStart()
+		val timer = metrics.filestorageGetLatencyStart()
 		try {
 			val fileIds = getFileIds(data)
 			logger.info("$key: Getting files with ids: '$fileIds'")
@@ -38,21 +40,21 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 			val files = getFiles(fileIds)
 
 			logger.info("$key: Received files.size: ${files.size}")
-			Metrics.incGetFilestorageSuccesses()
+			metrics.incGetFilestorageSuccesses()
 			return files
 
 		} catch (e: Exception) {
-			Metrics.incGetFilestorageErrors()
+			metrics.incGetFilestorageErrors()
 			logger.error("$key: Error retrieving files from the file storage", e)
 			throw ArchivingException(e)
 
 		} finally {
-		    Metrics.endTimer(timer)
+		    metrics.endTimer(timer)
 		}
 	}
 
 	override fun deleteFilesFromFilestorage(key: String, data: Soknadarkivschema) {
-		val timer = Metrics.filestorageDelLatencyStart()
+		val timer = metrics.filestorageDelLatencyStart()
 
 		val fileIds = getFileIds(data).joinToString(",")
 		try {
@@ -61,14 +63,14 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 			deleteFiles(fileIds)
 			logger.info("$key: The files: $fileIds are deleted")
 
-			Metrics.incDelFilestorageSuccesses()
+			metrics.incDelFilestorageSuccesses()
 		} catch (e: Exception) {
-			Metrics.incDelFilestorageErrors()
+			metrics.incDelFilestorageErrors()
 			logger.warn("$key: Failed to delete files from file storage. Everything is saved to Joark correctly, " +
 				"so this error will be ignored. Affected file ids: '$fileIds'", e)
 
 		} finally {
-		    Metrics.endTimer(timer)
+		    metrics.endTimer(timer)
 		}
 	}
 

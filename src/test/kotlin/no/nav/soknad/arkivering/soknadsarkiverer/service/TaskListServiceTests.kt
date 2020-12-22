@@ -1,10 +1,15 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import com.nhaarman.mockitokotlin2.*
+import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
+import io.prometheus.client.CollectorRegistry
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.schemaRegistryScope
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentCaptor
@@ -14,8 +19,14 @@ class TaskListServiceTests {
 
 	private val archiverService = mock<ArchiverService>()
 	private val scheduler = mock<Scheduler>()
+	private val metrics = ArchivingMetrics(CollectorRegistry.defaultRegistry)
 
-	private val taskListService = TaskListService(archiverService, AppConfiguration(), scheduler)
+	private val taskListService = TaskListService(archiverService, AppConfiguration(), scheduler, metrics)
+
+	@AfterEach
+	fun teardown() {
+		metrics.unregister()
+	}
 
 	@Test
 	fun `No tasks, can list`() {
