@@ -20,29 +20,29 @@ jobs:
 
 
       - name: 'Build the code for soknadsmottaker'
-        uses: navikt/archiving-infrastructure/.github/checkout-and-build@master
+        uses: navikt/archiving-infrastructure/.github/checkout-and-build@main
         with:
           component_name: soknadsmottaker
 
       - name: 'Build the code for soknadsfillager'
-        uses: navikt/archiving-infrastructure/.github/checkout-and-build@master
+        uses: navikt/archiving-infrastructure/.github/checkout-and-build@main
         with:
           component_name: soknadsfillager
 
       - name: 'Build the code for soknadsarkiverer (this PR)'
-        uses: navikt/archiving-infrastructure/.github/checkout-and-build@master
+        uses: navikt/archiving-infrastructure/.github/checkout-and-build@main
         with:
           component_name: soknadsarkiverer
           branch: ${GITHUB_HEAD_REF} # Branch of current PR
 
       - name: 'Build the code for arkiv-mock'
-        uses: navikt/archiving-infrastructure/.github/checkout-and-build@master
+        uses: navikt/archiving-infrastructure/.github/checkout-and-build@main
         with:
           component_name: archiving-infrastructure
           sub_directory: arkiv-mock
 
       - name: 'Run the end-to-end-tests'
-        uses: navikt/archiving-infrastructure/.github/checkout-and-build@master
+        uses: navikt/archiving-infrastructure/.github/checkout-and-build@main
         with:
           component_name: archiving-infrastructure
           sub_directory: end-to-end-tests

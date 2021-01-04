@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>no.nav.soknad.arkivering</groupId>
 	<artifactId>soknadsarkiverer</artifactId>
-	<version>0.0.2-SNAPSHOT</version>
+	<version>1.0.0-SNAPSHOT</version>
 	<name>Soknadsarkiverer</name>
 	<description>Arkiverer soknader</description>
 
