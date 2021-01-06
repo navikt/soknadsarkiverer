@@ -132,6 +132,7 @@ class TaskListService(private val archiverService: ArchiverService,
 
 	internal fun tryToArchive(key: String, soknadarkivschema: Soknadarkivschema) {
 		val timer = metrics.archivingLatencyStart()
+		val histogram = metrics.archivingLatencyHistogramStart(soknadarkivschema.getArkivtema())
 		try {
 			logger.info("$key: Will now start to archive")
 			archiverService.archive(key, soknadarkivschema)
@@ -151,6 +152,7 @@ class TaskListService(private val archiverService: ArchiverService,
 
 		} finally {
 			metrics.endTimer(timer)
+			metrics.endHistogramTimer(histogram)
 		}
 	}
 
