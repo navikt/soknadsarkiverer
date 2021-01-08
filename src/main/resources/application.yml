@@ -9,8 +9,6 @@ management:
     exposure:
       include: info, health, metrics, prometheus
     base-path: "/internal"
-    path-mapping:
-      info: "/isAlive"
   metrics:
     export:
       prometheus:
@@ -79,4 +77,3 @@ no.nav.security.jwt:
           client-id: ${CLIENTID}
           client-secret: ${CLIENTSECRET}
           client-auth-method: ${CLIENTAUTHMETHOD}
-
