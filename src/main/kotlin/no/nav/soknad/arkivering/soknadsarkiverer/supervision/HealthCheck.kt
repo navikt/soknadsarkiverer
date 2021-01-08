@@ -27,7 +27,6 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 	@Hidden
 	@GetMapping("/isAlive")
 	fun isAlive() = if (applicationIsAlive()) {
-		logger.info("/isAlive called")
 		"Ok"
 	} else {
 		logger.warn("/isAlive called - application is not alive")
@@ -37,7 +36,6 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 	@Hidden
 	@GetMapping("/isReady")
 	fun isReady() = if (applicationIsReady()) {
-		logger.info("/isReady called")
 		"Ready for actions"
 	} else {
 		logger.warn("/isReady called - application is not ready")
