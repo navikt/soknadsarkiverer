@@ -36,6 +36,12 @@ class KafkaPublisher(private val appConfiguration: AppConfiguration) {
 		putDataOnTopic(key, value, headers, topic, kafkaProducer)
 	}
 
+	fun putMetricOnTopic(key: String?, value: String, headers: Headers = RecordHeaders()) {
+		val topic = appConfiguration.kafkaConfig.metricsTopic
+		val kafkaProducer = kafkaMessageProducer
+		putDataOnTopic(key, value, headers, topic, kafkaProducer)
+	}
+
 	private fun <T> putDataOnTopic(key: String?, value: T, headers: Headers, topic: String,
 																 kafkaProducer: KafkaProducer<String, T>): RecordMetadata {
 

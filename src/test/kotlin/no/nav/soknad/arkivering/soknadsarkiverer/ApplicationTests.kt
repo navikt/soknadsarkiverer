@@ -19,6 +19,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers.contains
 import org.mockito.ArgumentMatchers.startsWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -108,6 +109,9 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "ok")
 		verifyMessageStartsWith(0, "Exception")
+		verifyMetric(1, "get files from filestorage")
+		verifyMetric(1, "send files to archive")
+		verifyMetric(1, "delete files from filestorage")
 		val requests = verifyPostRequest(appConfiguration.config.joarkUrl)
 		assertEquals(1, requests.size)
 		val request = objectMapper.readValue<OpprettJournalpostRequest>(requests[0].body)
@@ -127,6 +131,9 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyProcessingEvents(0, FINISHED)
 		verifyMockedPostRequests(0, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(0)
+		verifyMetric(0, "get files from filestorage")
+		verifyMetric(0, "send files to archive")
+		verifyMetric(0, "delete files from filestorage")
 	}
 
 	@Test
@@ -142,6 +149,9 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(maxNumberOfAttempts, "Exception")
 		verifyMessageStartsWith(0, "ok")
+		verifyMetric(maxNumberOfAttempts, "get files from filestorage")
+		verifyMetric(0, "send files to archive")
+		verifyMetric(0, "delete files from filestorage")
 	}
 
 	@Test
@@ -165,6 +175,9 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(maxNumberOfAttempts, "Exception")
 		verifyMessageStartsWith(0, "ok")
+		verifyMetric(0, "get files from filestorage")
+		verifyMetric(0, "send files to archive")
+		verifyMetric(0, "delete files from filestorage")
 
 		assertEquals(getFilestorageErrorsBefore + maxNumberOfAttempts, metrics.getGetFilestorageErrors())
 		assertEquals(getFilestorageSuccessesBefore + 0, metrics.getGetFilestorageSuccesses())
@@ -191,6 +204,9 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "Exception", keyForPoisionPill)
 		verifyMessageStartsWith(1, "ok", key)
+		verifyMetric(1, "get files from filestorage")
+		verifyMetric(1, "send files to archive")
+		verifyMetric(1, "delete files from filestorage")
 	}
 
 	@Test
@@ -214,6 +230,9 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "Exception")
 		verifyMessageStartsWith(1, "ok")
+		verifyMetric(2, "get files from filestorage")
+		verifyMetric(1, "send files to archive")
+		verifyMetric(1, "delete files from filestorage")
 
 		assertEquals(getFilestorageSuccessesBefore + 2, metrics.getGetFilestorageSuccesses())
 		assertEquals(delFilestorageSuccessesBefore + 1, metrics.getDelFilestorageSuccesses())
@@ -224,7 +243,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 	}
 
 	@Test
-	fun `First attempt to Joark fails, the fourth succeeds`() {
+	fun `Three attempts to Joark fail, the fourth succeeds`() {
 		val attemptsToFail = 3
 		mockFilestorageIsWorking(fileUuid)
 		mockJoarkRespondsAfterAttempts(attemptsToFail)
@@ -238,6 +257,9 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "ok")
 		verifyMessageStartsWith(attemptsToFail, "Exception")
+		verifyMetric(4, "get files from filestorage")
+		verifyMetric(1, "send files to archive")
+		verifyMetric(1, "delete files from filestorage")
 	}
 
 	@Test
@@ -261,6 +283,9 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "ok")
 		verifyMessageStartsWith(0, "Exception")
+		verifyMetric(1, "get files from filestorage")
+		verifyMetric(1, "send files to archive")
+		verifyMetric(1, "delete files from filestorage") // Metric succeeds even if the operation fails
 
 		assertEquals(getFilestorageSuccessesBefore + 1, metrics.getGetFilestorageSuccesses())
 		assertEquals(delFilestorageSuccessesBefore + 0, metrics.getDelFilestorageSuccesses())
@@ -283,6 +308,9 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(maxNumberOfAttempts, "Exception")
 		verifyMessageStartsWith(0, "ok")
+		verifyMetric(maxNumberOfAttempts, "get files from filestorage")
+		verifyMetric(0, "send files to archive")
+		verifyMetric(0, "delete files from filestorage")
 	}
 
 
@@ -298,6 +326,21 @@ class ApplicationTests: TopologyTestDriverTests() {
 		}
 
 		val finalCheck = { verify(kafkaPublisherMock, times(expectedCount)).putMessageOnTopic(eq(key), startsWith(message), any()) }
+		loopAndVerify(expectedCount, getCount, finalCheck)
+	}
+
+	private fun verifyMetric(expectedCount: Int, metric: String, key: String = this.key) {
+		val getCount = {
+			mockingDetails(kafkaPublisherMock)
+				.invocations.stream()
+				.filter { it.arguments[0] == key }
+				.filter { it.arguments[1] is String }
+				.filter { (it.arguments[1] as String).contains(metric) }
+				.count()
+				.toInt()
+		}
+
+		val finalCheck = { verify(kafkaPublisherMock, times(expectedCount)).putMetricOnTopic(eq(key), contains(metric), any()) }
 		loopAndVerify(expectedCount, getCount, finalCheck)
 	}
 
