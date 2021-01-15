@@ -26,11 +26,21 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 
 	@Hidden
 	@GetMapping("/isAlive")
-	fun isAlive() = if (applicationIsAlive()) "Ok" else throwException()
+	fun isAlive() = if (applicationIsAlive()) {
+		"Ok"
+	} else {
+		logger.warn("/isAlive called - application is not alive")
+		throwException()
+	}
 
 	@Hidden
 	@GetMapping("/isReady")
-	fun isReady() = if (applicationIsReady()) "Ready for actions" else throwException()
+	fun isReady() = if (applicationIsReady()) {
+		"Ready for actions"
+	} else {
+		logger.warn("/isReady called - application is not ready")
+		throwException()
+	}
 
 	@Hidden
 	@GetMapping("/ping")
@@ -41,6 +51,7 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 		)
 		throwExceptionIfDependenciesAreDown(dependencies)
 
+		logger.info("/ping called")
 		return "pong"
 	}
 
