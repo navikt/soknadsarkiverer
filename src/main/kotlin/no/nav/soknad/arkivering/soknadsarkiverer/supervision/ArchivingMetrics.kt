@@ -68,6 +68,10 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 	private val joarkLatencySummary = registerSummary(SUMMARY_JOARK_LATENCY, SUMMARY_JOARK_LATENCY_DESC)
 	private val archivingLatencyHistogram = registerHistorgram(HISTOGRAM_ARCHIVING_LATENCY, HISTORGRAM_ARCHIVING_LATENCY_DESC)
 
+	private val HISTOGRAM_ATTACHMENT_NUMBER = "histogram_attachment_number"
+	private val HISTOGRAM_ATTACHMENT_NUMBER_DESC = "Histogram for number of attachment per application"
+	private val numberOfAttachmentHistogram = registerAttachmentNumberHistorgram(HISTOGRAM_ATTACHMENT_NUMBER, HISTOGRAM_ATTACHMENT_NUMBER_DESC)
+
 	private fun registerCounter(name: String, help: String): Counter =
 		Counter
 			.build()
@@ -108,6 +112,16 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 			.labelNames(TEMA_LABEL)
 			.register(registry)
 
+	private fun registerAttachmentNumberHistorgram(name: String, help: String): Histogram =
+		Histogram
+			.build()
+			.namespace(SOKNAD_NAMESPACE)
+			.name(name)
+			.help(help)
+			.buckets(2.0, 3.0, 5.0, 8.0, 13.0, 21.0, 34.0)
+			.labelNames(TEMA_LABEL)
+			.register(registry)
+
 	fun incGetFilestorageSuccesses() = filestorageGetSuccessCounter.labels(APP).inc()
 	fun getGetFilestorageSuccesses() = filestorageGetSuccessCounter.labels(APP).get()
 
@@ -138,6 +152,8 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 	fun filestorageDelLatencyStart(): Summary.Timer = filestorageDelLatencySummary.labels(APP).startTimer()
 	fun joarkLatencyStart(): Summary.Timer = joarkLatencySummary.labels(APP).startTimer()
 	fun archivingLatencyHistogramStart(tema: String): Histogram.Timer = archivingLatencyHistogram.labels(tema).startTimer()
+	fun numberOfAttachmentHistogramSet(number: Double, tema: String) = numberOfAttachmentHistogram.labels(tema).observe(number)
+	fun numberOfAttachmentHistogramGet(tema: String): Histogram.Child.Value = numberOfAttachmentHistogram.labels(tema).get()
 
 	fun endTimer(timer: Summary.Timer) {
 		timer.observeDuration()
@@ -161,6 +177,7 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 		registry.unregister(archivingLatencyHistogram)
 		registry.unregister(tasksGivenUpOnGauge)
 		registry.unregister(taskGauge)
+		registry.unregister(numberOfAttachmentHistogram)
 	}
 
 }

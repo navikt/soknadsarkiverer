@@ -153,6 +153,7 @@ class TaskListService(private val archiverService: ArchiverService,
 		} finally {
 			metrics.endTimer(timer)
 			metrics.endHistogramTimer(histogram)
+			metrics.numberOfAttachmentHistogramSet(soknadarkivschema.getMottatteDokumenter().size.toDouble(), soknadarkivschema.getArkivtema())
 		}
 	}
 
