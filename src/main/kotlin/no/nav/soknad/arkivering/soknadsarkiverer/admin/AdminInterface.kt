@@ -8,13 +8,11 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import no.nav.security.token.support.core.api.ProtectedWithClaims
-import no.nav.security.token.support.core.api.Unprotected
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.web.bind.annotation.*
 
 @RestController
-//@ProtectedWithClaims(issuer = "azuread") // TODO midlertidig endret, skal ikke deployes til prod
-@Unprotected // midlertidig lagt til skal ikke deployes til prod
+@ProtectedWithClaims(issuer = "azuread")
 @RequestMapping("/admin")
 class AdminInterface(private val adminService: AdminService) {
 
