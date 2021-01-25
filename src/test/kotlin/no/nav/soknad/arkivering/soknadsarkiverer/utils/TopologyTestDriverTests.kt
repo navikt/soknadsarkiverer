@@ -4,6 +4,7 @@ import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
+import io.prometheus.client.CollectorRegistry
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
@@ -11,6 +12,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.*
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.StreamsConfig
@@ -27,9 +29,9 @@ open class TopologyTestDriverTests {
 	private lateinit var inputTopicForBadData: TestInputTopic<String, String>
 	private lateinit var processingEventTopic: TestInputTopic<String, ProcessingEvent>
 
-	private fun setupKafkaTopologyTestDriver(appConfiguration: AppConfiguration, taskListService: TaskListService, kafkaPublisher: KafkaPublisher) {
+	private fun setupKafkaTopologyTestDriver(appConfiguration: AppConfiguration, taskListService: TaskListService, kafkaPublisher: KafkaPublisher, metrics: ArchivingMetrics) {
 		val builder = StreamsBuilder()
-		KafkaConfig(appConfiguration, taskListService, kafkaPublisher).kafkaStreams(builder)
+		KafkaConfig(appConfiguration, taskListService, kafkaPublisher, metrics).kafkaStreams(builder)
 		val topology = builder.build()
 
 		// Dummy properties needed for test diver
@@ -111,8 +113,8 @@ open class TopologyTestDriverTests {
 				.then { processingEventTopic.pipeInput(captor.value, ProcessingEvent(eventType)) }
 		}
 
-		fun setup() {
-			setupKafkaTopologyTestDriver(appConfiguration, taskListService, kafkaPublisher)
+		fun setup(metrics: ArchivingMetrics) {
+			setupKafkaTopologyTestDriver(appConfiguration, taskListService, kafkaPublisher, metrics)
 		}
 
 		private inline fun <reified T> argumentCaptor(): ArgumentCaptor<T> = ArgumentCaptor.forClass(T::class.java)

@@ -21,6 +21,9 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 	private val GAUGE_TASKS_GIVEN_UP_ON = "gauge_tasks_given_up_on"
 	private val GAUGE_TASKS_GIVEN_UP_ON_DESC = "Number of tasks given up on"
 
+	private val GAUGE_UP_DOWN = "gauge_up_or_downn"
+	private val GAUGE_UP_DOWN_DESC = "Up or down status"
+
 	private val SUMMARY_ARCHIVING_LATENCY = "latency_archiving_operations"
 	private val SUMMARY_ARCHIVING_LATENCY_DESC = "Latency for archiving"
 
@@ -56,6 +59,7 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 
 	private val taskGauge: Gauge = registerGauge(GAUGE_TASKS, GAUGE_TASKS_DESC)
 	private val tasksGivenUpOnGauge: Gauge = registerGauge(GAUGE_TASKS_GIVEN_UP_ON, GAUGE_TASKS_GIVEN_UP_ON_DESC)
+	private val upOrDownGauge: Gauge = registerGauge(GAUGE_UP_DOWN, GAUGE_UP_DOWN_DESC)
 	private val archivingLatencySummary = registerSummary(SUMMARY_ARCHIVING_LATENCY, SUMMARY_ARCHIVING_LATENCY_DESC)
 	private val filestorageGetSuccessCounter: Counter = registerCounter(COUNTER_FILESTORAGE_GET_SUCCESS, COUNTER_FILESTORAGE_GET_SUCCESS_DESC)
 	private val filestorageGetErrorCounter: Counter = registerCounter(COUNTER_FILESTORAGE_GET_ERROR, COUNTER_FILESTORAGE_GET_ERROR_DESC)
@@ -147,6 +151,10 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 	fun setTasksGivenUpOn(value: Double) = tasksGivenUpOnGauge.labels(APP).set(value)
 	fun getTasksGivenUpOn() = tasksGivenUpOnGauge.labels(APP).get()
 
+	fun setUpOrDown(value: Double) = upOrDownGauge.labels(APP).set(value)
+	fun incUpOrDown() = upOrDownGauge.labels(APP).inc()
+	fun getUpOrDown() = upOrDownGauge.labels(APP).get()
+
 	fun archivingLatencyStart(): Summary.Timer = archivingLatencySummary.labels(APP).startTimer()
 	fun filestorageGetLatencyStart(): Summary.Timer = filestorageGetLatencySummary.labels(APP).startTimer()
 	fun filestorageDelLatencyStart(): Summary.Timer = filestorageDelLatencySummary.labels(APP).startTimer()
@@ -177,6 +185,7 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 		registry.unregister(archivingLatencyHistogram)
 		registry.unregister(tasksGivenUpOnGauge)
 		registry.unregister(taskGauge)
+		registry.unregister(upOrDownGauge)
 		registry.unregister(numberOfAttachmentHistogram)
 	}
 

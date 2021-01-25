@@ -8,6 +8,7 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.ProcessingEventDto
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.common.config.SaslConfigs
@@ -30,7 +31,8 @@ import java.util.*
 @Configuration
 class KafkaConfig(private val appConfiguration: AppConfiguration,
 									private val schedulerService: TaskListService,
-									private val kafkaPublisher: KafkaPublisher) {
+									private val kafkaPublisher: KafkaPublisher,
+									private val metrics: ArchivingMetrics) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -97,6 +99,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 
 	@Bean
 	fun setupKafkaStreams(): KafkaStreams {
+		metrics.setUpOrDown(1.0)
 		val streamsBuilder = StreamsBuilder()
 		kafkaStreams(streamsBuilder)
 		val topology = streamsBuilder.build()
