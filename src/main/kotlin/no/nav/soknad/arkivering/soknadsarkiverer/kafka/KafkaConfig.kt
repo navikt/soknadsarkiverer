@@ -11,6 +11,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
+import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.config.SaslConfigs
 import org.apache.kafka.common.serialization.Serde
 import org.apache.kafka.common.serialization.Serdes
@@ -104,7 +105,8 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		kafkaStreams(streamsBuilder)
 		val topology = streamsBuilder.build()
 
-		val kafkaStreams = KafkaStreams(topology, kafkaConfig("soknadsarkiverer-streams-${UUID.randomUUID()}"))
+		val kafkaStreams = KafkaStreams(topology, kafkaConfig("soknadsarkiverer-streams"))
+		kafkaStreams.cleanUp()
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
 		kafkaStreams.start()
 		Runtime.getRuntime().addShutdownHook(Thread(kafkaStreams::close))
@@ -113,6 +115,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 
 	private fun kafkaConfig(applicationId: String) = Properties().also {
 		it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
+		it[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
 		it[StreamsConfig.APPLICATION_ID_CONFIG] = applicationId
 		it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers
 		it[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = Serdes.StringSerde::class.java
