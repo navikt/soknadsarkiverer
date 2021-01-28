@@ -106,6 +106,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		val topology = streamsBuilder.build()
 
 		val kafkaStreams = KafkaStreams(topology, kafkaConfig("soknadsarkiverer-streams"))
+		logger.info("SetupoKafkaStreams cleanUp kafka streams")
 		kafkaStreams.cleanUp()
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
 		kafkaStreams.start()
