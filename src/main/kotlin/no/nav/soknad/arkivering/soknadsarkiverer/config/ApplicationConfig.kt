@@ -39,8 +39,8 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"START_ARKIVERING" to "2099-12-31 59:59:59"
 ))
 
-private val secondsBetweenRetries = listOf(1, 12, 25, 60, 120, 600, 1200) // As many retries will be attempted as there are elements in the list.
-private val secondsBetweenRetriesForTests = listOf(1, 1, 1, 1, 1, 1, 1)  // Note! Also update end-to-end-tests if the list size is changed!
+private val secondsBetweenRetries = listOf(1, 25, 60, 120, 600, 1200) // As many retries will be attempted as there are elements in the list.
+private val secondsBetweenRetriesForTests = listOf(1, 1, 1, 1, 1, 1)  // Note! Also update end-to-end-tests if the list size is changed!
 
 
 private val appConfig =
