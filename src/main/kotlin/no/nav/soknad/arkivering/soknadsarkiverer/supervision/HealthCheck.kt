@@ -20,7 +20,8 @@ import org.springframework.web.client.HttpServerErrorException
 @Unprotected
 class HealthCheck(private val appConfiguration: AppConfiguration,
 									private val fileService: FileserviceInterface,
-									private val joarkService: JournalpostClientInterface) {
+									private val joarkService: JournalpostClientInterface,
+									private val metrics: ArchivingMetrics) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -29,6 +30,7 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 	fun isAlive() = if (applicationIsAlive()) {
 		"Ok"
 	} else {
+		metrics.setUpOrDown(0.0)
 		logger.warn("/isAlive called - application is not alive")
 		throwException()
 	}
@@ -38,6 +40,7 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 	fun isReady() = if (applicationIsReady()) {
 		"Ready for actions"
 	} else {
+		metrics.setUpOrDown(0.0)
 		logger.warn("/isReady called - application is not ready")
 		throwException()
 	}
@@ -49,6 +52,7 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 			Dependency({ fileService.ping() }, "pong", "FileStorage"),
 			Dependency({ joarkService.isAlive() }, "Application is alive!", "Joark")
 		)
+		metrics.setUpOrDown(0.0)
 		throwExceptionIfDependenciesAreDown(dependencies)
 
 		logger.info("/ping called")

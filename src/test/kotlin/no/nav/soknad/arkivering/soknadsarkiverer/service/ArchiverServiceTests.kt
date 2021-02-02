@@ -1,6 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import com.nhaarman.mockitokotlin2.*
+import io.prometheus.client.CollectorRegistry
 import kotlinx.coroutines.*
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.ARCHIVED
@@ -9,6 +10,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientI
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.HealthCheck
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
@@ -25,7 +27,8 @@ class ArchiverServiceTests {
 	private val journalpostClient = mock<JournalpostClientInterface>()
 	private val kafkaPublisher = mock<KafkaPublisher>()
 	private val appConfiguration = AppConfiguration()
-	private val healthCheck = HealthCheck(appConfiguration, filestorage, journalpostClient)
+	private val metrics = mock<ArchivingMetrics>()
+	private val healthCheck = HealthCheck(appConfiguration, filestorage, journalpostClient, metrics)
 
 	private val key = UUID.randomUUID().toString()
 

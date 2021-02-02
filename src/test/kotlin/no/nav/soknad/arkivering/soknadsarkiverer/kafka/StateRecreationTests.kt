@@ -36,7 +36,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 			.withAppConfiguration(appConfiguration)
 			.withTaskListService(taskListService)
 			.runScheduledTasksOnScheduling(scheduler)
-			.setup()
+			.setup(metrics)
 	}
 
 	@AfterEach
@@ -234,7 +234,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 	}
 
 	private fun recreateState() {
-		KafkaConfig(appConfiguration, taskListService, mock()).kafkaStreams(StreamsBuilder())
+		KafkaConfig(appConfiguration, taskListService, mock(), metrics).kafkaStreams(StreamsBuilder())
 	}
 
 

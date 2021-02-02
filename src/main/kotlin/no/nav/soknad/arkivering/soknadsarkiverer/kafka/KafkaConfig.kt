@@ -8,8 +8,10 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.ProcessingEventDto
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
+import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.config.SaslConfigs
 import org.apache.kafka.common.serialization.Serde
 import org.apache.kafka.common.serialization.Serdes
@@ -30,7 +32,8 @@ import java.util.*
 @Configuration
 class KafkaConfig(private val appConfiguration: AppConfiguration,
 									private val schedulerService: TaskListService,
-									private val kafkaPublisher: KafkaPublisher) {
+									private val kafkaPublisher: KafkaPublisher,
+									private val metrics: ArchivingMetrics) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -97,11 +100,14 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 
 	@Bean
 	fun setupKafkaStreams(): KafkaStreams {
+		metrics.setUpOrDown(1.0)
 		val streamsBuilder = StreamsBuilder()
 		kafkaStreams(streamsBuilder)
 		val topology = streamsBuilder.build()
 
-		val kafkaStreams = KafkaStreams(topology, kafkaConfig("soknadsarkiverer-streams-${UUID.randomUUID()}"))
+		val kafkaStreams = KafkaStreams(topology, kafkaConfig("soknadsarkiverer-streams"))
+		logger.info("SetupoKafkaStreams cleanUp kafka streams")
+		kafkaStreams.cleanUp()
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
 		kafkaStreams.start()
 		Runtime.getRuntime().addShutdownHook(Thread(kafkaStreams::close))
@@ -110,6 +116,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 
 	private fun kafkaConfig(applicationId: String) = Properties().also {
 		it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
+		it[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
 		it[StreamsConfig.APPLICATION_ID_CONFIG] = applicationId
 		it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers
 		it[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = Serdes.StringSerde::class.java
