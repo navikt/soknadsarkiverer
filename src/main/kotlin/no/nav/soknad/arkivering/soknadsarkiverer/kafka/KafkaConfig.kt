@@ -54,6 +54,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		val inputTable = inputTopicStream.toTable()
 
 		inputTopicStream
+			.peek { key, value -> logger.info("$key: Processing InputTopic - $value") }
 			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
 
 		processingTopicStream
@@ -105,8 +106,9 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		kafkaStreams(streamsBuilder)
 		val topology = streamsBuilder.build()
 
-		val kafkaStreams = KafkaStreams(topology, kafkaConfig("soknadsarkiverer-streams"))
-		logger.info("SetupoKafkaStreams cleanUp kafka streams")
+		val kafkaStreams = KafkaStreams(topology, kafkaConfig(appConfiguration.kafkaConfig.groupId))
+
+		logger.info("SetupKafkaStreams: cleanUp kafka streams")
 		kafkaStreams.cleanUp()
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
 		kafkaStreams.start()
