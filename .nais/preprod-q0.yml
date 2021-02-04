@@ -22,7 +22,7 @@ spec:
     enabled: true
     path: /internal/prometheus
   replicas:
-    min: 1
+    min: 2
     max: 4
   resources:
     limits:
@@ -73,6 +73,8 @@ spec:
       value: privat-soknadInnsendt-processingEventLog-v1-q0
     - name: KAFKA_MESSAGE_TOPIC
       value: privat-soknadInnsendt-messages-v1-q0
+    - name: KAFKA_GROUPID
+      value: soknadsarkiverer-streams-q0
     - name: FILESTORAGE_HOST
       value: https://soknadsfillager-q0.dev.adeo.no
     - name: JOARK_HOST
