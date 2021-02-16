@@ -8,7 +8,6 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.*
 
-
 class SoknadarkivschemaBuilder {
 	private var behandlingsid: String = "behandlingsid"
 	private var fodselsnummer: String = "12345687901"
@@ -17,35 +16,12 @@ class SoknadarkivschemaBuilder {
 	private var soknadstype: Soknadstyper = Soknadstyper.SOKNAD
 	private var mottatteDokumenter: MutableList<MottattDokument> = mutableListOf()
 
-	fun withBehandlingsid(behandlingsid: String): SoknadarkivschemaBuilder {
-		this.behandlingsid = behandlingsid
-		return this
-	}
-
-	fun withFodselsnummer(fodselsnummer: String): SoknadarkivschemaBuilder {
-		this.fodselsnummer = fodselsnummer
-		return this
-	}
-
-	fun withArkivtema(arkivtema: String): SoknadarkivschemaBuilder {
-		this.arkivtema = arkivtema
-		return this
-	}
-
-	fun withInnsendtDato(innsendtDato: LocalDateTime): SoknadarkivschemaBuilder {
-		this.innsendtDato = innsendtDato.toEpochSecond(ZoneOffset.UTC)
-		return this
-	}
-
-	fun withSoknadstype(soknadstype: Soknadstyper): SoknadarkivschemaBuilder {
-		this.soknadstype = soknadstype
-		return this
-	}
-
-	fun withMottatteDokumenter(vararg mottatteDokumenter: MottattDokument): SoknadarkivschemaBuilder {
-		this.mottatteDokumenter.addAll(mottatteDokumenter)
-		return this
-	}
+	fun withBehandlingsid(behandlingsid: String) = apply { this.behandlingsid = behandlingsid }
+	fun withFodselsnummer(fodselsnummer: String) = apply { this.fodselsnummer = fodselsnummer }
+	fun withArkivtema(arkivtema: String) = apply { this.arkivtema = arkivtema }
+	fun withInnsendtDato(innsendtDato: LocalDateTime) = apply { this.innsendtDato = innsendtDato.toEpochSecond(ZoneOffset.UTC) }
+	fun withSoknadstype(soknadstype: Soknadstyper) = apply { this.soknadstype = soknadstype }
+	fun withMottatteDokumenter(vararg mottatteDokumenter: MottattDokument) = apply { this.mottatteDokumenter.addAll(mottatteDokumenter) }
 
 	fun build() = Soknadarkivschema(behandlingsid, fodselsnummer, arkivtema, innsendtDato, soknadstype, mottatteDokumenter)
 }
@@ -56,29 +32,11 @@ class MottattDokumentBuilder {
 	private var tittel: String = "Søknad om arbeidsavklaringspenger"
 	private var mottatteVarianter: MutableList<MottattVariant> = mutableListOf()
 
-	fun withSkjemanummer(skjemanummer: String): MottattDokumentBuilder {
-		this.skjemanummer = skjemanummer
-		return this
-	}
-
-	fun withErHovedskjema(erHovedskjema: Boolean): MottattDokumentBuilder {
-		this.erHovedskjema = erHovedskjema
-		return this
-	}
-
-	fun withTittel(tittel: String): MottattDokumentBuilder {
-		this.tittel = tittel
-		return this
-	}
-
-	fun withMottatteVarianter(vararg mottatteVarianter: MottattVariant): MottattDokumentBuilder {
-		return withMottatteVarianter(mottatteVarianter.toList())
-	}
-
-	fun withMottatteVarianter(mottatteVarianter: List<MottattVariant>): MottattDokumentBuilder {
-		this.mottatteVarianter.addAll(mottatteVarianter)
-		return this
-	}
+	fun withSkjemanummer(skjemanummer: String) = apply { this.skjemanummer = skjemanummer }
+	fun withErHovedskjema(erHovedskjema: Boolean) = apply { this.erHovedskjema = erHovedskjema }
+	fun withTittel(tittel: String) = apply { this.tittel = tittel }
+	fun withMottatteVarianter(vararg mottatteVarianter: MottattVariant) = apply { withMottatteVarianter(mottatteVarianter.toList()) }
+	fun withMottatteVarianter(mottatteVarianter: List<MottattVariant>) = apply { this.mottatteVarianter.addAll(mottatteVarianter) }
 
 	fun build() = MottattDokument(skjemanummer, erHovedskjema, tittel, mottatteVarianter)
 }
@@ -89,25 +47,10 @@ class MottattVariantBuilder {
 	private var filtype: String = "PDFA"
 	private var variantformat: String = "ARKIV"
 
-	fun withUuid(uuid: String): MottattVariantBuilder {
-		this.uuid = uuid
-		return this
-	}
-
-	fun withFilnavn(filnavn: String): MottattVariantBuilder {
-		this.filnavn = filnavn
-		return this
-	}
-
-	fun withfiltype(filtype: String): MottattVariantBuilder {
-		this.filtype = filtype
-		return this
-	}
-
-	fun withVariantformat(variantformat: String): MottattVariantBuilder {
-		this.variantformat = variantformat
-		return this
-	}
+	fun withUuid(uuid: String) = apply { this.uuid = uuid }
+	fun withFilnavn(filnavn: String) = apply { this.filnavn = filnavn }
+	fun withfiltype(filtype: String) = apply { this.filtype = filtype }
+	fun withVariantformat(variantformat: String) = apply { this.variantformat = variantformat }
 
 	fun build() = MottattVariant(uuid, filnavn, filtype, variantformat)
 }

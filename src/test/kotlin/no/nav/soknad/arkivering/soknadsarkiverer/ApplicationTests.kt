@@ -4,20 +4,17 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
-import kotlinx.coroutines.*
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.*
-import no.nav.soknad.arkivering.soknadsarkiverer.config.*
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
-import no.nav.soknad.arkivering.soknadsarkiverer.supervision.HealthCheck
-import no.nav.soknad.arkivering.soknadsarkiverer.supervision.Metrics
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -51,13 +48,13 @@ class ApplicationTests: TopologyTestDriverTests() {
 	private lateinit var appConfiguration: AppConfiguration
 
 	@Autowired
-	private lateinit var healthCheck: HealthCheck
-
-	@Autowired
 	private lateinit var taskListService: TaskListService
 
 	@Autowired
 	private lateinit var objectMapper: ObjectMapper
+
+	@Autowired
+	private lateinit var metrics: ArchivingMetrics
 
 	@MockBean
 	private lateinit var kafkaPublisherMock: KafkaPublisher
@@ -75,8 +72,6 @@ class ApplicationTests: TopologyTestDriverTests() {
 		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
 
 		maxNumberOfAttempts = appConfiguration.config.retryTime.size
-		appConfiguration.state.busyCounter = 0
-		appConfiguration.state.stopping = false
 
 		setupKafkaTopologyTestDriver()
 			.withAppConfiguration(appConfiguration)
@@ -151,13 +146,13 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 	@Test
 	fun `Failing to get files from Filestorage will cause retries`() {
-		val tasksBefore = Metrics.getTasks()
-		val tasksGivenUpOnBefore = Metrics.getTasksGivenUpOn()
-		val getFilestorageErrorsBefore = Metrics.getGetFilestorageErrors()
-		val getFilestorageSuccessesBefore = Metrics.getGetFilestorageSuccesses()
-		val delFilestorageSuccessesBefore = Metrics.getDelFilestorageSuccesses()
-		val joarkSuccessesBefore = Metrics.getJoarkSuccesses()
-		val joarkErrorsBefore = Metrics.getJoarkErrors()
+		val tasksBefore = metrics.getTasks()
+		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
+		val getFilestorageErrorsBefore = metrics.getGetFilestorageErrors()
+		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
+		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
+		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
+		val joarkErrorsBefore = metrics.getJoarkErrors()
 
 		mockFilestorageIsDown()
 		mockJoarkIsWorking()
@@ -171,13 +166,13 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyMessageStartsWith(maxNumberOfAttempts, "Exception")
 		verifyMessageStartsWith(0, "ok")
 
-		assertEquals(getFilestorageErrorsBefore + maxNumberOfAttempts, Metrics.getGetFilestorageErrors())
-		assertEquals(getFilestorageSuccessesBefore + 0, Metrics.getGetFilestorageSuccesses())
-		assertEquals(delFilestorageSuccessesBefore + 0, Metrics.getDelFilestorageSuccesses())
-		assertEquals(joarkErrorsBefore + 0, Metrics.getJoarkErrors())
-		assertEquals(joarkSuccessesBefore + 0, Metrics.getJoarkSuccesses())
-		assertEquals(tasksBefore + 1, Metrics.getTasks())
-		assertEquals(tasksGivenUpOnBefore + 1, Metrics.getTasksGivenUpOn())
+		assertEquals(getFilestorageErrorsBefore + maxNumberOfAttempts, metrics.getGetFilestorageErrors())
+		assertEquals(getFilestorageSuccessesBefore + 0, metrics.getGetFilestorageSuccesses())
+		assertEquals(delFilestorageSuccessesBefore + 0, metrics.getDelFilestorageSuccesses())
+		assertEquals(joarkErrorsBefore + 0, metrics.getJoarkErrors())
+		assertEquals(joarkSuccessesBefore + 0, metrics.getJoarkSuccesses())
+		assertEquals(tasksBefore + 1, metrics.getTasks())
+		assertEquals(tasksGivenUpOnBefore + 1, metrics.getTasksGivenUpOn())
 	}
 
 	@Test
@@ -200,12 +195,12 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 	@Test
 	fun `First attempt to Joark fails, the second succeeds`() {
-		val tasksBefore = Metrics.getTasks()
-		val tasksGivenUpOnBefore = Metrics.getTasksGivenUpOn()
-		val getFilestorageSuccessesBefore = Metrics.getGetFilestorageSuccesses()
-		val delFilestorageSuccessesBefore = Metrics.getDelFilestorageSuccesses()
-		val joarkSuccessesBefore = Metrics.getJoarkSuccesses()
-		val joarkErrorsBefore = Metrics.getJoarkErrors()
+		val tasksBefore = metrics.getTasks()
+		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
+		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
+		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
+		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
+		val joarkErrorsBefore = metrics.getJoarkErrors()
 
 		mockFilestorageIsWorking(fileUuid)
 		mockJoarkRespondsAfterAttempts(1)
@@ -220,12 +215,12 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyMessageStartsWith(1, "Exception")
 		verifyMessageStartsWith(1, "ok")
 
-		assertEquals(getFilestorageSuccessesBefore + 2, Metrics.getGetFilestorageSuccesses())
-		assertEquals(delFilestorageSuccessesBefore + 1, Metrics.getDelFilestorageSuccesses())
-		assertEquals(joarkErrorsBefore + 1, Metrics.getJoarkErrors())
-		assertEquals(joarkSuccessesBefore + 1, Metrics.getJoarkSuccesses())
-		assertEquals(tasksBefore + 0, Metrics.getTasks(), "Should have created and finished task")
-		assertEquals(tasksGivenUpOnBefore + 0, Metrics.getTasksGivenUpOn(), "Should not have given up on any task")
+		assertEquals(getFilestorageSuccessesBefore + 2, metrics.getGetFilestorageSuccesses())
+		assertEquals(delFilestorageSuccessesBefore + 1, metrics.getDelFilestorageSuccesses())
+		assertEquals(joarkErrorsBefore + 1, metrics.getJoarkErrors())
+		assertEquals(joarkSuccessesBefore + 1, metrics.getJoarkSuccesses())
+		assertEquals(tasksBefore + 0, metrics.getTasks(), "Should have created and finished task")
+		assertEquals(tasksGivenUpOnBefore + 0, metrics.getTasksGivenUpOn(), "Should not have given up on any task")
 	}
 
 	@Test
@@ -247,11 +242,11 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 	@Test
 	fun `Everything works, but Filestorage cannot delete files -- Message is nevertheless marked as finished`() {
-		val getFilestorageSuccessesBefore = Metrics.getGetFilestorageSuccesses()
-		val delFilestorageSuccessesBefore = Metrics.getDelFilestorageSuccesses()
-		val delFilestorageErrorsBefore = Metrics.getDelFilestorageErrors()
-		val joarkSuccessesBefore = Metrics.getJoarkSuccesses()
-		val joarkErrorsBefore = Metrics.getJoarkErrors()
+		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
+		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
+		val delFilestorageErrorsBefore = metrics.getDelFilestorageErrors()
+		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
+		val joarkErrorsBefore = metrics.getJoarkErrors()
 
 		mockFilestorageIsWorking(fileUuid)
 		mockFilestorageDeletionIsNotWorking()
@@ -267,11 +262,11 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyMessageStartsWith(1, "ok")
 		verifyMessageStartsWith(0, "Exception")
 
-		assertEquals(getFilestorageSuccessesBefore + 1, Metrics.getGetFilestorageSuccesses())
-		assertEquals(delFilestorageSuccessesBefore + 0, Metrics.getDelFilestorageSuccesses())
-		assertEquals(delFilestorageErrorsBefore + 1, Metrics.getDelFilestorageErrors())
-		assertEquals(joarkErrorsBefore + 0, Metrics.getJoarkErrors())
-		assertEquals(joarkSuccessesBefore + 1, Metrics.getJoarkSuccesses())
+		assertEquals(getFilestorageSuccessesBefore + 1, metrics.getGetFilestorageSuccesses())
+		assertEquals(delFilestorageSuccessesBefore + 0, metrics.getDelFilestorageSuccesses())
+		assertEquals(delFilestorageErrorsBefore + 1, metrics.getDelFilestorageErrors())
+		assertEquals(joarkErrorsBefore + 0, metrics.getJoarkErrors())
+		assertEquals(joarkSuccessesBefore + 1, metrics.getJoarkSuccesses())
 	}
 
 	@Test
@@ -288,53 +283,6 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(maxNumberOfAttempts, "Exception")
 		verifyMessageStartsWith(0, "ok")
-	}
-
-
-	@Test
-	fun `When StopDelay hook is called messages not sent to Joark`() {
-		mockFilestorageIsWorking(fileUuid)
-		mockJoarkIsWorking()
-		val soknadsarkivschema = createSoknadarkivschema()
-
-		healthCheck.stop()
-		putDataOnKafkaTopic(soknadsarkivschema)
-
-		verifyProcessingEvents(1, RECEIVED)
-		verifyProcessingEvents(1, STARTED)
-		verifyProcessingEvents(0, ARCHIVED)
-		verifyProcessingEvents(0, FINISHED)
-		verifyMockedPostRequests(0, appConfiguration.config.joarkUrl)
-		verifyDeleteRequestsToFilestorage(0)
-	}
-
-	val simulertTidForArkiveringAvSoknad = 2000L
-
-	@Test
-	fun `When StopDelay hook is called its delayed if busy`() {
-		mockFilestorageIsWorking(fileUuid)
-		mockJoarkIsWorking()
-
-		putDataOnKafkaTopic(createSoknadarkivschema()) // Legges på kø, tar ca. 1000 ms før den blir behandlet
-
-		GlobalScope.launch { simulerTidskrevendeSoknad() } // Venter simulertTidForArkiveringAvSoknad ms før behandling av søknad er over
-		val start = System.currentTimeMillis()
-		healthCheck.stop() // Stopp av behandling av nye søknader vil bli satt før meldinger på kø blir forsøkt arkivert
-		val tidbrukt = System.currentTimeMillis() - start
-
-		assertThat(tidbrukt>simulertTidForArkiveringAvSoknad)
-		verifyProcessingEvents(1, RECEIVED)
-		verifyProcessingEvents(1, STARTED)
-		verifyProcessingEvents(0, ARCHIVED)
-		verifyProcessingEvents(0, FINISHED)
-		verifyMockedPostRequests(0, appConfiguration.config.joarkUrl)
-		verifyDeleteRequestsToFilestorage(0)
-	}
-
-	suspend fun simulerTidskrevendeSoknad() {
-		busyInc(appConfiguration)
-		delay(simulertTidForArkiveringAvSoknad)
-		busyDec(appConfiguration)
 	}
 
 
@@ -408,9 +356,8 @@ class ApplicationTests: TopologyTestDriverTests() {
 			"INNGAAENDE",
 			"NAV_NO",
 			soknadsarkivschema.getArkivtema(),
-			"Søknad til " + soknadsarkivschema.getMottatteDokumenter()[0].getTittel()
+			soknadsarkivschema.getMottatteDokumenter()[0].getTittel()
 		)
 		assertEquals(expected, requestData)
 	}
-
 }

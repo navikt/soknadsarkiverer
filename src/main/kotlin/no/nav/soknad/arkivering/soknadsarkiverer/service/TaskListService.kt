@@ -6,7 +6,7 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
-import no.nav.soknad.arkivering.soknadsarkiverer.supervision.Metrics
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_SINGLETON
 import org.springframework.context.annotation.Scope
@@ -20,7 +20,8 @@ import java.util.concurrent.TimeUnit
 @Service
 class TaskListService(private val archiverService: ArchiverService,
 											private val appConfiguration: AppConfiguration,
-											private val scheduler: Scheduler) {
+											private val scheduler: Scheduler,
+											private val metrics: ArchivingMetrics) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	private val tasks = hashMapOf<String, Task>()
@@ -30,7 +31,7 @@ class TaskListService(private val archiverService: ArchiverService,
 		if (!tasks.containsKey(key)) {
 			tasks[key] = Task(soknadarkivschema, count, LocalDateTime.now(), Semaphore(1).also { it.acquire() })
 
-			Metrics.addTask()
+			metrics.addTask()
 			logger.info("$key: Created task")
 
 			GlobalScope.launch { startNewlyCreatedTask(key) }
@@ -81,7 +82,7 @@ class TaskListService(private val archiverService: ArchiverService,
 		val task = tasks[key]
 		if (task != null && task.count < newCount) {
 			tasks[key] = Task(task.value, newCount, task.timeStarted, task.isRunningLock)
-			Metrics.setTasksGivenUpOn(tasks.values.filter { it.count > appConfiguration.config.retryTime.size }.count().toDouble())
+			metrics.setTasksGivenUpOn(tasks.values.filter { it.count > appConfiguration.config.retryTime.size }.count().toDouble())
 		}
 	}
 
@@ -90,7 +91,7 @@ class TaskListService(private val archiverService: ArchiverService,
 
 			logger.info("$key: Finishing task")
 			tasks.remove(key)
-			Metrics.removeTask()
+			metrics.removeTask()
 
 		} else {
 			logger.info("$key: Tried to finish task, but it is already finished")
@@ -130,7 +131,7 @@ class TaskListService(private val archiverService: ArchiverService,
 	}
 
 	internal fun tryToArchive(key: String, soknadarkivschema: Soknadarkivschema) {
-		val timer = Metrics.archivingLatencyStart()
+		val timer = metrics.archivingLatencyStart()
 		try {
 			logger.info("$key: Will now start to archive")
 			archiverService.archive(key, soknadarkivschema)
@@ -149,7 +150,7 @@ class TaskListService(private val archiverService: ArchiverService,
 			throw t
 
 		} finally {
-			Metrics.endTimer(timer)
+			metrics.endTimer(timer)
 		}
 	}
 

@@ -75,10 +75,10 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 				}
 			}
 			.toStream()
-			.peek { key, count -> logger.info("$key: Processing Events - $count") }
+			.peek { key, count -> logger.debug("$key: Processing Events - $count") }
 			.leftJoin(inputTable, { count, soknadarkivschema -> soknadarkivschema to (count ?: 0) }, joined)
 			.filter { key, (soknadsarkiveschema, _) -> filterSoknadsarkivschemaThatAreNull(key, soknadsarkiveschema) }
-			.peek { key, pair -> logger.info("$key: About to schedule - $pair") }
+			.peek { key, (soknadsarkivschema, count) -> logger.info("$key: About to schedule with count $count - ${soknadsarkivschema.print()}") }
 			.foreach { key, (soknadsarkivschema, count) -> schedulerService.addOrUpdateTask(key, soknadsarkivschema, count) }
 	}
 
@@ -87,6 +87,13 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 			logger.error("$key: Soknadsarkivschema is null!")
 		return soknadsarkiveschema != null
 	}
+
+	private fun Soknadarkivschema.print(): String {
+		val fnr = "" // Do not print fnr to log
+		val a = Soknadarkivschema(this.getBehandlingsid(), fnr, this.getArkivtema(), this.getInnsendtDato(), this.getSoknadstype(), this.getMottatteDokumenter())
+		return a.toString()
+	}
+
 
 	@Bean
 	fun setupKafkaStreams(): KafkaStreams {
@@ -120,7 +127,11 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	}
 
 	private fun kafkaExceptionHandler() = KafkaExceptionHandler().also {
-		it.configure(kafkaConfig("soknadsarkiverer-exception").map { (k, v) -> k.toString() to v }.toMap())
+		it.configure(
+			kafkaConfig("soknadsarkiverer-exception")
+				.also { config -> config[APP_CONFIGURATION] = appConfiguration }
+				.map { (k, v) -> k.toString() to v }.toMap()
+		)
 	}
 
 	private fun createProcessingEventSerde(): SpecificAvroSerde<ProcessingEvent> = createAvroSerde()
@@ -132,5 +143,6 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	}
 }
 
+const val APP_CONFIGURATION = "app_configuration"
 const val KAFKA_PUBLISHER = "kafka.publisher"
 const val MESSAGE_ID = "MESSAGE_ID"

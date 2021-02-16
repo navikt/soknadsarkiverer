@@ -8,7 +8,7 @@ metadata:
 spec:
   image: {{image}}
   port: 8091
-  liveliness:
+  liveness:
     path: /internal/isAlive
     initialDelay: 100
     failureThreshold: 10
@@ -19,7 +19,7 @@ spec:
     timeout: 20
   preStopHookPath: /internal/stop
   prometheus:
-    enable: true
+    enabled: true
     path: /internal/prometheus
   replicas:
     min: 1
@@ -70,4 +70,4 @@ spec:
     - name: FILESTORAGE_HOST
       value: https://soknadsfillager.nais.adeo.no
     - name: JOARK_HOST
-      value: https://tjenester.nav.no/dokarkiv
+      value: https://dokarkiv.nais.adeo.no
