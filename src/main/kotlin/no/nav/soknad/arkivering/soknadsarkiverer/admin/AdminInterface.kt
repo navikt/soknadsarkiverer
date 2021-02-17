@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*
 
 @RestController
 //@ProtectedWithClaims(issuer = "azuread") // TODO midlertidig endret, skal ikke deployes til prod
-//@Unprotected // midlertidig lagt til skal ikke deployes til prod
+@Unprotected // midlertidig lagt til skal ikke deployes til prod
 @RequestMapping("/admin")
 class AdminInterface(private val adminService: AdminService) {
 
