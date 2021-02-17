@@ -286,6 +286,7 @@ class AdminInterface(private val adminService: AdminService) {
 			"to Joark), the returned list will consist of one element and an error message explaining that Filestorage keys " +
 			"could not be found.", content = [
 			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = FilestorageExistenceResponse::class)))))])])
+	@ProtectedWithClaims(issuer = "azuread")
 	@GetMapping("/fillager/filesExist/{key}", produces = [APPLICATION_JSON_VALUE])
 	fun filesExists(@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String) = adminService.filesExist(key)
 }
