@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import no.nav.security.token.support.core.api.Protected
 import no.nav.security.token.support.core.api.ProtectedWithClaims
 import no.nav.security.token.support.core.api.Unprotected
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.*
 
 @RestController
 //@ProtectedWithClaims(issuer = "azuread") // TODO midlertidig endret, skal ikke deployes til prod
-@Unprotected // midlertidig lagt til skal ikke deployes til prod
+//@Unprotected // midlertidig lagt til skal ikke deployes til prod
 @RequestMapping("/admin")
 class AdminInterface(private val adminService: AdminService) {
 
@@ -286,7 +287,7 @@ class AdminInterface(private val adminService: AdminService) {
 			"to Joark), the returned list will consist of one element and an error message explaining that Filestorage keys " +
 			"could not be found.", content = [
 			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = FilestorageExistenceResponse::class)))))])])
-	@ProtectedWithClaims(issuer = "isso")
+	@Protected
 	@GetMapping("/fillager/filesExist/{key}", produces = [APPLICATION_JSON_VALUE])
 	fun filesExists(@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String) = adminService.filesExist(key)
 }
