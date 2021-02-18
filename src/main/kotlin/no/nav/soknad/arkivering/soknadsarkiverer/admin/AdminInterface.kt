@@ -23,6 +23,7 @@ class AdminInterface(private val adminService: AdminService) {
 		"the rerun is started.", tags = ["operations"])
 	@ApiResponses(value = [ApiResponse(responseCode = "200", description = "Will always return successfully, but the " +
 		"actual rerun will be triggered some time in the future.")])
+	@ProtectedWithClaims(issuer="azuread")
 	@PostMapping("/rerun/{key}")
 	fun rerun(@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String) = adminService.rerun(key)
 
