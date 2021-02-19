@@ -14,7 +14,6 @@ import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.web.bind.annotation.*
 
 @RestController
-//@ProtectedWithClaims(issuer = "azuread") // TODO midlertidig endret, skal ikke deployes til prod
 @Unprotected // midlertidig lagt til skal ikke deployes til prod
 @RequestMapping("/admin")
 class AdminInterface(private val adminService: AdminService) {
@@ -54,6 +53,7 @@ class AdminInterface(private val adminService: AdminService) {
 			"\n\n" +
 			"An empty list is returned if there are no events on any topics.", content = [
 			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@ProtectedWithClaims(issuer="azuread")
 	@GetMapping("/kafka/events/allEvents/before/{timestamp}", produces = [APPLICATION_JSON_VALUE])
 	fun allEventsBefore(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long): List<KafkaEvent<String>> {
 
@@ -73,6 +73,7 @@ class AdminInterface(private val adminService: AdminService) {
 			"\n\n" +
 			"An empty list is returned if there are no events on any topics.", content = [
 			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@ProtectedWithClaims(issuer="azuread")
 	@GetMapping("/kafka/events/allEvents/after/{timestamp}", produces = [APPLICATION_JSON_VALUE])
 	fun allEventsAfter(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long): List<KafkaEvent<String>> {
 
@@ -111,6 +112,7 @@ class AdminInterface(private val adminService: AdminService) {
 			"\n\n" +
 			"An empty list is returned if there are no unfinished events.", content = [
 			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@ProtectedWithClaims(issuer="azuread")
 	@GetMapping("/kafka/events/unfinishedEvents/before/{timestamp}", produces = [APPLICATION_JSON_VALUE])
 	fun unfinishedEventsBefore(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long): List<KafkaEvent<String>> {
 
@@ -130,6 +132,7 @@ class AdminInterface(private val adminService: AdminService) {
 			"\n\n" +
 			"An empty list is returned if there are no unfinished events.", content = [
 			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@ProtectedWithClaims(issuer="azuread")
 	@GetMapping("/kafka/events/unfinishedEvents/after/{timestamp}", produces = [APPLICATION_JSON_VALUE])
 	fun unfinishedEventsAfter(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long): List<KafkaEvent<String>> {
 
@@ -167,6 +170,7 @@ class AdminInterface(private val adminService: AdminService) {
 			"\n\n" +
 			"An empty list is returned if the key is not found.", content = [
 			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@ProtectedWithClaims(issuer="azuread")
 	@GetMapping("/kafka/events/key/before/{timestamp}/{key}", produces = [APPLICATION_JSON_VALUE])
 	fun specificEventBefore(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long,
 													@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String): List<KafkaEvent<String>> {
@@ -189,6 +193,7 @@ class AdminInterface(private val adminService: AdminService) {
 			"\n\n" +
 			"An empty list is returned if the key is not found.", content = [
 			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@ProtectedWithClaims(issuer="azuread")
 	@GetMapping("/kafka/events/key/after/{timestamp}/{key}", produces = [APPLICATION_JSON_VALUE])
 	fun specificEventAfter(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long,
 												 @Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String): List<KafkaEvent<String>> {
@@ -232,6 +237,7 @@ class AdminInterface(private val adminService: AdminService) {
 			"\n\n" +
 			"An empty list is returned if there are no events matching the search phrase.", content = [
 			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@ProtectedWithClaims(issuer="azuread")
 	@GetMapping("/kafka/events/search/before/{timestamp}/{searchPhrase}", produces = [APPLICATION_JSON_VALUE])
 	fun searchBefore(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long,
 									 @Parameter(description = "Search phrase (Regex)") @PathVariable searchPhrase: String): List<KafkaEvent<String>> {
@@ -255,6 +261,7 @@ class AdminInterface(private val adminService: AdminService) {
 			"\n\n" +
 			"An empty list is returned if there are no events matching the search phrase.", content = [
 			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@ProtectedWithClaims(issuer="azuread")
 	@GetMapping("/kafka/events/search/after/{timestamp}/{searchPhrase}", produces = [APPLICATION_JSON_VALUE])
 	fun searchAfter(@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long,
 									@Parameter(description = "Search phrase (Regex)") @PathVariable searchPhrase: String): List<KafkaEvent<String>> {
