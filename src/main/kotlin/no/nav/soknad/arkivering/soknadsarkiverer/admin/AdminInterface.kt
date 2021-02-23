@@ -14,7 +14,7 @@ import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@Unprotected // midlertidig lagt til skal ikke deployes til prod
+@Unprotected
 @RequestMapping("/admin")
 class AdminInterface(private val adminService: AdminService) {
 
@@ -34,6 +34,7 @@ class AdminInterface(private val adminService: AdminService) {
 			"\n\n" +
 			"An empty list is returned if there are no events on any topics.", content = [
 			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@ProtectedWithClaims(issuer="azuread")
 	@GetMapping("/kafka/events/allEvents", produces = [APPLICATION_JSON_VALUE])
 	fun allEvents(): List<KafkaEvent<String>> {
 
@@ -93,6 +94,7 @@ class AdminInterface(private val adminService: AdminService) {
 			"\n\n" +
 			"An empty list is returned if there are no unfinished events.", content = [
 			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@ProtectedWithClaims(issuer="azuread")
 	@GetMapping("/kafka/events/unfinishedEvents", produces = [APPLICATION_JSON_VALUE])
 	fun unfinishedEvents(): List<KafkaEvent<String>> {
 
@@ -149,6 +151,7 @@ class AdminInterface(private val adminService: AdminService) {
 		ApiResponse(responseCode = "200", description = "A list of the $maxNumberOfEventsReturned most recent events from " +
 			"all topics that have a given key. An empty list is returned if the key is not found.", content = [
 			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@ProtectedWithClaims(issuer="azuread")
 	@GetMapping("/kafka/events/key/{key}", produces = [APPLICATION_JSON_VALUE])
 	fun specificEvent(@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String): List<KafkaEvent<String>> {
 
@@ -215,6 +218,7 @@ class AdminInterface(private val adminService: AdminService) {
 			"that matches the search phrase will be returned. An empty list is returned if there are no events matching the " +
 			"search phrase.", content = [
 			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = KafkaEvent::class)))))])])
+	@ProtectedWithClaims(issuer="azuread")
 	@GetMapping("/kafka/events/search/{searchPhrase}", produces = [APPLICATION_JSON_VALUE])
 	fun search(@Parameter(description = "Search phrase (Regex)") @PathVariable searchPhrase: String): List<KafkaEvent<String>> {
 
