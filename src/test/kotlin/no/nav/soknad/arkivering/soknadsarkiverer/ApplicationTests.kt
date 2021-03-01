@@ -7,6 +7,7 @@ import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
+import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.*
@@ -19,7 +20,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers.contains
 import org.mockito.ArgumentMatchers.startsWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -334,14 +334,13 @@ class ApplicationTests: TopologyTestDriverTests() {
 			mockingDetails(kafkaPublisherMock)
 				.invocations.stream()
 				.filter { it.arguments[0] == key }
-				.filter { it.arguments[1] is String }
-				.filter { (it.arguments[1] as String).contains(metric) }
+				.filter { it.arguments[1] is InnsendingMetrics }
+				.filter { (it.arguments[1] as InnsendingMetrics).toString().contains(metric) }
 				.count()
 				.toInt()
 		}
 
-		val finalCheck = { verify(kafkaPublisherMock, times(expectedCount)).putMetricOnTopic(eq(key), contains(metric), any()) }
-		loopAndVerify(expectedCount, getCount, finalCheck)
+		loopAndVerify(expectedCount, getCount)
 	}
 
 	private fun verifyProcessingEvents(expectedCount: Int, eventType: EventTypes) {

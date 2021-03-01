@@ -2,6 +2,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
+import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import org.apache.kafka.clients.CommonClientConfigs
@@ -22,6 +23,7 @@ import kotlin.collections.HashMap
 class KafkaPublisher(private val appConfiguration: AppConfiguration) {
 
 	private val kafkaProcessingEventProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap())
+	private val kafkaMetricsProducer = KafkaProducer<String, InnsendingMetrics>(kafkaConfigMap())
 	private val kafkaMessageProducer = KafkaProducer<String, String>(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 
 	fun putProcessingEventOnTopic(key: String, value: ProcessingEvent, headers: Headers = RecordHeaders()) {
@@ -36,9 +38,9 @@ class KafkaPublisher(private val appConfiguration: AppConfiguration) {
 		putDataOnTopic(key, value, headers, topic, kafkaProducer)
 	}
 
-	fun putMetricOnTopic(key: String?, value: String, headers: Headers = RecordHeaders()) {
+	fun putMetricOnTopic(key: String?, value: InnsendingMetrics, headers: Headers = RecordHeaders()) {
 		val topic = appConfiguration.kafkaConfig.metricsTopic
-		val kafkaProducer = kafkaMessageProducer
+		val kafkaProducer = kafkaMetricsProducer
 		putDataOnTopic(key, value, headers, topic, kafkaProducer)
 	}
 

@@ -2,6 +2,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
+import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
@@ -80,14 +81,8 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 
 	private fun createMetric(key: String, message: String, startTime: Long) {
 
-		kafkaPublisher.putMetricOnTopic(key,
-			"{" +
-				"\"application\":\"soknadsarkiverer\"," +
-				"\"action\":\"$message\"," +
-				"\"startTime\":$startTime," +
-				"\"duration\":${System.currentTimeMillis() - startTime}" +
-				"}"
-		)
+		val metrics = InnsendingMetrics("soknadsarkiverer", message, startTime, System.currentTimeMillis() - startTime)
+		kafkaPublisher.putMetricOnTopic(key, metrics)
 	}
 
 	private fun createExceptionMessage(e: Exception): String {
