@@ -21,7 +21,7 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 
 	fun rerun(key: String) {
 		logger.info("$key: Performing forced rerun")
-		GlobalScope.launch { taskListService.pauseAndStart(key) }
+		taskListService.startPaNytt(key)
 	}
 
 	fun pingJoark() = joarkService.isAlive()

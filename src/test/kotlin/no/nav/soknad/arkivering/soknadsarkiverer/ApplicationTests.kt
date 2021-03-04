@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.startsWith
+import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
@@ -72,6 +73,11 @@ class ApplicationTests: TopologyTestDriverTests() {
 		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
 
 		maxNumberOfAttempts = appConfiguration.config.retryTime.size
+		Mockito.`when`(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(STARTED)), any())).doAnswer {putDataOnProcessingTopic(key, ProcessingEvent(STARTED))}
+		Mockito.`when`(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(ARCHIVED)), any())).doAnswer {putDataOnProcessingTopic(key, ProcessingEvent(ARCHIVED))}
+		Mockito.`when`(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(FINISHED)), any())).doAnswer {putDataOnProcessingTopic(key, ProcessingEvent(FINISHED))}
+		Mockito.`when`(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(FAILURE)), any())).doAnswer {putDataOnProcessingTopic(key, ProcessingEvent(FAILURE))}
+
 
 		setupKafkaTopologyTestDriver()
 			.withAppConfiguration(appConfiguration)
@@ -101,9 +107,11 @@ class ApplicationTests: TopologyTestDriverTests() {
 		putDataOnKafkaTopic(soknadsarkivschema)
 
 		verifyProcessingEvents(1, RECEIVED)
+/*
 		verifyProcessingEvents(1, STARTED)
 		verifyProcessingEvents(1, ARCHIVED)
 		verifyProcessingEvents(1, FINISHED)
+*/
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "ok")
@@ -136,7 +144,8 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		verifyProcessingEvents(maxNumberOfAttempts, STARTED)
+		verifyProcessingEvents(1, FAILURE)
+		verifyProcessingEvents(1, STARTED)
 		verifyProcessingEvents(0, ARCHIVED)
 		verifyProcessingEvents(0, FINISHED)
 		verifyDeleteRequestsToFilestorage(0)
@@ -159,9 +168,10 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		verifyProcessingEvents(maxNumberOfAttempts, STARTED)
+		verifyProcessingEvents(1, STARTED)
 		verifyProcessingEvents(0, ARCHIVED)
 		verifyProcessingEvents(0, FINISHED)
+		verifyProcessingEvents(1, FAILURE)
 		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(maxNumberOfAttempts, "Exception")
 		verifyMessageStartsWith(0, "ok")
@@ -173,6 +183,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		assertEquals(joarkSuccessesBefore + 0, metrics.getJoarkSuccesses())
 		assertEquals(tasksBefore + 1, metrics.getTasks())
 		assertEquals(tasksGivenUpOnBefore + 1, metrics.getTasksGivenUpOn())
+
 	}
 
 	@Test
@@ -207,7 +218,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		verifyProcessingEvents(2, STARTED)
+		verifyProcessingEvents(1, STARTED)
 		verifyProcessingEvents(1, ARCHIVED)
 		verifyProcessingEvents(1, FINISHED)
 		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
@@ -231,7 +242,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		verifyProcessingEvents(attemptsToFail + 1, STARTED)
+		verifyProcessingEvents(1, STARTED)
 		verifyProcessingEvents(1, ARCHIVED)
 		verifyProcessingEvents(1, FINISHED)
 		verifyMockedPostRequests(attemptsToFail + 1, appConfiguration.config.joarkUrl)
@@ -276,9 +287,11 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		verifyProcessingEvents(maxNumberOfAttempts, STARTED)
+		verifyProcessingEvents(1, RECEIVED)
+		verifyProcessingEvents(1, STARTED)
 		verifyProcessingEvents(0, ARCHIVED)
 		verifyProcessingEvents(0, FINISHED)
+		verifyProcessingEvents(1, FAILURE)
 		verifyMockedPostRequests(maxNumberOfAttempts, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(maxNumberOfAttempts, "Exception")

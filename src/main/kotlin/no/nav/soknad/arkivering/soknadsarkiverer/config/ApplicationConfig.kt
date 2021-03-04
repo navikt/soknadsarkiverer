@@ -40,8 +40,10 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"START_ARKIVERING" to "2099-12-31 59:59:59"
 ))
 
-private val secondsBetweenRetries = listOf(1, 25, 60, 120, 600, 1200) // As many retries will be attempted as there are elements in the list.
-private val secondsBetweenRetriesForTests = listOf(1, 1, 1, 1, 1, 1)  // Note! Also update end-to-end-tests if the list size is changed!
+private val secondsBetweenRetries = listOf(0, 25, 60, 120, 600, 1200) // As many retries will be attempted as there are elements in the list.
+private val secondsBetweenRetriesForTests = listOf(0, 1, 1, 1, 1, 1)  // Note! Also update end-to-end-tests if the list size is changed!
+private val startUpSeconds: Long = 10 * 60 //  10 minutes before starting processing incoming
+private val startUpSecondsForTest: Long = 10 // 10 seconds before starting processing incoming
 
 
 private val appConfig =
@@ -82,6 +84,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
 		val retryTime: List<Int> = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
+		val secondsAfterStartupBeforeStarting: Long = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) startUpSeconds else startUpSecondsForTest,
 		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty(),
 		val maxMessageSize: Int = "MAX_MESSAGE_SIZE".configProperty().toInt(),
 		val adminUser: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER", "ADMIN_USER".configProperty()),

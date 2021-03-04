@@ -2,6 +2,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
+import no.nav.soknad.arkivering.avroschemas.ArchivingStateSchema
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
@@ -9,6 +10,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.ProcessingEventDto
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.converter.createProcessEvent
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -22,6 +24,7 @@ import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler
 import org.apache.kafka.streams.kstream.Consumed
 import org.apache.kafka.streams.kstream.Joined
+import org.apache.kafka.streams.kstream.KTable
 import org.apache.kafka.streams.kstream.Materialized
 import org.apache.kafka.streams.state.KeyValueStore
 import org.slf4j.LoggerFactory
@@ -41,7 +44,74 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	private val stringSerde = Serdes.StringSerde()
 	private val processingEventSerde = createProcessingEventSerde()
 	private val soknadarkivschemaSerde = createSoknadarkivschemaSerde()
+	private val archivingStateSerde = createArchivingStateSerde()
 	private val mutableListSerde: Serde<MutableList<String>> = MutableListSerde()
+
+
+	fun modifiedKafkaStreams(streamsBuilder: StreamsBuilder) {
+		val joinDef = Joined.with(stringSerde, processingEventSerde, soknadarkivschemaSerde, "archivingState")
+		val materialized = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("ProcessingEventDtos").withValueSerde(mutableListSerde)
+		val inputTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.inputTopic, Consumed.with(stringSerde, soknadarkivschemaSerde))
+		val processingTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.processingTopic, Consumed.with(stringSerde, processingEventSerde))
+
+		val inputTable = inputTopicStream.toTable()
+
+		inputTopicStream
+			.peek { key, value -> logger.info("$key: Processing InputTopic - $value") }
+			//.filter{key, soknadsarkiveschema -> erIkkeFerdig(key, archivingStateTable) }
+			.foreach { key, e -> kafkaPublisher.putProcessingEventOnTopic(key, createProcessEvent(EventTypes.RECEIVED)) }
+
+		processingTopicStream
+			.peek { key, value -> logger.info("$key: ProcessingTopic - ${value.type}") }
+		// Aggregere state slik at RECEIVED kan erstattes av alle etterfølgende states: STARTED, ARCHIVED, FAILED, FINISHED
+			.mapValues { processingEvent -> processingEvent.getType().name }
+			.groupByKey()
+			.aggregate(  // Returnerer en tabell <Key, Value> der value er en Liste av eventtype
+				{ mutableListOf() }, // Initiator
+				{ _, value, aggregate ->  // aggregator
+					aggregate.add(value)
+					aggregate
+				},
+				materialized // Materialisert som KeyValue store
+			)
+			.mapValues { processingEvents -> ProcessingEventDto(processingEvents) } // mapper eventtype til ProcessingEventDto
+			.mapValues { processingEvents ->  processingEvents.getNewestState()}
+			.toStream()
+			.peek{ key, state -> logger.info("$key: ProcessingTopic filter with state $state")}
+			.filter {key, state -> !(erFerdig(key, state) ) }
+			.leftJoin(inputTable, { state, soknadarkivschema ->  soknadarkivschema to state }, joinDef) // Oppdatere state på tabell, archivingState, ved join av soknadarkivschema og state.
+			.filter { key, (soknadsarkiveschema, _) -> filterSoknadsarkivschemaThatAreNull(key, soknadsarkiveschema) } // Ta bort alle innslag i tabell der soknadarkivschema er null.
+			.peek { key, (soknadsarkivschema, state) -> logger.info("$key: ProcessingTopic scehdule job in state $state - ${soknadsarkivschema.print()}") }
+			.foreach { key, (soknadsarkivschema, state) -> schedulerService.addOrUpdateTask(key, soknadsarkivschema, state.type) } // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
+
+/*
+
+		val archivingStateTable: KTable<String, ArchivingStateSchema> = streamsBuilder.table(
+			"archivingState",
+			Materialized.`as`<String, ArchivingStateSchema, KeyValueStore<Bytes, ByteArray>>("mottatteSoknader")
+				.withKeySerde(stringSerde)
+				.withValueSerde(archivingStateSerde)
+		)
+
+		archivingStateTable
+			.filter {k, v -> !erFerdig(v) }
+			.toStream()
+			.foreach {key, v -> schedulerService.addOrUpdateTask(key, v.soknadarkivschema, 0) }
+*/
+
+	}
+
+	private fun erFerdig(key: String, processingEvent: ProcessingEvent): Boolean {
+		if (processingEvent.type == EventTypes.FINISHED) {
+			schedulerService.finishTask(key)
+			return true
+		} else if (processingEvent.type == EventTypes.FAILURE) {
+			schedulerService.failTask(key)
+			return true
+		} else return false
+	}
+
+/*
 
 	fun kafkaStreams(streamsBuilder: StreamsBuilder) {
 
@@ -50,27 +120,26 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		val inputTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.inputTopic, Consumed.with(stringSerde, soknadarkivschemaSerde))
 		val processingTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.processingTopic, Consumed.with(stringSerde, processingEventSerde))
 
-
 		val inputTable = inputTopicStream.toTable()
 
 		inputTopicStream
 			.peek { key, value -> logger.info("$key: Processing InputTopic - $value") }
-			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
+			.foreach { key, e -> kafkaPublisher.putProcessingEventOnTopic(key, createProcessEvent(EventTypes.RECEIVED)) }
 
 		processingTopicStream
-			.peek { key, value -> logger.info("$key: ProcessingTopic - $value") }
+			.peek { key, value -> logger.info("$key: ProcessingTopic - ${value.type}") }
 			.mapValues { processingEvent -> processingEvent.getType().name }
 			.groupByKey()
-			.aggregate(
-				{ mutableListOf() },
-				{ _, value, aggregate ->
+			.aggregate(  // Returnerer en tabell <Key, Value> der value er en Liste av eventtype
+				{ mutableListOf() }, // Initiator
+				{ _, value, aggregate ->  // aggregator
 					aggregate.add(value)
 					aggregate
 				},
-				materialized
+				materialized // Materialisert som KeyValue store
 			)
-			.mapValues { processingEvents -> ProcessingEventDto(processingEvents) }
-			.mapValues { key, processingEventDto ->
+			.mapValues { processingEvents -> ProcessingEventDto(processingEvents) } // mapper eventtype til ProcessingEventDto
+			.mapValues { key, processingEventDto -> // mapper key, ProcessingEventDto til Int der null indikerer ferdig
 				if (processingEventDto.isFinished()) {
 					schedulerService.finishTask(key)
 					null // Return null which acts as a tombstone, thus removing the entry from the table
@@ -78,13 +147,14 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 					processingEventDto.getNumberOfStarts()
 				}
 			}
-			.toStream()
-			.peek { key, count -> logger.debug("$key: Processing Events - $count") }
-			.leftJoin(inputTable, { count, soknadarkivschema -> soknadarkivschema to (count ?: 0) }, joined)
-			.filter { key, (soknadsarkiveschema, _) -> filterSoknadsarkivschemaThatAreNull(key, soknadsarkiveschema) }
+			.toStream() // tabell til stream (key, count)
+			.peek { key, count -> logger.info("$key: Processing Events - $count") }
+			.leftJoin(inputTable, { count, soknadarkivschema -> soknadarkivschema to (count ?: 0) }, joined) // Oppdatere state på tabell, SoknadsarkivCountJoined, ved join av soknadarkivschema og count.
+			.filter { key, (soknadsarkiveschema, _) -> filterSoknadsarkivschemaThatAreNull(key, soknadsarkiveschema) } // Ta bort alle innslag i tabell der soknadarkivschema er null. Hvordan kan det skje?
 			.peek { key, (soknadsarkivschema, count) -> logger.info("$key: About to schedule with count $count - ${soknadsarkivschema.print()}") }
-			.foreach { key, (soknadsarkivschema, count) -> schedulerService.addOrUpdateTask(key, soknadsarkivschema, count) }
+			.foreach { key, (soknadsarkivschema, count) -> schedulerService.addOrUpdateTask(key, soknadsarkivschema, count) } // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
 	}
+*/
 
 	private fun filterSoknadsarkivschemaThatAreNull(key: String, soknadsarkiveschema: Soknadarkivschema?): Boolean {
 		if (soknadsarkiveschema == null)
@@ -103,7 +173,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	fun setupKafkaStreams(): KafkaStreams {
 		metrics.setUpOrDown(1.0)
 		val streamsBuilder = StreamsBuilder()
-		kafkaStreams(streamsBuilder)
+		modifiedKafkaStreams(streamsBuilder)
 		val topology = streamsBuilder.build()
 
 		val kafkaStreams = KafkaStreams(topology, kafkaConfig(appConfiguration.kafkaConfig.groupId))
@@ -145,6 +215,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 
 	private fun createProcessingEventSerde(): SpecificAvroSerde<ProcessingEvent> = createAvroSerde()
 	private fun createSoknadarkivschemaSerde(): SpecificAvroSerde<Soknadarkivschema> = createAvroSerde()
+	private fun createArchivingStateSerde(): SpecificAvroSerde<ArchivingStateSchema> = createAvroSerde()
 
 	private fun <T : SpecificRecord> createAvroSerde(): SpecificAvroSerde<T> {
 		val serdeConfig = hashMapOf(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)

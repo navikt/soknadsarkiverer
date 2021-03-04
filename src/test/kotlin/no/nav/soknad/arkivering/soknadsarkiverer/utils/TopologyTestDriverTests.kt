@@ -31,7 +31,7 @@ open class TopologyTestDriverTests {
 
 	private fun setupKafkaTopologyTestDriver(appConfiguration: AppConfiguration, taskListService: TaskListService, kafkaPublisher: KafkaPublisher, metrics: ArchivingMetrics) {
 		val builder = StreamsBuilder()
-		KafkaConfig(appConfiguration, taskListService, kafkaPublisher, metrics).kafkaStreams(builder)
+		KafkaConfig(appConfiguration, taskListService, kafkaPublisher, metrics).modifiedKafkaStreams(builder)
 		val topology = builder.build()
 
 		// Dummy properties needed for test diver
@@ -100,10 +100,17 @@ open class TopologyTestDriverTests {
 			return this
 		}
 
+		fun putProcessingEventLogsOnTopic(enventTypes: EventTypes) {
+			putProcessingEventLogOnTopic(enventTypes)
+		}
+
 		fun putProcessingEventLogsOnTopic(): TopologyTestDriverBuilder {
 			putProcessingEventLogOnTopic(EventTypes.RECEIVED)
+/*
 			putProcessingEventLogOnTopic(EventTypes.STARTED)
+			putProcessingEventLogOnTopic(EventTypes.ARCHIVED)
 			putProcessingEventLogOnTopic(EventTypes.FINISHED)
+*/
 			return this
 		}
 

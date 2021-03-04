@@ -8,6 +8,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientI
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ShuttingDownException
 import no.nav.soknad.arkivering.soknadsarkiverer.config.protectFromShutdownInterruption
+import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import org.slf4j.LoggerFactory
@@ -22,24 +23,18 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 											private val kafkaPublisher: KafkaPublisher) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	fun archive(key: String, data: Soknadarkivschema) {
+	fun archive(key: String, data: Soknadarkivschema, files: List<FilElementDto>) {
 		try {
-			createProcessingEvent(key, STARTED)
-			val files = filestorageService.getFilesFromFilestorage(key, data)
+//			val files = filestorageService.getFilesFromFilestorage(key, data)
 
-			val journalpostId = protectFromShutdownInterruption(appConfiguration) {
+//			val journalpostId = protectFromShutdownInterruption(appConfiguration) {
 				val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
-				createProcessingEvent(key, ARCHIVED)
-				journalpostId
-			}
+//				journalpostId
+//			}
 			logger.info("$key: Opprettet journalpostId=${journalpostId} for behandlingsid=${data.getBehandlingsid()}")
 
-			filestorageService.deleteFilesFromFilestorage(key, data)
-			createProcessingEvent(key, FINISHED)
-			createMessage(key, "ok")
-
-		} catch (e: ShuttingDownException) {
-			logger.warn("$key: Will not start to archive - application is shutting down.")
+//		} catch (e: ShuttingDownException) {
+//			logger.warn("$key: Will not start to archive - application is shutting down.")
 
 		} catch (e: Exception) {
 			createMessage(key, createExceptionMessage(e))
@@ -47,9 +42,34 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 		}
 	}
 
+	fun fetchFiles(key: String, data: Soknadarkivschema): List<FilElementDto> {
+		try {
 
-	private fun createProcessingEvent(key: String, type: EventTypes) {
-		kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(type))
+			return filestorageService.getFilesFromFilestorage(key, data)
+
+		} catch (e: ShuttingDownException) {
+			logger.warn("$key: Will not start to fetchFiles - application is shutting down.")
+			return ArrayList()
+
+		} catch (e: Exception) {
+			createMessage(key, createExceptionMessage(e))
+			throw e
+		}
+	}
+
+	fun deleteFiles(key: String, data: Soknadarkivschema) {
+		try {
+
+			filestorageService.deleteFilesFromFilestorage(key, data)
+			createMessage(key, "ok")
+
+		} catch (e: ShuttingDownException) {
+			logger.warn("$key: Will not start to deleteFiles - application is shutting down.")
+
+		} catch (e: Exception) {
+			createMessage(key, createExceptionMessage(e))
+			throw e
+		}
 	}
 
 	private fun createMessage(key: String, message: String) {
