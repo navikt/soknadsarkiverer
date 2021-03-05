@@ -15,7 +15,7 @@
 	<description>Arkiverer soknader</description>
 
 	<properties>
-		<arkivering-schemas.version>1.3.0</arkivering-schemas.version>
+		<arkivering-schemas.version>3cf70688</arkivering-schemas.version>
 		<kafka-streams-avro-serde.version>5.5.0</kafka-streams-avro-serde.version>
 		<jackson-module-kotlin.version>2.11.3</jackson-module-kotlin.version>
 		<json-smart.version>2.3</json-smart.version>
