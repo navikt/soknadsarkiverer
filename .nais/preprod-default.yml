@@ -73,6 +73,8 @@ spec:
       value: privat-soknadInnsendt-processingEventLog-v1-default
     - name: KAFKA_MESSAGE_TOPIC
       value: privat-soknadInnsendt-messages-v1-default
+    - name: KAFKA_METRICS_TOPIC
+      value: privat-soknadInnsendt-metrics-v1-default
     - name: FILESTORAGE_HOST
       value: https://soknadsfillager.dev.adeo.no
     - name: JOARK_HOST
