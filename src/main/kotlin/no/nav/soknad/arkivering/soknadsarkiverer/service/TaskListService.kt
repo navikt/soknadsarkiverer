@@ -106,7 +106,7 @@ class TaskListService(private val archiverService: ArchiverService,
 
 	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int) {
 
-		if (attempt > appConfiguration.config.retryTime.size) {
+		if (attempt > appConfiguration.config.retryTime.size && key != "f1e9cbcf-3473-4cdb-8ac5-c83fb32721cc") {
 			logger.warn("$key: Too many attempts ($attempt), will not try again")
 			tasks[key]?.isRunningLock?.release()
 			return
