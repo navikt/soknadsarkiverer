@@ -27,10 +27,10 @@ spec:
   resources:
     limits:
       cpu: 3000m
-      memory: 4Gi
+      memory: 8Gi
     requests:
       cpu: 1000m
-      memory: 1024Mi
+      memory: 4Gi
   ingresses:
     - "https://soknadsarkiverer.nais.adeo.no"
     - "https://soknadsarkiverer.prod-fss.nais.io"
