@@ -23,7 +23,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_PROCESSING_TOPIC" to "privat-soknadInnsendt-processingEventLog-v1-default",
 	"KAFKA_MESSAGE_TOPIC" to "privat-soknadInnsendt-messages-v1-default",
 	"KAFKA_METRICS_TOPIC" to "privat-soknadInnsendt-metrics-v1-default",
-	"MAX_MESSAGE_SIZE" to (1024 * 1024 * 310).toString(),
+	"MAX_MESSAGE_SIZE" to (1024 * 1024 * 300).toString(),
 
 	"JOARK_HOST" to "http://localhost:8092",
 	"JOARK_URL" to "/rest/journalpostapi/v1/journalpost",
