@@ -22,6 +22,7 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 											private val filestorageService: FileserviceInterface,
 											private val journalpostClient: JournalpostClientInterface,
 											private val kafkaPublisher: KafkaPublisher) {
+
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	fun archive(key: String, data: Soknadarkivschema) {
@@ -30,7 +31,7 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 			val files = getFilesFromFilestorage(key, data)
 
 			val journalpostId = sendToArchive(key, data, files)
-			logger.info("$key: Opprettet journalpostId=${journalpostId} for behandlingsid=${data.getBehandlingsid()}")
+			logger.info("$key: Opprettet journalpostId=${journalpostId} for behandlingsid=${data.behandlingsid}")
 
 			deleteFilesFromFilestorage(key, data)
 			createProcessingEvent(key, FINISHED)

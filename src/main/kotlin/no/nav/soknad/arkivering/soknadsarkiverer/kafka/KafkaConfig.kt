@@ -55,7 +55,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 
 		processingTopicStream
 			.peek { key, value -> logger.info("$key: ProcessingTopic - $value") }
-			.mapValues { processingEvent -> processingEvent.getType().name }
+			.mapValues { processingEvent -> processingEvent.type.name }
 			.groupByKey()
 			.aggregate(
 				{ mutableListOf() },
@@ -90,7 +90,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 
 	private fun Soknadarkivschema.print(): String {
 		val fnr = "" // Do not print fnr to log
-		val a = Soknadarkivschema(this.getBehandlingsid(), fnr, this.getArkivtema(), this.getInnsendtDato(), this.getSoknadstype(), this.getMottatteDokumenter())
+		val a = Soknadarkivschema(this.behandlingsid, fnr, this.arkivtema, this.innsendtDato, this.soknadstype, this.mottatteDokumenter)
 		return a.toString()
 	}
 
