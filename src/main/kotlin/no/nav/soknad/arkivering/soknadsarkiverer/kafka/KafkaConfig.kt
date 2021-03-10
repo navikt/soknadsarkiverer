@@ -61,6 +61,20 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 			//.filter{key, soknadsarkiveschema -> erIkkeFerdig(key, archivingStateTable) }
 			.foreach { key, e -> kafkaPublisher.putProcessingEventOnTopic(key, createProcessEvent(EventTypes.RECEIVED)) }
 
+/*
+		val archivingStateTable: KTable<String, ArchivingStateSchema> = streamsBuilder.table(
+			"archivingState",
+			Materialized.`as`<String, ArchivingStateSchema, KeyValueStore<Bytes, ByteArray>>("mottatteSoknader")
+				.withKeySerde(stringSerde)
+				.withValueSerde(archivingStateSerde)
+		)
+		archivingStateTable
+			//.filter {k, v -> !erFerdig(k, ProcessingEvent(v.state)) }
+			.toStream()
+			.peek {k, v -> logger.info("**TESTING** $k:") }
+			.foreach {key, v -> schedulerService.testtask(key, v.soknadarkivschema, v.state) }
+
+*/
 		processingTopicStream
 			.peek { key, value -> logger.info("$key: ProcessingTopic - ${value.type}") }
 		// Aggregere state slik at RECEIVED kan erstattes av alle etterfølgende states: STARTED, ARCHIVED, FAILED, FINISHED
@@ -84,20 +98,8 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 			.peek { key, (soknadsarkivschema, state) -> logger.info("$key: ProcessingTopic scehdule job in state $state - ${soknadsarkivschema.print()}") }
 			.foreach { key, (soknadsarkivschema, state) -> schedulerService.addOrUpdateTask(key, soknadsarkivschema, state.type) } // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
 
-/*
 
-		val archivingStateTable: KTable<String, ArchivingStateSchema> = streamsBuilder.table(
-			"archivingState",
-			Materialized.`as`<String, ArchivingStateSchema, KeyValueStore<Bytes, ByteArray>>("mottatteSoknader")
-				.withKeySerde(stringSerde)
-				.withValueSerde(archivingStateSerde)
-		)
 
-		archivingStateTable
-			.filter {k, v -> !erFerdig(v) }
-			.toStream()
-			.foreach {key, v -> schedulerService.addOrUpdateTask(key, v.soknadarkivschema, 0) }
-*/
 
 	}
 
@@ -176,7 +178,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		modifiedKafkaStreams(streamsBuilder)
 		val topology = streamsBuilder.build()
 
-		val kafkaStreams = KafkaStreams(topology, kafkaConfig(appConfiguration.kafkaConfig.groupId))
+		val kafkaStreams = KafkaStreams(topology, kafkaConfig(appConfiguration.kafkaConfig.groupId+1))
 
 		logger.info("SetupKafkaStreams: cleanUp kafka streams")
 		kafkaStreams.cleanUp()
