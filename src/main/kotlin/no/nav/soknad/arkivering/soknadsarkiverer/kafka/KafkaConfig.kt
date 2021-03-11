@@ -61,6 +61,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 			//.filter{key, soknadsarkiveschema -> erIkkeFerdig(key, archivingStateTable) }
 			.foreach { key, e -> kafkaPublisher.putProcessingEventOnTopic(key, createProcessEvent(EventTypes.RECEIVED)) }
 
+/*
 		val archivingStateTable: KTable<String, ArchivingStateSchema> = streamsBuilder.table(
 			"archivingState",
 			Materialized.`as`<String, ArchivingStateSchema, KeyValueStore<Bytes, ByteArray>>("mottatteSoknader")
@@ -72,6 +73,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 			.toStream()
 			.peek {k, v -> logger.info("**TESTING** $k: state:${v.state}") }
 			//.foreach {key, v -> schedulerService.testtask(key, v.soknadarkivschema, v.state) }
+*/
 
 		processingTopicStream
 			.peek { key, value -> logger.info("$key: ProcessingTopic - ${value.type}") }
