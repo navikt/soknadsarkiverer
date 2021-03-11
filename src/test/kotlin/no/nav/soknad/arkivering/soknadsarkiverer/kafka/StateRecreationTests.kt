@@ -233,7 +233,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 	@Test
 	fun `Process events, simulate upstart with all received and archived events - none should be scheduled`() {
-		val size = 100
+		val size = 20
 		val keyList = MutableList(size) { _ -> UUID.randomUUID().toString()}
 
 		keyList.forEach {key -> publishSoknadsarkivschemas(key)}
@@ -247,7 +247,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 	@Test
 	fun `Process events, simulate upstart with some FINISHED and FAILURE events - none should be scheduled`() {
-		val size = 100
+		val size = 20
 		val keyList = MutableList(size) { _ -> UUID.randomUUID().toString()}
 
 		keyList.forEach {key -> publishSoknadsarkivschemas(key)}
