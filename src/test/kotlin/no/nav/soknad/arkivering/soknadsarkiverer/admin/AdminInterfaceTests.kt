@@ -95,6 +95,7 @@ class AdminInterfaceTests {
 		loopAndVerify(maxNumberOfAttempts, { getTaskListCount(key) })
 
 		mockFilestorageIsWorking(fileUuid)
+		TimeUnit.SECONDS.sleep(2)
 		adminInterface.rerun(key)
 
 		loopAndVerify(0, { taskListService.listTasks(key).size })
