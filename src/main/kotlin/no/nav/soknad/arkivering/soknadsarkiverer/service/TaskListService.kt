@@ -33,6 +33,10 @@ class TaskListService(private val archiverService: ArchiverService,
 
 	private val startUpEndTime = Instant.now().plusSeconds( appConfiguration.config.secondsAfterStartupBeforeStarting)
 
+	init{
+		logger.info("startUpEndTime=$startUpEndTime")
+	}
+
 	@Synchronized
 	fun addOrUpdateTask(key: String, soknadarkivschema: Soknadarkivschema, state: EventTypes) {
 		if (!tasks.containsKey(key)) {
