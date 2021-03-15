@@ -177,7 +177,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
-		TimeUnit.SECONDS.sleep(1)
+		TimeUnit.SECONDS.sleep(2)
 		verifyProcessingEvents(1, STARTED)
 		verifyProcessingEvents(0, ARCHIVED)
 		verifyProcessingEvents(0, FINISHED)
@@ -207,6 +207,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 		putDataOnKafkaTopic(keyForPoisionPill, "this is not deserializable")
 		putDataOnKafkaTopic(createSoknadarkivschema())
+		TimeUnit.SECONDS.sleep(1)
 
 		verifyProcessingEvents(1, STARTED)
 		verifyProcessingEvents(1, ARCHIVED)
