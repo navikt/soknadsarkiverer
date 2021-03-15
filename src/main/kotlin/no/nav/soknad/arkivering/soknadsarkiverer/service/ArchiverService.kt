@@ -2,6 +2,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
+import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
@@ -28,7 +29,9 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 //			val files = filestorageService.getFilesFromFilestorage(key, data)
 
 //			val journalpostId = protectFromShutdownInterruption(appConfiguration) {
+				val startTime = System.currentTimeMillis()
 				val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
+				createMetric(key, "send files to archive", startTime)
 //				journalpostId
 //			}
 			logger.info("$key: Opprettet journalpostId=${journalpostId} for behandlingsid=${data.getBehandlingsid()}")
@@ -44,8 +47,10 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 
 	fun fetchFiles(key: String, data: Soknadarkivschema): List<FilElementDto> {
 		try {
-
-			return filestorageService.getFilesFromFilestorage(key, data)
+			val startTime = System.currentTimeMillis()
+			val files = filestorageService.getFilesFromFilestorage(key, data)
+			createMetric(key, "get files from filestorage", startTime)
+			return files
 
 		} catch (e: ShuttingDownException) {
 			logger.warn("$key: Will not start to fetchFiles - application is shutting down.")
@@ -59,8 +64,9 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 
 	fun deleteFiles(key: String, data: Soknadarkivschema) {
 		try {
-
+			val startTime = System.currentTimeMillis()
 			filestorageService.deleteFilesFromFilestorage(key, data)
+			createMetric(key, "delete files from filestorage", startTime)
 			createMessage(key, "ok")
 
 		} catch (e: ShuttingDownException) {
@@ -74,6 +80,12 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 
 	private fun createMessage(key: String, message: String) {
 		kafkaPublisher.putMessageOnTopic(key, message)
+	}
+
+	private fun createMetric(key: String, message: String, startTime: Long) {
+
+		val metrics = InnsendingMetrics("soknadsarkiverer", message, startTime, System.currentTimeMillis() - startTime)
+		kafkaPublisher.putMetricOnTopic(key, metrics)
 	}
 
 	private fun createExceptionMessage(e: Exception): String {

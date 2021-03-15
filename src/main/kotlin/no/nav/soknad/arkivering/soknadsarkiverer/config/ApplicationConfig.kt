@@ -22,6 +22,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_INPUT_TOPIC" to "privat-soknadInnsendt-v1-default",
 	"KAFKA_PROCESSING_TOPIC" to "privat-soknadInnsendt-processingEventLog-v1-default",
 	"KAFKA_MESSAGE_TOPIC" to "privat-soknadInnsendt-messages-v1-default",
+	"KAFKA_METRICS_TOPIC" to "privat-soknadInnsendt-metrics-v1-default",
 	"KAFKA_GROUPID" to "soknadsarkiverer-streams-default",
 	"MAX_MESSAGE_SIZE" to (1024 * 1024 * 300).toString(),
 
@@ -40,8 +41,8 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"START_ARKIVERING" to "2099-12-31 59:59:59"
 ))
 
-private val secondsBetweenRetries = listOf(0, 25, 60, 120, 600, 1200) // As many retries will be attempted as there are elements in the list.
-private val secondsBetweenRetriesForTests = listOf(0, 1, 1, 1, 1, 1)  // Note! Also update end-to-end-tests if the list size is changed!
+private val secondsBetweenRetries = listOf(1, 25, 60, 120, 600, 1200) // As many retries will be attempted as there are elements in the list.
+private val secondsBetweenRetriesForTests = listOf(1, 1, 1, 1, 1, 1)  // Note! Also update end-to-end-tests if the list size is changed!
 private val startUpSeconds: Long = 10 * 60 //  10 minutes before starting processing incoming
 private val startUpSecondsForTest: Long = 7 // 7 seconds before starting processing incoming
 
@@ -71,6 +72,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val inputTopic: String = "KAFKA_INPUT_TOPIC".configProperty(),
 		val processingTopic: String = "KAFKA_PROCESSING_TOPIC".configProperty(),
 		val messageTopic: String = "KAFKA_MESSAGE_TOPIC".configProperty(),
+		val metricsTopic: String = "KAFKA_METRICS_TOPIC".configProperty(),
 		var saslJaasConfig: String = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"$username\" password=\"$password\";",
 		val groupId: String = "KAFKA_GROUPID".configProperty()
 	)

@@ -98,9 +98,6 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 			.peek { key, (soknadsarkivschema, state) -> logger.info("$key: ProcessingTopic scehdule job in state $state - ${soknadsarkivschema.print()}") }
 			.foreach { key, (soknadsarkivschema, state) -> schedulerService.addOrUpdateTask(key, soknadsarkivschema, state.type) } // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
 
-
-
-
 	}
 
 	private fun erFerdig(key: String, processingEvent: ProcessingEvent): Boolean {
