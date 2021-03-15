@@ -234,6 +234,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		mockJoarkRespondsAfterAttempts(1)
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
+		TimeUnit.SECONDS.sleep(1)
 
 		verifyProcessingEvents(1, STARTED)
 		verifyProcessingEvents(1, ARCHIVED)
@@ -261,6 +262,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		mockJoarkRespondsAfterAttempts(attemptsToFail)
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
+		TimeUnit.SECONDS.sleep(2)
 
 		verifyProcessingEvents(1, STARTED)
 		verifyProcessingEvents(1, ARCHIVED)
