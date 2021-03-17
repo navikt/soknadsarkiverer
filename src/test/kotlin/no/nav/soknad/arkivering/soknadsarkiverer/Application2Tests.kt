@@ -123,7 +123,7 @@ class Application2Tests: TopologyTestDriverTests() {
 		mockJoarkRespondsAfterAttempts(1)
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
-		TimeUnit.SECONDS.sleep(9)
+		TimeUnit.SECONDS.sleep(8)
 
 		verifyProcessingEvents(1, EventTypes.STARTED)
 		verifyProcessingEvents(1, EventTypes.ARCHIVED)
@@ -155,7 +155,7 @@ class Application2Tests: TopologyTestDriverTests() {
 		mockJoarkRespondsAfterAttempts(attemptsToFail)
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
-		TimeUnit.SECONDS.sleep(9)
+		TimeUnit.SECONDS.sleep(8)
 
 		verifyProcessingEvents(1, EventTypes.STARTED)
 		verifyProcessingEvents(1, EventTypes.ARCHIVED)
@@ -182,6 +182,7 @@ class Application2Tests: TopologyTestDriverTests() {
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
+		TimeUnit.SECONDS.sleep(8)
 
 		verifyProcessingEvents(1, EventTypes.STARTED)
 		verifyProcessingEvents(1, EventTypes.ARCHIVED)
@@ -207,6 +208,7 @@ class Application2Tests: TopologyTestDriverTests() {
 		mockJoarkIsWorkingButGivesInvalidResponse()
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
+		TimeUnit.SECONDS.sleep(8)
 
 		verifyProcessingEvents(1, EventTypes.RECEIVED)
 		verifyProcessingEvents(1, EventTypes.STARTED)
