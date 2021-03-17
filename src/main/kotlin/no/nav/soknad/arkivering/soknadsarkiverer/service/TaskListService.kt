@@ -6,6 +6,7 @@ import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.*
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_SINGLETON
@@ -82,7 +83,7 @@ class TaskListService(private val archiverService: ArchiverService,
 			// When recreating state, there could be more state updates in the processTopic. Wait a little while to make sure we don't start before all queued states are read inorder to process the most recent state.
 			logger.debug("$key: Sleeping for ${appConfiguration.config.secondsAfterStartupBeforeStarting} sec state - $state")
 			TimeUnit.SECONDS.sleep(appConfiguration.config.secondsAfterStartupBeforeStarting)
-			logger.debug("$key: Slept 1 sec state - $state")
+			logger.debug("$key: Slept ${appConfiguration.config.secondsAfterStartupBeforeStarting} sec state - $state")
 		}
 
 		val task = tasks[key]
@@ -241,8 +242,16 @@ class TaskListService(private val archiverService: ArchiverService,
 			retry(key)
 
 		} catch (e: Exception) {
-			logger.error("$key: Error when performing scheduled task", e)
-			retry(key)
+			if (e.cause is FilesAlreadyDeletedException) {
+				// File(s) already deleted in filestorage indicating that the application is already archived.
+				createProcessingEvent(key, EventTypes.ARCHIVED)
+				currentTaskStates[key] = EventTypes.ARCHIVED
+				logger.warn("$key: Files gone from filestorage continues without archiving", e)
+				schedule(key, soknadarkivschema, tasks[key]?.count)
+			} else {
+				logger.error("$key: Error when performing scheduled task", e)
+				retry(key)
+			}
 
 		} catch (t: Throwable) {
 			logger.error("$key: Serious error when performing scheduled task", t)

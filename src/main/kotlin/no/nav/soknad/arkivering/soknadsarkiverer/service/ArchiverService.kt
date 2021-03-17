@@ -11,6 +11,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.ShuttingDownException
 import no.nav.soknad.arkivering.soknadsarkiverer.config.protectFromShutdownInterruption
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -51,6 +52,9 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 			val files = filestorageService.getFilesFromFilestorage(key, data)
 			createMetric(key, "get files from filestorage", startTime)
 			return files
+
+		} catch (e: FilesAlreadyDeletedException) {
+			throw e
 
 		} catch (e: ShuttingDownException) {
 			logger.warn("$key: Will not start to fetchFiles - application is shutting down.")

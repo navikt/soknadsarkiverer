@@ -200,6 +200,42 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 	}
 
+
+	@Test
+	fun `Files deleted from Filestorage will cause finishing archiving`() {
+		val tasksBefore = metrics.getTasks()
+		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
+		val getFilestorageErrorsBefore = metrics.getGetFilestorageErrors()
+		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
+		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
+		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
+		val joarkErrorsBefore = metrics.getJoarkErrors()
+
+		mockRequestedFileIsGone()
+		mockJoarkIsWorking()
+
+		putDataOnKafkaTopic(createSoknadarkivschema())
+		TimeUnit.SECONDS.sleep(8)
+		verifyProcessingEvents(1, STARTED)
+		verifyProcessingEvents(1, ARCHIVED)
+		verifyProcessingEvents(1, FINISHED)
+		verifyProcessingEvents(0, FAILURE)
+		verifyDeleteRequestsToFilestorage(1)
+		verifyMessageStartsWith(1, "ok")
+		verifyMetric(0, "get files from filestorage")
+		verifyMetric(0, "send files to archive")
+		verifyMetric(1, "delete files from filestorage")
+
+		assertEquals(getFilestorageErrorsBefore + 1, metrics.getGetFilestorageErrors())
+		assertEquals(getFilestorageSuccessesBefore + 0, metrics.getGetFilestorageSuccesses())
+		assertEquals(delFilestorageSuccessesBefore + 0, metrics.getDelFilestorageSuccesses())
+		assertEquals(joarkErrorsBefore + 0, metrics.getJoarkErrors())
+		assertEquals(joarkSuccessesBefore + 0, metrics.getJoarkSuccesses())
+		assertEquals(tasksBefore, metrics.getTasks())
+		assertEquals(tasksGivenUpOnBefore, metrics.getTasksGivenUpOn())
+
+	}
+
 	@Test
 	fun `Poison pill followed by proper event -- Only proper one is sent to Joark`() {
 		val keyForPoisionPill = UUID.randomUUID().toString()
