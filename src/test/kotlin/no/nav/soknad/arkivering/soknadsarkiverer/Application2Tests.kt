@@ -1,12 +1,10 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
-import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
@@ -17,10 +15,10 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers.startsWith
+import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -41,7 +39,8 @@ import kotlin.properties.Delegates
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
-class ApplicationTests: TopologyTestDriverTests() {
+class Application2Tests: TopologyTestDriverTests() {
+
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
@@ -74,10 +73,22 @@ class ApplicationTests: TopologyTestDriverTests() {
 		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
 
 		maxNumberOfAttempts = appConfiguration.config.retryTime.size
-		Mockito.`when`(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(STARTED)), any())).doAnswer {putDataOnProcessingTopic(key, ProcessingEvent(STARTED))}
-		Mockito.`when`(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(ARCHIVED)), any())).doAnswer {putDataOnProcessingTopic(key, ProcessingEvent(ARCHIVED))}
-		Mockito.`when`(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(FINISHED)), any())).doAnswer {putDataOnProcessingTopic(key, ProcessingEvent(FINISHED))}
-		Mockito.`when`(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(FAILURE)), any())).doAnswer {putDataOnProcessingTopic(key, ProcessingEvent(FAILURE))}
+		Mockito.`when`(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(EventTypes.STARTED)), any())).doAnswer {putDataOnProcessingTopic(key, ProcessingEvent(
+			EventTypes.STARTED
+		)
+		)}
+		Mockito.`when`(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(EventTypes.ARCHIVED)), any())).doAnswer {putDataOnProcessingTopic(key, ProcessingEvent(
+			EventTypes.ARCHIVED
+		)
+		)}
+		Mockito.`when`(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(EventTypes.FINISHED)), any())).doAnswer {putDataOnProcessingTopic(key, ProcessingEvent(
+			EventTypes.FINISHED
+		)
+		)}
+		Mockito.`when`(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(EventTypes.FAILURE)), any())).doAnswer {putDataOnProcessingTopic(key, ProcessingEvent(
+			EventTypes.FAILURE
+		)
+		)}
 
 
 		setupKafkaTopologyTestDriver()
@@ -100,57 +111,109 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 
 	@Test
-	fun `Happy case - Putting events on Kafka will cause rest calls to Joark`() {
+	fun `First attempt to Joark fails, the second succeeds`() {
+		val tasksBefore = metrics.getTasks()
+		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
+		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
+		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
+		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
+		val joarkErrorsBefore = metrics.getJoarkErrors()
+
 		mockFilestorageIsWorking(fileUuid)
+		mockJoarkRespondsAfterAttempts(1)
+
+		putDataOnKafkaTopic(createSoknadarkivschema())
+		TimeUnit.SECONDS.sleep(9)
+
+		verifyProcessingEvents(1, EventTypes.STARTED)
+		verifyProcessingEvents(1, EventTypes.ARCHIVED)
+		verifyProcessingEvents(1, EventTypes.FINISHED)
+		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
+		verifyDeleteRequestsToFilestorage(1)
+		verifyMessageStartsWith(1, "Exception")
+		verifyMessageStartsWith(1, "ok")
+		verifyMetric(2, "get files from filestorage")
+		verifyMetric(1, "send files to archive")
+		verifyMetric(1, "delete files from filestorage")
+
+		Assertions.assertEquals(getFilestorageSuccessesBefore + 2, metrics.getGetFilestorageSuccesses())
+		Assertions.assertEquals(delFilestorageSuccessesBefore + 1, metrics.getDelFilestorageSuccesses())
+		Assertions.assertEquals(joarkErrorsBefore + 1, metrics.getJoarkErrors())
+		Assertions.assertEquals(joarkSuccessesBefore + 1, metrics.getJoarkSuccesses())
+		Assertions.assertEquals(tasksBefore + 0, metrics.getTasks(), "Should have created and finished task")
+		Assertions.assertEquals(
+			tasksGivenUpOnBefore + 0,
+			metrics.getTasksGivenUpOn(),
+			"Should not have given up on any task"
+		)
+	}
+
+	@Test
+	fun `First attempt to Joark fails, the fourth succeeds`() {
+		val attemptsToFail = 3
+		mockFilestorageIsWorking(fileUuid)
+		mockJoarkRespondsAfterAttempts(attemptsToFail)
+
+		putDataOnKafkaTopic(createSoknadarkivschema())
+		TimeUnit.SECONDS.sleep(9)
+
+		verifyProcessingEvents(1, EventTypes.STARTED)
+		verifyProcessingEvents(1, EventTypes.ARCHIVED)
+		verifyProcessingEvents(1, EventTypes.FINISHED)
+		verifyMockedPostRequests(attemptsToFail + 1, appConfiguration.config.joarkUrl)
+		verifyDeleteRequestsToFilestorage(1)
+		verifyMessageStartsWith(1, "ok")
+		verifyMessageStartsWith(attemptsToFail, "Exception")
+		verifyMetric(4, "get files from filestorage")
+		verifyMetric(1, "send files to archive")
+		verifyMetric(1, "delete files from filestorage")
+	}
+
+	@Test
+	fun `Everything works, but Filestorage cannot delete files -- Message is nevertheless marked as finished`() {
+		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
+		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
+		val delFilestorageErrorsBefore = metrics.getDelFilestorageErrors()
+		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
+		val joarkErrorsBefore = metrics.getJoarkErrors()
+
+		mockFilestorageIsWorking(fileUuid)
+		mockFilestorageDeletionIsNotWorking()
 		mockJoarkIsWorking()
-		val soknadsarkivschema = createSoknadarkivschema()
 
-		putDataOnKafkaTopic(soknadsarkivschema)
+		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		verifyProcessingEvents(1, RECEIVED)
+		verifyProcessingEvents(1, EventTypes.STARTED)
+		verifyProcessingEvents(1, EventTypes.ARCHIVED)
+		verifyProcessingEvents(1, EventTypes.FINISHED)
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "ok")
 		verifyMessageStartsWith(0, "Exception")
 		verifyMetric(1, "get files from filestorage")
 		verifyMetric(1, "send files to archive")
-		verifyMetric(1, "delete files from filestorage")
-		val requests = verifyPostRequest(appConfiguration.config.joarkUrl)
-		assertEquals(1, requests.size)
-		val request = objectMapper.readValue<OpprettJournalpostRequest>(requests[0].body)
-		verifyRequestDataToJoark(soknadsarkivschema, request)
+		verifyMetric(1, "delete files from filestorage") // Metric succeeds even if the operation fails
+
+		Assertions.assertEquals(getFilestorageSuccessesBefore + 1, metrics.getGetFilestorageSuccesses())
+		Assertions.assertEquals(delFilestorageSuccessesBefore + 0, metrics.getDelFilestorageSuccesses())
+		Assertions.assertEquals(delFilestorageErrorsBefore + 1, metrics.getDelFilestorageErrors())
+		Assertions.assertEquals(joarkErrorsBefore + 0, metrics.getJoarkErrors())
+		Assertions.assertEquals(joarkSuccessesBefore + 1, metrics.getJoarkSuccesses())
 	}
 
 	@Test
-	fun `Sending in invalid data will not create Processing Events`() {
-		val invalidData = "this string is not deserializable"
-
-		putDataOnKafkaTopic(key, invalidData)
-
-		verifyMessageStartsWith(1, "Exception")
-		TimeUnit.MILLISECONDS.sleep(500)
-		verifyProcessingEvents(0, STARTED)
-		verifyProcessingEvents(0, ARCHIVED)
-		verifyProcessingEvents(0, FINISHED)
-		verifyMockedPostRequests(0, appConfiguration.config.joarkUrl)
-		verifyDeleteRequestsToFilestorage(0)
-		verifyMetric(0, "get files from filestorage")
-		verifyMetric(0, "send files to archive")
-		verifyMetric(0, "delete files from filestorage")
-	}
-
-	@Test
-	fun `Failing to send to Joark will cause retries`() {
+	fun `Joark responds with status OK but invalid body -- will retry`() {
 		mockFilestorageIsWorking(fileUuid)
-		mockJoarkIsDown()
+		mockJoarkIsWorkingButGivesInvalidResponse()
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
-		TimeUnit.SECONDS.sleep(9)
 
-		verifyProcessingEvents(1, FAILURE)
-		verifyProcessingEvents(1, STARTED)
-		verifyProcessingEvents(0, ARCHIVED)
-		verifyProcessingEvents(0, FINISHED)
+		verifyProcessingEvents(1, EventTypes.RECEIVED)
+		verifyProcessingEvents(1, EventTypes.STARTED)
+		verifyProcessingEvents(0, EventTypes.ARCHIVED)
+		verifyProcessingEvents(0, EventTypes.FINISHED)
+		verifyProcessingEvents(1, EventTypes.FAILURE)
+		verifyMockedPostRequests(maxNumberOfAttempts, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(maxNumberOfAttempts, "Exception")
 		verifyMessageStartsWith(0, "ok")
@@ -158,101 +221,6 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyMetric(0, "send files to archive")
 		verifyMetric(0, "delete files from filestorage")
 	}
-
-	@Test
-	fun `Failing to get files from Filestorage will cause retries`() {
-		val tasksBefore = metrics.getTasks()
-		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
-		val getFilestorageErrorsBefore = metrics.getGetFilestorageErrors()
-		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
-		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
-		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
-		val joarkErrorsBefore = metrics.getJoarkErrors()
-
-		mockFilestorageIsDown()
-		mockJoarkIsWorking()
-
-		putDataOnKafkaTopic(createSoknadarkivschema())
-		TimeUnit.SECONDS.sleep(9)
-		verifyProcessingEvents(1, STARTED)
-		verifyProcessingEvents(0, ARCHIVED)
-		verifyProcessingEvents(0, FINISHED)
-		verifyProcessingEvents(1, FAILURE)
-		verifyDeleteRequestsToFilestorage(0)
-		verifyMessageStartsWith(maxNumberOfAttempts, "Exception")
-		verifyMessageStartsWith(0, "ok")
-		verifyMetric(0, "get files from filestorage")
-		verifyMetric(0, "send files to archive")
-		verifyMetric(0, "delete files from filestorage")
-
-		assertEquals(getFilestorageErrorsBefore + maxNumberOfAttempts, metrics.getGetFilestorageErrors())
-		assertEquals(getFilestorageSuccessesBefore + 0, metrics.getGetFilestorageSuccesses())
-		assertEquals(delFilestorageSuccessesBefore + 0, metrics.getDelFilestorageSuccesses())
-		assertEquals(joarkErrorsBefore + 0, metrics.getJoarkErrors())
-		assertEquals(joarkSuccessesBefore + 0, metrics.getJoarkSuccesses())
-		assertEquals(tasksBefore + 1, metrics.getTasks())
-		assertEquals(tasksGivenUpOnBefore + 1, metrics.getTasksGivenUpOn())
-
-	}
-
-
-	@Test
-	fun `Files deleted from Filestorage will cause finishing archiving`() {
-		val tasksBefore = metrics.getTasks()
-		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
-		val getFilestorageErrorsBefore = metrics.getGetFilestorageErrors()
-		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
-		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
-		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
-		val joarkErrorsBefore = metrics.getJoarkErrors()
-
-		mockRequestedFileIsGone()
-		mockJoarkIsWorking()
-
-		putDataOnKafkaTopic(createSoknadarkivschema())
-		TimeUnit.SECONDS.sleep(9)
-		verifyProcessingEvents(1, STARTED)
-		verifyProcessingEvents(1, ARCHIVED)
-		verifyProcessingEvents(1, FINISHED)
-		verifyProcessingEvents(0, FAILURE)
-		verifyDeleteRequestsToFilestorage(1)
-		verifyMessageStartsWith(1, "ok")
-		verifyMetric(0, "get files from filestorage")
-		verifyMetric(0, "send files to archive")
-		verifyMetric(1, "delete files from filestorage")
-
-		assertEquals(getFilestorageErrorsBefore + 1, metrics.getGetFilestorageErrors())
-		assertEquals(getFilestorageSuccessesBefore + 0, metrics.getGetFilestorageSuccesses())
-		assertEquals(delFilestorageSuccessesBefore + 0, metrics.getDelFilestorageSuccesses())
-		assertEquals(joarkErrorsBefore + 0, metrics.getJoarkErrors())
-		assertEquals(joarkSuccessesBefore + 0, metrics.getJoarkSuccesses())
-		assertEquals(tasksBefore, metrics.getTasks())
-		assertEquals(tasksGivenUpOnBefore, metrics.getTasksGivenUpOn())
-
-	}
-
-	@Test
-	fun `Poison pill followed by proper event -- Only proper one is sent to Joark`() {
-		val keyForPoisionPill = UUID.randomUUID().toString()
-		mockFilestorageIsWorking(fileUuid)
-		mockJoarkIsWorking()
-
-		putDataOnKafkaTopic(keyForPoisionPill, "this is not deserializable")
-		putDataOnKafkaTopic(createSoknadarkivschema())
-		TimeUnit.SECONDS.sleep(2)
-
-		verifyProcessingEvents(1, STARTED)
-		verifyProcessingEvents(1, ARCHIVED)
-		verifyProcessingEvents(1, FINISHED)
-		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
-		verifyDeleteRequestsToFilestorage(1)
-		verifyMessageStartsWith(1, "Exception", keyForPoisionPill)
-		verifyMessageStartsWith(1, "ok", key)
-		verifyMetric(1, "get files from filestorage")
-		verifyMetric(1, "send files to archive")
-		verifyMetric(1, "delete files from filestorage")
-	}
-
 
 	private fun verifyMessageStartsWith(expectedCount: Int, message: String, key: String = this.key) {
 		val getCount = {
@@ -265,7 +233,8 @@ class ApplicationTests: TopologyTestDriverTests() {
 				.toInt()
 		}
 
-		val finalCheck = { verify(kafkaPublisherMock, times(expectedCount)).putMessageOnTopic(eq(key), startsWith(message), any()) }
+		val finalCheck = { verify(kafkaPublisherMock, times(expectedCount)).putMessageOnTopic(eq(key),
+			ArgumentMatchers.startsWith(message), any()) }
 		loopAndVerify(expectedCount, getCount, finalCheck)
 	}
 
@@ -282,6 +251,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 		loopAndVerify(expectedCount, getCount)
 	}
+
 
 	private fun verifyProcessingEvents(expectedCount: Int, eventType: EventTypes) {
 		val type = ProcessingEvent(eventType)
@@ -340,6 +310,8 @@ class ApplicationTests: TopologyTestDriverTests() {
 			soknadsarkivschema.getArkivtema(),
 			soknadsarkivschema.getMottatteDokumenter()[0].getTittel()
 		)
-		assertEquals(expected, requestData)
+		Assertions.assertEquals(expected, requestData)
 	}
+
+
 }
