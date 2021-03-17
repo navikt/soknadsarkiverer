@@ -27,18 +27,10 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 
 	fun archive(key: String, data: Soknadarkivschema, files: List<FilElementDto>) {
 		try {
-//			val files = filestorageService.getFilesFromFilestorage(key, data)
-
-//			val journalpostId = protectFromShutdownInterruption(appConfiguration) {
 				val startTime = System.currentTimeMillis()
 				val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
 				createMetric(key, "send files to archive", startTime)
-//				journalpostId
-//			}
 			logger.info("$key: Opprettet journalpostId=${journalpostId} for behandlingsid=${data.getBehandlingsid()}")
-
-//		} catch (e: ShuttingDownException) {
-//			logger.warn("$key: Will not start to archive - application is shutting down.")
 
 		} catch (e: Exception) {
 			createMessage(key, createExceptionMessage(e))

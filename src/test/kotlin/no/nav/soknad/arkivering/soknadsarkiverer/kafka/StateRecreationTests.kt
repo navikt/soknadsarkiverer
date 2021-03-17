@@ -17,8 +17,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.test.context.ActiveProfiles
 import java.util.*
-import java.util.concurrent.TimeUnit
-import kotlin.collections.RandomAccess
 
 @ActiveProfiles("test")
 class StateRecreationTests : TopologyTestDriverTests() {
@@ -178,9 +176,9 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 	@Test
 	fun `Can read Event Log with mixed order of events`() {
-		val key0 = UUID.randomUUID().toString() // ff96c32f-0ead-44cf-af40-b2ddc48a3e53
-		val key1 = UUID.randomUUID().toString() // 6c738efd-5c02-4f54-b93c-d906c7aedd4f
-		val key2 = UUID.randomUUID().toString() // ead67f86-1540-4a13-9857-8069d142aa7c
+		val key0 = UUID.randomUUID().toString()
+		val key1 = UUID.randomUUID().toString()
+		val key2 = UUID.randomUUID().toString()
 
 		publishSoknadsarkivschemas(key0, key1, key2)
 		publishProcessingEvents(
@@ -233,7 +231,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 	@Test
 	fun `Process events, simulate upstart with all received and archived events - none should be scheduled`() {
-		val size = 10
+		val size = 20
 		val keyList = MutableList(size) { _ -> UUID.randomUUID().toString()}
 
 		keyList.forEach {key -> publishSoknadsarkivschemas(key)}
@@ -247,7 +245,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 	@Test
 	fun `Process events, simulate upstart with some FINISHED and FAILURE events - none should be scheduled`() {
-		val size = 10
+		val size = 20
 		val keyList = MutableList(size) { _ -> UUID.randomUUID().toString()}
 
 		keyList.forEach {key -> publishSoknadsarkivschemas(key)}

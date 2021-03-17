@@ -97,7 +97,6 @@ class TaskListServiceTests {
 	fun `Archiving succeeds - will remove task from list and not attempt to schedule again`() {
 		val key = UUID.randomUUID().toString()
 		runScheduledTaskOnScheduling()
-		//whenever(archiverService.archive(eq(key), any())).then { taskListService.finishTask(key) }
 
 		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), EventTypes.RECEIVED)
 		TimeUnit.SECONDS.sleep(11) // ref secondsAfterStartupBeforeStarting

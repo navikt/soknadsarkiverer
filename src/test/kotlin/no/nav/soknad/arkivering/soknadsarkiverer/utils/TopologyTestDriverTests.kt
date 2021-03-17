@@ -106,11 +106,6 @@ open class TopologyTestDriverTests {
 
 		fun putProcessingEventLogsOnTopic(): TopologyTestDriverBuilder {
 			putProcessingEventLogOnTopic(EventTypes.RECEIVED)
-/*
-			putProcessingEventLogOnTopic(EventTypes.STARTED)
-			putProcessingEventLogOnTopic(EventTypes.ARCHIVED)
-			putProcessingEventLogOnTopic(EventTypes.FINISHED)
-*/
 			return this
 		}
 

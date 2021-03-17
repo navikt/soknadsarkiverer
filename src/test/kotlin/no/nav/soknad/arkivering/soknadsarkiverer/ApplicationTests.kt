@@ -108,11 +108,6 @@ class ApplicationTests: TopologyTestDriverTests() {
 		putDataOnKafkaTopic(soknadsarkivschema)
 
 		verifyProcessingEvents(1, RECEIVED)
-/*
-		verifyProcessingEvents(1, STARTED)
-		verifyProcessingEvents(1, ARCHIVED)
-		verifyProcessingEvents(1, FINISHED)
-*/
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "ok")
