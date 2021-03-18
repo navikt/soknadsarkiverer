@@ -19,9 +19,11 @@ import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.TestInputTopic
 import org.apache.kafka.streams.TopologyTestDriver
 import org.mockito.ArgumentCaptor
+import org.slf4j.LoggerFactory
 import java.util.*
 
 open class TopologyTestDriverTests {
+	private val logger = LoggerFactory.getLogger(javaClass)
 
 	private lateinit var testDriver: TopologyTestDriver
 
@@ -30,6 +32,7 @@ open class TopologyTestDriverTests {
 	private lateinit var processingEventTopic: TestInputTopic<String, ProcessingEvent>
 
 	private fun setupKafkaTopologyTestDriver(appConfiguration: AppConfiguration, taskListService: TaskListService, kafkaPublisher: KafkaPublisher, metrics: ArchivingMetrics) {
+		logger.info("**setupKafkaTopologyTestDriver**")
 		val builder = StreamsBuilder()
 		KafkaConfig(appConfiguration, taskListService, kafkaPublisher, metrics).modifiedKafkaStreams(builder)
 		val topology = builder.build()
@@ -67,6 +70,7 @@ open class TopologyTestDriverTests {
 	}
 
 	fun closeTestDriver() {
+		logger.info("**Closing testDriver**")
 		testDriver.close()
 	}
 
