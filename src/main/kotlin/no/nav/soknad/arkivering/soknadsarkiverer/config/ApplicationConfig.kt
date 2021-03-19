@@ -23,7 +23,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_PROCESSING_TOPIC" to "privat-soknadInnsendt-processingEventLog-v1-default",
 	"KAFKA_MESSAGE_TOPIC" to "privat-soknadInnsendt-messages-v1-default",
 	"KAFKA_METRICS_TOPIC" to "privat-soknadInnsendt-metrics-v1-default",
-	"KAFKA_GROUPID" to "soknadsarkiverer-streams-default",
+	"KAFKA_GROUPID" to "soknadsarkiverer-group-defaultid",
 	"MAX_MESSAGE_SIZE" to (1024 * 1024 * 300).toString(),
 
 	"JOARK_HOST" to "http://localhost:8092",
@@ -74,7 +74,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val messageTopic: String = "KAFKA_MESSAGE_TOPIC".configProperty(),
 		val metricsTopic: String = "KAFKA_METRICS_TOPIC".configProperty(),
 		var saslJaasConfig: String = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"$username\" password=\"$password\";",
-		val groupId: String = "KAFKA_GROUPID".configProperty()
+		val groupId: String = readFileAsText("/var/run/secrets/nais.io/kv/KAFKA_GROUPID", "KAFKA_GROUPID".configProperty())
 	)
 
 	data class Config(

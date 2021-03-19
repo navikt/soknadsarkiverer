@@ -113,7 +113,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 		modifiedKafkaStreams(streamsBuilder)
 		val topology = streamsBuilder.build()
 
-		val kafkaStreams = KafkaStreams(topology, kafkaConfig(appConfiguration.kafkaConfig.groupId+"cursor-reset")) // TODO remove '+"cursor-reset"'
+		val kafkaStreams = KafkaStreams(topology, kafkaConfig(appConfiguration.kafkaConfig.groupId))
 
 		logger.info("SetupKafkaStreams: cleanUp kafka streams")
 		kafkaStreams.cleanUp()
