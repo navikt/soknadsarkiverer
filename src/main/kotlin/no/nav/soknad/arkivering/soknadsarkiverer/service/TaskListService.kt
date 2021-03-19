@@ -138,6 +138,8 @@ class TaskListService(private val archiverService: ArchiverService,
 			return
 		} else {
 
+			logger.debug("$key: In schedule. Attempts: ($attempt), loggedstate: ${loggedTaskStates[key]}, currentTaskState: ${currentTaskStates[key]}")
+
 			when (currentTaskStates[key]) {
 				EventTypes.RECEIVED -> receivedState(key, soknadarkivschema, attempt)
 				EventTypes.STARTED -> archiveState(key, soknadarkivschema, attempt)

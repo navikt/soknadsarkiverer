@@ -106,6 +106,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		val soknadsarkivschema = createSoknadarkivschema()
 
 		putDataOnKafkaTopic(soknadsarkivschema)
+		TimeUnit.SECONDS.sleep(9)
 
 		verifyProcessingEvents(1, RECEIVED)
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
@@ -145,7 +146,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		mockJoarkIsDown()
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
-		TimeUnit.SECONDS.sleep(89)
+		TimeUnit.SECONDS.sleep(9)
 
 		verifyProcessingEvents(1, FAILURE)
 		verifyProcessingEvents(1, STARTED)
