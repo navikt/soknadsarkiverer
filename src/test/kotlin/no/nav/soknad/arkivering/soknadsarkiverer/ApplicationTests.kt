@@ -19,6 +19,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.startsWith
 import org.mockito.Mockito
@@ -160,6 +161,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyMetric(0, "delete files from filestorage")
 	}
 
+	@Disabled
 	@Test
 	fun `Poison pill followed by proper event -- Only proper one is sent to Joark`() {
 		val keyForPoisionPill = UUID.randomUUID().toString()
