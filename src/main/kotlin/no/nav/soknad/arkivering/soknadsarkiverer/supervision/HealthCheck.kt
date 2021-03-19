@@ -67,7 +67,7 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 				logger.info("Waiting for shutdown")
 				delay(2000L)
 			}
-			logger.info("Pod is ready for shutdown")
+			logger.info("Pod is now ready for shutdown")
 		}
 		stop(appConfiguration)
 		logger.info("Pod is getting ready for shutdown")
