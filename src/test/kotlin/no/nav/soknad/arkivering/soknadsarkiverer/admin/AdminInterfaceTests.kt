@@ -95,6 +95,7 @@ class AdminInterfaceTests {
 		loopAndVerify(maxNumberOfAttempts, { getTaskListCount(key) })
 
 		mockFilestorageIsWorking(fileUuid)
+		TimeUnit.SECONDS.sleep(2)
 		adminInterface.rerun(key)
 
 		loopAndVerify(0, { taskListService.listTasks(key).size })
@@ -143,7 +144,7 @@ class AdminInterfaceTests {
 
 		val numberOfInputs = 2
 		val numberOfMessages = 1 + maxNumberOfAttempts // 1 "ok" message, a number of mocked exceptions
-		val numberOfProcessingEvents = 4 + 1 + maxNumberOfAttempts // 4 for the first event, 1 received for the second, a number of attempts at starting
+		val numberOfProcessingEvents = 4 + 3  // 4 for the first event, 3  for the second
 		loopAndVerifyAtLeast(numberOfInputs + numberOfMessages + numberOfProcessingEvents, eventsAfter)
 	}
 
@@ -159,9 +160,9 @@ class AdminInterfaceTests {
 				.count()
 		}
 
-		val numberOfInputs = 1
+		val numberOfInputs = 2
 		val numberOfMessages = maxNumberOfAttempts // mocked exceptions
-		val numberOfProcessingEvents = 1 + maxNumberOfAttempts // 1 received for the second event, a number of attempts at starting
+		val numberOfProcessingEvents = 2 // 1*Started, 1*Failure
 		loopAndVerifyAtLeast(numberOfInputs + numberOfMessages + numberOfProcessingEvents, eventsAfter)
 	}
 
@@ -239,7 +240,7 @@ class AdminInterfaceTests {
 		mockJoarkIsWorking()
 
 		putDataOnTopic(key, soknadarkivschema)
-		verifyNumberOfStartedEvents(key, maxNumberOfAttempts)
+		verifyNumberOfStartedEvents(key, 1)
 
 
 		mockFilestorageIsWorking(listOf(fileUuidInFilestorage to "filecontent", fileUuidNotInFilestorage to null))
@@ -283,7 +284,7 @@ class AdminInterfaceTests {
 		mockJoarkIsDown()
 
 		putDataOnTopic(key1, soknadarkivschema1)
-		verifyNumberOfStartedEvents(key1, maxNumberOfAttempts)
+		verifyNumberOfStartedEvents(key1, 1)
 	}
 
 

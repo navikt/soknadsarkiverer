@@ -136,6 +136,14 @@ fun mockFilestorageIsDown() {
 				.withStatus(HttpStatus.SERVICE_UNAVAILABLE.value())))
 }
 
+fun mockRequestedFileIsGone() {
+	wiremockServer.stubFor(
+		get(urlMatching(filestorageUrl.replace("?", "\\?") + ".*"))
+			.willReturn(aResponse()
+				.withBody("Mocked exception for filestorage")
+				.withStatus(HttpStatus.GONE.value())))
+}
+
 fun mockFilestoragePingIsWorking() {
 	wiremockServer.stubFor(
 		get("/internal/ping")

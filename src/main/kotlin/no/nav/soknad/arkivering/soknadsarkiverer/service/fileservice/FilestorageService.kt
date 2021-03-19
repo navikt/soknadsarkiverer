@@ -9,6 +9,7 @@ import org.apache.tomcat.util.codec.binary.Base64
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.HttpMethod
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
@@ -45,8 +46,13 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 
 		} catch (e: Exception) {
 			metrics.incGetFilestorageErrors()
-			logger.error("$key: Error retrieving files from the file storage", e)
-			throw ArchivingException(e)
+			if (e.cause is FilesAlreadyDeletedException) {
+				logger.warn("$key: File(s) deleted in the file storage", e)
+				throw e
+			} else {
+				logger.error("$key: Error retrieving files from the file storage", e)
+				throw ArchivingException(e)
+			}
 
 		} finally {
 		    metrics.endTimer(timer)
@@ -112,7 +118,15 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 			.retrieve()
 			.onStatus(
 				{ httpStatus -> httpStatus.is4xxClientError || httpStatus.is5xxServerError },
-				{ response -> response.bodyToMono(String::class.java).map { Exception("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'") } })
+				{ response -> response.bodyToMono(String::class.java).map {
+						if (response.statusCode() == HttpStatus.GONE) {
+							FilesAlreadyDeletedException("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'")
+						} else {
+							Exception("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'")
+						}
+					}
+				}
+			)
 			.bodyToFlux(FilElementDto::class.java)
 			.collectList()
 			.block() // TODO Do we need to block?

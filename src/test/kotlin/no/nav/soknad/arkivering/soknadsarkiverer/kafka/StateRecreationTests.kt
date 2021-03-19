@@ -24,8 +24,9 @@ class StateRecreationTests : TopologyTestDriverTests() {
 	private val appConfiguration = createAppConfiguration()
 	private val archiverService = mock<ArchiverService>()
 	private val scheduler = mock<Scheduler>()
+	private val kafkaPublisher = mock<KafkaPublisher>()
 	private val metrics = ArchivingMetrics(CollectorRegistry.defaultRegistry)
-	private val taskListService = TaskListService(archiverService, appConfiguration, scheduler, metrics)
+	private val taskListService = TaskListService(archiverService, appConfiguration, scheduler, metrics, kafkaPublisher)
 
 	private val soknadarkivschema = createSoknadarkivschema()
 
@@ -82,18 +83,13 @@ class StateRecreationTests : TopologyTestDriverTests() {
 	}
 
 	@Test
-	fun `Can read Event Log with Event that was started six times - will not reattempt`() {
+	fun `Can read Event Log with Finished Event - will not reattempt`() {
 		val key = UUID.randomUUID().toString()
 
 		publishSoknadsarkivschemas(key)
 		publishProcessingEvents(
-			key to RECEIVED,
-			key to STARTED,
-			key to STARTED,
-			key to STARTED,
-			key to STARTED,
-			key to STARTED,
-			key to STARTED
+			key to FINISHED,
+			key to RECEIVED
 		)
 
 		recreateState()
@@ -129,8 +125,9 @@ class StateRecreationTests : TopologyTestDriverTests() {
 		publishProcessingEvents(
 			key to RECEIVED,
 			key to STARTED,
-			key to STARTED,
-			key to FINISHED
+			key to FINISHED,
+			key to RECEIVED,
+			key to STARTED
 		)
 
 		recreateState()
@@ -167,6 +164,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 
 			key1 to RECEIVED,
 			key1 to STARTED,
+			key1 to ARCHIVED,
 			key1 to FINISHED
 		)
 
@@ -180,19 +178,26 @@ class StateRecreationTests : TopologyTestDriverTests() {
 	fun `Can read Event Log with mixed order of events`() {
 		val key0 = UUID.randomUUID().toString()
 		val key1 = UUID.randomUUID().toString()
+		val key2 = UUID.randomUUID().toString()
 
-		publishSoknadsarkivschemas(key0, key1)
+		publishSoknadsarkivschemas(key0, key1, key2)
 		publishProcessingEvents(
 			key1 to RECEIVED,
 			key0 to RECEIVED,
 			key1 to STARTED,
+			key2 to RECEIVED,
 			key0 to STARTED,
-			key1 to FINISHED
+			key2 to STARTED,
+			key1 to ARCHIVED,
+			key0 to ARCHIVED,
+			key1 to FINISHED,
+			key0 to FAILURE
 		)
 
 		recreateState()
 
-		verifyThatScheduler().wasCalled(1).forKey(key0)
+		verifyThatScheduler().wasCalled(1).forKey(key2)
+		verifyThatScheduler().wasNotCalledForKey(key0)
 		verifyThatScheduler().wasNotCalledForKey(key1)
 	}
 
@@ -224,6 +229,41 @@ class StateRecreationTests : TopologyTestDriverTests() {
 		verifyThatScheduler().wasCalled(1).forKey(key)
 	}
 
+	@Test
+	fun `Process events, simulate upstart with all received and archived events - none should be scheduled`() {
+		val size = 100
+		val keyList = MutableList(size) { _ -> UUID.randomUUID().toString()}
+
+		keyList.forEach {key -> publishSoknadsarkivschemas(key)}
+
+		keyList.forEach {key -> publishProcessingEvents(key to RECEIVED, 	key to STARTED, key to ARCHIVED, key to FINISHED)}
+
+		recreateState()
+
+		verifyThatScheduler().wasNotCalled()
+	}
+
+	@Test
+	fun `Process events, simulate upstart with some FINISHED and FAILURE events - none should be scheduled`() {
+		val size = 100
+		val keyList = MutableList(size) { _ -> UUID.randomUUID().toString()}
+
+		keyList.forEach {key -> publishSoknadsarkivschemas(key)}
+
+		keyList.forEach {key -> publishProcessingEvents(key to RECEIVED, 	key to STARTED, key to ARCHIVED, randomFailureOrFinished(key))}
+
+		recreateState()
+
+		verifyThatScheduler().wasNotCalled()
+	}
+
+	private fun randomFailureOrFinished(key: String): Pair<String, EventTypes> {
+		val rand = (1..1000).random()
+		if (rand>600)
+			return key to FAILURE
+		else
+			return key to FINISHED
+	}
 
 	private fun publishSoknadsarkivschemas(vararg keys: String) {
 		keys.forEach { putDataOnInputTopic(it, soknadarkivschema) }
@@ -234,7 +274,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 	}
 
 	private fun recreateState() {
-		KafkaConfig(appConfiguration, taskListService, mock(), metrics).kafkaStreams(StreamsBuilder())
+		KafkaConfig(appConfiguration, taskListService, mock(), metrics).modifiedKafkaStreams(StreamsBuilder())
 	}
 
 
@@ -276,7 +316,7 @@ class StateRecreationTests : TopologyTestDriverTests() {
 					.count().toInt()
 			}
 
-			loopAndVerify(timesCalled, getInvocations)
+			loopAndVerify(if (timesCalled == 0) 0 else timesCalled + 2, getInvocations) // ArchiverService will be called 3 timer when running through state started and archived
 
 			verify(scheduler, atLeast(timesCalled)).schedule(any(), any())
 		}

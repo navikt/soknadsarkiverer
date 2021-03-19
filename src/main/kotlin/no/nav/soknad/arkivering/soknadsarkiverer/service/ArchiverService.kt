@@ -11,6 +11,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.ShuttingDownException
 import no.nav.soknad.arkivering.soknadsarkiverer.config.protectFromShutdownInterruption
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -24,20 +25,12 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 											private val kafkaPublisher: KafkaPublisher) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	fun archive(key: String, data: Soknadarkivschema) {
+	fun archive(key: String, data: Soknadarkivschema, files: List<FilElementDto>) {
 		try {
-			createProcessingEvent(key, STARTED)
-			val files = getFilesFromFilestorage(key, data)
-
-			val journalpostId = sendToArchive(key, data, files)
+				val startTime = System.currentTimeMillis()
+				val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
+				createMetric(key, "send files to archive", startTime)
 			logger.info("$key: Opprettet journalpostId=${journalpostId} for behandlingsid=${data.getBehandlingsid()}")
-
-			deleteFilesFromFilestorage(key, data)
-			createProcessingEvent(key, FINISHED)
-			createMessage(key, "ok")
-
-		} catch (e: ShuttingDownException) {
-			logger.warn("$key: Will not start to archive - application is shutting down.")
 
 		} catch (e: Exception) {
 			createMessage(key, createExceptionMessage(e))
@@ -45,34 +38,40 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 		}
 	}
 
-	private fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): List<FilElementDto> {
-		val startTime = System.currentTimeMillis()
-		val files = filestorageService.getFilesFromFilestorage(key, data)
-		createMetric(key, "get files from filestorage", startTime)
-		return files
-	}
-
-	private fun deleteFilesFromFilestorage(key: String, data: Soknadarkivschema) {
-		val startTime = System.currentTimeMillis()
-		filestorageService.deleteFilesFromFilestorage(key, data)
-		createMetric(key, "delete files from filestorage", startTime)
-	}
-
-	private fun sendToArchive(key: String, data: Soknadarkivschema, files: List<FilElementDto>): String {
-		return protectFromShutdownInterruption(appConfiguration) {
+	fun fetchFiles(key: String, data: Soknadarkivschema): List<FilElementDto> {
+		try {
 			val startTime = System.currentTimeMillis()
+			val files = filestorageService.getFilesFromFilestorage(key, data)
+			createMetric(key, "get files from filestorage", startTime)
+			return files
 
-			val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
-			createProcessingEvent(key, ARCHIVED)
-			createMetric(key, "send files to archive", startTime)
+		} catch (e: FilesAlreadyDeletedException) {
+			throw e
 
-			journalpostId
+		} catch (e: ShuttingDownException) {
+			logger.warn("$key: Will not start to fetchFiles - application is shutting down.")
+			return ArrayList()
+
+		} catch (e: Exception) {
+			createMessage(key, createExceptionMessage(e))
+			throw e
 		}
 	}
 
+	fun deleteFiles(key: String, data: Soknadarkivschema) {
+		try {
+			val startTime = System.currentTimeMillis()
+			filestorageService.deleteFilesFromFilestorage(key, data)
+			createMetric(key, "delete files from filestorage", startTime)
+			createMessage(key, "ok")
 
-	private fun createProcessingEvent(key: String, type: EventTypes) {
-		kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(type))
+		} catch (e: ShuttingDownException) {
+			logger.warn("$key: Will not start to deleteFiles - application is shutting down.")
+
+		} catch (e: Exception) {
+			createMessage(key, createExceptionMessage(e))
+			throw e
+		}
 	}
 
 	private fun createMessage(key: String, message: String) {

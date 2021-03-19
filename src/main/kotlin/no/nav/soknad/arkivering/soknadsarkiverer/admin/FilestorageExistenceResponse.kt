@@ -14,4 +14,4 @@ data class FilestorageExistenceResponse(
 	@NotBlank
 	val status: FilestorageExistenceStatus)
 
-enum class FilestorageExistenceStatus { EXISTS, DOES_NOT_EXIST, FAILED_TO_FIND_FILE_IDS }
+enum class FilestorageExistenceStatus { EXISTS, DOES_NOT_EXIST, FAILED_TO_FIND_FILE_IDS, DELETED }

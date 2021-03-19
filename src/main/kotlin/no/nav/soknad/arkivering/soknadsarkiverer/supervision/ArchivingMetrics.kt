@@ -148,7 +148,7 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 	fun removeTask() = taskGauge.labels(APP).dec()
 	fun getTasks() = taskGauge.labels(APP).get()
 
-	fun setTasksGivenUpOn(value: Double) = tasksGivenUpOnGauge.labels(APP).set(value)
+	fun setTasksGivenUpOn(value: Double) = tasksGivenUpOnGauge.labels(APP).set(getTasksGivenUpOn()+value)
 	fun getTasksGivenUpOn() = tasksGivenUpOnGauge.labels(APP).get()
 
 	fun setUpOrDown(value: Double) = upOrDownGauge.labels(APP).set(value)

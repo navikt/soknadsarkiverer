@@ -4,7 +4,6 @@ import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
-import io.prometheus.client.CollectorRegistry
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
@@ -19,9 +18,11 @@ import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.TestInputTopic
 import org.apache.kafka.streams.TopologyTestDriver
 import org.mockito.ArgumentCaptor
+import org.slf4j.LoggerFactory
 import java.util.*
 
 open class TopologyTestDriverTests {
+	private val logger = LoggerFactory.getLogger(javaClass)
 
 	private lateinit var testDriver: TopologyTestDriver
 
@@ -30,8 +31,9 @@ open class TopologyTestDriverTests {
 	private lateinit var processingEventTopic: TestInputTopic<String, ProcessingEvent>
 
 	private fun setupKafkaTopologyTestDriver(appConfiguration: AppConfiguration, taskListService: TaskListService, kafkaPublisher: KafkaPublisher, metrics: ArchivingMetrics) {
+		logger.info("**setupKafkaTopologyTestDriver**")
 		val builder = StreamsBuilder()
-		KafkaConfig(appConfiguration, taskListService, kafkaPublisher, metrics).kafkaStreams(builder)
+		KafkaConfig(appConfiguration, taskListService, kafkaPublisher, metrics).modifiedKafkaStreams(builder)
 		val topology = builder.build()
 
 		// Dummy properties needed for test diver
@@ -67,6 +69,7 @@ open class TopologyTestDriverTests {
 	}
 
 	fun closeTestDriver() {
+		logger.info("**Closing testDriver**")
 		testDriver.close()
 	}
 
@@ -100,10 +103,12 @@ open class TopologyTestDriverTests {
 			return this
 		}
 
+		fun putProcessingEventLogsOnTopic(enventTypes: EventTypes) {
+			putProcessingEventLogOnTopic(enventTypes)
+		}
+
 		fun putProcessingEventLogsOnTopic(): TopologyTestDriverBuilder {
 			putProcessingEventLogOnTopic(EventTypes.RECEIVED)
-			putProcessingEventLogOnTopic(EventTypes.STARTED)
-			putProcessingEventLogOnTopic(EventTypes.FINISHED)
 			return this
 		}
 
