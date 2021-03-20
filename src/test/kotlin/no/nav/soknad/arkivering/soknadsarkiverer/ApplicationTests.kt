@@ -123,6 +123,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyRequestDataToJoark(soknadsarkivschema, request)
 	}
 
+	@Disabled
 	@Test
 	fun `Sending in invalid data will not create Processing Events`() {
 		val invalidData = "this string is not deserializable"
