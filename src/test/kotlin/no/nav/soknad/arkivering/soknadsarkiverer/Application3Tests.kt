@@ -25,6 +25,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
+@Disabled
 @ActiveProfiles("test")
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
