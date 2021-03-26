@@ -25,7 +25,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
-@Disabled
+//@Disabled
 @ActiveProfiles("test")
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
@@ -101,7 +101,7 @@ class Application2Tests: TopologyTestDriverTests() {
 	}
 
 
-	@Disabled
+	//@Disabled
 	@Test
 	fun `First attempt to Joark fails, the second succeeds`() {
 		val tasksBefore = metrics.getTasks()
@@ -140,7 +140,7 @@ class Application2Tests: TopologyTestDriverTests() {
 		)
 	}
 
-	@Disabled
+	//@Disabled
 	@Test
 	fun `First attempt to Joark fails, the fourth succeeds`() {
 		val attemptsToFail = 3
@@ -195,7 +195,7 @@ class Application2Tests: TopologyTestDriverTests() {
 		Assertions.assertEquals(joarkSuccessesBefore + 1, metrics.getJoarkSuccesses())
 	}
 
-	@Disabled
+	//@Disabled
 	@Test
 	fun `Joark responds with status OK but invalid body -- will retry`() {
 		mockFilestorageIsWorking(fileUuid)

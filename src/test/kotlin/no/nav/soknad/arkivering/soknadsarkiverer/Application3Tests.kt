@@ -25,7 +25,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
-@Disabled
+//@Disabled
 @ActiveProfiles("test")
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
@@ -98,7 +98,7 @@ class Application3Tests: TopologyTestDriverTests() {
 		clearInvocations(kafkaPublisherMock)
 	}
 
-	@Disabled
+	//@Disabled
 	@Test
 	fun `Failing to get files from Filestorage will cause retries`() {
 		val tasksBefore = metrics.getTasks()

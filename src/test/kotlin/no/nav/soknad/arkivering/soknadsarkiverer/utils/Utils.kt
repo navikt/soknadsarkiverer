@@ -48,7 +48,7 @@ fun verifyProcessingEventsUtils(kafkaPublisherMock: KafkaPublisher, expectedCoun
 			.toInt()
 	}
 
-	val finalCheck = { verify(kafkaPublisherMock, times(expectedCount)).putProcessingEventOnTopic(eq(key), eq(type), any()) }
+	val finalCheck = { verify(kafkaPublisherMock, atLeast(expectedCount)).putProcessingEventOnTopic(eq(key), eq(type), any()) }
 	loopAndVerify(expectedCount, getCount, finalCheck)
 }
 

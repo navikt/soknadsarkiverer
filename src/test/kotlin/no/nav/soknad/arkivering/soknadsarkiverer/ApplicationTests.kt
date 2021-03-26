@@ -38,7 +38,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
-@Disabled
+//@Disabled
 @ActiveProfiles("test")
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
@@ -124,7 +124,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyRequestDataToJoark(soknadsarkivschema, request)
 	}
 
-	@Disabled
+	//@Disabled
 	@Test
 	fun `Sending in invalid data will not create Processing Events`() {
 		val invalidData = "this string is not deserializable"
@@ -163,7 +163,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyMetric(0, "delete files from filestorage")
 	}
 
-	@Disabled
+	//@Disabled
 	@Test
 	fun `Poison pill followed by proper event -- Only proper one is sent to Joark`() {
 		val keyForPoisionPill = UUID.randomUUID().toString()
