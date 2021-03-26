@@ -163,7 +163,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyMetric(0, "delete files from filestorage")
 	}
 
-	//@Disabled
+	@Disabled
 	@Test
 	fun `Poison pill followed by proper event -- Only proper one is sent to Joark`() {
 		val keyForPoisionPill = UUID.randomUUID().toString()
