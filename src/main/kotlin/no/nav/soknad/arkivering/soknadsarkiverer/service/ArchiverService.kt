@@ -27,10 +27,14 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 
 	fun archive(key: String, data: Soknadarkivschema, files: List<FilElementDto>) {
 		try {
-				val startTime = System.currentTimeMillis()
-				val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
-				createMetric(key, "send files to archive", startTime)
+			val startTime = System.currentTimeMillis()
+			val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
+			createMetric(key, "send files to archive", startTime)
 			logger.info("$key: Opprettet journalpostId=${journalpostId} for behandlingsid=${data.getBehandlingsid()}")
+
+		} catch (e: ApplicationAlreadyArchivedException) {
+			createMessage(key, createExceptionMessage(e))
+			throw e
 
 		} catch (e: Exception) {
 			createMessage(key, createExceptionMessage(e))
@@ -46,6 +50,7 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 			return files
 
 		} catch (e: FilesAlreadyDeletedException) {
+			createMessage(key, createExceptionMessage(e))
 			throw e
 
 		} catch (e: ShuttingDownException) {

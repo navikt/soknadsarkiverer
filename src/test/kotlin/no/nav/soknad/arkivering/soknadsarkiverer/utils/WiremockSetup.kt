@@ -58,6 +58,10 @@ fun mockJoarkIsDown(delay: Int = 0) {
 	mockJoark(HttpStatus.NOT_FOUND.value(), "Mocked_exception", delay)
 }
 
+fun mockAlreadyArchivedResponse(delay: Int = 1) {
+	mockJoark(HttpStatus.CONFLICT.value(), "Already archived", delay)
+}
+
 fun mockJoarkRespondsAfterAttempts(attempts: Int) {
 
 	val stateNames = listOf(Scenario.STARTED).plus((0 until attempts).map { "iteration_$it" })

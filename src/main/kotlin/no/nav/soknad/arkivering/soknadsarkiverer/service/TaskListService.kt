@@ -246,6 +246,10 @@ class TaskListService(private val archiverService: ArchiverService,
 
 			logger.info("$key: Finished archiving")
 
+		} catch (e: ApplicationAlreadyArchivedException) {
+			// Log nothing, the Exceptions of this type are supposed to already have been logged
+			nextState = EventTypes.ARCHIVED
+
 		} catch (e: ArchivingException) {
 			// Log nothing, the Exceptions of this type are supposed to already have been logged
 			nextState = retry(key)
@@ -255,6 +259,10 @@ class TaskListService(private val archiverService: ArchiverService,
 				// File(s) already deleted in filestorage indicating that the application is already archived.
 				logger.warn("$key: Files gone from filestorage continues without archiving", e)
 				nextState = EventTypes.ARCHIVED
+			} else if (e.cause is ApplicationAlreadyArchivedException) {
+					// File(s) already deleted in filestorage indicating that the application is already archived.
+					logger.warn("$key: Application already archived continues without archiving", e)
+					nextState = EventTypes.ARCHIVED
 			} else if (e.cause is ShuttingDownException) {
 				logger.warn("$key: Will not start to archive - application is shutting down.")
 				nextState = null

@@ -9,16 +9,15 @@ import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.HealthCheck
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.mockAlreadyArchivedResponse
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import java.util.*
 import java.util.concurrent.Semaphore
 
@@ -77,6 +76,19 @@ class ArchiverServiceTests {
 	}
 
 	@Test
+	fun `Archiving already archived application throws exception`() {
+		val key2 = UUID.randomUUID().toString()
+		mockAlreadyArchivedException(key2)
+
+		val soknadschema =  createSoknadarkivschema()
+		assertThrows<ApplicationAlreadyArchivedException> {
+			archiverService.archive(key2, soknadschema, archiverService.fetchFiles(key, soknadschema))
+		}
+
+	}
+
+
+	@Test
 	fun `If Shutdown is requested during protected segment of one event, a second may not enter protected segment afterwards`() {
 		val key1 = UUID.randomUUID().toString()
 		val key2 = UUID.randomUUID().toString()
@@ -101,6 +113,11 @@ class ArchiverServiceTests {
 	private fun mockExceptionIsThrownWhileSendingToJoark() {
 		whenever(journalpostClient.opprettJournalpost(eq(key), any(), any()))
 			.thenThrow(RuntimeException("Mocked exception"))
+	}
+
+	private fun mockAlreadyArchivedException(key: String) {
+		whenever(journalpostClient.opprettJournalpost(eq(key), any(), any()))
+			.thenThrow(ApplicationAlreadyArchivedException("Already archived"))
 	}
 
 	private fun sendShutdownSignalWhileSendingToJoark() {

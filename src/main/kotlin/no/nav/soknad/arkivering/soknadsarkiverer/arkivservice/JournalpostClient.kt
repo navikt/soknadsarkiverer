@@ -7,10 +7,13 @@ import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.converter.createOp
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
+import no.nav.soknad.arkivering.soknadsarkiverer.service.ApplicationAlreadyArchivedException
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.http.HttpMethod
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
@@ -59,7 +62,9 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 				metrics.incJoarkSuccesses()
 				return journalpostId
 			}
-
+		} catch (e: ApplicationAlreadyArchivedException) {
+			logger.warn("$key: Application's eksternReferanseId ${soknadarkivschema.behandlingsid} already exists in the archive", e)
+			throw e
 		} catch (e: Exception) {
 			metrics.incJoarkErrors()
 			logger.error("$key: Error sending to Joark", e)
@@ -80,7 +85,14 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 			.retrieve()
 			.onStatus(
 				{ httpStatus -> httpStatus.is4xxClientError || httpStatus.is5xxServerError },
-				{ response -> response.bodyToMono(String::class.java).map { Exception("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'") } })
+				{ response -> response.bodyToMono(String::class.java).map {
+					if (response.statusCode() == HttpStatus.CONFLICT) {
+						ApplicationAlreadyArchivedException("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'")
+					} else {
+						Exception("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'")
+					}
+				}
+				})
 			.bodyToMono(OpprettJournalpostResponse::class.java)
 			.block()
 	}
