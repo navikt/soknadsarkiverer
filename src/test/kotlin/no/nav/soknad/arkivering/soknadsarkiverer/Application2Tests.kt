@@ -162,6 +162,7 @@ class Application2Tests: TopologyTestDriverTests() {
 		verifyMetric(1, "delete files from filestorage")
 	}
 
+	@Disabled
 	@Test
 	fun `Everything works, but Filestorage cannot delete files -- Message is nevertheless marked as finished`() {
 		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
