@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import java.util.*
 import java.util.concurrent.Semaphore
 
-@Disabled
 class ArchiverServiceTests {
 
 	private val filestorage = mock<FileserviceInterface>()
@@ -40,6 +39,7 @@ class ArchiverServiceTests {
 		archiverService = ArchiverService(appConfiguration, filestorage, journalpostClient, kafkaPublisher)
 	}
 
+	@Disabled
 	@Test
 	fun `Shutdown requested during protected segment - will still publish Archived event`() {
 		val	soknadschema = createSoknadarkivschema()
@@ -51,6 +51,7 @@ class ArchiverServiceTests {
 		verify(kafkaPublisher, times(1)).putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(ARCHIVED)), any())
 	}
 
+	@Disabled
 	@Test
 	fun `Shutdown requested before protected segment - will not call Joark or publish Archived event`() {
 		sendShutdownSignalWhenStartingToArchive()
@@ -63,6 +64,7 @@ class ArchiverServiceTests {
 		verify(kafkaPublisher, times(0)).putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(ARCHIVED)), any())
 	}
 
+	@Disabled
 	@Test
 	fun `Protected segment throws exception - busyCounter is still 0 afterwards`() {
 		mockExceptionIsThrownWhileSendingToJoark()
@@ -88,6 +90,7 @@ class ArchiverServiceTests {
 	}
 
 
+	@Disabled
 	@Test
 	fun `If Shutdown is requested during protected segment of one event, a second may not enter protected segment afterwards`() {
 		val key1 = UUID.randomUUID().toString()
