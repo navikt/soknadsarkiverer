@@ -98,7 +98,7 @@ class Application3Tests: TopologyTestDriverTests() {
 		clearInvocations(kafkaPublisherMock)
 	}
 
-	//@Disabled
+	@Disabled
 	@Test
 	fun `Failing to get files from Filestorage will cause retries`() {
 		val tasksBefore = metrics.getTasks()
