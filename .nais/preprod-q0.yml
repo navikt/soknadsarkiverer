@@ -76,7 +76,7 @@ spec:
     - name: KAFKA_METRICS_TOPIC
       value: privat-soknadInnsendt-metrics-v1-q0
     - name: KAFKA_GROUPID
-      value: soknadsarkiverer-groupid2-q0
+      value: soknadsarkiverer-groupid-q0
     - name: FILESTORAGE_HOST
       value: https://soknadsfillager-q0.dev.adeo.no
     - name: JOARK_HOST
