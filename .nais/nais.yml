@@ -70,7 +70,7 @@ spec:
     - name: KAFKA_METRICS_TOPIC
       value: privat-soknadInnsendt-metrics-v1
     - name: KAFKA_GROUPID
-      value: soknadsarkiverer-streams
+      value: soknadsarkiverer-groupid-p
     - name: FILESTORAGE_HOST
       value: https://soknadsfillager.nais.adeo.no
     - name: JOARK_HOST

@@ -115,15 +115,15 @@ class TaskListService(private val archiverService: ArchiverService,
 		}
 	}
 
-	// Starte på nytt task som har failed. Må resette task.count og sette state til STARTED. Opprette ny thread
-	// Merk at det state endring fra FAILURE til STARTED ikke logges.
+	// Starte på nytt task som har failed. Må resette task.count og sette state til STARTED.
+	// Setter processingEvent for å trigge re-start fra POD som kjører partition.
 	fun startPaNytt(key: String) {
+		logger.info("$key: state = FAILURE. Ready for next state STARTED")
 		val task = tasks[key]
 		if (task != null && loggedTaskStates[key] == EventTypes.FAILURE ) {
-			loggedTaskStates[key] = EventTypes.STARTED
-			tasks[key] = Task(task.value, 0, task.timeStarted, Semaphore(1).also { it.acquire() })
-			jobMap[key] = GlobalScope.launch { start(key, EventTypes.STARTED) }
+			tasks.remove(key)
 		}
+		createProcessingEvent(key, EventTypes.STARTED)
 	}
 
 
