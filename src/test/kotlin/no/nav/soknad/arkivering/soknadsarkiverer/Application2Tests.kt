@@ -140,7 +140,7 @@ class Application2Tests: TopologyTestDriverTests() {
 		)
 	}
 
-	//@Disabled
+	@Disabled
 	@Test
 	fun `First attempt to Joark fails, the fourth succeeds`() {
 		val attemptsToFail = 3
@@ -196,7 +196,7 @@ class Application2Tests: TopologyTestDriverTests() {
 		Assertions.assertEquals(joarkSuccessesBefore + 1, metrics.getJoarkSuccesses())
 	}
 
-	//@Disabled
+	@Disabled
 	@Test
 	fun `Joark responds with status OK but invalid body -- will retry`() {
 		mockFilestorageIsWorking(fileUuid)
