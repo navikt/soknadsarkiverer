@@ -37,7 +37,7 @@ private fun loopAndVerify(getCount: () -> Int, expectedCount: Int, finalCheck: (
 	finalCheck.invoke()
 }
 
-fun verifyProcessingEventsUtils(kafkaPublisherMock: KafkaPublisher, expectedCount: Int, eventType: EventTypes, key: String) {
+fun verifyProcessingEventsSupport(kafkaPublisherMock: KafkaPublisher, expectedCount: Int, eventType: EventTypes, key: String) {
 	val type = ProcessingEvent(eventType)
 	val getCount = {
 		mockingDetails(kafkaPublisherMock)
@@ -52,7 +52,7 @@ fun verifyProcessingEventsUtils(kafkaPublisherMock: KafkaPublisher, expectedCoun
 	loopAndVerify(expectedCount, getCount, finalCheck)
 }
 
-fun verifyMetricUtils(kafkaPublisherMock: KafkaPublisher, expectedCount: Int, metric: String, key: String ) {
+fun verifyMetricSupport(kafkaPublisherMock: KafkaPublisher, expectedCount: Int, metric: String, key: String ) {
 	val getCount = {
 		mockingDetails(kafkaPublisherMock)
 			.invocations.stream()
@@ -66,7 +66,7 @@ fun verifyMetricUtils(kafkaPublisherMock: KafkaPublisher, expectedCount: Int, me
 	loopAndVerify(expectedCount, getCount)
 }
 
-fun verifyMessageStartsWithUtils(kafkaPublisherMock: KafkaPublisher, expectedCount: Int, message: String, key: String) {
+fun verifyMessageStartsWithSupport(kafkaPublisherMock: KafkaPublisher, expectedCount: Int, message: String, key: String) {
 	val getCount = {
 		mockingDetails(kafkaPublisherMock)
 			.invocations.stream()

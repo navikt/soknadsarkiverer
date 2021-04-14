@@ -98,7 +98,7 @@ class Application3Tests: TopologyTestDriverTests() {
 		clearInvocations(kafkaPublisherMock)
 	}
 
-	@Disabled
+	@Disabled // TODO finn ut hvorfor testen ikke kjører på GHA sammen med øvrige tester
 	@Test
 	fun `Failing to get files from Filestorage will cause retries`() {
 		val tasksBefore = metrics.getTasks()
@@ -173,15 +173,15 @@ class Application3Tests: TopologyTestDriverTests() {
 	}
 
 	private fun verifyMessageStartsWith(expectedCount: Int, message: String, key: String = this.key) {
-		verifyMessageStartsWithUtils(kafkaPublisherMock, expectedCount, message, key)
+		verifyMessageStartsWithSupport(kafkaPublisherMock, expectedCount, message, key)
 	}
 
 	private fun verifyMetric(expectedCount: Int, metric: String, key: String = this.key) {
-		verifyMetricUtils(kafkaPublisherMock, expectedCount, metric, key)
+		verifyMetricSupport(kafkaPublisherMock, expectedCount, metric, key)
 	}
 
 	private fun verifyProcessingEvents(expectedCount: Int, eventType: EventTypes) {
-		verifyProcessingEventsUtils(kafkaPublisherMock, expectedCount, eventType, key)
+		verifyProcessingEventsSupport(kafkaPublisherMock, expectedCount, eventType, key)
 	}
 
 	private fun putDataOnKafkaTopic(data: Soknadarkivschema) {

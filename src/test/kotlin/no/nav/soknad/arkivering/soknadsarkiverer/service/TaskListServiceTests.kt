@@ -56,7 +56,6 @@ class TaskListServiceTests {
 	@Test
 	fun `Can update task`() {
 		val originalCount = 0
-		val newCount = 2
 		val key = UUID.randomUUID().toString()
 
 		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), EventTypes.RECEIVED)

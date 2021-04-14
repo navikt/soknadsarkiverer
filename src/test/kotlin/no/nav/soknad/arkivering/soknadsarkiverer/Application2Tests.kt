@@ -100,8 +100,6 @@ class Application2Tests: TopologyTestDriverTests() {
 		clearInvocations(kafkaPublisherMock)
 	}
 
-
-	//@Disabled
 	@Test
 	fun `First attempt to Joark fails, the second succeeds`() {
 		val tasksBefore = metrics.getTasks()
@@ -140,7 +138,7 @@ class Application2Tests: TopologyTestDriverTests() {
 		)
 	}
 
-	@Disabled
+	@Disabled // TODO finn ut hvorfor testen ikke kjører på GHA sammen med øvrige tester
 	@Test
 	fun `First attempt to Joark fails, the fourth succeeds`() {
 		val attemptsToFail = 3
@@ -162,7 +160,7 @@ class Application2Tests: TopologyTestDriverTests() {
 		verifyMetric(1, "delete files from filestorage")
 	}
 
-	@Disabled
+	@Disabled // TODO finn ut hvorfor testen ikke kjører på GHA sammen med øvrige tester
 	@Test
 	fun `Everything works, but Filestorage cannot delete files -- Message is nevertheless marked as finished`() {
 		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
@@ -196,7 +194,7 @@ class Application2Tests: TopologyTestDriverTests() {
 		Assertions.assertEquals(joarkSuccessesBefore + 1, metrics.getJoarkSuccesses())
 	}
 
-	@Disabled
+	@Disabled // TODO finn ut hvorfor testen ikke kjører på GHA sammen med øvrige tester
 	@Test
 	fun `Joark responds with status OK but invalid body -- will retry`() {
 		mockFilestorageIsWorking(fileUuid)
@@ -257,15 +255,15 @@ class Application2Tests: TopologyTestDriverTests() {
 	}
 
 	private fun verifyMessageStartsWith(expectedCount: Int, message: String, key: String = this.key) {
-		verifyMessageStartsWithUtils(kafkaPublisherMock, expectedCount, message, key)
+		verifyMessageStartsWithSupport(kafkaPublisherMock, expectedCount, message, key)
 	}
 
 	private fun verifyMetric(expectedCount: Int, metric: String, key: String = this.key) {
-		verifyMetricUtils(kafkaPublisherMock, expectedCount, metric, key)
+		verifyMetricSupport(kafkaPublisherMock, expectedCount, metric, key)
 	}
 
 	private fun verifyProcessingEvents(expectedCount: Int, eventType: EventTypes) {
-		verifyProcessingEventsUtils(kafkaPublisherMock, expectedCount, eventType, key)
+		verifyProcessingEventsSupport(kafkaPublisherMock, expectedCount, eventType, key)
 	}
 
 	private fun putDataOnKafkaTopic(data: Soknadarkivschema) {

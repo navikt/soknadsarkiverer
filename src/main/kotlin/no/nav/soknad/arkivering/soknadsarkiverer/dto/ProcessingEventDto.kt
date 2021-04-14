@@ -15,14 +15,6 @@ class ProcessingEventDto(processingEventStrings: List<String>) {
 		}
 	}
 
-	fun isFailed() = values.contains(ProcessingEvent(EventTypes.FAILURE))
-
-	fun isFinished() = values.contains(ProcessingEvent(EventTypes.FINISHED))
-
-	fun getNumberOfStarts(): Int {
-		return values.filter { it == ProcessingEvent(EventTypes.STARTED) }.count()
-	}
-
 	fun getNewestState(): ProcessingEvent {
 		if (values.contains(ProcessingEvent(EventTypes.FINISHED))) return ProcessingEvent(EventTypes.FINISHED)
 

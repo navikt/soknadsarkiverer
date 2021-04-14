@@ -254,6 +254,15 @@ class AdminInterfaceTests {
 		assertEquals(FilestorageExistenceStatus.DOES_NOT_EXIST, response[1].status)
 	}
 
+	@Test
+	fun `Can query if soknadsfillager is healthy`() {
+		mockFilestoragePingIsWorking()
+		mockJoarkIsWorking()
+
+		val response = adminInterface.pingFilestorage()
+
+		assertEquals(response, "pong")
+	}
 
 	private fun archiveOneEventSuccessfullyAndFailOne(key0: String = UUID.randomUUID().toString(),
 																										key1: String = UUID.randomUUID().toString()): Pair<Soknadarkivschema, Soknadarkivschema> {

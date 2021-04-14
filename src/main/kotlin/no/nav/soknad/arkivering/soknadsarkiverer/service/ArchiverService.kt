@@ -1,14 +1,10 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
-import no.nav.soknad.arkivering.avroschemas.EventTypes
-import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
-import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ShuttingDownException
-import no.nav.soknad.arkivering.soknadsarkiverer.config.protectFromShutdownInterruption
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException

@@ -143,11 +143,10 @@ class FilestorageServiceTests {
 		mockFilestoreageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 
-		try {
+		val e = assertThrows<Exception> {
 			filestorageService.getFilesFromFilestorage(key, soknadarkivschema)
-		} catch (e: Exception) {
-			assertTrue(e.cause is FilesAlreadyDeletedException)
 		}
+		assertTrue(e.cause is FilesAlreadyDeletedException)
 	}
 
 	@Test

@@ -2,7 +2,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
-import no.nav.soknad.arkivering.avroschemas.ArchivingStateSchema
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
@@ -10,7 +9,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.ProcessingEventDto
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.converter.createProcessEvent
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -55,7 +53,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 
 		inputTopicStream
 			.peek { key, value -> logger.info("$key: Processing InputTopic - $value") }
-			.foreach { key, e -> kafkaPublisher.putProcessingEventOnTopic(key, createProcessEvent(EventTypes.RECEIVED)) }
+			.foreach { key, e -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
 
 		processingTopicStream
 			.peek { key, value -> logger.info("$key: ProcessingTopic - ${value.type}") }
@@ -115,7 +113,6 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 
 		val kafkaStreams = KafkaStreams(topology, kafkaConfig(appConfiguration.kafkaConfig.groupId))
 
-		logger.info("SetupKafkaStreams: cleanUp kafka streams")
 		kafkaStreams.cleanUp()
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
 		kafkaStreams.start()

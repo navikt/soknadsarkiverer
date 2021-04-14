@@ -7,7 +7,6 @@ import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
-import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.*
@@ -21,7 +20,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers.startsWith
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -124,7 +122,6 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyRequestDataToJoark(soknadsarkivschema, request)
 	}
 
-	//@Disabled
 	@Test
 	fun `Sending in invalid data will not create Processing Events`() {
 		val invalidData = "this string is not deserializable"
@@ -163,7 +160,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyMetric(0, "delete files from filestorage")
 	}
 
-	@Disabled
+	@Disabled  // TODO finn ut hvorfor testen ikke kjører på GHA sammen med øvrige tester
 	@Test
 	fun `Poison pill followed by proper event -- Only proper one is sent to Joark`() {
 		val keyForPoisionPill = UUID.randomUUID().toString()
@@ -187,15 +184,15 @@ class ApplicationTests: TopologyTestDriverTests() {
 	}
 
 	private fun verifyMessageStartsWith(expectedCount: Int, message: String, key: String = this.key) {
-		verifyMessageStartsWithUtils(kafkaPublisherMock, expectedCount, message, key)
+		verifyMessageStartsWithSupport(kafkaPublisherMock, expectedCount, message, key)
 	}
 
 	private fun verifyMetric(expectedCount: Int, metric: String, key: String = this.key) {
-		verifyMetricUtils(kafkaPublisherMock, expectedCount, metric, key)
+		verifyMetricSupport(kafkaPublisherMock, expectedCount, metric, key)
 	}
 
 	private fun verifyProcessingEvents(expectedCount: Int, eventType: EventTypes) {
-		verifyProcessingEventsUtils(kafkaPublisherMock, expectedCount, eventType, key)
+		verifyProcessingEventsSupport(kafkaPublisherMock, expectedCount, eventType, key)
 	}
 
 	private fun putDataOnKafkaTopic(data: Soknadarkivschema) {
