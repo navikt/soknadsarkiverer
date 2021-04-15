@@ -40,7 +40,7 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 
 			val files = getFiles(fileIds)
 
-			logger.info("$key: Received files.size: ${files.size}")
+			logger.info("$key: Received ${files.size} files with a sum of ${files.map { it.fil?.size ?: 0 }.sum()} bytes")
 			metrics.incGetFilestorageSuccesses()
 			return files
 
@@ -148,8 +148,8 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 
 
 	private fun getFileIds(data: Soknadarkivschema) =
-		data.getMottatteDokumenter()
-			.flatMap { it.getMottatteVarianter().map { variant -> variant.getUuid() } }
+		data.mottatteDokumenter
+			.flatMap { it.mottatteVarianter.map { variant -> variant.uuid } }
 }
 
 const val filesInOneRequestToFilestorage = 5
