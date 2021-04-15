@@ -1,7 +1,5 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import no.nav.soknad.arkivering.soknadsarkiverer.admin.FilestorageExistenceStatus.*
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
@@ -36,11 +34,11 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 			return listOf(FilestorageExistenceResponse(key, FAILED_TO_FIND_FILE_IDS))
 		}
 
-		try {
+		return try {
 			val response = fileService.getFilesFromFilestorage(key, soknadarkivschema)
-			return response.map { FilestorageExistenceResponse(it.uuid, if (it.fil != null) EXISTS else DOES_NOT_EXIST) }
+			response.map { FilestorageExistenceResponse(it.uuid, if (it.fil != null) EXISTS else DOES_NOT_EXIST) }
 		} catch (e: FilesAlreadyDeletedException) {
-			return listOf(FilestorageExistenceResponse(key, DELETED))
+			listOf(FilestorageExistenceResponse(key, DELETED))
 		}
 	}
 

@@ -1,6 +1,5 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
@@ -12,8 +11,10 @@ import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
-import org.junit.jupiter.api.*
-import org.mockito.Mockito
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
@@ -25,13 +26,11 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
-//@Disabled
 @ActiveProfiles("test")
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 class Application2Tests: TopologyTestDriverTests() {
-
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
@@ -41,9 +40,6 @@ class Application2Tests: TopologyTestDriverTests() {
 
 	@Autowired
 	private lateinit var taskListService: TaskListService
-
-	@Autowired
-	private lateinit var objectMapper: ObjectMapper
 
 	@Autowired
 	private lateinit var metrics: ArchivingMetrics
@@ -64,22 +60,15 @@ class Application2Tests: TopologyTestDriverTests() {
 		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
 
 		maxNumberOfAttempts = appConfiguration.config.retryTime.size
-		Mockito.`when`(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(EventTypes.STARTED)), any())).doAnswer {putDataOnProcessingTopic(key, ProcessingEvent(
-			EventTypes.STARTED
-		)
-		)}
-		Mockito.`when`(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(EventTypes.ARCHIVED)), any())).doAnswer {putDataOnProcessingTopic(key, ProcessingEvent(
-			EventTypes.ARCHIVED
-		)
-		)}
-		Mockito.`when`(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(EventTypes.FINISHED)), any())).doAnswer {putDataOnProcessingTopic(key, ProcessingEvent(
-			EventTypes.FINISHED
-		)
-		)}
-		Mockito.`when`(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(EventTypes.FAILURE)), any())).doAnswer {putDataOnProcessingTopic(key, ProcessingEvent(
-			EventTypes.FAILURE
-		)
-		)}
+
+		fun mockProcessingEvent(eventType: EventTypes) {
+			whenever(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(eventType)), any()))
+				.doAnswer { putDataOnProcessingTopic(key, ProcessingEvent(eventType)) }
+		}
+		mockProcessingEvent(EventTypes.STARTED)
+		mockProcessingEvent(EventTypes.ARCHIVED)
+		mockProcessingEvent(EventTypes.FINISHED)
+		mockProcessingEvent(EventTypes.FAILURE)
 
 
 		setupKafkaTopologyTestDriver()
@@ -100,7 +89,7 @@ class Application2Tests: TopologyTestDriverTests() {
 		clearInvocations(kafkaPublisherMock)
 	}
 
-	@Disabled // TODO finn ut hvorfor testen ikke kjører på GHA sammen med øvrige tester
+	@Test
 	fun `First attempt to Joark fails, the second succeeds`() {
 		val tasksBefore = metrics.getTasks()
 		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
@@ -126,19 +115,14 @@ class Application2Tests: TopologyTestDriverTests() {
 		verifyMetric(1, "send files to archive")
 		verifyMetric(1, "delete files from filestorage")
 
-		Assertions.assertEquals(getFilestorageSuccessesBefore + 2, metrics.getGetFilestorageSuccesses())
-		Assertions.assertEquals(delFilestorageSuccessesBefore + 1, metrics.getDelFilestorageSuccesses())
-		Assertions.assertEquals(joarkErrorsBefore + 1, metrics.getJoarkErrors())
-		Assertions.assertEquals(joarkSuccessesBefore + 1, metrics.getJoarkSuccesses())
-		Assertions.assertEquals(tasksBefore + 0, metrics.getTasks(), "Should have created and finished task")
-		Assertions.assertEquals(
-			tasksGivenUpOnBefore + 0,
-			metrics.getTasksGivenUpOn(),
-			"Should not have given up on any task"
-		)
+		assertEquals(getFilestorageSuccessesBefore + 2, metrics.getGetFilestorageSuccesses())
+		assertEquals(delFilestorageSuccessesBefore + 1, metrics.getDelFilestorageSuccesses())
+		assertEquals(joarkErrorsBefore + 1, metrics.getJoarkErrors())
+		assertEquals(joarkSuccessesBefore + 1, metrics.getJoarkSuccesses())
+		assertEquals(tasksBefore + 0, metrics.getTasks(), "Should have created and finished task")
+		assertEquals(tasksGivenUpOnBefore + 0, metrics.getTasksGivenUpOn(), "Should not have given up on any task")
 	}
 
-	@Disabled // TODO finn ut hvorfor testen ikke kjører på GHA sammen med øvrige tester
 	@Test
 	fun `First attempt to Joark fails, the fourth succeeds`() {
 		val attemptsToFail = 3
@@ -160,7 +144,6 @@ class Application2Tests: TopologyTestDriverTests() {
 		verifyMetric(1, "delete files from filestorage")
 	}
 
-	@Disabled // TODO finn ut hvorfor testen ikke kjører på GHA sammen med øvrige tester
 	@Test
 	fun `Everything works, but Filestorage cannot delete files -- Message is nevertheless marked as finished`() {
 		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
@@ -187,14 +170,13 @@ class Application2Tests: TopologyTestDriverTests() {
 		verifyMetric(1, "send files to archive")
 		verifyMetric(1, "delete files from filestorage") // Metric succeeds even if the operation fails
 
-		Assertions.assertEquals(getFilestorageSuccessesBefore + 1, metrics.getGetFilestorageSuccesses())
-		Assertions.assertEquals(delFilestorageSuccessesBefore + 0, metrics.getDelFilestorageSuccesses())
-		Assertions.assertEquals(delFilestorageErrorsBefore + 1, metrics.getDelFilestorageErrors())
-		Assertions.assertEquals(joarkErrorsBefore + 0, metrics.getJoarkErrors())
-		Assertions.assertEquals(joarkSuccessesBefore + 1, metrics.getJoarkSuccesses())
+		assertEquals(getFilestorageSuccessesBefore + 1, metrics.getGetFilestorageSuccesses())
+		assertEquals(delFilestorageSuccessesBefore + 0, metrics.getDelFilestorageSuccesses())
+		assertEquals(delFilestorageErrorsBefore + 1, metrics.getDelFilestorageErrors())
+		assertEquals(joarkErrorsBefore + 0, metrics.getJoarkErrors())
+		assertEquals(joarkSuccessesBefore + 1, metrics.getJoarkSuccesses())
 	}
 
-	@Disabled // TODO finn ut hvorfor testen ikke kjører på GHA sammen med øvrige tester
 	@Test
 	fun `Joark responds with status OK but invalid body -- will retry`() {
 		mockFilestorageIsWorking(fileUuid)
@@ -244,14 +226,13 @@ class Application2Tests: TopologyTestDriverTests() {
 		verifyMetric(0, "send files to archive")
 		verifyMetric(1, "delete files from filestorage")
 
-		Assertions.assertEquals(getFilestorageErrorsBefore + 0, metrics.getGetFilestorageErrors())
-		Assertions.assertEquals(getFilestorageSuccessesBefore + 1, metrics.getGetFilestorageSuccesses())
-		Assertions.assertEquals(delFilestorageSuccessesBefore + 1, metrics.getDelFilestorageSuccesses())
-		Assertions.assertEquals(joarkErrorsBefore + 0, metrics.getJoarkErrors())
-		Assertions.assertEquals(joarkSuccessesBefore + 0, metrics.getJoarkSuccesses())
-		Assertions.assertEquals(tasksBefore, metrics.getTasks())
-		Assertions.assertEquals(tasksGivenUpOnBefore, metrics.getTasksGivenUpOn())
-
+		assertEquals(getFilestorageErrorsBefore + 0, metrics.getGetFilestorageErrors())
+		assertEquals(getFilestorageSuccessesBefore + 1, metrics.getGetFilestorageSuccesses())
+		assertEquals(delFilestorageSuccessesBefore + 1, metrics.getDelFilestorageSuccesses())
+		assertEquals(joarkErrorsBefore + 0, metrics.getJoarkErrors())
+		assertEquals(joarkSuccessesBefore + 0, metrics.getJoarkSuccesses())
+		assertEquals(tasksBefore, metrics.getTasks())
+		assertEquals(tasksGivenUpOnBefore, metrics.getTasksGivenUpOn())
 	}
 
 	private fun verifyMessageStartsWith(expectedCount: Int, message: String, key: String = this.key) {
@@ -275,5 +256,4 @@ class Application2Tests: TopologyTestDriverTests() {
 	}
 
 	private fun createSoknadarkivschema() = createSoknadarkivschema(fileUuid)
-
 }

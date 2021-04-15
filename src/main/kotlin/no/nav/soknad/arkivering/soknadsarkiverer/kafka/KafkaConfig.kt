@@ -30,10 +30,12 @@ import org.springframework.context.annotation.Configuration
 import java.util.*
 
 @Configuration
-class KafkaConfig(private val appConfiguration: AppConfiguration,
-									private val schedulerService: TaskListService,
-									private val kafkaPublisher: KafkaPublisher,
-									private val metrics: ArchivingMetrics) {
+class KafkaConfig(
+	private val appConfiguration: AppConfiguration,
+	private val schedulerService: TaskListService,
+	private val kafkaPublisher: KafkaPublisher,
+	private val metrics: ArchivingMetrics
+) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -43,7 +45,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	private val mutableListSerde: Serde<MutableList<String>> = MutableListSerde()
 
 
-	fun modifiedKafkaStreams(streamsBuilder: StreamsBuilder) {
+	fun kafkaStreams(streamsBuilder: StreamsBuilder) {
 		val joinDef = Joined.with(stringSerde, processingEventSerde, soknadarkivschemaSerde, "archivingState")
 		val materialized = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("ProcessingEventDtos").withValueSerde(mutableListSerde)
 		val inputTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.inputTopic, Consumed.with(stringSerde, soknadarkivschemaSerde))
@@ -53,12 +55,12 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 
 		inputTopicStream
 			.peek { key, value -> logger.info("$key: Processing InputTopic - $value") }
-			.foreach { key, e -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
+			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
 
 		processingTopicStream
 			.peek { key, value -> logger.info("$key: ProcessingTopic - ${value.type}") }
-		// Aggregere state slik at RECEIVED kan erstattes av alle etterfølgende states: STARTED, ARCHIVED, FAILED, FINISHED
-			.mapValues { processingEvent -> processingEvent.getType().name }
+			// Aggregere state slik at RECEIVED kan erstattes av alle etterfølgende states: STARTED, ARCHIVED, FAILED, FINISHED
+			.mapValues { processingEvent -> processingEvent.type.name }
 			.groupByKey()
 			.aggregate(  // Returnerer en tabell <Key, Value> der value er en Liste av eventtype
 				{ mutableListOf() }, // Initiator
@@ -69,25 +71,28 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 				materialized // Materialisert som KeyValue store
 			)
 			.mapValues { processingEvents -> ProcessingEventDto(processingEvents) } // mapper eventtype til ProcessingEventDto
-			.mapValues { processingEvents ->  processingEvents.getNewestState()}
+			.mapValues { processingEvents -> processingEvents.getNewestState() }
 			.toStream()
-			.peek{ key, state -> logger.debug("$key: ProcessingTopic filter with state $state")}
-			.filter {key, state -> !(erFerdig(key, state) ) }
-			.leftJoin(inputTable, { state, soknadarkivschema ->  soknadarkivschema to state }, joinDef) // Oppdatere state på tabell, archivingState, ved join av soknadarkivschema og state.
+			.peek { key, state -> logger.debug("$key: ProcessingTopic filter with state $state") }
+			.filter { key, state -> !(erFerdig(key, state)) }
+			.leftJoin(inputTable, { state, soknadarkivschema -> soknadarkivschema to state }, joinDef) // Oppdatere state på tabell, archivingState, ved join av soknadarkivschema og state.
 			.filter { key, (soknadsarkiveschema, _) -> filterSoknadsarkivschemaThatAreNull(key, soknadsarkiveschema) } // Ta bort alle innslag i tabell der soknadarkivschema er null.
 			.peek { key, (soknadsarkivschema, state) -> logger.debug("$key: ProcessingTopic scehdule job in state $state - ${soknadsarkivschema.print()}") }
 			.foreach { key, (soknadsarkivschema, state) -> schedulerService.addOrUpdateTask(key, soknadsarkivschema, state.type) } // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
-
 	}
 
 	private fun erFerdig(key: String, processingEvent: ProcessingEvent): Boolean {
-		if (processingEvent.type == EventTypes.FINISHED) {
-			schedulerService.finishTask(key)
-			return true
-		} else if (processingEvent.type == EventTypes.FAILURE) {
-			schedulerService.failTask(key)
-			return true
-		} else return false
+		return when (processingEvent.type) {
+			EventTypes.FINISHED -> {
+				schedulerService.finishTask(key)
+				true
+			}
+			EventTypes.FAILURE -> {
+				schedulerService.failTask(key)
+				true
+			}
+			else -> false
+		}
 	}
 
 
@@ -99,7 +104,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 
 	private fun Soknadarkivschema.print(): String {
 		val fnr = "" // Do not print fnr to log
-		val a = Soknadarkivschema(this.getBehandlingsid(), fnr, this.getArkivtema(), this.getInnsendtDato(), this.getSoknadstype(), this.getMottatteDokumenter())
+		val a = Soknadarkivschema(this.behandlingsid, fnr, this.arkivtema, this.innsendtDato, this.soknadstype, this.mottatteDokumenter)
 		return a.toString()
 	}
 
@@ -108,7 +113,7 @@ class KafkaConfig(private val appConfiguration: AppConfiguration,
 	fun setupKafkaStreams(): KafkaStreams {
 		metrics.setUpOrDown(1.0)
 		val streamsBuilder = StreamsBuilder()
-		modifiedKafkaStreams(streamsBuilder)
+		kafkaStreams(streamsBuilder)
 		val topology = streamsBuilder.build()
 
 		val kafkaStreams = KafkaStreams(topology, kafkaConfig(appConfiguration.kafkaConfig.groupId))

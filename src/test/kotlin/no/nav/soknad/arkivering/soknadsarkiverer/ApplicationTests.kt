@@ -18,7 +18,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -36,7 +35,6 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
-//@Disabled
 @ActiveProfiles("test")
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
@@ -140,7 +138,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyMetric(0, "delete files from filestorage")
 	}
 
-	@Disabled // TODO finn ut hvorfor testen ikke kjører på GHA sammen med øvrige tester
+	@Test
 	fun `Failing to send to Joark will cause retries`() {
 		mockFilestorageIsWorking(fileUuid)
 		mockJoarkIsDown()
@@ -160,7 +158,6 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyMetric(0, "delete files from filestorage")
 	}
 
-	@Disabled  // TODO finn ut hvorfor testen ikke kjører på GHA sammen med øvrige tester
 	@Test
 	fun `Poison pill followed by proper event -- Only proper one is sent to Joark`() {
 		val keyForPoisionPill = UUID.randomUUID().toString()
@@ -212,29 +209,29 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 	private fun verifyRequestDataToJoark(soknadsarkivschema: Soknadarkivschema, requestData: OpprettJournalpostRequest) {
 		val expected = OpprettJournalpostRequest(
-			AvsenderMottaker(soknadsarkivschema.getFodselsnummer(), "FNR"),
-			Bruker(soknadsarkivschema.getFodselsnummer(), "FNR"),
-			DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(soknadsarkivschema.getInnsendtDato()), ZoneOffset.UTC)),
+			AvsenderMottaker(soknadsarkivschema.fodselsnummer, "FNR"),
+			Bruker(soknadsarkivschema.fodselsnummer, "FNR"),
+			DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(soknadsarkivschema.innsendtDato), ZoneOffset.UTC)),
 			listOf(
 				Dokument(
-					soknadsarkivschema.getMottatteDokumenter()[0].getTittel(),
-					soknadsarkivschema.getMottatteDokumenter()[0].getSkjemanummer(),
+					soknadsarkivschema.mottatteDokumenter[0].tittel,
+					soknadsarkivschema.mottatteDokumenter[0].skjemanummer,
 					"SOK",
 					listOf(
 						DokumentVariant(
-							soknadsarkivschema.getMottatteDokumenter()[0].getMottatteVarianter()[0].getFilnavn(),
+							soknadsarkivschema.mottatteDokumenter[0].mottatteVarianter[0].filnavn,
 							"PDFA",
 							filestorageContent.toByteArray(),
-							soknadsarkivschema.getMottatteDokumenter()[0].getMottatteVarianter()[0].getVariantformat()
+							soknadsarkivschema.mottatteDokumenter[0].mottatteVarianter[0].variantformat
 						)
 					)
 				)
 			),
-			soknadsarkivschema.getBehandlingsid(),
+			soknadsarkivschema.behandlingsid,
 			"INNGAAENDE",
 			"NAV_NO",
-			soknadsarkivschema.getArkivtema(),
-			soknadsarkivschema.getMottatteDokumenter()[0].getTittel()
+			soknadsarkivschema.arkivtema,
+			soknadsarkivschema.mottatteDokumenter[0].tittel
 		)
 		assertEquals(expected, requestData)
 	}

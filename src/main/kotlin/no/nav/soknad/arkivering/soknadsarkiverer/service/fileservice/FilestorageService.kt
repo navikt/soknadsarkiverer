@@ -148,8 +148,8 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 
 
 	private fun getFileIds(data: Soknadarkivschema) =
-		data.getMottatteDokumenter()
-			.flatMap { it.getMottatteVarianter().map { variant -> variant.getUuid() } }
+		data.mottatteDokumenter
+			.flatMap { it.mottatteVarianter.map { variant -> variant.uuid } }
 }
 
 const val filesInOneRequestToFilestorage = 5

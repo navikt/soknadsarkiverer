@@ -1,6 +1,5 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
@@ -12,7 +11,10 @@ import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -25,7 +27,6 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
-//@Disabled
 @ActiveProfiles("test")
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
@@ -42,9 +43,6 @@ class Application3Tests: TopologyTestDriverTests() {
 	private lateinit var taskListService: TaskListService
 
 	@Autowired
-	private lateinit var objectMapper: ObjectMapper
-
-	@Autowired
 	private lateinit var metrics: ArchivingMetrics
 
 	@MockBean
@@ -54,8 +52,6 @@ class Application3Tests: TopologyTestDriverTests() {
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
 
 	private var maxNumberOfAttempts by Delegates.notNull<Int>()
-
-	private val fileUuid = UUID.randomUUID().toString()
 	private val key = UUID.randomUUID().toString()
 
 	@BeforeEach
@@ -98,7 +94,6 @@ class Application3Tests: TopologyTestDriverTests() {
 		clearInvocations(kafkaPublisherMock)
 	}
 
-	@Disabled // TODO finn ut hvorfor testen ikke kjører på GHA sammen med øvrige tester
 	@Test
 	fun `Failing to get files from Filestorage will cause retries`() {
 		val tasksBefore = metrics.getTasks()
@@ -125,16 +120,14 @@ class Application3Tests: TopologyTestDriverTests() {
 		verifyMetric(0, "send files to archive")
 		verifyMetric(0, "delete files from filestorage")
 
-		Assertions.assertEquals(getFilestorageErrorsBefore + maxNumberOfAttempts, metrics.getGetFilestorageErrors())
-		Assertions.assertEquals(getFilestorageSuccessesBefore + 0, metrics.getGetFilestorageSuccesses())
-		Assertions.assertEquals(delFilestorageSuccessesBefore + 0, metrics.getDelFilestorageSuccesses())
-		Assertions.assertEquals(joarkErrorsBefore + 0, metrics.getJoarkErrors())
-		Assertions.assertEquals(joarkSuccessesBefore + 0, metrics.getJoarkSuccesses())
-		Assertions.assertEquals(tasksBefore + 1, metrics.getTasks())
-		Assertions.assertEquals(tasksGivenUpOnBefore + 1, metrics.getTasksGivenUpOn())
-
+		assertEquals(getFilestorageErrorsBefore + maxNumberOfAttempts, metrics.getGetFilestorageErrors())
+		assertEquals(getFilestorageSuccessesBefore + 0, metrics.getGetFilestorageSuccesses())
+		assertEquals(delFilestorageSuccessesBefore + 0, metrics.getDelFilestorageSuccesses())
+		assertEquals(joarkErrorsBefore + 0, metrics.getJoarkErrors())
+		assertEquals(joarkSuccessesBefore + 0, metrics.getJoarkSuccesses())
+		assertEquals(tasksBefore + 1, metrics.getTasks())
+		assertEquals(tasksGivenUpOnBefore + 1, metrics.getTasksGivenUpOn())
 	}
-
 
 
 	@Test
@@ -162,14 +155,13 @@ class Application3Tests: TopologyTestDriverTests() {
 		verifyMetric(0, "send files to archive")
 		verifyMetric(1, "delete files from filestorage")
 
-		Assertions.assertEquals(getFilestorageErrorsBefore + 1, metrics.getGetFilestorageErrors())
-		Assertions.assertEquals(getFilestorageSuccessesBefore + 0, metrics.getGetFilestorageSuccesses())
-		Assertions.assertEquals(delFilestorageSuccessesBefore + 0, metrics.getDelFilestorageSuccesses())
-		Assertions.assertEquals(joarkErrorsBefore + 0, metrics.getJoarkErrors())
-		Assertions.assertEquals(joarkSuccessesBefore + 0, metrics.getJoarkSuccesses())
-		Assertions.assertEquals(tasksBefore, metrics.getTasks())
-		Assertions.assertEquals(tasksGivenUpOnBefore, metrics.getTasksGivenUpOn())
-
+		assertEquals(getFilestorageErrorsBefore + 1, metrics.getGetFilestorageErrors())
+		assertEquals(getFilestorageSuccessesBefore + 0, metrics.getGetFilestorageSuccesses())
+		assertEquals(delFilestorageSuccessesBefore + 0, metrics.getDelFilestorageSuccesses())
+		assertEquals(joarkErrorsBefore + 0, metrics.getJoarkErrors())
+		assertEquals(joarkSuccessesBefore + 0, metrics.getJoarkSuccesses())
+		assertEquals(tasksBefore, metrics.getTasks())
+		assertEquals(tasksGivenUpOnBefore, metrics.getTasksGivenUpOn())
 	}
 
 	private fun verifyMessageStartsWith(expectedCount: Int, message: String, key: String = this.key) {
@@ -188,12 +180,7 @@ class Application3Tests: TopologyTestDriverTests() {
 		putDataOnInputTopic(key, data)
 	}
 
-	private fun putDataOnKafkaTopic(key: String, data: String) {
-		putBadDataOnInputTopic(key, data)
-	}
-
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
 		verifyMockedDeleteRequests(expectedCount, appConfiguration.config.filestorageUrl.replace("?", "\\?") + ".*")
 	}
-
 }

@@ -3,11 +3,9 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service
 import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ShuttingDownException
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -15,8 +13,7 @@ import java.io.PrintWriter
 import java.io.StringWriter
 
 @Service
-class ArchiverService(private val appConfiguration: AppConfiguration,
-											private val filestorageService: FileserviceInterface,
+class ArchiverService(private val filestorageService: FileserviceInterface,
 											private val journalpostClient: JournalpostClientInterface,
 											private val kafkaPublisher: KafkaPublisher) {
 	private val logger = LoggerFactory.getLogger(javaClass)
@@ -26,11 +23,7 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 			val startTime = System.currentTimeMillis()
 			val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
 			createMetric(key, "send files to archive", startTime)
-			logger.info("$key: Opprettet journalpostId=${journalpostId} for behandlingsid=${data.getBehandlingsid()}")
-
-		} catch (e: ApplicationAlreadyArchivedException) {
-			createMessage(key, createExceptionMessage(e))
-			throw e
+			logger.info("$key: Opprettet journalpostId=$journalpostId for behandlingsid=${data.behandlingsid}")
 
 		} catch (e: Exception) {
 			createMessage(key, createExceptionMessage(e))
@@ -39,19 +32,15 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 	}
 
 	fun fetchFiles(key: String, data: Soknadarkivschema): List<FilElementDto> {
-		try {
+		return try {
 			val startTime = System.currentTimeMillis()
 			val files = filestorageService.getFilesFromFilestorage(key, data)
 			createMetric(key, "get files from filestorage", startTime)
-			return files
-
-		} catch (e: FilesAlreadyDeletedException) {
-			createMessage(key, createExceptionMessage(e))
-			throw e
+			files
 
 		} catch (e: ShuttingDownException) {
 			logger.warn("$key: Will not start to fetchFiles - application is shutting down.")
-			return ArrayList()
+			emptyList()
 
 		} catch (e: Exception) {
 			createMessage(key, createExceptionMessage(e))
@@ -80,8 +69,8 @@ class ArchiverService(private val appConfiguration: AppConfiguration,
 	}
 
 	private fun createMetric(key: String, message: String, startTime: Long) {
-
-		val metrics = InnsendingMetrics("soknadsarkiverer", message, startTime, System.currentTimeMillis() - startTime)
+		val duration = System.currentTimeMillis() - startTime
+		val metrics = InnsendingMetrics("soknadsarkiverer", message, startTime, duration)
 		kafkaPublisher.putMetricOnTopic(key, metrics)
 	}
 
