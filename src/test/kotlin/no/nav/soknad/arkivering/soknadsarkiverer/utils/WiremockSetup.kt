@@ -58,6 +58,10 @@ fun mockJoarkIsDown(delay: Int = 0) {
 	mockJoark(HttpStatus.NOT_FOUND.value(), "Mocked_exception", delay)
 }
 
+fun mockAlreadyArchivedResponse(delay: Int = 1) {
+	mockJoark(HttpStatus.CONFLICT.value(), "Already archived", delay)
+}
+
 fun mockJoarkRespondsAfterAttempts(attempts: Int) {
 
 	val stateNames = listOf(Scenario.STARTED).plus((0 until attempts).map { "iteration_$it" })
@@ -134,6 +138,14 @@ fun mockFilestorageIsDown() {
 			.willReturn(aResponse()
 				.withBody("Mocked exception for filestorage")
 				.withStatus(HttpStatus.SERVICE_UNAVAILABLE.value())))
+}
+
+fun mockRequestedFileIsGone() {
+	wiremockServer.stubFor(
+		get(urlMatching(filestorageUrl.replace("?", "\\?") + ".*"))
+			.willReturn(aResponse()
+				.withBody("Mocked exception for filestorage")
+				.withStatus(HttpStatus.GONE.value())))
 }
 
 fun mockFilestoragePingIsWorking() {

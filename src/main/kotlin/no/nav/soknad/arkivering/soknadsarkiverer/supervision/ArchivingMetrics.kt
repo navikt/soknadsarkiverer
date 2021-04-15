@@ -1,9 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
-import io.prometheus.client.CollectorRegistry
-import io.prometheus.client.Counter
-import io.prometheus.client.Gauge
-import io.prometheus.client.Summary
+import io.prometheus.client.*
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
@@ -14,6 +11,7 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 
 	private val SOKNAD_NAMESPACE = "soknadinnsending"
 	private val APP_LABEL = "app"
+	private val TEMA_LABEL = "tema"
 	private val APP = "soknadsarkiverer"
 
 
@@ -22,6 +20,9 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 
 	private val GAUGE_TASKS_GIVEN_UP_ON = "gauge_tasks_given_up_on"
 	private val GAUGE_TASKS_GIVEN_UP_ON_DESC = "Number of tasks given up on"
+
+	private val GAUGE_UP_DOWN = "gauge_up_or_downn"
+	private val GAUGE_UP_DOWN_DESC = "Up or down status"
 
 	private val SUMMARY_ARCHIVING_LATENCY = "latency_archiving_operations"
 	private val SUMMARY_ARCHIVING_LATENCY_DESC = "Latency for archiving"
@@ -53,8 +54,12 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 	private val SUMMARY_JOARK_LATENCY = "latency_joark_operations"
 	private val SUMMARY_JOARK_LATENCY_DESC = "Latency for sending to Joark"
 
+	private val HISTOGRAM_ARCHIVING_LATENCY = "histogram_latency_archiving_operations"
+	private val HISTORGRAM_ARCHIVING_LATENCY_DESC = "Histogram for latency for archiving"
+
 	private val taskGauge: Gauge = registerGauge(GAUGE_TASKS, GAUGE_TASKS_DESC)
 	private val tasksGivenUpOnGauge: Gauge = registerGauge(GAUGE_TASKS_GIVEN_UP_ON, GAUGE_TASKS_GIVEN_UP_ON_DESC)
+	private val upOrDownGauge: Gauge = registerGauge(GAUGE_UP_DOWN, GAUGE_UP_DOWN_DESC)
 	private val archivingLatencySummary = registerSummary(SUMMARY_ARCHIVING_LATENCY, SUMMARY_ARCHIVING_LATENCY_DESC)
 	private val filestorageGetSuccessCounter: Counter = registerCounter(COUNTER_FILESTORAGE_GET_SUCCESS, COUNTER_FILESTORAGE_GET_SUCCESS_DESC)
 	private val filestorageGetErrorCounter: Counter = registerCounter(COUNTER_FILESTORAGE_GET_ERROR, COUNTER_FILESTORAGE_GET_ERROR_DESC)
@@ -65,6 +70,11 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 	private val joarkSuccessCounter: Counter = registerCounter(COUNTER_JOARK_SUCCESS, COUNTER_JOARK_SUCCESS_DESC)
 	private val joarkErrorCounter: Counter = registerCounter(COUNTER_JOARK_ERROR, COUNTER_JOARK_ERROR_DESC)
 	private val joarkLatencySummary = registerSummary(SUMMARY_JOARK_LATENCY, SUMMARY_JOARK_LATENCY_DESC)
+	private val archivingLatencyHistogram = registerHistorgram(HISTOGRAM_ARCHIVING_LATENCY, HISTORGRAM_ARCHIVING_LATENCY_DESC)
+
+	private val HISTOGRAM_ATTACHMENT_NUMBER = "histogram_attachment_number"
+	private val HISTOGRAM_ATTACHMENT_NUMBER_DESC = "Histogram for number of attachment per application"
+	private val numberOfAttachmentHistogram = registerAttachmentNumberHistorgram(HISTOGRAM_ATTACHMENT_NUMBER, HISTOGRAM_ATTACHMENT_NUMBER_DESC)
 
 	private fun registerCounter(name: String, help: String): Counter =
 		Counter
@@ -96,6 +106,25 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 			.labelNames(APP_LABEL)
 			.register(registry)
 
+	private fun registerHistorgram(name: String, help: String): Histogram =
+		Histogram
+			.build()
+			.namespace(SOKNAD_NAMESPACE)
+			.name(name)
+			.help(help)
+			.buckets(0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 12.8, 25.6, 51.2, 100.2)
+			.labelNames(TEMA_LABEL)
+			.register(registry)
+
+	private fun registerAttachmentNumberHistorgram(name: String, help: String): Histogram =
+		Histogram
+			.build()
+			.namespace(SOKNAD_NAMESPACE)
+			.name(name)
+			.help(help)
+			.buckets(2.0, 3.0, 5.0, 8.0, 13.0, 21.0, 34.0)
+			.labelNames(TEMA_LABEL)
+			.register(registry)
 
 	fun incGetFilestorageSuccesses() = filestorageGetSuccessCounter.labels(APP).inc()
 	fun getGetFilestorageSuccesses() = filestorageGetSuccessCounter.labels(APP).get()
@@ -119,15 +148,26 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 	fun removeTask() = taskGauge.labels(APP).dec()
 	fun getTasks() = taskGauge.labels(APP).get()
 
-	fun setTasksGivenUpOn(value: Double) = tasksGivenUpOnGauge.labels(APP).set(value)
+	fun setTasksGivenUpOn(value: Double) = tasksGivenUpOnGauge.labels(APP).set(getTasksGivenUpOn()+value)
 	fun getTasksGivenUpOn() = tasksGivenUpOnGauge.labels(APP).get()
+
+	fun setUpOrDown(value: Double) = upOrDownGauge.labels(APP).set(value)
+	fun incUpOrDown() = upOrDownGauge.labels(APP).inc()
+	fun getUpOrDown() = upOrDownGauge.labels(APP).get()
 
 	fun archivingLatencyStart(): Summary.Timer = archivingLatencySummary.labels(APP).startTimer()
 	fun filestorageGetLatencyStart(): Summary.Timer = filestorageGetLatencySummary.labels(APP).startTimer()
 	fun filestorageDelLatencyStart(): Summary.Timer = filestorageDelLatencySummary.labels(APP).startTimer()
 	fun joarkLatencyStart(): Summary.Timer = joarkLatencySummary.labels(APP).startTimer()
+	fun archivingLatencyHistogramStart(tema: String): Histogram.Timer = archivingLatencyHistogram.labels(tema).startTimer()
+	fun numberOfAttachmentHistogramSet(number: Double, tema: String) = numberOfAttachmentHistogram.labels(tema).observe(number)
+	fun numberOfAttachmentHistogramGet(tema: String): Histogram.Child.Value = numberOfAttachmentHistogram.labels(tema).get()
 
 	fun endTimer(timer: Summary.Timer) {
+		timer.observeDuration()
+	}
+
+	fun endHistogramTimer(timer: Histogram.Timer) {
 		timer.observeDuration()
 	}
 
@@ -142,8 +182,11 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 		registry.unregister(filestorageDelLatencySummary)
 		registry.unregister(filestorageGetLatencySummary)
 		registry.unregister(archivingLatencySummary)
+		registry.unregister(archivingLatencyHistogram)
 		registry.unregister(tasksGivenUpOnGauge)
 		registry.unregister(taskGauge)
+		registry.unregister(upOrDownGauge)
+		registry.unregister(numberOfAttachmentHistogram)
 	}
 
 }

@@ -39,6 +39,9 @@ class HealthCheckTests {
 	@Autowired
 	private lateinit var journalpostClient: JournalpostClientInterface
 
+	@Autowired
+	private lateinit var metrics: ArchivingMetrics
+
 	private val appConfiguration = AppConfiguration()
 	private lateinit var healthCheck: HealthCheck
 
@@ -50,7 +53,7 @@ class HealthCheckTests {
 		mockFilestorageIsReadyIsWorking()
 		mockJoarkIsAliveIsWorking()
 
-		healthCheck = HealthCheck(appConfiguration, filestorage, journalpostClient)
+		healthCheck = HealthCheck(appConfiguration, filestorage, journalpostClient, metrics)
 	}
 
 	@AfterEach

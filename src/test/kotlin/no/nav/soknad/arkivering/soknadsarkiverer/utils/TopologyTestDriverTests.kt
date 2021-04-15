@@ -11,15 +11,18 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.*
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.TestInputTopic
 import org.apache.kafka.streams.TopologyTestDriver
 import org.mockito.ArgumentCaptor
+import org.slf4j.LoggerFactory
 import java.util.*
 
 open class TopologyTestDriverTests {
+	private val logger = LoggerFactory.getLogger(javaClass)
 
 	private lateinit var testDriver: TopologyTestDriver
 
@@ -27,9 +30,10 @@ open class TopologyTestDriverTests {
 	private lateinit var inputTopicForBadData: TestInputTopic<String, String>
 	private lateinit var processingEventTopic: TestInputTopic<String, ProcessingEvent>
 
-	private fun setupKafkaTopologyTestDriver(appConfiguration: AppConfiguration, taskListService: TaskListService, kafkaPublisher: KafkaPublisher) {
+	private fun setupKafkaTopologyTestDriver(appConfiguration: AppConfiguration, taskListService: TaskListService, kafkaPublisher: KafkaPublisher, metrics: ArchivingMetrics) {
+		logger.info("**setupKafkaTopologyTestDriver**")
 		val builder = StreamsBuilder()
-		KafkaConfig(appConfiguration, taskListService, kafkaPublisher).kafkaStreams(builder)
+		KafkaConfig(appConfiguration, taskListService, kafkaPublisher, metrics).modifiedKafkaStreams(builder)
 		val topology = builder.build()
 
 		// Dummy properties needed for test diver
@@ -65,6 +69,7 @@ open class TopologyTestDriverTests {
 	}
 
 	fun closeTestDriver() {
+		logger.info("**Closing testDriver**")
 		testDriver.close()
 	}
 
@@ -100,8 +105,6 @@ open class TopologyTestDriverTests {
 
 		fun putProcessingEventLogsOnTopic(): TopologyTestDriverBuilder {
 			putProcessingEventLogOnTopic(EventTypes.RECEIVED)
-			putProcessingEventLogOnTopic(EventTypes.STARTED)
-			putProcessingEventLogOnTopic(EventTypes.FINISHED)
 			return this
 		}
 
@@ -111,8 +114,8 @@ open class TopologyTestDriverTests {
 				.then { processingEventTopic.pipeInput(captor.value, ProcessingEvent(eventType)) }
 		}
 
-		fun setup() {
-			setupKafkaTopologyTestDriver(appConfiguration, taskListService, kafkaPublisher)
+		fun setup(metrics: ArchivingMetrics) {
+			setupKafkaTopologyTestDriver(appConfiguration, taskListService, kafkaPublisher, metrics)
 		}
 
 		private inline fun <reified T> argumentCaptor(): ArgumentCaptor<T> = ArgumentCaptor.forClass(T::class.java)

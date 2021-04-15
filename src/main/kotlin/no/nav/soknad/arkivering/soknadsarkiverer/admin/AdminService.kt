@@ -6,6 +6,7 @@ import kotlinx.coroutines.runBlocking
 import no.nav.soknad.arkivering.soknadsarkiverer.admin.FilestorageExistenceStatus.*
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Configuration
@@ -21,7 +22,7 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 
 	fun rerun(key: String) {
 		logger.info("$key: Performing forced rerun")
-		GlobalScope.launch { taskListService.pauseAndStart(key) }
+		taskListService.startPaNytt(key)
 	}
 
 	fun pingJoark() = joarkService.isAlive()
@@ -35,8 +36,12 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 			return listOf(FilestorageExistenceResponse(key, FAILED_TO_FIND_FILE_IDS))
 		}
 
-		val response = fileService.getFilesFromFilestorage(key, soknadarkivschema)
-		return response.map { FilestorageExistenceResponse(it.uuid, if (it.fil != null) EXISTS else DOES_NOT_EXIST) }
+		try {
+			val response = fileService.getFilesFromFilestorage(key, soknadarkivschema)
+			return response.map { FilestorageExistenceResponse(it.uuid, if (it.fil != null) EXISTS else DOES_NOT_EXIST) }
+		} catch (e: FilesAlreadyDeletedException) {
+			return listOf(FilestorageExistenceResponse(key, DELETED))
+		}
 	}
 
 

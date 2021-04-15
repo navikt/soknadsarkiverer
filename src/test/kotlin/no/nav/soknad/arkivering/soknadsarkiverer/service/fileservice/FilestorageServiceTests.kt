@@ -7,6 +7,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
@@ -135,6 +136,18 @@ class FilestorageServiceTests {
 		}
 	}
 
+	@Test
+	fun `getFilesFromFilestorage - Asking for 3 files - One of the files have been deleted - will throw FilesAlreadyDeletedException`() {
+		val numberOfFiles = 3
+		mockRequestedFileIsGone()
+		mockFilestoreageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
+		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
+
+		val e = assertThrows<Exception> {
+			filestorageService.getFilesFromFilestorage(key, soknadarkivschema)
+		}
+		assertTrue(e.cause is FilesAlreadyDeletedException)
+	}
 
 	@Test
 	fun `deleteFilesFromFilestorage - Deleting 0 files - Makes one request`() {
