@@ -4,6 +4,7 @@ import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
+import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
@@ -14,6 +15,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -26,6 +28,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
+@Disabled
 @ActiveProfiles("test")
 @SpringBootTest
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
@@ -65,10 +68,10 @@ class Application2Tests: TopologyTestDriverTests() {
 			whenever(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(eventType)), any()))
 				.doAnswer { putDataOnProcessingTopic(key, ProcessingEvent(eventType)) }
 		}
-		mockProcessingEvent(EventTypes.STARTED)
-		mockProcessingEvent(EventTypes.ARCHIVED)
-		mockProcessingEvent(EventTypes.FINISHED)
-		mockProcessingEvent(EventTypes.FAILURE)
+		mockProcessingEvent(STARTED)
+		mockProcessingEvent(ARCHIVED)
+		mockProcessingEvent(FINISHED)
+		mockProcessingEvent(FAILURE)
 
 
 		setupKafkaTopologyTestDriver()
@@ -104,9 +107,9 @@ class Application2Tests: TopologyTestDriverTests() {
 		putDataOnKafkaTopic(createSoknadarkivschema())
 		TimeUnit.SECONDS.sleep(8)
 
-		verifyProcessingEvents(1, EventTypes.STARTED)
-		verifyProcessingEvents(1, EventTypes.ARCHIVED)
-		verifyProcessingEvents(1, EventTypes.FINISHED)
+		verifyProcessingEvents(1, STARTED)
+		verifyProcessingEvents(1, ARCHIVED)
+		verifyProcessingEvents(1, FINISHED)
 		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "Exception")
@@ -132,9 +135,9 @@ class Application2Tests: TopologyTestDriverTests() {
 		putDataOnKafkaTopic(createSoknadarkivschema())
 		TimeUnit.SECONDS.sleep(8)
 
-		verifyProcessingEvents(1, EventTypes.STARTED)
-		verifyProcessingEvents(1, EventTypes.ARCHIVED)
-		verifyProcessingEvents(1, EventTypes.FINISHED)
+		verifyProcessingEvents(1, STARTED)
+		verifyProcessingEvents(1, ARCHIVED)
+		verifyProcessingEvents(1, FINISHED)
 		verifyMockedPostRequests(attemptsToFail + 1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "ok")
@@ -159,9 +162,9 @@ class Application2Tests: TopologyTestDriverTests() {
 		putDataOnKafkaTopic(createSoknadarkivschema())
 		TimeUnit.SECONDS.sleep(8)
 
-		verifyProcessingEvents(1, EventTypes.STARTED)
-		verifyProcessingEvents(1, EventTypes.ARCHIVED)
-		verifyProcessingEvents(1, EventTypes.FINISHED)
+		verifyProcessingEvents(1, STARTED)
+		verifyProcessingEvents(1, ARCHIVED)
+		verifyProcessingEvents(1, FINISHED)
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "ok")
@@ -185,11 +188,11 @@ class Application2Tests: TopologyTestDriverTests() {
 		putDataOnKafkaTopic(createSoknadarkivschema())
 		TimeUnit.SECONDS.sleep(8)
 
-		verifyProcessingEvents(1, EventTypes.RECEIVED)
-		verifyProcessingEvents(1, EventTypes.STARTED)
-		verifyProcessingEvents(0, EventTypes.ARCHIVED)
-		verifyProcessingEvents(0, EventTypes.FINISHED)
-		verifyProcessingEvents(1, EventTypes.FAILURE)
+		verifyProcessingEvents(1, RECEIVED)
+		verifyProcessingEvents(1, STARTED)
+		verifyProcessingEvents(0, ARCHIVED)
+		verifyProcessingEvents(0, FINISHED)
+		verifyProcessingEvents(1, FAILURE)
 		verifyMockedPostRequests(maxNumberOfAttempts, appConfiguration.config.joarkUrl)
 		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(maxNumberOfAttempts, "Exception")
@@ -216,10 +219,10 @@ class Application2Tests: TopologyTestDriverTests() {
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
 		TimeUnit.SECONDS.sleep(8)
-		verifyProcessingEvents(1, EventTypes.STARTED)
-		verifyProcessingEvents(1, EventTypes.ARCHIVED)
-		verifyProcessingEvents(1, EventTypes.FINISHED)
-		verifyProcessingEvents(0, EventTypes.FAILURE)
+		verifyProcessingEvents(1, STARTED)
+		verifyProcessingEvents(1, ARCHIVED)
+		verifyProcessingEvents(1, FINISHED)
+		verifyProcessingEvents(0, FAILURE)
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "ok")
 		verifyMetric(1, "get files from filestorage")

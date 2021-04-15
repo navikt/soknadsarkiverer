@@ -43,7 +43,7 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 	override fun opprettJournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FilElementDto>): String {
 		val timer = metrics.joarkLatencyStart()
 		try {
-			logger.info("$key: About to create journalpost for behandlingsId: '${soknadarkivschema.getBehandlingsid()}'")
+			logger.info("$key: About to create journalpost for behandlingsId: '${soknadarkivschema.behandlingsid}'")
 			val request: OpprettJournalpostRequest = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)
 
 			val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
@@ -57,7 +57,7 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 				val response = sendDataToJoark(request, url)
 				val journalpostId = response?.journalpostId ?: "-1"
 
-				logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.getBehandlingsid()}', got the following journalpostId: '$journalpostId'")
+				logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.behandlingsid}', got the following journalpostId: '$journalpostId'")
 				metrics.incJoarkSuccesses()
 				return journalpostId
 			}
