@@ -101,7 +101,7 @@ class TaskListService(private val archiverService: ArchiverService,
 			// When recreating state, there could be more state updates in the processLoggTopic.
 			// Wait a little while to make sure we don't start before all queued states are read inorder to process the most recent state.
 			logger.debug("$key: Sleeping for ${appConfiguration.config.secondsAfterStartupBeforeStarting} sec state - $state")
-			TimeUnit.SECONDS.sleep(appConfiguration.config.secondsAfterStartupBeforeStarting)
+			delay(appConfiguration.config.secondsAfterStartupBeforeStarting*1000)
 			logger.debug("$key: Slept ${appConfiguration.config.secondsAfterStartupBeforeStarting} sec state - $state")
 		}
 
