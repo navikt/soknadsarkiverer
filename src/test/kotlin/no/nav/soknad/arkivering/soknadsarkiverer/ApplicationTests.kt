@@ -25,6 +25,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.time.Instant
 import java.time.LocalDateTime
@@ -36,6 +37,7 @@ import kotlin.properties.Delegates
 
 @ActiveProfiles("test")
 @SpringBootTest
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 class ApplicationTests: TopologyTestDriverTests() {
@@ -72,14 +74,15 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 		maxNumberOfAttempts = appConfiguration.config.retryTime.size
 
-		fun mockProcessingEvent(eventType: EventTypes) {
+		fun mockPuttingProcessingEventOnTopic(eventType: EventTypes) {
 			whenever(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(eventType)), any()))
 				.doAnswer { putDataOnProcessingTopic(key, ProcessingEvent(eventType)) }
 		}
-		mockProcessingEvent(STARTED)
-		mockProcessingEvent(ARCHIVED)
-		mockProcessingEvent(FINISHED)
-		mockProcessingEvent(FAILURE)
+		mockPuttingProcessingEventOnTopic(RECEIVED)
+		mockPuttingProcessingEventOnTopic(STARTED)
+		mockPuttingProcessingEventOnTopic(ARCHIVED)
+		mockPuttingProcessingEventOnTopic(FINISHED)
+		mockPuttingProcessingEventOnTopic(FAILURE)
 
 
 		setupKafkaTopologyTestDriver()
@@ -313,8 +316,8 @@ class ApplicationTests: TopologyTestDriverTests() {
 		TimeUnit.SECONDS.sleep(8)
 
 		verifyProcessingEvents(1, STARTED)
-		verifyProcessingEvents(1, FINISHED)
 		verifyProcessingEvents(1, ARCHIVED)
+		verifyProcessingEvents(1, FINISHED)
 		verifyProcessingEvents(0, FAILURE)
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(1, "ok")
@@ -344,7 +347,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		mockFilestorageIsDown()
 		mockJoarkIsWorking()
 
-		putDataOnKafkaTopic(no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema())
+		putDataOnKafkaTopic(createSoknadarkivschema())
 		TimeUnit.SECONDS.sleep(8)
 		verifyProcessingEvents(1, STARTED)
 		verifyProcessingEvents(0, ARCHIVED)
@@ -379,7 +382,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		mockRequestedFileIsGone()
 		mockJoarkIsWorking()
 
-		putDataOnKafkaTopic(no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema())
+		putDataOnKafkaTopic(createSoknadarkivschema())
 		TimeUnit.SECONDS.sleep(8)
 		verifyProcessingEvents(1, STARTED)
 		verifyProcessingEvents(1, ARCHIVED)

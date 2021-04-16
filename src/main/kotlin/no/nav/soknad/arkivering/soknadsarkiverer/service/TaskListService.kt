@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.concurrent.Semaphore
-import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
 
 @Scope(SCOPE_SINGLETON) // This is a stateful component so it must be singleton
 @Service
@@ -99,7 +99,7 @@ class TaskListService(
 			// When recreating state, there could be more state updates in the processLoggTopic.
 			// Wait a little while to make sure we don't start before all queued states are read inorder to process the most recent state.
 			logger.debug("$key: Sleeping for ${appConfiguration.config.secondsAfterStartupBeforeStarting} sec state - $state")
-			TimeUnit.SECONDS.sleep(appConfiguration.config.secondsAfterStartupBeforeStarting)
+			delay(appConfiguration.config.secondsAfterStartupBeforeStarting * 1000)
 			logger.debug("$key: Slept ${appConfiguration.config.secondsAfterStartupBeforeStarting} sec state - $state")
 		}
 

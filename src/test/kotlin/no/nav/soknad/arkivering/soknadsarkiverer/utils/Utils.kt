@@ -25,7 +25,7 @@ fun loopAndVerifyAtLeast(expectedCount: Int, getCount: () -> Int,
 
 private fun loopAndVerify(getCount: () -> Int, expectedCount: Int, finalCheck: () -> Any, compareMethod: (Int, Int) -> Boolean) {
 	val startTime = System.currentTimeMillis()
-	val timeout = 30 * 1000
+	val timeout = 60 * 1000
 
 	while (System.currentTimeMillis() < startTime + timeout) {
 		val matches = getCount.invoke()
