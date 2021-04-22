@@ -7,6 +7,7 @@ import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
+import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.*
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
@@ -397,15 +399,48 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 
 	private fun verifyMessageStartsWith(expectedCount: Int, message: String, key: String = this.key) {
-		verifyMessageStartsWithSupport(kafkaPublisherMock, expectedCount, message, key)
+		val getCount = {
+			mockingDetails(kafkaPublisherMock)
+				.invocations.stream()
+				.filter { it.arguments[0] == key }
+				.filter { it.arguments[1] is String }
+				.filter { (it.arguments[1] as String).startsWith(message) }
+				.count()
+				.toInt()
+		}
+
+		val finalCheck = { verify(kafkaPublisherMock, times(expectedCount)).putMessageOnTopic(eq(key),
+			ArgumentMatchers.startsWith(message), any()) }
+		loopAndVerify(expectedCount, getCount, finalCheck)
 	}
 
 	private fun verifyMetric(expectedCount: Int, metric: String, key: String = this.key) {
-		verifyMetricSupport(kafkaPublisherMock, expectedCount, metric, key)
+		val getCount = {
+			mockingDetails(kafkaPublisherMock)
+				.invocations.stream()
+				.filter { it.arguments[0] == key }
+				.filter { it.arguments[1] is InnsendingMetrics }
+				.filter { (it.arguments[1] as InnsendingMetrics).toString().contains(metric) }
+				.count()
+				.toInt()
+		}
+
+		loopAndVerify(expectedCount, getCount)
 	}
 
 	private fun verifyProcessingEvents(expectedCount: Int, eventType: EventTypes) {
-		verifyProcessingEventsSupport(kafkaPublisherMock, expectedCount, eventType, key)
+		val type = ProcessingEvent(eventType)
+		val getCount = {
+			mockingDetails(kafkaPublisherMock)
+				.invocations.stream()
+				.filter { it.arguments[0] == key }
+				.filter { it.arguments[1] == type }
+				.count()
+				.toInt()
+		}
+
+		val finalCheck = { verify(kafkaPublisherMock, atLeast(expectedCount)).putProcessingEventOnTopic(eq(key), eq(type), any()) }
+		loopAndVerify(expectedCount, getCount, finalCheck)
 	}
 
 	private fun putDataOnKafkaTopic(data: Soknadarkivschema) {
