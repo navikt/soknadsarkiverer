@@ -277,8 +277,8 @@ class AdminInterfaceTests {
 
 	private fun archiveOneEventSuccessfullyAndFailOne(key0: String, key1: String, soknadarkivschema0: Soknadarkivschema, soknadarkivschema1: Soknadarkivschema) {
 		val uuidsAndResponses = listOf(
-				soknadarkivschema0.getMottatteDokumenter().flatMap { it.getMottatteVarianter().map { variant -> variant.getUuid() } },
-				soknadarkivschema1.getMottatteDokumenter().flatMap { it.getMottatteVarianter().map { variant -> variant.getUuid() } }
+				soknadarkivschema0.mottatteDokumenter.flatMap { it.mottatteVarianter.map { variant -> variant.uuid } },
+				soknadarkivschema1.mottatteDokumenter.flatMap { it.mottatteVarianter.map { variant -> variant.uuid } }
 			)
 			.flatten()
 			.distinct()
