@@ -59,6 +59,4 @@ class RestControllerSecurityConfig(private val config: AppConfiguration) : WebSe
 		entryPoint.realmName = "admin realm"
 		return entryPoint
 	}
-
-
 }

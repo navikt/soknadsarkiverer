@@ -28,6 +28,7 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 	@Hidden
 	@GetMapping("/isAlive")
 	fun isAlive() = if (applicationIsAlive()) {
+		logger.debug("/isAlive called - application is alive")
 		"Ok"
 	} else {
 		metrics.setUpOrDown(0.0)

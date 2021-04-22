@@ -113,7 +113,7 @@ class KafkaConfig(
 	fun setupKafkaStreams(): KafkaStreams {
 		metrics.setUpOrDown(1.0)
 		val streamsBuilder = StreamsBuilder()
-		kafkaStreams(streamsBuilder)
+		modifiedKafkaStreams(streamsBuilder)
 		val topology = streamsBuilder.build()
 
 		val kafkaStreams = KafkaStreams(topology, kafkaConfig(appConfiguration.kafkaConfig.groupId))

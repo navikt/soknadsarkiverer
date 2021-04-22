@@ -13,14 +13,13 @@ import java.time.format.DateTimeFormatter
 
 
 fun createOpprettJournalpostRequest(o: Soknadarkivschema, attachedFiles: List<FilElementDto>): OpprettJournalpostRequest {
-	val soknadstype = o.getSoknadstype()
-	val date = DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(o.getInnsendtDato()), ZoneOffset.UTC))
+	val date = DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(o.innsendtDato), ZoneOffset.UTC))
 
-	val documents = createDocuments(o.getMottatteDokumenter(), attachedFiles, soknadstype)
+	val documents = createDocuments(o.mottatteDokumenter, attachedFiles, o.soknadstype)
 	val tittel = getTitleFromMainDocument(documents)
 
-	return OpprettJournalpostRequest(AvsenderMottaker(o.getFodselsnummer(), "FNR"), Bruker(o.getFodselsnummer(), "FNR"), date, documents, o.getBehandlingsid(),
-		"INNGAAENDE", "NAV_NO", o.getArkivtema(), tittel)
+	return OpprettJournalpostRequest(AvsenderMottaker(o.fodselsnummer, "FNR"), Bruker(o.fodselsnummer, "FNR"),
+		date, documents, o.behandlingsid, "INNGAAENDE", "NAV_NO", o.arkivtema, tittel)
 }
 
 private fun getTitleFromMainDocument(documents: List<Dokument>): String {
@@ -47,7 +46,7 @@ private fun createDocuments(mottatteDokumenter: List<MottattDokument>, attachedF
 private fun createHoveddokument(documents: List<MottattDokument>, attachedFiles: List<FilElementDto>,
 																soknadstype: Soknadstyper): Dokument {
 	val hoveddokument = documents
-		.filter { it.getErHovedskjema() }
+		.filter { it.erHovedskjema }
 		.map { createDokument(it, attachedFiles, soknadstype) }
 
 	if (hoveddokument.size != 1)
@@ -58,12 +57,12 @@ private fun createHoveddokument(documents: List<MottattDokument>, attachedFiles:
 private fun createVedlegg(documents: List<MottattDokument>, attachedFiles: List<FilElementDto>,
 													soknadstype: Soknadstyper): List<Dokument> {
 	return documents
-		.filter { !it.getErHovedskjema() }
+		.filter { !it.erHovedskjema }
 		.map { createDokument(it, attachedFiles, soknadstype) }
 }
 
 private fun createDokument(document: MottattDokument, attachedFiles: List<FilElementDto>, soknadstype: Soknadstyper): Dokument {
-	val dokumentvarianter = document.getMottatteVarianter().map { createDokumentVariant(it, attachedFiles) }
+	val dokumentvarianter = document.mottatteVarianter.map { createDokumentVariant(it, attachedFiles) }
 	val skjemanummer = getSkjemanummer(document, soknadstype)
 
 	if (skjemanummer.isBlank()) {
@@ -73,23 +72,24 @@ private fun createDokument(document: MottattDokument, attachedFiles: List<FilEle
 	if (dokumentvarianter.isEmpty())
 		throw Exception("Expected there to be at least one DokumentVariant")
 
-	return Dokument(renameTitleDependingOnSoknadstype(document.getTittel(), soknadstype, document.getErHovedskjema()), skjemanummer, "SOK", dokumentvarianter)
+	return Dokument(renameTitleDependingOnSoknadstype(document.tittel, soknadstype, document.erHovedskjema),
+		skjemanummer, "SOK", dokumentvarianter)
 }
 
 private fun getSkjemanummer(document: MottattDokument, soknadstype: Soknadstyper): String {
 	return if (soknadstype == Soknadstyper.ETTERSENDING)
-		document.getSkjemanummer().replace("NAV ", "NAVe ")
+		document.skjemanummer.replace("NAV ", "NAVe ")
 	else
-		document.getSkjemanummer()
+		document.skjemanummer
 }
 
 private fun createDokumentVariant(variant: MottattVariant, attachedFiles: List<FilElementDto>): DokumentVariant {
-	val attachedFile = attachedFiles.filter { it.uuid == variant.getUuid() }
+	val attachedFile = attachedFiles.filter { it.uuid == variant.uuid }
 
 	if (attachedFile.size != 1)
-		throw Exception("Found ${attachedFile.size} files matching uuid '${variant.getUuid()}', expected 1")
+		throw Exception("Found ${attachedFile.size} files matching uuid '${variant.uuid}', expected 1")
 	if (attachedFile[0].fil == null)
-		throw Exception("File with uuid '${variant.getUuid()}' was null!")
+		throw Exception("File with uuid '${variant.uuid}' was null!")
 
-	return DokumentVariant(variant.getFilnavn(), if (variant.getFiltype() == "PDF/A") "PDFA" else variant.getFiltype(), attachedFile[0].fil!!, variant.getVariantformat())
+	return DokumentVariant(variant.filnavn, if (variant.filtype == "PDF/A") "PDFA" else variant.filtype, attachedFile[0].fil!!, variant.variantformat)
 }

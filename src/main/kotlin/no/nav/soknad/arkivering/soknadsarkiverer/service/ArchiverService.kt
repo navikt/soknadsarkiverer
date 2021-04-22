@@ -6,6 +6,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientI
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ShuttingDownException
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -63,6 +64,7 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 			throw e
 		}
 	}
+
 
 	private fun createMessage(key: String, message: String) {
 		kafkaPublisher.putMessageOnTopic(key, message)

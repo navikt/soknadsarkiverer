@@ -42,7 +42,7 @@ private fun getTypeRepresentation(data: Any?): PayloadType {
 	return when(data) {
 		is Soknadarkivschema -> PayloadType.INPUT
 		is ProcessingEvent -> {
-			when (data.getType()) {
+			when (data.type) {
 				EventTypes.RECEIVED -> PayloadType.RECEIVED
 				EventTypes.STARTED  -> PayloadType.STARTED
 				EventTypes.ARCHIVED -> PayloadType.ARCHIVED

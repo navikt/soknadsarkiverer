@@ -40,7 +40,7 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 
 			val files = getFiles(fileIds)
 
-			logger.info("$key: Received files.size: ${files.size}")
+			logger.info("$key: Received ${files.size} files with a sum of ${files.map { it.fil?.size ?: 0 }.sum()} bytes")
 			metrics.incGetFilestorageSuccesses()
 			return files
 

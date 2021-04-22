@@ -62,7 +62,7 @@ class KafkaPublisher(private val appConfiguration: AppConfiguration) {
 			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers
 			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java
-			if ("TRUE" == appConfiguration.kafkaConfig.secure) {
+			if (appConfiguration.kafkaConfig.secure == "TRUE") {
 				it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = appConfiguration.kafkaConfig.protocol
 				it[SaslConfigs.SASL_JAAS_CONFIG] = appConfiguration.kafkaConfig.saslJaasConfig
 				it[SaslConfigs.SASL_MECHANISM] = appConfiguration.kafkaConfig.salsmec
