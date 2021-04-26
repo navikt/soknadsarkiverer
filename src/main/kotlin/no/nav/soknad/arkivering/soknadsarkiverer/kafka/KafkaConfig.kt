@@ -122,6 +122,7 @@ class KafkaConfig(
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
 		kafkaStreams.start()
 		Runtime.getRuntime().addShutdownHook(Thread(kafkaStreams::close))
+		logger.debug("AppConfiguration: $appConfiguration")
 		return kafkaStreams
 	}
 
