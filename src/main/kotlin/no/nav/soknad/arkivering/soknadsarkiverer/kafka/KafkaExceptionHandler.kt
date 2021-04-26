@@ -52,7 +52,6 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 	override fun configure(configs: Map<String, *>) {
 		kafkaPublisher = getConfigForKey(configs, KAFKA_PUBLISHER) as KafkaPublisher
 		appConfiguration = getConfigForKey(configs, APP_CONFIGURATION) as AppConfiguration
-		logger.debug("AppConfiguration: $appConfiguration")
 	}
 
 	private fun getConfigForKey(configs: Map<String, *>, key: String): Any? {
