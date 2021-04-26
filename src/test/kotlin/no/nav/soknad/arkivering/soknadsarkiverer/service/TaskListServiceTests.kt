@@ -1,16 +1,15 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import com.nhaarman.mockitokotlin2.*
-import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
 import io.prometheus.client.CollectorRegistry
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
+import no.nav.soknad.arkivering.soknadsarkiverer.config.startUpSecondsForTest
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.schemaRegistryScope
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -98,7 +97,7 @@ class TaskListServiceTests {
 		runScheduledTaskOnScheduling()
 
 		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), EventTypes.RECEIVED)
-		TimeUnit.SECONDS.sleep(11) // ref secondsAfterStartupBeforeStarting
+		TimeUnit.SECONDS.sleep(startUpSecondsForTest + 2)
 
 		verify(archiverService, times(1)).archive(eq(key), any(), any())
 		verify(archiverService, times(1)).deleteFiles(eq(key), any())

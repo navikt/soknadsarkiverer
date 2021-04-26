@@ -33,7 +33,7 @@ open class TopologyTestDriverTests {
 	private fun setupKafkaTopologyTestDriver(appConfiguration: AppConfiguration, taskListService: TaskListService, kafkaPublisher: KafkaPublisher, metrics: ArchivingMetrics) {
 		logger.info("**setupKafkaTopologyTestDriver**")
 		val builder = StreamsBuilder()
-		KafkaConfig(appConfiguration, taskListService, kafkaPublisher, metrics).modifiedKafkaStreams(builder)
+		KafkaConfig(appConfiguration, taskListService, kafkaPublisher, metrics).kafkaStreams(builder)
 		val topology = builder.build()
 
 		// Dummy properties needed for test diver
