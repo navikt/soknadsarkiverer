@@ -22,10 +22,9 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 		val message = createMessage("Uncaught exception", e)
 		logger.error(message)
 
-		kafkaPublisher.putMessageOnTopic("null", message)
-
-
 		appConfiguration.state.up = false // Set state.up=false, which (through the Health Endpoint) will trigger a restart of this app instance
+
+		kafkaPublisher.putMessageOnTopic("null", message)
 	}
 
 	override fun handle(context: ProcessorContext, record: ConsumerRecord<ByteArray, ByteArray>, exception: Exception): DeserializationExceptionHandler.DeserializationHandlerResponse {
@@ -52,7 +51,6 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 	override fun configure(configs: Map<String, *>) {
 		kafkaPublisher = getConfigForKey(configs, KAFKA_PUBLISHER) as KafkaPublisher
 		appConfiguration = getConfigForKey(configs, APP_CONFIGURATION) as AppConfiguration
-		logger.debug("AppConfiguration: $appConfiguration")
 	}
 
 	private fun getConfigForKey(configs: Map<String, *>, key: String): Any? {
