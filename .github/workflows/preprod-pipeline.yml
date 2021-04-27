@@ -40,7 +40,7 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: '11.x'
-      - name: Maven build
+      - name: Build with maven
         env:
           GITHUB_USERNAME: x-access-token
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -129,6 +129,39 @@ jobs:
           PRINT_PAYLOAD: true
           CLUSTER: dev-fss
           RESOURCE: .nais/preprod-q1.yml
+          VAR: app_version=${{env.TAG}}
+          DRY_RUN: false
+          IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}
+
+  deploy-team-soknad:
+    name: Deploy to team-soknad
+    needs: bygg-app-preprod-pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download tag file
+        uses: actions/download-artifact@v1
+        with:
+          name: docker_tag
+      - name: Unpack
+        run: |
+          cp docker_tag/.docker_tag .
+          TAG=$(cat .docker_tag)
+          echo "TAG=${TAG}" >> $GITHUB_ENV
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Login to Github Package Registry
+        env:
+          DOCKER_USERNAME: x-access-token
+          DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin docker.pkg.github.com
+      - name: Deploy
+        uses: nais/deploy/actions/deploy@v1
+        env:
+          APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
+          PRINT_PAYLOAD: true
+          CLUSTER: dev-fss
+          RESOURCE: .nais/preprod-teamsoknad.yml
           VAR: app_version=${{env.TAG}}
           DRY_RUN: false
           IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}
