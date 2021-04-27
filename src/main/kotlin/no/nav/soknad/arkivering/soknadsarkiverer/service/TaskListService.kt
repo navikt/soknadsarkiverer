@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.concurrent.Semaphore
-import kotlin.time.Duration
 
 @Scope(SCOPE_SINGLETON) // This is a stateful component so it must be singleton
 @Service
@@ -327,6 +326,7 @@ class TaskListService(
 
 
 	private fun createProcessingEvent(key: String, type: EventTypes) {
+		logger.debug("$key: About to create processing event of type $type on topic ${appConfiguration.kafkaConfig.processingTopic}")
 		kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(type))
 	}
 
