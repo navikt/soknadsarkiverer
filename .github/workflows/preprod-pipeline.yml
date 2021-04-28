@@ -13,7 +13,6 @@ on:
     paths-ignore:
       - '**.md'
       - '.github/workflows/main.yml'
-      - '.github/workflows/preprod-default.yml'
 
 jobs:
   bygg-app-preprod-pipeline:
