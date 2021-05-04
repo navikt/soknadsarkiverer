@@ -326,7 +326,6 @@ class TaskListService(
 
 
 	private fun createProcessingEvent(key: String, type: EventTypes) {
-		logger.debug("$key: About to create processing event of type $type on topic ${appConfiguration.kafkaConfig.processingTopic}")
 		kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(type))
 	}
 
