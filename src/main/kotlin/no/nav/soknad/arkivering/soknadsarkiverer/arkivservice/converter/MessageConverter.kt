@@ -5,7 +5,7 @@ import no.nav.soknad.arkivering.avroschemas.MottattVariant
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.*
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.*
+import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset

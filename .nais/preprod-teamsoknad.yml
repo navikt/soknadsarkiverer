@@ -2,7 +2,7 @@ apiVersion: "nais.io/v1alpha1"
 kind: "Application"
 metadata:
   name: soknadsarkiverer
-  namespace: default
+  namespace: team-soknad
   labels:
     team: team-soknad
 spec:
@@ -68,15 +68,15 @@ spec:
     - name: SPRING_PROFILES_ACTIVE
       value: dev
     - name: KAFKA_INPUT_TOPIC
-      value: privat-soknadInnsendt-v1-default
+      value: privat-soknadInnsendt-v1-teamsoknad
     - name: KAFKA_PROCESSING_TOPIC
-      value: privat-soknadInnsendt-processingEventLog-v1-default
+      value: privat-soknadInnsendt-processingEventLog-v1-teamsoknad
     - name: KAFKA_MESSAGE_TOPIC
-      value: privat-soknadInnsendt-messages-v1-default
+      value: privat-soknadInnsendt-messages-v1-teamsoknad
     - name: KAFKA_METRICS_TOPIC
-      value: privat-soknadInnsendt-metrics-v1-default
+      value: privat-soknadInnsendt-metrics-v1-teamsoknad
     - name: KAFKA_GROUPID
-      value: soknadsarkiverer-groupid-default
+      value: soknadsarkiverer-groupid-teamsoknad
     - name: FILESTORAGE_HOST
       value: https://soknadsfillager.dev.adeo.no
     - name: JOARK_HOST
