@@ -29,6 +29,7 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 	private val inputTopic = appConfiguration.kafkaConfig.inputTopic
 	private val processingTopic = appConfiguration.kafkaConfig.processingTopic
 	private val messageTopic = appConfiguration.kafkaConfig.messageTopic
+	private val metricsTopic = appConfiguration.kafkaConfig.metricsTopic
 
 
 	internal fun getAllKafkaRecords(eventCollectionBuilder: EventCollection.Builder): List<KafkaEvent<String>> {
@@ -37,7 +38,8 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 			val records = awaitAll(
 				getAllInputRecordsAsync(eventCollectionBuilder),
 				getAllProcessingRecordsAsync(eventCollectionBuilder),
-				getAllMessageRecordsAsync(eventCollectionBuilder)
+				getAllMessageRecordsAsync(eventCollectionBuilder),
+				getAllMetricsRecordsAsync(eventCollectionBuilder)
 			)
 				.flatten()
 				.map { KafkaEvent(it.sequence, it.innsendingKey, it.messageId, it.timestamp, it.type, it.content.toString()) }
@@ -56,6 +58,9 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 	}
 	private fun getAllMessageRecordsAsync(eventCollectionBuilder: EventCollection.Builder) = GlobalScope.async {
 		getAllKafkaRecords(messageTopic, "MESSAGE", StringDeserializer(), eventCollectionBuilder.build())
+	}
+	private fun getAllMetricsRecordsAsync(eventCollectionBuilder: EventCollection.Builder) = GlobalScope.async {
+		getAllKafkaRecords(metricsTopic, "METRICS", PoisonSwallowingAvroDeserializer(), eventCollectionBuilder.build())
 	}
 
 	private fun <T> getAllKafkaRecords(topic: String, recordType: String, valueDeserializer: Deserializer<T>, eventCollection: EventCollection<T>): List<KafkaEvent<T>> {

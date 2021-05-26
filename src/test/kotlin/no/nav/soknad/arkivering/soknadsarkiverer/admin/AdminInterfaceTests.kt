@@ -4,7 +4,7 @@ import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.*
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 @DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
 @Import(EmbeddedKafkaBrokerConfig::class)
-@EmbeddedKafka(topics = ["privat-soknadInnsendt-v1-teamsoknad", "privat-soknadInnsendt-processingEventLog-v1-teamsoknad", "privat-soknadInnsendt-messages-v1-teamsoknad"])
+@EmbeddedKafka(topics = [kafkaInputTopic, kafkaProcessingTopic, kafkaMessageTopic, kafkaMetricsTopic])
 class AdminInterfaceTests {
 
 	@Value("\${application.mocked-port-for-external-services}")
@@ -144,8 +144,9 @@ class AdminInterfaceTests {
 
 		val numberOfInputs = 2
 		val numberOfMessages = 1 + maxNumberOfAttempts // 1 "ok" message, a number of mocked exceptions
-		val numberOfProcessingEvents = 4 + 3  // 4 for the first event, 3  for the second
-		loopAndVerifyAtLeast(numberOfInputs + numberOfMessages + numberOfProcessingEvents, eventsAfter)
+		val numberOfProcessingEvents = 4 + 3  // 4 for the first event, 3 for the second
+		val numberOfMetricEvents = 3 + maxNumberOfAttempts // 3 for the successful event, maxNumberOfAttempts getFiles-events for the failing
+		loopAndVerifyAtLeast(numberOfInputs + numberOfMessages + numberOfProcessingEvents + numberOfMetricEvents, eventsAfter)
 	}
 
 	@Test
@@ -163,7 +164,8 @@ class AdminInterfaceTests {
 		val numberOfInputs = 2
 		val numberOfMessages = maxNumberOfAttempts // mocked exceptions
 		val numberOfProcessingEvents = 2 // 1*Started, 1*Failure
-		loopAndVerifyAtLeast(numberOfInputs + numberOfMessages + numberOfProcessingEvents, eventsAfter)
+		val numberOfMetricEvents = maxNumberOfAttempts // maxNumberOfAttempts getFiles-events for the failing
+		loopAndVerifyAtLeast(numberOfInputs + numberOfMessages + numberOfMetricEvents + numberOfProcessingEvents, eventsAfter)
 	}
 
 	@Test
@@ -177,7 +179,8 @@ class AdminInterfaceTests {
 		val numberOfInputs = 1
 		val numberOfMessages = 1 // "ok" message
 		val numberOfProcessingEvents = 4
-		assertEquals(numberOfInputs + numberOfMessages + numberOfProcessingEvents, events.size)
+		val numberOfMetricEvents = 3 // 3 for the successful event
+		assertEquals(numberOfInputs + numberOfMessages + numberOfMetricEvents + numberOfProcessingEvents, events.size)
 	}
 
 

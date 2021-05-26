@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 
 fun loopAndVerify(expectedCount: Int, getCount: () -> Int,
 									finalCheck: () -> Any = { assertEquals(expectedCount, getCount.invoke()) }) {
-	loopAndVerify(getCount, expectedCount, finalCheck, { a, b -> a == b } )
+	loopAndVerify(getCount, expectedCount, finalCheck) { a, b -> a == b }
 }
 
 fun loopAndVerifyAtLeast(expectedCount: Int, getCount: () -> Int,
@@ -14,7 +14,7 @@ fun loopAndVerifyAtLeast(expectedCount: Int, getCount: () -> Int,
 													 val actual = getCount.invoke()
 													 assertTrue(expectedCount <= actual, "Expected $expectedCount, was $actual")
 												 }) {
-	loopAndVerify(getCount, expectedCount, finalCheck, { a, b -> a <= b } )
+	loopAndVerify(getCount, expectedCount, finalCheck) { a, b -> a <= b }
 }
 
 private fun loopAndVerify(getCount: () -> Int, expectedCount: Int, finalCheck: () -> Any, compareMethod: (Int, Int) -> Boolean) {
