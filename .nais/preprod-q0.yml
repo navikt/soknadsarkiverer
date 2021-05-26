@@ -27,7 +27,7 @@ spec:
   resources:
     limits:
       cpu: 3000m
-      memory: 4Gi
+      memory: 8Gi
     requests:
       cpu: 1000m
       memory: 1024Mi
@@ -76,7 +76,7 @@ spec:
     - name: KAFKA_METRICS_TOPIC
       value: privat-soknadInnsendt-metrics-v1-q0
     - name: KAFKA_GROUPID
-      value: soknadsarkiverer-groupidXX-q0
+      value: soknadsarkiverer-groupid-q0
     - name: FILESTORAGE_HOST
       value: https://soknadsfillager-q0.dev.adeo.no
     - name: JOARK_HOST
