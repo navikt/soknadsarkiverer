@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 @DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
 @Import(EmbeddedKafkaBrokerConfig::class)
-@EmbeddedKafka(topics = ["privat-soknadInnsendt-v1-default", "privat-soknadInnsendt-processingEventLog-v1-default", "privat-soknadInnsendt-messages-v1-default"])
+@EmbeddedKafka(topics = ["privat-soknadInnsendt-v1-teamsoknad", "privat-soknadInnsendt-processingEventLog-v1-teamsoknad", "privat-soknadInnsendt-messages-v1-teamsoknad"])
 class AdminInterfaceTests {
 
 	@Value("\${application.mocked-port-for-external-services}")
