@@ -2,6 +2,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
 import io.swagger.v3.oas.annotations.media.Schema
 import no.nav.soknad.arkivering.avroschemas.EventTypes
+import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import javax.validation.constraints.NotBlank
@@ -41,13 +42,15 @@ data class KafkaEvent<T>(
 private fun getTypeRepresentation(data: Any?): PayloadType {
 	return when(data) {
 		is Soknadarkivschema -> PayloadType.INPUT
+		is InnsendingMetrics -> PayloadType.METRIC
 		is ProcessingEvent -> {
 			when (data.type) {
 				EventTypes.RECEIVED -> PayloadType.RECEIVED
 				EventTypes.STARTED  -> PayloadType.STARTED
 				EventTypes.ARCHIVED -> PayloadType.ARCHIVED
 				EventTypes.FINISHED -> PayloadType.FINISHED
-				else -> PayloadType.UNKNOWN
+				EventTypes.FAILURE  -> PayloadType.FAILURE
+				null                -> PayloadType.UNKNOWN
 			}
 		}
 		is String -> {
@@ -61,4 +64,4 @@ private fun getTypeRepresentation(data: Any?): PayloadType {
 	}
 }
 
-enum class PayloadType { INPUT, RECEIVED, STARTED, ARCHIVED, FINISHED, MESSAGE_OK, MESSAGE_EXCEPTION, UNKNOWN }
+enum class PayloadType { INPUT, RECEIVED, STARTED, ARCHIVED, FINISHED, FAILURE, MESSAGE_OK, MESSAGE_EXCEPTION, METRIC, UNKNOWN }

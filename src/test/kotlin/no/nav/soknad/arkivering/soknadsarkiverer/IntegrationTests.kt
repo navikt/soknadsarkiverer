@@ -5,6 +5,9 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.kafkaInputTopic
+import no.nav.soknad.arkivering.soknadsarkiverer.config.kafkaMessageTopic
+import no.nav.soknad.arkivering.soknadsarkiverer.config.kafkaProcessingTopic
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -37,7 +40,7 @@ import java.util.concurrent.TimeUnit
 @Import(EmbeddedKafkaBrokerConfig::class)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
-@EmbeddedKafka(topics = ["privat-soknadInnsendt-v1-teamsoknad", "privat-soknadInnsendt-processingEventLog-v1-teamsoknad", "privat-soknadInnsendt-messages-v1-teamsoknad"])
+@EmbeddedKafka(topics = [kafkaInputTopic, kafkaProcessingTopic, kafkaMessageTopic])
 class IntegrationTests {
 
 	@MockBean

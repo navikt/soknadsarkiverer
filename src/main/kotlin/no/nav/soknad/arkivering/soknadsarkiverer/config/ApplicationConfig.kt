@@ -8,6 +8,11 @@ import org.springframework.core.env.ConfigurableEnvironment
 import java.io.File
 import javax.annotation.Priority
 
+const val kafkaInputTopic = "privat-soknadInnsendt-v1-teamsoknad"
+const val kafkaProcessingTopic = "privat-soknadInnsendt-processingEventLog-v1-teamsoknad"
+const val kafkaMessageTopic = "privat-soknadInnsendt-messages-v1-teamsoknad"
+const val kafkaMetricsTopic = "privat-soknadInnsendt-metrics-v1-teamsoknad"
+
 private val defaultProperties = ConfigurationMap(mapOf(
 	"APP_VERSION" to "",
 	"SOKNADSARKIVERER_USERNAME" to "arkiverer",
@@ -19,10 +24,10 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_SECPROT" to "",
 	"KAFKA_SASLMEC" to "",
 	"SPRING_PROFILES_ACTIVE" to "spring",
-	"KAFKA_INPUT_TOPIC" to "privat-soknadInnsendt-v1-teamsoknad",
-	"KAFKA_PROCESSING_TOPIC" to "privat-soknadInnsendt-processingEventLog-v1-teamsoknad",
-	"KAFKA_MESSAGE_TOPIC" to "privat-soknadInnsendt-messages-v1-teamsoknad",
-	"KAFKA_METRICS_TOPIC" to "privat-soknadInnsendt-metrics-v1-teamsoknad",
+	"KAFKA_INPUT_TOPIC" to kafkaInputTopic,
+	"KAFKA_PROCESSING_TOPIC" to kafkaProcessingTopic,
+	"KAFKA_MESSAGE_TOPIC" to kafkaMessageTopic,
+	"KAFKA_METRICS_TOPIC" to kafkaMetricsTopic,
 	"KAFKA_GROUPID" to "soknadsarkiverer-group-defaultid",
 	"MAX_MESSAGE_SIZE" to (1024 * 1024 * 300).toString(),
 
