@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<link rel="icon" type="image/png" href="/favicon.png">
+</head>
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v5.js"></script>
+
+<div id="content">
+	<div id="timeline"></div>
+	<div id="loader" class="loader">Loading...</div>
+	<div id="detailsbox">
+		<div id="details"><span id="detailskey" class="detailskey">Click on a row to see details</span></div>
+		<div id="expandedtimeline"></div>
+		<div id="expandedtimelinetooltip"></div>
+		<table id="timeseriestable"></table>
+	</div>
+</div>
+
+<style>
+	body {
+		margin: 0;
+		overflow-x: hidden;
+	}
+
+	tbody tr:nth-child(even) {
+		background-color: #eee;
+	}
+	.hoverable {
+		fill: none;
+		pointer-events: all;
+	}
+	.hoverable:hover {
+		fill: #eee;
+		opacity: 0.5;
+	}
+
+	#content {
+		height: 100vh;
+		display: flex;
+		flex-direction: column;
+	}
+
+	#timeline {
+		flex-grow: 1;
+		overflow: scroll;
+		overflow-x: hidden;
+	}
+
+	#timeseriestable {
+		padding: 1ex;
+	}
+
+	#detailsbox {
+		height: 20em;
+		width: 100%;
+	}
+
+	#expandedtimelinetooltip {
+		display: none;
+		position: absolute;
+		border-radius: .4em;
+		float: left;
+		padding: 1ex;
+		border: black 2px solid;
+		background-color: #FFF;
+	}
+
+	#ruler {
+		overflow: hidden;
+		height: 100px;
+		position: absolute;
+		border-right: 1px dotted #000;
+		text-align: right;
+	}
+	.legendcolour {
+		border-radius: 25px;
+		min-width: 1ex;
+		padding: 1ex;
+	}
+	.durationColumn {
+		text-align: right;
+	}
+	.tableHeader {
+		font-weight: bold;
+	}
+	#details {
+		text-align: center;
+	}
+	.detailslabel {
+		color: grey;
+		margin-right: 0.5em;
+	}
+	.detailskey {
+		display: none;
+		font-size: 20px;
+		margin-right: 0.5em;
+	}
+
+
+	.loader {
+		color: #000;
+		font-size: 20px;
+		margin: 100px auto;
+		width: 1em;
+		height: 1em;
+		border-radius: 50%;
+		position: relative;
+		text-indent: -9999em;
+		-webkit-animation: load4 1.3s infinite linear;
+		animation: load4 1.3s infinite linear;
+		-webkit-transform: translateZ(0);
+		-ms-transform: translateZ(0);
+		transform: translateZ(0);
+	}
+	@-webkit-keyframes load4 {
+		0%,
+		100% {
+			box-shadow: 0 -3em 0 0.2em, 2em -2em 0 0em, 3em 0 0 -1em, 2em 2em 0 -1em, 0 3em 0 -1em, -2em 2em 0 -1em, -3em 0 0 -1em, -2em -2em 0 0;
+		}
+		12.5% {
+			box-shadow: 0 -3em 0 0, 2em -2em 0 0.2em, 3em 0 0 0, 2em 2em 0 -1em, 0 3em 0 -1em, -2em 2em 0 -1em, -3em 0 0 -1em, -2em -2em 0 -1em;
+		}
+		25% {
+			box-shadow: 0 -3em 0 -0.5em, 2em -2em 0 0, 3em 0 0 0.2em, 2em 2em 0 0, 0 3em 0 -1em, -2em 2em 0 -1em, -3em 0 0 -1em, -2em -2em 0 -1em;
+		}
+		37.5% {
+			box-shadow: 0 -3em 0 -1em, 2em -2em 0 -1em, 3em 0em 0 0, 2em 2em 0 0.2em, 0 3em 0 0em, -2em 2em 0 -1em, -3em 0em 0 -1em, -2em -2em 0 -1em;
+		}
+		50% {
+			box-shadow: 0 -3em 0 -1em, 2em -2em 0 -1em, 3em 0 0 -1em, 2em 2em 0 0em, 0 3em 0 0.2em, -2em 2em 0 0, -3em 0em 0 -1em, -2em -2em 0 -1em;
+		}
+		62.5% {
+			box-shadow: 0 -3em 0 -1em, 2em -2em 0 -1em, 3em 0 0 -1em, 2em 2em 0 -1em, 0 3em 0 0, -2em 2em 0 0.2em, -3em 0 0 0, -2em -2em 0 -1em;
+		}
+		75% {
+			box-shadow: 0em -3em 0 -1em, 2em -2em 0 -1em, 3em 0em 0 -1em, 2em 2em 0 -1em, 0 3em 0 -1em, -2em 2em 0 0, -3em 0em 0 0.2em, -2em -2em 0 0;
+		}
+		87.5% {
+			box-shadow: 0em -3em 0 0, 2em -2em 0 -1em, 3em 0 0 -1em, 2em 2em 0 -1em, 0 3em 0 -1em, -2em 2em 0 0, -3em 0em 0 0, -2em -2em 0 0.2em;
+		}
+	}
+	@keyframes load4 {
+		0%,
+		100% {
+			box-shadow: 0 -3em 0 0.2em, 2em -2em 0 0em, 3em 0 0 -1em, 2em 2em 0 -1em, 0 3em 0 -1em, -2em 2em 0 -1em, -3em 0 0 -1em, -2em -2em 0 0;
+		}
+		12.5% {
+			box-shadow: 0 -3em 0 0, 2em -2em 0 0.2em, 3em 0 0 0, 2em 2em 0 -1em, 0 3em 0 -1em, -2em 2em 0 -1em, -3em 0 0 -1em, -2em -2em 0 -1em;
+		}
+		25% {
+			box-shadow: 0 -3em 0 -0.5em, 2em -2em 0 0, 3em 0 0 0.2em, 2em 2em 0 0, 0 3em 0 -1em, -2em 2em 0 -1em, -3em 0 0 -1em, -2em -2em 0 -1em;
+		}
+		37.5% {
+			box-shadow: 0 -3em 0 -1em, 2em -2em 0 -1em, 3em 0em 0 0, 2em 2em 0 0.2em, 0 3em 0 0em, -2em 2em 0 -1em, -3em 0em 0 -1em, -2em -2em 0 -1em;
+		}
+		50% {
+			box-shadow: 0 -3em 0 -1em, 2em -2em 0 -1em, 3em 0 0 -1em, 2em 2em 0 0em, 0 3em 0 0.2em, -2em 2em 0 0, -3em 0em 0 -1em, -2em -2em 0 -1em;
+		}
+		62.5% {
+			box-shadow: 0 -3em 0 -1em, 2em -2em 0 -1em, 3em 0 0 -1em, 2em 2em 0 -1em, 0 3em 0 0, -2em 2em 0 0.2em, -3em 0 0 0, -2em -2em 0 -1em;
+		}
+		75% {
+			box-shadow: 0em -3em 0 -1em, 2em -2em 0 -1em, 3em 0em 0 -1em, 2em 2em 0 -1em, 0 3em 0 -1em, -2em 2em 0 0, -3em 0em 0 0.2em, -2em -2em 0 0;
+		}
+		87.5% {
+			box-shadow: 0em -3em 0 0, 2em -2em 0 -1em, 3em 0 0 -1em, 2em 2em 0 -1em, 0 3em 0 -1em, -2em 2em 0 0, -3em 0em 0 0, -2em -2em 0 0.2em;
+		}
+	}
+</style>
+
+
+<script>
+	let oldSelectedElem = null;
+	function changeRowSelection(elem) {
+		if (oldSelectedElem)
+			d3.select(oldSelectedElem).style("fill", "");
+		d3.select(elem).style("fill", "#ccc");
+		oldSelectedElem = elem;
+	}
+
+	function timeConversion(millisec) {
+		const seconds = (millisec / 1000).toFixed(1);
+		const minutes = (millisec / (1000 * 60)).toFixed(1);
+		const hours = (millisec / (1000 * 60 * 60)).toFixed(1);
+		const days = (millisec / (1000 * 60 * 60 * 24)).toFixed(1);
+
+		if (seconds < 60) {
+			return seconds + " seconds";
+		} else if (minutes < 60) {
+			return minutes + " minutes";
+		} else if (hours < 24) {
+			return hours + " hours";
+		} else {
+			return days + " days"
+		}
+	}
+
+	function removeFromDom(id) {
+		const elem = document.getElementById(id);
+		if (elem)
+			elem.remove();
+	}
+
+	function getMetricsUrl() {
+		const url_string = window.location.href;
+		const url = new URL(url_string);
+		const before = url.searchParams.get("before");
+		const after = url.searchParams.get("after");
+		let metrics_url = "/metrics";
+		if (before === null && after === null)
+			metrics_url += "";
+		else if (before !== null && after !== null)
+			metrics_url += "/between/" + after + "/" + before;
+		else if (before !== null)
+			metrics_url += "/before/" + before;
+		else
+			metrics_url += "/after/" + after;
+		return metrics_url;
+	}
+
+
+	d3.json(getMetricsUrl()).then(data => {
+		console.log("Data points: " + data.length);
+		document.getElementById("loader").remove();
+		document.getElementById("detailskey").style.display = "block";
+		if (data.length === 0) {
+			document.getElementById("detailskey").textContent = "No data found";
+			return;
+		}
+
+		// set the dimensions and margins of the graph
+		const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+		const margin = {top: 10, right: 30, bottom: 50, left: 234},
+			width  = vw - margin.left - margin.right,
+			height = 20*data.length + margin.top + margin.bottom;
+		const expandedTimelineWidth = width + margin.left;
+		const expandedTimelineHeight = 60;
+
+		// append the svg object to the body of the page
+		const svg = d3.select("#timeline")
+			.append("svg")
+			.attr("width",  width  + margin.left + margin.right)
+			.attr("height", height + margin.top  + margin.bottom)
+			.append("g")
+			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+		// append pattern for idle time
+		// https://stackoverflow.com/questions/17776641/fill-rect-with-pattern
+		const defs = svg.append('defs');
+		const addPattern = colour => defs
+			.append('pattern')
+			.attr('id', colour + '-stripe')
+			.attr('patternUnits', 'userSpaceOnUse')
+			.attr('width', 10)
+			.attr('height', 4)
+			.append('path')
+			.attr('d', 'M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2')
+			.attr('stroke', colour)
+			.attr('stroke-width', 1);
+		addPattern("lightgreen");
+		addPattern("orange");
+
+
+		// append the expanded svg object to the body of the details div
+		const expandedTimeline = d3.select("#expandedtimeline")
+			.append("svg")
+			.attr("width",  expandedTimelineWidth)
+			.attr("height", expandedTimelineHeight);
+
+
+		const getSeriesStartTime = d => Math.min(... d.datapoints.map(datapoint => datapoint.startTime));
+		const getSeriesEndTime   = d => Math.max(... d.datapoints.map(datapoint => datapoint.startTime + datapoint.duration));
+		const seriesIsFinished = datapoints => datapoints.map(datapoint => datapoint.action).includes("FINISHED");
+
+		const minTime = Math.min(... data.map(d => getSeriesStartTime(d)));
+		const maxTime = Math.max(... data.map(d => getSeriesEndTime(d)));
+
+		const flattenedData = data
+			.sort((a, b) => (getSeriesStartTime(a) < getSeriesStartTime(b)) ? 1 : ((getSeriesStartTime(b) < getSeriesStartTime(a)) ? -1 : 0))
+			.flatMap(d => d.datapoints.map(point => { return { key : d.key, datapoint : point }}));
+
+
+		// Show the Y scale
+		const y = d3.scaleBand()
+			.range([height, 0])
+			.domain(flattenedData.map(d => d.key))
+			.padding(.4);
+		svg.append("g")
+			.call(d3.axisLeft(y).tickSize(0))
+			.attr("font-family", "courier")
+			.select(".domain")
+			.remove();
+
+		// Show the X scale
+		const x = d3.scaleLinear()
+			.domain([minTime, maxTime])
+			.range([0, width]);
+		svg.append("g")
+			.attr("transform", "translate(0," + height + ")")
+			.call(d3.axisBottom(x).ticks(5))
+			.select(".domain")
+			.remove();
+
+		const colour = d3.scaleOrdinal(d3.schemeSet2);
+
+		// Add X axis label:
+		svg.append("text")
+			.attr("text-anchor", "end")
+			.attr("x", width)
+			.attr("y", height + margin.top + 30)
+			.text("UTC Epoch time in millis");
+
+
+		const showRowDetails = d => {
+			removeFromDom("expandedTimelineMainGroup");
+
+			const k = d.key;
+			const datapoints = flattenedData
+				.filter(o => o.key === k)
+				.map(o => o.datapoint)
+				.sort((a, b) => (a.startTime > b.startTime) ? 1 : (b.startTime > a.startTime) ? -1 : 0);
+
+
+			const table = document.getElementById("timeseriestable");
+			table.innerHTML = "";
+
+			const insertCell = (row, content, className = "", style = "") => {
+				const cell = row.insertCell(-1);
+				cell.innerHTML = content;
+				cell.className = className;
+				cell.style = style;
+			};
+
+			const row = table.insertRow(-1);
+			insertCell(row, "Application", "tableHeader");
+			insertCell(row, "", "tableHeader");
+			insertCell(row, "Action", "tableHeader");
+			insertCell(row, "Start time", "tableHeader");
+			insertCell(row, "Duration (ms)", "tableHeader");
+
+			datapoints.forEach(point => {
+				const row = table.insertRow(-1);
+
+				const d = new Date(0);
+				d.setUTCMilliseconds(point.startTime);
+				const startTime = point.startTime + " (" + d.toISOString() + ")"
+
+				insertCell(row, point.application);
+				insertCell(row, "", "legendcolour", "background: " + (point.duration < 0 ? "black" : colour(point.action)));
+				insertCell(row, point.action);
+				insertCell(row, startTime);
+				insertCell(row, point.duration <= 0 ? 0 : point.duration, "durationColumn");
+			});
+
+			const x = d3.scaleLinear()
+				.domain([datapoints[0].startTime - 100, 100 + datapoints[datapoints.length - 1].startTime + datapoints[datapoints.length - 1].duration])
+				.range([0, expandedTimelineWidth]);
+
+			expandedTimeline
+				.selectAll("rect")
+				.remove();
+
+			const isPoint = d => d.duration < 0;
+
+			const expandedTimelineMove = function(datapoint) {
+				const xpos = d3.event.pageX;
+				const tooltip = document.getElementById("expandedtimelinetooltip");
+				tooltip.style.display = "block";
+
+				const epochMs = Math.round(x.invert(xpos));
+				const d = new Date(0);
+				d.setUTCMilliseconds(epochMs);
+				tooltip.innerHTML = "<b>" + datapoint.action + "</b><br />" + epochMs + "<br />" + d.toISOString();
+
+				const tooltipWidth = tooltip.clientWidth;
+				let pos = xpos - (tooltipWidth / 2);
+				if (pos < 10)
+					pos = 10;
+				if (pos + tooltipWidth > expandedTimelineWidth)
+					pos = expandedTimelineWidth - tooltipWidth;
+				tooltip.style.left = pos + "px";
+
+				removeFromDom("ruler");
+				expandedTimelineMainGroup
+					.append("line")
+					.attr("id", "ruler")
+					.attr('x1', d3.event.pageX)
+					.attr('x2', d3.event.pageX)
+					.attr("y1", 0)
+					.attr("y2", expandedTimelineHeight)
+					.attr("stroke", "black")
+					.attr("stroke-dasharray", 2);
+			}
+
+			const expandedTimelineMainGroup = expandedTimeline
+				.append("g")
+				.attr("id", "expandedTimelineMainGroup")
+				.on('mouseout', () => {
+					const mainGroup = document.getElementById("expandedTimelineMainGroup");
+					const elemUnderMouse = document.elementFromPoint(d3.event.pageX, d3.event.pageY);
+					if (!mainGroup.contains(elemUnderMouse)) {
+						document.getElementById("expandedtimelinetooltip").style.display = "none";
+						removeFromDom("ruler");
+					}
+				});
+
+
+			const expandedTimelineGroup = expandedTimelineMainGroup
+				.selectAll("rect")
+				.data(datapoints)
+				.enter()
+				.append("g")
+				.on('mousemove', expandedTimelineMove);
+
+			expandedTimelineGroup
+				.append("rect")
+				.attr("x",      d => x(d.startTime))
+				.attr("y",      d => { if (isPoint(d)) return 0;      else return expandedTimelineHeight * 0.1; })
+				.attr("width",  d => { if (d.duration <= 0) return 1; else return x(d.startTime + d.duration) - x(d.startTime); } )
+				.attr("height", d => { if (isPoint(d)) return expandedTimelineHeight; else return expandedTimelineHeight - (expandedTimelineHeight * 0.1 * 2); })
+				.attr("stroke", d => { if (isPoint(d)) return "#000"; else return "none"; })
+				.style("fill",  d => colour(d.action));
+
+
+
+			let timeText;
+			if (seriesIsFinished(datapoints)) {
+				let duration = datapoints[datapoints.length - 1].duration;
+				const timeTaken = (datapoints[datapoints.length - 1].startTime + (duration >= 0 ? duration : 0)) - datapoints[0].startTime;
+				timeText = "Finished in " + timeTaken + "ms (" + timeConversion(timeTaken) + ")";
+			} else {
+				const timeTaken = Date.now() - datapoints[0].startTime;
+				timeText = "<b>Not finished</b>, started " + timeTaken + "ms ago (" + timeConversion(timeTaken) + ")";
+			}
+
+			document.getElementById("details").innerHTML =
+				"<span class='detailslabel'>Key:</span><span class='detailskey'>" + k + "</span>" + timeText;
+		};
+
+		const isPoint = d => d.value.duration < 0
+		// Append group in order to make rows hoverable and clickable
+		const g = svg
+			.selectAll("boxes")
+			.data(data)
+			.enter()
+			.append("g")
+			.attr("class", "hoverable")
+			.on("click", function(d) {
+				changeRowSelection(this);
+				showRowDetails(d);
+			});
+
+		// Append background for row
+		g.append("rect")
+			.attr("x", 0)
+			.attr("y", d => y(d.key))
+			.attr("width", "100%")
+			.attr("height", y.bandwidth());
+
+
+		// Append striped background under boxes
+		g.append("rect")
+			.attr("x",     d => x(getSeriesStartTime(d)))
+			.attr("y",     d => y(d.key))
+			.attr("width", d => x(getSeriesEndTime(d)) - x(getSeriesStartTime(d)))
+			.attr("height", y.bandwidth())
+			.attr("stroke", "black")
+			.style("fill", d => { if (seriesIsFinished(d.datapoints)) return "url(#lightgreen-stripe)"; else return "url(#orange-stripe)"; })
+			.style("opacity", 0.5);
+
+		// Append boxes for time consumption
+		g.selectAll(null)
+			.data(d => {
+				const entries = d3.entries(d.datapoints);
+				entries.forEach(p => p["innsendingKey"] = d.key);
+				return entries;
+			})
+			.enter()
+			.append("rect")
+			.attr("x",      d => x(d.value.startTime))
+			.attr("y",      d => { if (isPoint(d)) return y(d.innsendingKey) - 3; else return y(d.innsendingKey); })
+			.attr("width",  d => { if (d.value.duration <= 0) return 1; else return x(d.value.startTime + d.value.duration) - x(d.value.startTime); } )
+			.attr("height", d => { if (isPoint(d)) return y.bandwidth() + 6; else return y.bandwidth(); })
+			.attr("stroke", d => { if (isPoint(d)) return "black"; else return "none"; })
+			.style("fill",  d => colour(d.value.action))
+			.style("opacity", 1);
+	})
+</script>
