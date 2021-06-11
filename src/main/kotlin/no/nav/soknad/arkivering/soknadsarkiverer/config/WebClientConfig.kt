@@ -63,7 +63,11 @@ class WebClientConfig(private val appConfiguration: AppConfiguration) {
 					.addHandlerLast(WriteTimeoutHandler(60))
 			}
 		val exchangeStrategies = ExchangeStrategies.builder()
-			.codecs { configurer: ClientCodecConfigurer -> configurer.defaultCodecs().maxInMemorySize(appConfiguration.config.maxMessageSize) }.build()
+			.codecs { configurer: ClientCodecConfigurer ->
+				configurer
+					.defaultCodecs()
+					.maxInMemorySize(appConfiguration.config.maxMessageSize) }
+			.build()
 
 		return WebClient.builder()
 			.filter(bearerTokenFilter(properties, oAuth2AccessTokenService))

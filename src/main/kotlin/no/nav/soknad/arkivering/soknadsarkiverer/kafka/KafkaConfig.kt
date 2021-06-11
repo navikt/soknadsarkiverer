@@ -75,14 +75,14 @@ class KafkaConfig(
 			.mapValues { processingEvents -> processingEvents.getNewestState() }
 			.toStream()
 			.peek { key, state -> logger.debug("$key: ProcessingTopic filter with state $state") }
-			.filter { key, state -> !(erFerdig(key, state)) }
+			.filter { key, state -> !(isConsideredFinished(key, state)) }
 			.leftJoin(inputTable, { state, soknadarkivschema -> soknadarkivschema to state }, joinDef) // Oppdatere state på tabell, archivingState, ved join av soknadarkivschema og state.
-			.filter { key, (soknadsarkiveschema, _) -> filterSoknadsarkivschemaThatAreNull(key, soknadsarkiveschema) } // Ta bort alle innslag i tabell der soknadarkivschema er null.
+			.filter { key, (soknadsarkivschema, _) -> filterSoknadsarkivschemaThatAreNull(key, soknadsarkivschema) } // Ta bort alle innslag i tabell der soknadarkivschema er null.
 			.peek { key, (soknadsarkivschema, state) -> logger.debug("$key: ProcessingTopic scehdule job in state $state - ${soknadsarkivschema.print()}") }
 			.foreach { key, (soknadsarkivschema, state) -> schedulerService.addOrUpdateTask(key, soknadsarkivschema, state.type) } // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
 	}
 
-	private fun erFerdig(key: String, processingEvent: ProcessingEvent): Boolean {
+	private fun isConsideredFinished(key: String, processingEvent: ProcessingEvent): Boolean {
 		return when (processingEvent.type) {
 			EventTypes.FINISHED -> {
 				schedulerService.finishTask(key)

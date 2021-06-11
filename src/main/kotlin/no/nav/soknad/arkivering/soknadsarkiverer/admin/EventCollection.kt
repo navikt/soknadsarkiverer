@@ -3,9 +3,9 @@ package no.nav.soknad.arkivering.soknadsarkiverer.admin
 import no.nav.soknad.arkivering.soknadsarkiverer.admin.EventCollection.TimeSelector
 
 /**
- * This class acts as a collection of [KafkaEvent]'s, and with the method [addEvents(List)][addEvents], new elements
+ * This class acts as a collection of [KafkaEvent]s, and with the method [addEvents(List)][addEvents], new elements
  * can be added. The collection can have a fixed [capacity], which it will not exceed, or it can be unbounded
- * (when `capacity < 0`).
+ * (when `capacity <= 0`).
  *
  * Two types of filters can be applied:
  *
@@ -27,7 +27,7 @@ internal class EventCollection<T> private constructor(
 	private var events: MutableList<KafkaEvent<T>> = mutableListOf()
 
 	/**
-	 * @return The collection of [KafkaEvent]'s, sorted by timestamp.
+	 * @return The collection of [KafkaEvent]s, sorted by timestamp.
 	 */
 	fun getEvents() = events
 		.mapIndexed { index, event ->
@@ -42,10 +42,10 @@ internal class EventCollection<T> private constructor(
 		}
 
 	/**
-	 * This function will take the [KafkaEvent]'s in [list] that fulfill the class's filters, and add those
+	 * This function will take the [KafkaEvent]s in [list] that fulfill the class's filters, and add those
 	 * to the internal collection of the class.
 	 *
-	 * @param [list] List of [KafkaEvent]'s to add to the class instance's internal collection.
+	 * @param [list] List of [KafkaEvent]s to add to the class instance's internal collection.
 	 * @return A boolean signalling whether the [EventCollection] is now satisfied. If it is satisfied, there is no more
 	 * need to feed the collection with new elements. This is given by the following logic:
 	 * 1. If the collection of [events] had items previously, and [list] is empty, it returns true.
