@@ -30,6 +30,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_METRICS_TOPIC" to kafkaMetricsTopic,
 	"KAFKA_GROUPID" to "soknadsarkiverer-group-defaultid",
 	"MAX_MESSAGE_SIZE" to (1024 * 1024 * 300).toString(),
+	"BOOTSTRAPPING_TIMEOUT" to 120.toString(),
 
 	"JOARK_HOST" to "http://localhost:8092",
 	"JOARK_URL" to "/rest/journalpostapi/v1/journalpost",
@@ -78,6 +79,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val processingTopic: String = "KAFKA_PROCESSING_TOPIC".configProperty(),
 		val messageTopic: String = "KAFKA_MESSAGE_TOPIC".configProperty(),
 		val metricsTopic: String = "KAFKA_METRICS_TOPIC".configProperty(),
+		val bootstrappingTimeout: String = "BOOTSTRAPPING_TIMEOUT".configProperty(),
 		var saslJaasConfig: String = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"$username\" password=\"$password\";",
 		val groupId: String = readFileAsText("/var/run/secrets/nais.io/kv/KAFKA_GROUPID", "KAFKA_GROUPID".configProperty())
 	)

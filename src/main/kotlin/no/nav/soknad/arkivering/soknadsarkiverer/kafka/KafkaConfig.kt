@@ -7,6 +7,7 @@ import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.ProcessingEventDto
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.bootstrapping.KafkaBootstrapConsumer
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.apache.avro.specific.SpecificRecord
@@ -112,6 +113,10 @@ class KafkaConfig(
 	@Bean
 	fun setupKafkaStreams(): KafkaStreams {
 		metrics.setUpOrDown(1.0)
+		logger.info("Starting Kafka Bootstrap Consumer to create tasks for any tasks that had not yet been finished")
+		KafkaBootstrapConsumer(appConfiguration, schedulerService).recreateState()
+		logger.info("Finished Kafka Bootstrap Consumer")
+
 		val streamsBuilder = StreamsBuilder()
 		kafkaStreams(streamsBuilder)
 		val topology = streamsBuilder.build()
