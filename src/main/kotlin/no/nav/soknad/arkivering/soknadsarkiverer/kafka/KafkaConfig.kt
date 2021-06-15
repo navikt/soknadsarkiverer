@@ -55,7 +55,7 @@ class KafkaConfig(
 		val inputTable = inputTopicStream.toTable()
 
 		inputTopicStream
-			.peek { key, value -> logger.info("$key: Processing InputTopic - ${value.behandlingsid}") }
+			.peek { key, value -> logger.info("$key: Processing InputTopic. BehandlingsId: ${value.behandlingsid}") }
 			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
 
 		processingTopicStream

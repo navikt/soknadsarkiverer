@@ -27,11 +27,11 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 
 	@Hidden
 	@GetMapping("/isStarted")
-	fun isStarted() = if (applicationIsAlive()) {
+	fun isStarted() = if (applicationIsStarted()) {
 		"Ok"
 	} else {
 		metrics.setUpOrDown(0.0)
-		logger.warn("/isAlive called - application is not alive")
+		logger.warn("/isStarted called - application is not started")
 		throwException()
 	}
 

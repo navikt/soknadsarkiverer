@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
+import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.config.kafkaInputTopic
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.EmbeddedKafkaBrokerConfig
@@ -22,8 +23,13 @@ import org.springframework.test.context.ActiveProfiles
 @EmbeddedKafka(topics = [kafkaInputTopic])
 class SoknadsarkivererApplicationTests {
 
+	@Suppress("unused")
 	@MockBean
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
+
+	@Suppress("unused")
+	@MockBean
+	private lateinit var collectorRegistry: CollectorRegistry
 
 	@Test
 	fun `Spring context loads`() {

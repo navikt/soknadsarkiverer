@@ -9,7 +9,9 @@ application:
 
 ---
 spring:
-  profiles: spring
+  config:
+    activate:
+      on-profile: spring
 
 no.nav.security.jwt:
   issuer:
