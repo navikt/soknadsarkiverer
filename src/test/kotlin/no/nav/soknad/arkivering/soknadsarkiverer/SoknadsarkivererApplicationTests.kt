@@ -3,6 +3,9 @@ package no.nav.soknad.arkivering.soknadsarkiverer
 import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.config.kafkaInputTopic
+import no.nav.soknad.arkivering.soknadsarkiverer.config.kafkaMessageTopic
+import no.nav.soknad.arkivering.soknadsarkiverer.config.kafkaMetricsTopic
+import no.nav.soknad.arkivering.soknadsarkiverer.config.kafkaProcessingTopic
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.EmbeddedKafkaBrokerConfig
 import org.junit.jupiter.api.Test
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
@@ -17,10 +20,10 @@ import org.springframework.test.context.ActiveProfiles
 @ActiveProfiles("test")
 @SpringBootTest
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@Import(EmbeddedKafkaBrokerConfig::class)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
-@EmbeddedKafka(topics = [kafkaInputTopic])
+@Import(EmbeddedKafkaBrokerConfig::class)
+@EmbeddedKafka(topics = [kafkaInputTopic, kafkaProcessingTopic, kafkaMessageTopic, kafkaMetricsTopic])
 class SoknadsarkivererApplicationTests {
 
 	@Suppress("unused")

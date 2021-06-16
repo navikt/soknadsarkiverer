@@ -3,6 +3,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.kafka.bootstrapping
 import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
+import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
@@ -21,8 +22,12 @@ import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
-import org.junit.jupiter.api.*
+import org.apache.kafka.streams.KafkaStreams
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
@@ -36,19 +41,28 @@ import org.springframework.test.context.ActiveProfiles
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-@Disabled
 @ActiveProfiles("test")
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@Import(EmbeddedKafkaBrokerConfig::class)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
+@Import(EmbeddedKafkaBrokerConfig::class)
 @EmbeddedKafka(topics = [kafkaInputTopic, kafkaProcessingTopic, kafkaMessageTopic, kafkaMetricsTopic])
 class StateRecreationTests {
 
+	@Suppress("unused")
 	@MockBean
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
+
+	@Suppress("unused")
+	@MockBean
+	private lateinit var collectorRegistry: CollectorRegistry
+
+	@Suppress("unused")
+	@MockBean
+	private lateinit var kafkaStreams: KafkaStreams // Mock this so that the real chain isn't run by the tests
+
 
 	@Value("\${spring.embedded.kafka.brokers}")
 	private val kafkaBrokers: String? = null

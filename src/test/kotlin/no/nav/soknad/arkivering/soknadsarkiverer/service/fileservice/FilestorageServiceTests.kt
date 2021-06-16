@@ -12,16 +12,18 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.context.annotation.Import
+import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.util.*
 
 @ActiveProfiles("test")
 @SpringBootTest
-@Import(EmbeddedKafkaBrokerConfig::class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
+@EnableConfigurationProperties(ClientConfigurationProperties::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class FilestorageServiceTests {
 
@@ -203,7 +205,7 @@ class FilestorageServiceTests {
 	private fun assertFileContentIsCorrect(files: List<FilElementDto>) {
 		assertAll("All files should have the right content",
 			files.map { result -> {
-				assertEquals(fileIdsAndResponses.first { it.first == result.uuid }.second, result.fil?.map { it.toChar() }?.joinToString(""))
+				assertEquals(fileIdsAndResponses.first { it.first == result.uuid }.second, result.fil?.map { it.toInt().toChar() }?.joinToString(""))
 			} })
 	}
 

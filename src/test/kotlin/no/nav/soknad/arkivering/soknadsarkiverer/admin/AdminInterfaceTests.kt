@@ -36,9 +36,9 @@ import java.util.concurrent.TimeUnit
 
 @ActiveProfiles("test")
 @SpringBootTest
+@DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
-@DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
 @Import(EmbeddedKafkaBrokerConfig::class)
 @EmbeddedKafka(topics = [kafkaInputTopic, kafkaProcessingTopic, kafkaMessageTopic, kafkaMetricsTopic])
 class AdminInterfaceTests {
