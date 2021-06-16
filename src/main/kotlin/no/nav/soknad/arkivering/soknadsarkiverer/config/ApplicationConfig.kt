@@ -2,7 +2,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.config
 
 import com.natpryce.konfig.*
 import com.natpryce.konfig.ConfigurationProperties.Companion.systemProperties
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.context.annotation.Bean
 import org.springframework.core.env.ConfigurableEnvironment
 import java.io.File
@@ -111,7 +110,6 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 }
 
 @org.springframework.context.annotation.Configuration
-@ConfigurationPropertiesScan
 @Priority(-1)
 class ConfigConfig(private val env: ConfigurableEnvironment) {
 
