@@ -401,7 +401,7 @@ class StateRecreationTests {
 
 			loopAndVerify(timesCalled, getInvocations)
 
-			verify(taskListService, atLeast(timesCalled)).addOrUpdateTask(any(), any(), any())
+			verify(taskListService, atLeast(timesCalled)).addOrUpdateTask(any(), any(), any(), any())
 		}
 	}
 

@@ -44,10 +44,12 @@ class KafkaBootstrapConsumer(
 
 		unfinishedInputRecords
 			.map { it.key() to it.value() }
+			.shuffled() // Only one event at a time will be processed while restarting. Shuffle in case several pods go down,
+									// so they don't process in the same order and can thus better parallelise.
 			.forEach { (key, soknadsarkivschema) ->
 				val state = filteredUnfinishedProcessingEvents[key] ?: ProcessingEvent(EventTypes.RECEIVED)
 
-				taskListService.addOrUpdateTask(key, soknadsarkivschema, state.type)
+				taskListService.addOrUpdateTask(key, soknadsarkivschema, state.type, true)
 			}
 	}
 
