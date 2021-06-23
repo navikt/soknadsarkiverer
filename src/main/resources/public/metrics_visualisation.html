@@ -11,7 +11,7 @@
 	<div id="timeline"></div>
 	<div id="loader" class="loader">Loading...</div>
 	<div id="detailsbox">
-		<div id="details"><span id="detailskey" class="detailskey">Click on a row to see details</span></div>
+		<div id="details"><span id="detailsplaceholder" class="detailskey" style="display:none;">Click on a row to see details</span></div>
 		<div id="expandedtimeline"></div>
 		<div id="expandedtimelinetooltip"></div>
 		<table id="timeseriestable"></table>
@@ -93,7 +93,6 @@
 		margin-right: 0.5em;
 	}
 	.detailskey {
-		display: none;
 		font-size: 20px;
 		margin-right: 0.5em;
 	}
@@ -224,9 +223,9 @@
 	d3.json(getMetricsUrl()).then(data => {
 		console.log("Data points: " + data.length);
 		document.getElementById("loader").remove();
-		document.getElementById("detailskey").style.display = "block";
+		document.getElementById("detailsplaceholder").style.display = "block";
 		if (data.length === 0) {
-			document.getElementById("detailskey").textContent = "No data found";
+			document.getElementById("detailsplaceholder").textContent = "No data found";
 			return;
 		}
 
