@@ -8,6 +8,9 @@ metadata:
 spec:
   image: {{image}}
   port: 8091
+  startup:
+    path: /internal/isStarted
+    initialDelay: 500
   liveness:
     path: /internal/isAlive
     initialDelay: 100
