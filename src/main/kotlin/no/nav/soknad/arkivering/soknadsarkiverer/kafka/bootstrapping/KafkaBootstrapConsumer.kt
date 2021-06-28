@@ -107,21 +107,30 @@ class KafkaBootstrapConsumer(
 		}
 	}
 
-	private fun <T> loopUntilKafkaRecordsAreRetrieved(kafkaConsumer: KafkaConsumer<Key, T>,
-																										filter: (List<ConsumerRecord<Key, T>>) -> List<ConsumerRecord<Key, T>>): List<ConsumerRecord<Key, T>> {
+	private fun <T> loopUntilKafkaRecordsAreRetrieved(
+		kafkaConsumer: KafkaConsumer<Key, T>,
+		filter: (List<ConsumerRecord<Key, T>>) -> List<ConsumerRecord<Key, T>>
+	): List<ConsumerRecord<Key, T>> {
+
 		val startTime = System.currentTimeMillis()
 		val timeout = appConfiguration.kafkaConfig.bootstrappingTimeout.toInt() * 1000
 		var records = mutableListOf<ConsumerRecord<Key, T>>()
 
-		while (System.currentTimeMillis() < startTime + timeout) {
+		while (true) {
 			val newRecords = retrieveKafkaRecords(kafkaConsumer)
 			val shouldStop = shouldStop(records, newRecords)
 
 			records.addAll(newRecords)
 			records = filter.invoke(records).toMutableList()
+
 			if (shouldStop)
 				break
 			TimeUnit.MILLISECONDS.sleep(100)
+			if (System.currentTimeMillis() > startTime + timeout) {
+				logger.warn("For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records $timeout ms after " +
+					"starting. Aborting consumption.")
+				break
+			}
 		}
 		return records
 	}
