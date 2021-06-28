@@ -33,7 +33,7 @@ spec:
       memory: 8Gi
     requests:
       cpu: 1000m
-      memory: 1024Mi
+      memory: 2Gi
   ingresses:
     - "https://soknadsarkiverer-q0.dev.adeo.no"
   accessPolicy:
