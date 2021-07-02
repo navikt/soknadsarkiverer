@@ -32,7 +32,11 @@ class TaskListService(
 	private val currentTaskStates = hashMapOf<String, EventTypes>()
 	private val jobMap = hashMapOf<String, Job>()
 
-	private val processRun: Boolean = false // Hvis true så vil all behandling av ulike states på søknader initieres fra topology. Pt vil testene feilene hvis = true
+	/**
+	 * If true, Processing Events will drive the archiving stages through the Kafka topology.
+	 * If false, this class will act as the driver
+	 */
+	private val topologyDriven = true
 
 	private val startUpEndTime = Instant.now().plusSeconds(appConfiguration.config.secondsAfterStartupBeforeStarting)
 
@@ -84,7 +88,7 @@ class TaskListService(
 			val task = tasks[key]!!
 			loggedTaskStates[key] = state
 			logger.debug("$key: Updated task, new state - $state")
-			if (processRun && task.isRunningLock.tryAcquire()) {
+			if (topologyDriven && task.isRunningLock.tryAcquire()) {
 				jobMap[key] = GlobalScope.launch { start(key, state) } // Start new thread for handling archiving of application with key
 			}
 			updateNoOfFailedMetrics()
@@ -94,7 +98,7 @@ class TaskListService(
 	}
 
 	private fun setStateChange(key: String, state: EventTypes, soknadarkivschema: Soknadarkivschema, attempt: Int) {
-		if (processRun) {
+		if (topologyDriven) {
 			val jobThread = jobMap.remove(key)
 			jobThread?.cancel()
 			currentTaskStates[key] = state
@@ -163,8 +167,8 @@ class TaskListService(
 
 	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int? = 0) {
 
-		if (tasks[key] == null || loggedTaskStates[key] == EventTypes.FAILURE || loggedTaskStates[key] == EventTypes.FINISHED) {
-			logger.warn("$key: Too many attempts ($attempt) or loggedstate ${loggedTaskStates[key]}, will not try again")
+		if (tasks[key] == null) {
+			logger.warn("$key: Too many attempts ($attempt), will not try again")
 
 		} else {
 			logger.debug("$key: In schedule. Attempts: ($attempt), loggedstate: ${loggedTaskStates[key]}, currentTaskState: ${currentTaskStates[key]}")

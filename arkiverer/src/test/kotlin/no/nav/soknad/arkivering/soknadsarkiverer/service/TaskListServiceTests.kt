@@ -3,6 +3,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service
 import com.nhaarman.mockitokotlin2.*
 import io.prometheus.client.CollectorRegistry
 import no.nav.soknad.arkivering.avroschemas.EventTypes
+import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.config.startUpSecondsForTest
@@ -12,6 +13,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentCaptor
 import java.util.*
@@ -27,6 +29,14 @@ class TaskListServiceTests {
 	private val taskListService = TaskListService(archiverService, AppConfiguration(), scheduler, metrics, kafkaPublisher)
 
 	private val soknadarkivschema = createSoknadarkivschema()
+
+	@BeforeEach
+	fun setup() {
+		val keyCaptor = argumentCaptor<String>()
+		val processingEventCaptor = argumentCaptor<ProcessingEvent>()
+		whenever(kafkaPublisher.putProcessingEventOnTopic(capture(keyCaptor), capture(processingEventCaptor), any()))
+			.then { taskListService.addOrUpdateTask(keyCaptor.value, soknadarkivschema, processingEventCaptor.value.type) }
+	}
 
 	@AfterEach
 	fun teardown() {
