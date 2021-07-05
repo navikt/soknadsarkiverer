@@ -27,7 +27,9 @@ springdoc:
 
 ---
 spring:
-  profiles: test
+  config:
+    activate:
+      on-profile: test
 
 no.nav.security.jwt:
   issuer:
@@ -53,7 +55,9 @@ no.nav.security.jwt:
 
 ---
 spring:
-  profiles: spring | default | docker | dev | prod
+  config:
+    activate:
+      on-profile: spring | default | docker | dev | prod
 
 no.nav.security.jwt:
   expirythreshold: ${EXPIRYTHRESHOLD} #threshold in minutes until token expires

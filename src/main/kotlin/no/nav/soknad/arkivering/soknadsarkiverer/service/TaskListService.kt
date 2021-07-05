@@ -41,18 +41,31 @@ class TaskListService(
 	}
 
 	@Synchronized
-	fun addOrUpdateTask(key: String, soknadarkivschema: Soknadarkivschema, state: EventTypes) {
+	fun addOrUpdateTask(
+		key: String,
+		soknadarkivschema: Soknadarkivschema,
+		state: EventTypes,
+		isBootstrappingTask: Boolean = false
+	) {
+
 		if (!tasks.containsKey(key)) {
-			newTask(key, soknadarkivschema, state)
+			newTask(key, soknadarkivschema, state, isBootstrappingTask)
 		} else {
 			updateTaskState(key, state)
 		}
 	}
 
-	private fun newTask(key: String, soknadarkivschema: Soknadarkivschema, state: EventTypes) {
+	private fun newTask(
+		key: String,
+		soknadarkivschema: Soknadarkivschema,
+		state: EventTypes,
+		isBootstrappingTask: Boolean
+	) {
+
 		loggedTaskStates[key] = state
 		currentTaskStates[key] = state
-		tasks[key] = Task(soknadarkivschema, 0, LocalDateTime.now(), Semaphore(1).also { it.acquire() })
+		val isRunningLock = Semaphore(1).also { it.acquire() }
+		tasks[key] = Task(soknadarkivschema, 0, LocalDateTime.now(), isRunningLock, isBootstrappingTask)
 
 		metrics.addTask()
 		logger.info("$key: Created new task with state = $state")
@@ -158,9 +171,9 @@ class TaskListService(
 
 			when (currentTaskStates[key]) {
 				EventTypes.RECEIVED -> receivedState(key, soknadarkivschema, attempt)
-				EventTypes.STARTED -> archiveState(key, soknadarkivschema, attempt)
+				EventTypes.STARTED  -> archiveState(key, soknadarkivschema, attempt)
 				EventTypes.ARCHIVED -> deleteFilesState(key, soknadarkivschema, attempt)
-				EventTypes.FAILURE -> failTask(key)
+				EventTypes.FAILURE  -> failTask(key)
 				EventTypes.FINISHED -> finishTask(key)
 				else -> logger.error("$key: - Unexpected state ${loggedTaskStates[key]}")
 			}
@@ -177,7 +190,11 @@ class TaskListService(
 		val scheduledTime = Instant.now().plusSeconds(secondsToWait)
 		val task = { tryToArchive(key, soknadarkivschema) }
 		logger.info("$key: state = STARTED. About to schedule attempt $attempt at job in $secondsToWait seconds")
-		scheduler.schedule(task, scheduledTime)
+
+		if (tasks[key]?.isBootstrappingTask == true)
+			scheduler.scheduleSingleTask(task, scheduledTime)
+		else
+			scheduler.schedule(task, scheduledTime)
 	}
 
 	fun deleteFilesState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int? = 0) {
@@ -334,6 +351,7 @@ class TaskListService(
 		val value: Soknadarkivschema,
 		val count: Int,
 		val timeStarted: LocalDateTime,
-		val isRunningLock: Semaphore
+		val isRunningLock: Semaphore,
+		val isBootstrappingTask: Boolean = false
 	)
 }

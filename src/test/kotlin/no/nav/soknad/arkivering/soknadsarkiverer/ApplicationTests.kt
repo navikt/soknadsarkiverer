@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
+import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
@@ -47,6 +48,14 @@ class ApplicationTests: TopologyTestDriverTests() {
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
 
+	@Suppress("unused")
+	@MockBean
+	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
+
+	@Suppress("unused")
+	@MockBean
+	private lateinit var collectorRegistry: CollectorRegistry
+
 	@Autowired
 	private lateinit var appConfiguration: AppConfiguration
 
@@ -61,9 +70,6 @@ class ApplicationTests: TopologyTestDriverTests() {
 
 	@MockBean
 	private lateinit var kafkaPublisherMock: KafkaPublisher
-
-	@MockBean
-	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
 
 	private var maxNumberOfAttempts by Delegates.notNull<Int>()
 

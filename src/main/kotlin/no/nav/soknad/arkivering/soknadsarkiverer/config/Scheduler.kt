@@ -10,15 +10,28 @@ import java.time.Instant
 class Scheduler {
 
 	@Autowired
-	private lateinit var threadPoolTaskScheduler: ThreadPoolTaskScheduler
+	private lateinit var normalTaskScheduler: ThreadPoolTaskScheduler
 
-	@Bean
-	fun threadPoolTaskScheduler() = ThreadPoolTaskScheduler().also {
-		it.poolSize = 5
-		it.setThreadNamePrefix("ThreadPoolTaskScheduler")
+	@Autowired
+	private lateinit var singleTaskScheduler: ThreadPoolTaskScheduler
+
+	@Bean(name = ["normalTaskScheduler"])
+	fun normalTaskScheduler() = threadPoolTaskScheduler(5)
+
+	@Bean(name = ["singleTaskScheduler"])
+	fun singleTaskScheduler() = threadPoolTaskScheduler(1)
+
+	fun threadPoolTaskScheduler(poolSize: Int) = ThreadPoolTaskScheduler().also {
+		it.poolSize = poolSize
+		it.setThreadNamePrefix("ThreadPoolTaskSchedulerOfSize${poolSize}_")
 	}
 
+
 	fun schedule(task: () -> Unit, startTime: Instant) {
-		threadPoolTaskScheduler.schedule(task, startTime)
+		normalTaskScheduler.schedule(task, startTime)
+	}
+
+	fun scheduleSingleTask(task: () -> Unit, startTime: Instant) {
+		singleTaskScheduler.schedule(task, startTime)
 	}
 }

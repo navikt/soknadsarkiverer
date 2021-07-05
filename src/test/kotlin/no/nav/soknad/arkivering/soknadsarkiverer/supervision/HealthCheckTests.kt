@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
+import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
@@ -17,12 +18,14 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.http.HttpStatus
+import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.web.client.HttpServerErrorException
 import org.springframework.web.reactive.function.client.WebClientResponseException
 
 @ActiveProfiles("test")
 @SpringBootTest
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 class HealthCheckTests {
@@ -30,8 +33,13 @@ class HealthCheckTests {
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
 
+	@Suppress("unused")
 	@MockBean
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
+
+	@Suppress("unused")
+	@MockBean
+	private lateinit var collectorRegistry: CollectorRegistry
 
 	@Autowired
 	private lateinit var filestorage: FileserviceInterface
@@ -59,6 +67,22 @@ class HealthCheckTests {
 	@AfterEach
 	fun cleanup() {
 		stopMockedNetworkServices()
+	}
+
+
+	@Test
+	fun `isStarted returns Ok when application is started`() {
+		appConfiguration.state.started = true
+
+		assertEquals("Ok", healthCheck.isStarted())
+	}
+
+	@Test
+	fun `isStarted returns Status 500 when application is not started`() {
+		appConfiguration.state.started = false
+
+		val e = assertThrows<HttpServerErrorException> { healthCheck.isStarted() }
+		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, e.statusCode)
 	}
 
 

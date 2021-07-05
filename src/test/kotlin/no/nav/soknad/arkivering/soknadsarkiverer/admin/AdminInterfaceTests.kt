@@ -2,6 +2,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
+import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.*
@@ -35,9 +36,9 @@ import java.util.concurrent.TimeUnit
 
 @ActiveProfiles("test")
 @SpringBootTest
+@DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
-@DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
 @Import(EmbeddedKafkaBrokerConfig::class)
 @EmbeddedKafka(topics = [kafkaInputTopic, kafkaProcessingTopic, kafkaMessageTopic, kafkaMetricsTopic])
 class AdminInterfaceTests {
@@ -48,8 +49,14 @@ class AdminInterfaceTests {
 	@Value("\${spring.embedded.kafka.brokers}")
 	private val kafkaBrokers: String? = null
 
+	@Suppress("unused")
 	@MockBean
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
+
+	@Suppress("unused")
+	@MockBean
+	private lateinit var collectorRegistry: CollectorRegistry
+
 
 	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 

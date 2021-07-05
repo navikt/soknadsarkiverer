@@ -8,6 +8,9 @@ metadata:
 spec:
   image: {{image}}
   port: 8091
+  startup:
+    path: /internal/isStarted
+    initialDelay: 250
   liveness:
     path: /internal/isAlive
     initialDelay: 100
@@ -30,7 +33,7 @@ spec:
       memory: 8Gi
     requests:
       cpu: 1000m
-      memory: 1024Mi
+      memory: 2Gi
   ingresses:
     - "https://soknadsarkiverer.dev.adeo.no"
   accessPolicy:

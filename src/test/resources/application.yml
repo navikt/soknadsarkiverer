@@ -5,10 +5,13 @@ application:
   mocked-port-for-external-services: 2908
   JOARK_HOST: http://localhost:2908
   FILESTORAGE_HOST: http://localhost:2908
+  BOOTSTRAPPING_TIMEOUT: 10
 
 ---
 spring:
-  profiles: spring
+  config:
+    activate:
+      on-profile: spring
 
 no.nav.security.jwt:
   issuer:
