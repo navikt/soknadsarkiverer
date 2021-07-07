@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 @Import(EmbeddedKafkaBrokerConfig::class)
-@EmbeddedKafka(topics = [kafkaInputTopic, kafkaProcessingTopic, kafkaMessageTopic, kafkaMetricsTopic])
+@EmbeddedKafka(topics = [kafkaInputTopic, kafkaProcessingTopic, kafkaMessageTopic, kafkaMetricsTopic], controlledShutdown = true)
 class AdminInterfaceTests {
 
 	@Value("\${application.mocked-port-for-external-services}")
