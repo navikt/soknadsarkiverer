@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@Unprotected // TODO
+@Unprotected // TODO: This should not be unprotected, but as long as the metrics view is part of the BE and not the Admin App, it needs to be accessible
 @RequestMapping
 class MetricsInterface(private val adminService: AdminService) {
 
