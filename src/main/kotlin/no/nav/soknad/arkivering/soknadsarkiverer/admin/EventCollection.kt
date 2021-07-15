@@ -3,9 +3,9 @@ package no.nav.soknad.arkivering.soknadsarkiverer.admin
 import no.nav.soknad.arkivering.soknadsarkiverer.admin.EventCollection.TimeSelector
 
 /**
- * This class acts as a collection of [KafkaEvent]'s, and with the method [addEvents(List)][addEvents], new elements
+ * This class acts as a collection of [KafkaEvent]s, and with the method [addEvents(List)][addEvents], new elements
  * can be added. The collection can have a fixed [capacity], which it will not exceed, or it can be unbounded
- * (when `capacity < 0`).
+ * (when `capacity <= 0`).
  *
  * Two types of filters can be applied:
  *
@@ -27,15 +27,25 @@ internal class EventCollection<T> private constructor(
 	private var events: MutableList<KafkaEvent<T>> = mutableListOf()
 
 	/**
-	 * @return The collection of [KafkaEvent]'s, sorted by timestamp.
+	 * @return The collection of [KafkaEvent]s, sorted by timestamp.
 	 */
 	fun getEvents() = events
-		.mapIndexed { index, event -> KafkaEvent(index, event.innsendingKey, event.messageId, event.timestamp, event.type, event.content) }
+		.mapIndexed { index, event ->
+			KafkaEvent(
+				index,
+				event.innsendingKey,
+				event.messageId,
+				event.timestamp,
+				event.type,
+				event.content
+			)
+		}
 
 	/**
-	 * Adds the [KafkaEvent]'s in [list] that fulfill the class's filters to the collection.
+	 * This function will take the [KafkaEvent]s in [list] that fulfill the class's filters, and add those
+	 * to the internal collection of the class.
 	 *
-	 * @param [list] List of [KafkaEvent]'s to add to the collection.
+	 * @param [list] List of [KafkaEvent]s to add to the class instance's internal collection.
 	 * @return A boolean signalling whether the [EventCollection] is now satisfied. If it is satisfied, there is no more
 	 * need to feed the collection with new elements. This is given by the following logic:
 	 * 1. If the collection of [events] had items previously, and [list] is empty, it returns true.
@@ -47,9 +57,9 @@ internal class EventCollection<T> private constructor(
 		events.addAll(filterIncomingEvents(list))
 
 		events = when {
-				capacity <= 0 -> events.sortedByDescending { it.timestamp }.toMutableList()
-				timeSelector == TimeSelector.AFTER -> events.sortedByDescending { it.timestamp }.takeLast(capacity).toMutableList()
-				else -> events.sortedByDescending { it.timestamp }.take(capacity).toMutableList()
+			capacity <= 0 -> events.sortedByDescending { it.timestamp }.toMutableList()
+			timeSelector == TimeSelector.AFTER -> events.sortedByDescending { it.timestamp }.takeLast(capacity).toMutableList()
+			else -> events.sortedByDescending { it.timestamp }.take(capacity).toMutableList()
 		}
 
 		return isSatisfied(list)
@@ -67,9 +77,9 @@ internal class EventCollection<T> private constructor(
 
 	private fun isSatisfied(list: List<KafkaEvent<T>>): Boolean {
 		return when {
-				eventsHaveBeenPreviousAddedButThisOneWasEmpty(list) -> true
-				timeSelector == TimeSelector.ANY -> false // We found new events in this call, but TimeSelector ANY means there can always be more relevant events
-				else -> events.size == capacity
+			eventsHaveBeenPreviousAddedButThisOneWasEmpty(list) -> true
+			timeSelector == TimeSelector.ANY -> false // We found new events in this call, but TimeSelector ANY means there can always be more relevant events
+			else -> events.size == capacity
 		}
 	}
 

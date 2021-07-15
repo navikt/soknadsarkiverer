@@ -40,7 +40,7 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 
 			val files = getFiles(fileIds)
 
-			logger.info("$key: Received ${files.size} files with a sum of ${files.map { it.fil?.size ?: 0 }.sum()} bytes")
+			logger.info("$key: Received ${files.size} files with a sum of ${files.sumOf { it.fil?.size ?: 0 }} bytes")
 			metrics.incGetFilestorageSuccesses()
 			return files
 
@@ -55,7 +55,7 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 			}
 
 		} finally {
-		    metrics.endTimer(timer)
+			metrics.endTimer(timer)
 		}
 	}
 
@@ -76,7 +76,7 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 				"so this error will be ignored. Affected file ids: '$fileIds'", e)
 
 		} finally {
-		    metrics.endTimer(timer)
+			metrics.endTimer(timer)
 		}
 	}
 

@@ -18,7 +18,6 @@ import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -66,6 +65,8 @@ class AdminInterfaceTests {
 	private lateinit var taskListService: TaskListService
 	@Autowired
 	private lateinit var adminInterface: AdminInterface
+	@Autowired
+	private lateinit var metricsInterface: MetricsInterface
 
 	private var maxNumberOfAttempts = 0
 	private val keysSentToKafka = mutableListOf<String>()
@@ -129,13 +130,6 @@ class AdminInterfaceTests {
 		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
 	}
 
-
-	@Test
-	fun `No events when requesting allEvents`() {
-		val events = adminInterface.allEvents()
-
-		assertTrue(events.isEmpty())
-	}
 
 	@Test
 	fun `Can request allEvents`() {
@@ -274,8 +268,48 @@ class AdminInterfaceTests {
 		assertEquals(response, "pong")
 	}
 
-	private fun archiveOneEventSuccessfullyAndFailOne(key0: String = UUID.randomUUID().toString(),
-																										key1: String = UUID.randomUUID().toString()): Pair<Soknadarkivschema, Soknadarkivschema> {
+
+	@Test
+	fun `Can request metrics`() {
+		val key0 = UUID.randomUUID().toString()
+		val key1 = UUID.randomUUID().toString()
+		archiveOneEventSuccessfullyAndFailOne(key0, key1)
+
+		val eventsAfter = {
+			metricsInterface.metrics()
+				.filter { it.key == key0 || it.key == key1 }
+				.flatMap { it.datapoints }
+				.count()
+		}
+
+		val numberOfMetricEvents = 3 + maxNumberOfAttempts // 3 for the successful event, maxNumberOfAttempts getFiles-events for the failing
+		val numberOfProcessingEvents = 4 + (1 + maxNumberOfAttempts + 1) // 4 for the successful event + (1 RECEIVED + maxNumberOfAttempts STARTED + 1 FAILED)
+		loopAndVerifyAtLeast(numberOfProcessingEvents + numberOfMetricEvents, eventsAfter)
+	}
+
+	@Test
+	fun `Can request specific metrics`() {
+		val key0 = UUID.randomUUID().toString()
+		val key1 = UUID.randomUUID().toString()
+		archiveOneEventSuccessfullyAndFailOne(key0, key1)
+
+		val eventsAfter = {
+			metricsInterface.specificMetrics(key0)
+				.flatMap { it.datapoints }
+				.count()
+		}
+
+		val numberOfMetricEvents = 3 // 3 for the successful event
+		val numberOfProcessingEvents = 4 // 4 for the successful event
+		loopAndVerifyAtLeast(numberOfProcessingEvents + numberOfMetricEvents, eventsAfter)
+	}
+
+
+	private fun archiveOneEventSuccessfullyAndFailOne(
+		key0: String = UUID.randomUUID().toString(),
+		key1: String = UUID.randomUUID().toString()
+	): Pair<Soknadarkivschema, Soknadarkivschema> {
+
 		val fileUuid = UUID.randomUUID().toString()
 		val soknadarkivschema0 = createSoknadarkivschema(fileUuid)
 		val soknadarkivschema1 = createSoknadarkivschema(fileUuid)
@@ -285,7 +319,13 @@ class AdminInterfaceTests {
 		return soknadarkivschema0 to soknadarkivschema1
 	}
 
-	private fun archiveOneEventSuccessfullyAndFailOne(key0: String, key1: String, soknadarkivschema0: Soknadarkivschema, soknadarkivschema1: Soknadarkivschema) {
+	private fun archiveOneEventSuccessfullyAndFailOne(
+		key0: String,
+		key1: String,
+		soknadarkivschema0: Soknadarkivschema,
+		soknadarkivschema1: Soknadarkivschema
+	) {
+
 		val uuidsAndResponses = listOf(
 				soknadarkivschema0.mottatteDokumenter.flatMap { it.mottatteVarianter.map { variant -> variant.uuid } },
 				soknadarkivschema1.mottatteDokumenter.flatMap { it.mottatteVarianter.map { variant -> variant.uuid } }

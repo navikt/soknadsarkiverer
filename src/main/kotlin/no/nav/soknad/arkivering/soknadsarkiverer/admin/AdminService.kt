@@ -1,6 +1,9 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.coroutines.runBlocking
+import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
+import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.admin.FilestorageExistenceStatus.*
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
@@ -62,4 +65,27 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 
 	internal fun getAllRequestedEvents(builder: EventCollection.Builder): List<KafkaEvent<String>> =
 		kafkaAdminConsumer.getAllKafkaRecords(builder)
+
+
+	internal fun getMetrics(builder: EventCollection.Builder): List<MetricsObject> {
+
+		val records = kafkaAdminConsumer.getProcessingAndMetricsKafkaRecords(builder)
+		val mapOfMetrics = records.map {
+
+			val metrics =
+				if (it.type == PayloadType.METRIC) {
+					val metric = jacksonObjectMapper().readValue(it.content, InnsendingMetrics::class.java)
+					Metrics(metric.application, metric.action, metric.startTime, metric.duration)
+
+				} else {
+					val processingEvent = jacksonObjectMapper().readValue(it.content, ProcessingEvent::class.java)
+					Metrics("soknadsarkiverer", processingEvent.type.name, it.timestamp, -1)
+				}
+
+			Pair(it.innsendingKey, metrics)
+		}.groupBy({ it.first }, { it.second })
+
+
+		return mapOfMetrics.map { MetricsObject(it.key, it.value) }
+	}
 }

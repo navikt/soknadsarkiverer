@@ -308,7 +308,7 @@ class TaskListService(
 
 	internal fun tryToDeleteFiles(key: String, soknadarkivschema: Soknadarkivschema) {
 		try {
-			logger.info("$key: Will now start to deleteFiles of archived files")
+			logger.info("$key: Will now start to delete files")
 			archiverService.deleteFiles(key, soknadarkivschema)
 			logger.info("$key: Finished deleting files")
 

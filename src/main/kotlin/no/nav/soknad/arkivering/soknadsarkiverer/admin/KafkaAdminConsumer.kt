@@ -33,21 +33,39 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 
 
 	internal fun getAllKafkaRecords(eventCollectionBuilder: EventCollection.Builder): List<KafkaEvent<String>> {
-		return runBlocking {
-
-			val records = awaitAll(
+		val futureRecords = runBlocking {
+			awaitAll(
 				getAllInputRecordsAsync(eventCollectionBuilder),
 				getAllProcessingRecordsAsync(eventCollectionBuilder),
 				getAllMessageRecordsAsync(eventCollectionBuilder),
 				getAllMetricsRecordsAsync(eventCollectionBuilder)
 			)
-				.flatten()
-				.map { KafkaEvent(it.sequence, it.innsendingKey, it.messageId, it.timestamp, it.type, it.content.toString()) }
-
-			val eventCollection = eventCollectionBuilder.build<String>()
-			eventCollection.addEvents(records)
-			eventCollection.getEvents()
 		}
+		return getKafkaRecords(futureRecords, eventCollectionBuilder)
+	}
+
+	internal fun getProcessingAndMetricsKafkaRecords(eventCollectionBuilder: EventCollection.Builder): List<KafkaEvent<String>> {
+		val futureRecords = runBlocking {
+			awaitAll(
+				getAllProcessingRecordsAsync(eventCollectionBuilder),
+				getAllMetricsRecordsAsync(eventCollectionBuilder)
+			)
+		}
+		return getKafkaRecords(futureRecords, eventCollectionBuilder)
+	}
+
+	private fun getKafkaRecords(
+		futureRecords: List<List<KafkaEvent<out Any>>>,
+		eventCollectionBuilder: EventCollection.Builder
+	): List<KafkaEvent<String>> {
+
+		val records = futureRecords
+			.flatten()
+			.map { KafkaEvent(it.sequence, it.innsendingKey, it.messageId, it.timestamp, it.type, it.content.toString()) }
+
+		val eventCollection = eventCollectionBuilder.build<String>()
+		eventCollection.addEvents(records)
+		return eventCollection.getEvents()
 	}
 
 	private fun getAllInputRecordsAsync(eventCollectionBuilder: EventCollection.Builder) = GlobalScope.async {
@@ -86,7 +104,7 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 
 	private fun <T> loopUntilKafkaRecordsAreRetrieved(kafkaConsumer: KafkaConsumer<Key, T>, eventCollection: EventCollection<T>): List<KafkaEvent<T>> {
 		val startTime = System.currentTimeMillis()
-		val timeout = 10 * 1000
+		val timeout = 30 * 1000
 
 		while (System.currentTimeMillis() < startTime + timeout) {
 			val records = retrieveKafkaRecords(kafkaConsumer)
