@@ -102,7 +102,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 
 	data class State(
 		var started: Boolean = false,
-		var up: Boolean = true,
+		var alive: Boolean = false,
 		var ready: Boolean = false,
 		var stopping: Boolean = false,
 		var busyCounter: Int = 0
@@ -117,9 +117,6 @@ class ConfigConfig(private val env: ConfigurableEnvironment) {
 	fun appConfiguration(): AppConfiguration {
 		val appConfiguration = AppConfiguration()
 		env.setActiveProfiles(appConfiguration.config.profile)
-		appConfiguration.state.ready = true
-		appConfiguration.state.up = true
-
 		return appConfiguration
 	}
 }

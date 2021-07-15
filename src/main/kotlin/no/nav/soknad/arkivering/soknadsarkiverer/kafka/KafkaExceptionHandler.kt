@@ -22,7 +22,7 @@ class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationEx
 		val message = createMessage("Uncaught exception", e)
 		logger.error(message)
 
-		appConfiguration.state.up = false // Set state.up=false, which (through the Health Endpoint) will trigger a restart of this app instance
+		appConfiguration.state.alive = false // Set state.up=false, which (through the Health Endpoint) will trigger a restart of this app instance
 
 		kafkaPublisher.putMessageOnTopic("null", message)
 	}

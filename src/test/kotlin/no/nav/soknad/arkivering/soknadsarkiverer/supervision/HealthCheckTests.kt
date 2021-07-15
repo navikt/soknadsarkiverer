@@ -88,14 +88,14 @@ class HealthCheckTests {
 
 	@Test
 	fun `isAlive returns Ok when application is well`() {
-		appConfiguration.state.up = true
+		appConfiguration.state.alive = true
 
 		assertEquals("Ok", healthCheck.isAlive())
 	}
 
 	@Test
 	fun `isAlive returns Status 500 when application is unwell`() {
-		appConfiguration.state.up = false
+		appConfiguration.state.alive = false
 
 		val e = assertThrows<HttpServerErrorException> { healthCheck.isAlive() }
 		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, e.statusCode)
