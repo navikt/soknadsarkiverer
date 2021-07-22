@@ -83,4 +83,4 @@ spec:
     - name: FILESTORAGE_HOST
       value: https://soknadsfillager.dev.adeo.no
     - name: JOARK_HOST
-      value: https://dokarkiv-q0.dev.adeo.no
+      value: https://arkiv-mock.dev.adeo.no
