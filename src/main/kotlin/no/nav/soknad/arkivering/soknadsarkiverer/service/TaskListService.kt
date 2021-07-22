@@ -269,13 +269,12 @@ class TaskListService(
 		} catch (e: Exception) {
 			nextState = when (e.cause) {
 				is FilesAlreadyDeletedException -> {
-					// File(s) already deleted in filestorage indicating that the application is already archived.
-					logger.warn("$key: Files gone from filestorage continues without archiving", e)
+					logger.warn("$key: Files gone from Filestorage, indicating that the application is already archived. " +
+						"Will continue without archiving")
 					EventTypes.ARCHIVED
 				}
 				is ApplicationAlreadyArchivedException -> {
-					// File(s) already deleted in filestorage indicating that the application is already archived.
-					logger.warn("$key: Application already archived continues without archiving", e)
+					logger.warn("$key: Application already archived. Will continue without archiving")
 					EventTypes.ARCHIVED
 				}
 				is ShuttingDownException -> {

@@ -47,7 +47,7 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 		} catch (e: Exception) {
 			metrics.incGetFilestorageErrors()
 			if (e.cause is FilesAlreadyDeletedException) {
-				logger.warn("$key: File(s) deleted in the file storage", e)
+				logger.warn("$key: File(s) were deleted in the file storage when trying to fetch them: ${e.message}")
 				throw e
 			} else {
 				logger.error("$key: Error retrieving files from the file storage", e)
