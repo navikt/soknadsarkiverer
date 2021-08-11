@@ -110,6 +110,7 @@ class ConfigConfig(private val env: ConfigurableEnvironment) {
 	fun appConfiguration(): AppConfiguration {
 		val appConfiguration = AppConfiguration()
 		env.setActiveProfiles(appConfiguration.config.profile)
+		println("Using profile '${appConfiguration.config.profile}'")
 		appConfiguration.state.ready = true
 		appConfiguration.state.up = true
 
