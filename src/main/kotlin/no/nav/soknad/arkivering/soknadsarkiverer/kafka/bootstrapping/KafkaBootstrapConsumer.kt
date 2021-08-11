@@ -126,7 +126,7 @@ class KafkaBootstrapConsumer(
 			if (shouldStop)
 				break
 			TimeUnit.MILLISECONDS.sleep(100)
-			if (System.currentTimeMillis() > startTime + timeout) {
+			if (System.currentTimeMillis() > startTime + timeout && timeout > 0) {
 				logger.warn("For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records $timeout ms after " +
 					"starting. Aborting consumption.")
 				break
