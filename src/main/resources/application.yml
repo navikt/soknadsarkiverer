@@ -57,7 +57,7 @@ no.nav.security.jwt:
 spring:
   config:
     activate:
-      on-profile: default | dev | prod
+      on-profile: spring | default | docker | dev | prod
 
 no.nav.security.jwt:
   expirythreshold: ${EXPIRYTHRESHOLD} #threshold in minutes until token expires

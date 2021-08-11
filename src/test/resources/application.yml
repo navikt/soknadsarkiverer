@@ -1,8 +1,32 @@
 application:
-  APPLICATION_PROFILE: test
+  SPRING_PROFILES_ACTIVE: test
   schema-registry-scope: mocked-scope
   SCHEMA_REGISTRY_URL: mock://mocked-scope
   mocked-port-for-external-services: 2908
   JOARK_HOST: http://localhost:2908
   FILESTORAGE_HOST: http://localhost:2908
   BOOTSTRAPPING_TIMEOUT: 10
+
+---
+spring:
+  config:
+    activate:
+      on-profile: spring
+
+no.nav.security.jwt:
+  issuer:
+    someshortname:
+      discoveryurl: http://metadata
+      accepted_audience: aud-localhost
+      cookie_name: localhost-idtoken
+
+  client:
+    registration:
+      soknadsarkiverer:
+        token-endpoint-url: http://localhost:8181/oauth2/v2.0/token
+        grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
+        scope: scope1
+        authentication:
+          client-id: testclient
+          client-secret: testsecret
+          client-auth-method: client_secret_basic

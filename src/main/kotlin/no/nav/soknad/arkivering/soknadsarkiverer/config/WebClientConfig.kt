@@ -36,7 +36,7 @@ class WebClientConfig(private val appConfiguration: AppConfiguration) {
 		.build()
 
 	@Bean
-	@Profile("test | default")
+	@Profile("spring | test | docker | default")
 	@Qualifier("archiveWebClient")
 	@Scope("prototype")
 	@Lazy
