@@ -113,7 +113,7 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 
 	private fun applicationIsStarted() = appConfiguration.state.started
 
-	private fun applicationIsAlive() = appConfiguration.state.up
+	private fun applicationIsAlive() = appConfiguration.state.alive
 
 
 	private data class Dependency(val dependencyEndpoint: () -> String,

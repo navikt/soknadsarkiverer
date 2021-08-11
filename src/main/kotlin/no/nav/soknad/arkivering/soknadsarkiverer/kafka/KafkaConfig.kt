@@ -129,7 +129,7 @@ class KafkaConfig(
 		kafkaStreams.start()
 		Runtime.getRuntime().addShutdownHook(Thread(kafkaStreams::close))
 
-		appConfiguration.state.started = true
+		appConfiguration.state.ready = true
 		return kafkaStreams
 	}
 
