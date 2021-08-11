@@ -17,10 +17,6 @@ import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
 @Service
 class JournalpostClient(private val appConfiguration: AppConfiguration,
@@ -29,7 +25,6 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	private val SKIP_JOARK_IF_ENVIRONMENT: String = "prod"
 
 	override fun isAlive(): String {
 		return webClient
@@ -47,20 +42,13 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 			val request: OpprettJournalpostRequest = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)
 
 			val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
+			val response = sendDataToJoark(request, url)
+			val journalpostId = response?.journalpostId ?: "-1"
 
-			if (SKIP_JOARK_IF_ENVIRONMENT.equals(appConfiguration.config.profile, true) && isBeforeArchivingStart(soknadarkivschema.getInnsendtDato())) {
-				val journalpostId = "-1"
-				logger.info("$key: Skipped saving to Joark, fake the following journalpostId: '$journalpostId'")
-				metrics.incJoarkSuccesses()
-				return "-1"
-			} else {
-				val response = sendDataToJoark(request, url)
-				val journalpostId = response?.journalpostId ?: "-1"
+			logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.behandlingsid}', got the following journalpostId: '$journalpostId'")
+			metrics.incJoarkSuccesses()
+			return journalpostId
 
-				logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.behandlingsid}', got the following journalpostId: '$journalpostId'")
-				metrics.incJoarkSuccesses()
-				return journalpostId
-			}
 		} catch (e: ApplicationAlreadyArchivedException) {
 			logger.warn("$key: Application's eksternReferanseId ${soknadarkivschema.behandlingsid} already exists in the archive", e)
 			throw e
@@ -94,12 +82,5 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 				})
 			.bodyToMono(OpprettJournalpostResponse::class.java)
 			.block()
-	}
-
-
-	private fun isBeforeArchivingStart(innsendtDato: Long): Boolean {
-		val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-		logger.info("skip_archiving_until:  innsendtDato=${LocalDateTime.ofInstant(Instant.ofEpochSecond(innsendtDato), ZoneOffset.UTC)}, startArkivering=${appConfiguration.config.startArkivering}")
-		return (LocalDateTime.ofInstant(Instant.ofEpochSecond(innsendtDato), ZoneOffset.UTC)).isBefore(LocalDateTime.parse(appConfiguration.config.startArkivering, formatter))
 	}
 }

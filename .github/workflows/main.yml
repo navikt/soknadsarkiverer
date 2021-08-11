@@ -91,6 +91,5 @@ jobs:
           PRINT_PAYLOAD: true
           CLUSTER: prod-fss
           RESOURCE: .nais/nais.yml
-          VAR: app_version=${{env.TAG}}
           DRY_RUN: false
           IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}

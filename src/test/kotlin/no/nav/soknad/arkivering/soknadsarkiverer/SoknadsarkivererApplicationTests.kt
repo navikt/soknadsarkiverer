@@ -23,7 +23,7 @@ import org.springframework.test.context.ActiveProfiles
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 @Import(EmbeddedKafkaBrokerConfig::class)
-@EmbeddedKafka(topics = [kafkaInputTopic, kafkaProcessingTopic, kafkaMessageTopic, kafkaMetricsTopic])
+@EmbeddedKafka(topics = [kafkaInputTopic, kafkaProcessingTopic, kafkaMessageTopic, kafkaMetricsTopic], controlledShutdown = true)
 class SoknadsarkivererApplicationTests {
 
 	@Suppress("unused")
