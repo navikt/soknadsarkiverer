@@ -7,6 +7,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.kafkaMessageTopic
 import no.nav.soknad.arkivering.soknadsarkiverer.config.kafkaMetricsTopic
 import no.nav.soknad.arkivering.soknadsarkiverer.config.kafkaProcessingTopic
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.EmbeddedKafkaBrokerConfig
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -17,6 +18,7 @@ import org.springframework.kafka.test.context.EmbeddedKafka
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 
+@Disabled
 @ActiveProfiles("test")
 @SpringBootTest
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
