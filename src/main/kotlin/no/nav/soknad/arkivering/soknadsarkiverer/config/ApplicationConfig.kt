@@ -27,7 +27,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_MESSAGE_TOPIC" to kafkaMessageTopic,
 	"KAFKA_METRICS_TOPIC" to kafkaMetricsTopic,
 
-	"SPRING_PROFILES_ACTIVE" to "spring",
+	"APPLICATION_PROFILE" to "spring",
 	"MAX_MESSAGE_SIZE" to (1024 * 1024 * 300).toString(),
 	"CLIENTSECRET" to "",
 
@@ -85,9 +85,9 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val clientsecret: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "CLIENTSECRET".configProperty()),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
-		val retryTime: List<Int> = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
-		val secondsAfterStartupBeforeStarting: Long = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) startUpSeconds else startUpSecondsForTest,
-		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty(),
+		val retryTime: List<Int> = if (!"test".equals("APPLICATION_PROFILE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
+		val secondsAfterStartupBeforeStarting: Long = if (!"test".equals("APPLICATION_PROFILE".configProperty(), true)) startUpSeconds else startUpSecondsForTest,
+		val profile: String = "APPLICATION_PROFILE".configProperty(),
 		val maxMessageSize: Int = "MAX_MESSAGE_SIZE".configProperty().toInt(),
 		val adminUser: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER", "ADMIN_USER".configProperty()),
 		val adminUserPassword: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER_PASSWORD", "ADMIN_USER_PASSWORD".configProperty()),
