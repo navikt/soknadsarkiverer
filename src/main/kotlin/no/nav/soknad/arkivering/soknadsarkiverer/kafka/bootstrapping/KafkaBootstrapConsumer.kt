@@ -6,7 +6,6 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.keysToBeRestarted
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
@@ -63,21 +62,13 @@ class KafkaBootstrapConsumer(
 		return getAllKafkaRecords(inputTopic, "Input", PoisonSwallowingAvroDeserializer(), keepUnfinishedRecordsFilter)
 	}
 
-	private fun isToBeRestarted(key: Key): Boolean {
-		return if (key in keysToBeRestarted) {
-			logger.info("$key: This record will be restarted!")
-			true
-		} else
-			false
-	}
-
 	private fun getProcessingRecords(): Pair<MutableList<Key>, List<ConsumerRecord<Key, ProcessingEvent>>> {
 		val allFinishedKeys = mutableListOf<Key>()
 
 		val keepUnfinishedRecordsFilter = { records: List<ConsumerRecord<Key, ProcessingEvent>> ->
 
 			val finishedKeys = records
-				.filter { it.value().type == EventTypes.FINISHED || (it.value().type == EventTypes.FAILURE && !isToBeRestarted(it.key())) }
+				.filter { it.value().type == EventTypes.FINISHED || it.value().type == EventTypes.FAILURE }
 				.map { it.key() }
 
 			allFinishedKeys.addAll(finishedKeys)
