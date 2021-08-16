@@ -87,7 +87,7 @@ class TaskListService(
 			if (processRun && task.isRunningLock.tryAcquire()) {
 				jobMap[key] = GlobalScope.launch { start(key, state) } // Start new thread for handling archiving of application with key
 			}
-			metrics.setTasksGivenUpOn(loggedTaskStates.values.filter{v -> v == EventTypes.FAILURE}.size)
+			updateNoOfFailedMetrics()
 		} else {
 			logger.debug("$key: Ignoring state - $state")
 		}
@@ -223,7 +223,7 @@ class TaskListService(
 		if (tasks.containsKey(key)) {
 
 			loggedTaskStates[key] = EventTypes.FAILURE
-			metrics.setTasksGivenUpOn(loggedTaskStates.values.filter{v -> v == EventTypes.FAILURE}.size)
+			updateNoOfFailedMetrics()
 			val jobThread = jobMap.remove(key)
 			logger.info("$key: Failed task")
 			tasks[key]?.isRunningLock?.release()
@@ -232,6 +232,10 @@ class TaskListService(
 		} else {
 			logger.info("$key: Tried to fail task, but it is already finished")
 		}
+	}
+
+	private fun updateNoOfFailedMetrics() {
+		metrics.setTasksGivenUpOn(loggedTaskStates.values.filter{v -> v == EventTypes.FAILURE}.size)
 	}
 
 	private fun getSecondsToWait(attempt: Int): Long {
