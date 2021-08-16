@@ -154,6 +154,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 	fun `Failing to send to Joark will cause retries`() {
 		mockFilestorageIsWorking(fileUuid)
 		mockJoarkIsDown()
+		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
@@ -167,7 +168,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyKafkaMetric(maxNumberOfAttempts, "get files from filestorage")
 		verifyKafkaMetric(0, "send files to archive")
 		verifyKafkaMetric(0, "delete files from filestorage")
-	}
+		verifyArchivingMetrics(tasksGivenUpOnBefore + 1,	metrics.getTasksGivenUpOn()) }
 
 	@Test
 	fun `Poison pill followed by proper event -- Only proper one is sent to Joark`() {
