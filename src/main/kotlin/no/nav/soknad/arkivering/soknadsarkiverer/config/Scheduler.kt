@@ -15,11 +15,17 @@ class Scheduler {
 	@Autowired
 	private lateinit var singleTaskScheduler: ThreadPoolTaskScheduler
 
+	@Autowired
+	private lateinit var selfDestructScheduler: ThreadPoolTaskScheduler
+
 	@Bean(name = ["normalTaskScheduler"])
 	fun normalTaskScheduler() = threadPoolTaskScheduler(5)
 
 	@Bean(name = ["singleTaskScheduler"])
 	fun singleTaskScheduler() = threadPoolTaskScheduler(1)
+
+	@Bean(name = ["selfDestructScheduler"])
+	fun selfDestructScheduler() = threadPoolTaskScheduler(1)
 
 	fun threadPoolTaskScheduler(poolSize: Int) = ThreadPoolTaskScheduler().also {
 		it.poolSize = poolSize
@@ -33,5 +39,9 @@ class Scheduler {
 
 	fun scheduleSingleTask(task: () -> Unit, startTime: Instant) {
 		singleTaskScheduler.schedule(task, startTime)
+	}
+
+	fun scheduleSelfDestruct(task: () -> Unit, startTime: Instant) {
+		selfDestructScheduler.schedule(task, startTime)
 	}
 }
