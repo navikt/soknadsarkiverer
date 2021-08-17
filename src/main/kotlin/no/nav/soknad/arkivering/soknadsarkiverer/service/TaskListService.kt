@@ -161,7 +161,7 @@ class TaskListService(
 
 	fun getSoknadarkivschema(key: String) = tasks[key]?.value
 
-	fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int? = 0) {
+	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int? = 0) {
 
 		if (tasks[key] == null || loggedTaskStates[key] == EventTypes.FAILURE || loggedTaskStates[key] == EventTypes.FINISHED) {
 			logger.warn("$key: Too many attempts ($attempt) or loggedstate ${loggedTaskStates[key]}, will not try again")
@@ -198,7 +198,7 @@ class TaskListService(
 	}
 
 	fun deleteFilesState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int? = 0) {
-		logger.info("$key: state = ARCHIVED. About deleteFiles in attempt $attempt")
+		logger.info("$key: state = ARCHIVED. About to delete files in attempt $attempt")
 		tryToDeleteFiles(key, soknadarkivschema)
 	}
 
@@ -252,7 +252,7 @@ class TaskListService(
 		val timer = metrics.archivingLatencyStart()
 		val histogram = metrics.archivingLatencyHistogramStart(soknadarkivschema.arkivtema)
 		try {
-			logger.info("$key: Will now start to archive")
+			logger.info("$key: Will now start to fetch files and send to the archive")
 			val files = archiverService.fetchFiles(key, soknadarkivschema)
 
 			protectFromShutdownInterruption(appConfiguration) {
@@ -260,7 +260,7 @@ class TaskListService(
 				nextState = EventTypes.ARCHIVED
 			}
 
-			logger.info("$key: Finished archiving")
+			logger.info("$key: Finished sending to the archive")
 
 		} catch (e: ApplicationAlreadyArchivedException) {
 			// Log nothing, the Exceptions of this type are supposed to already have been logged
