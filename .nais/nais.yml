@@ -37,6 +37,7 @@ spec:
   ingresses:
     - "https://soknadsarkiverer.nais.adeo.no"
     - "https://soknadsarkiverer.prod-fss.nais.io"
+    - "https://soknadsarkiverer.intern.nav.no"
   vault:
     enabled: true
     paths:
