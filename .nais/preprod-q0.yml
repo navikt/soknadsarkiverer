@@ -82,3 +82,5 @@ spec:
       value: https://soknadsfillager-q0.dev.adeo.no
     - name: JOARK_HOST
       value: https://dokarkiv-q0.dev.adeo.no
+    - name: BOOTSTRAPPING_TIMEOUT
+      value: "120"

@@ -83,3 +83,5 @@ spec:
       value: https://soknadsfillager.dev.adeo.no
     - name: JOARK_HOST
       value: https://arkiv-mock.dev.intern.nav.no
+    - name: BOOTSTRAPPING_TIMEOUT
+      value: "30"
