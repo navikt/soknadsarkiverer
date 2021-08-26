@@ -112,7 +112,8 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 			val shouldStop = eventCollection.addEvents(records)
 			if (shouldStop)
 				break
-			TimeUnit.MILLISECONDS.sleep(100)
+			if (records.isEmpty())
+				TimeUnit.MILLISECONDS.sleep(100)
 		}
 		return eventCollection.getEvents()
 	}
