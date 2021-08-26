@@ -83,4 +83,4 @@ spec:
     - name: JOARK_HOST
       value: https://dokarkiv-q1.dev.adeo.no
     - name: BOOTSTRAPPING_TIMEOUT
-      value: "120"
+      value: "0"
