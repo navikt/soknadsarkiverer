@@ -33,6 +33,7 @@ import org.springframework.test.context.ActiveProfiles
 import java.util.*
 import java.util.concurrent.TimeUnit
 
+@Disabled // TODO
 @ActiveProfiles("test")
 @SpringBootTest
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
@@ -104,7 +105,6 @@ class IntegrationTests {
 		verifyDeleteRequestsToFilestorage(0)
 	}
 
-	@Disabled // TODO
 	@Test
 	fun `Poison pill followed by proper event -- One event discarded, one to Joark`() {
 		mockFilestorageIsWorking(fileId)

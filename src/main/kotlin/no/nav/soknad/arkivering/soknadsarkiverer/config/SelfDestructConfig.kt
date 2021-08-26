@@ -67,7 +67,7 @@ class SelfDestructConfig(private val scheduler: Scheduler, private val appConfig
 	fun scheduleSelfDestruct() {
 		val time = timeTomorrowNightBetween2and5()
 		logger.info("Will self destruct at $time")
-		scheduler.scheduleSelfDestruct({ selfDestruct() }, time)
+		scheduler.scheduleSingleTask({ selfDestruct() }, time)
 	}
 
 	/**
@@ -83,6 +83,6 @@ class SelfDestructConfig(private val scheduler: Scheduler, private val appConfig
 
 	private fun selfDestruct() {
 		logger.info("Initialising self destruction sequence")
-		appConfiguration.state.up = false
+		appConfiguration.state.alive = false
 	}
 }
