@@ -133,8 +133,8 @@ class KafkaBootstrapConsumer(
 				break
 			TimeUnit.MILLISECONDS.sleep(100)
 			if (hasTimedOut(startTime, timeout, records)) {
-				logger.warn("For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records $timeout ms after " +
-					"starting. Has read ${records.size} records. Aborting consumption.")
+				logger.warn("For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records " +
+					"${System.currentTimeMillis()} ms after starting. Has read ${records.size} records. Aborting consumption.")
 				break
 			}
 		}
@@ -143,11 +143,13 @@ class KafkaBootstrapConsumer(
 
 	private fun hasTimedOut(startTime: Long, timeout: Int, records: List<*>): Boolean {
 
-		val shouldApplyTimeoutRules = timeout > 0
+		val shouldEnforceTimeout = timeout > 0
 		val hasTimedOut = System.currentTimeMillis() > startTime + timeout
+
+		val hasTimedOutWithoutRecords = System.currentTimeMillis() > startTime + timeoutWhenNotFindingRecords
 		val hasNotReadRecords = records.isEmpty()
 
-		return shouldApplyTimeoutRules && hasTimedOut || hasTimedOut && hasNotReadRecords
+		return shouldEnforceTimeout && hasTimedOut || hasNotReadRecords && hasTimedOutWithoutRecords
 	}
 
 	private fun shouldStop(previousRecords: List<*>, newRecords: List<*>) =
@@ -229,3 +231,4 @@ class KafkaBootstrapConsumer(
 }
 
 private typealias Key = String
+private const val timeoutWhenNotFindingRecords = 30 * 1000
