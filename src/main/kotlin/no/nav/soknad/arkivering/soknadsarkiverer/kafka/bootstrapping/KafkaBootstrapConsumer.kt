@@ -59,7 +59,8 @@ class KafkaBootstrapConsumer(
 			records.filter { !finishedKeys.contains(it.key()) }
 		}
 
-		return getAllKafkaRecords(inputTopic, "Input", PoisonSwallowingAvroDeserializer(), keepUnfinishedRecordsFilter)
+		val deserializer = PoisonSwallowingAvroDeserializer<Soknadarkivschema>()
+		return getAllKafkaRecords(inputTopic, "Input", deserializer, keepUnfinishedRecordsFilter)
 	}
 
 	private fun getProcessingRecords(): Pair<MutableList<Key>, List<ConsumerRecord<Key, ProcessingEvent>>> {
@@ -84,8 +85,13 @@ class KafkaBootstrapConsumer(
 		return allFinishedKeys to kafkaRecords
 	}
 
-	private fun <T> getAllKafkaRecords(topic: String, recordType: String, valueDeserializer: Deserializer<T>,
-																		 filter: (List<ConsumerRecord<Key, T>>) -> List<ConsumerRecord<Key, T>>): List<ConsumerRecord<Key, T>> {
+	private fun <T> getAllKafkaRecords(
+		topic: String,
+		recordType: String,
+		valueDeserializer: Deserializer<T>,
+		filter: (List<ConsumerRecord<Key, T>>) -> List<ConsumerRecord<Key, T>>
+	): List<ConsumerRecord<Key, T>> {
+
 		try {
 			val applicationId = "soknadsarkiverer-bootstrapping-$recordType-$uuid"
 			logger.info("About to bootstrap records from $topic")
@@ -126,13 +132,22 @@ class KafkaBootstrapConsumer(
 			if (shouldStop)
 				break
 			TimeUnit.MILLISECONDS.sleep(100)
-			if (System.currentTimeMillis() > startTime + timeout && timeout > 0) {
+			if (hasTimedOut(startTime, timeout, records)) {
 				logger.warn("For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records $timeout ms after " +
-					"starting. Aborting consumption.")
+					"starting. Has read ${records.size} records. Aborting consumption.")
 				break
 			}
 		}
 		return records
+	}
+
+	private fun hasTimedOut(startTime: Long, timeout: Int, records: List<*>): Boolean {
+
+		val shouldApplyTimeoutRules = timeout > 0
+		val hasTimedOut = System.currentTimeMillis() > startTime + timeout
+		val hasNotReadRecords = records.isEmpty()
+
+		return shouldApplyTimeoutRules && hasTimedOut || hasTimedOut && hasNotReadRecords
 	}
 
 	private fun shouldStop(previousRecords: List<*>, newRecords: List<*>) =
@@ -149,7 +164,8 @@ class KafkaBootstrapConsumer(
 			if (record.key() != null && record.value() != null)
 				records.add(record)
 			else
-				logger.error("For ${kafkaConsumer.assignment()}: Record had null attributes. Key='${record.key()}', value ${if (record.value() == null) "is" else "is not"} null")
+				logger.error("For ${kafkaConsumer.assignment()}: Record had null attributes. Key='${record.key()}', " +
+					"value ${if (record.value() == null) "is" else "is not"} null")
 		}
 		return records
 	}
@@ -204,7 +220,8 @@ class KafkaBootstrapConsumer(
 			return try {
 				super.deserialize(topic, bytes)
 			} catch (e: Exception) {
-				logger.error("Unable to deserialize event on topic $topic\nByte Array: ${bytes.asList()}\nString representation: '${String(bytes)}'", e)
+				logger.error("Unable to deserialize event on topic $topic\nByte Array: ${bytes.asList()}\n" +
+					"String representation: '${String(bytes)}'", e)
 				null
 			}
 		}

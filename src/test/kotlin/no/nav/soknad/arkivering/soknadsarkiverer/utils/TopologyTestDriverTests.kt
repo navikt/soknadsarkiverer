@@ -2,7 +2,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.utils
 
 import com.nhaarman.mockitokotlin2.*
 import io.confluent.kafka.schemaregistry.testutil.MockSchemaRegistry
-import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
@@ -11,7 +11,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.*
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
-import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.StreamsConfig
@@ -30,10 +29,15 @@ open class TopologyTestDriverTests {
 	private lateinit var inputTopicForBadData: TestInputTopic<String, String>
 	private lateinit var processingEventTopic: TestInputTopic<String, ProcessingEvent>
 
-	private fun setupKafkaTopologyTestDriver(appConfiguration: AppConfiguration, taskListService: TaskListService, kafkaPublisher: KafkaPublisher, metrics: ArchivingMetrics) {
+	private fun setupKafkaTopologyTestDriver(
+		appConfiguration: AppConfiguration,
+		taskListService: TaskListService,
+		kafkaPublisher: KafkaPublisher
+	) {
+
 		logger.info("**setupKafkaTopologyTestDriver**")
 		val builder = StreamsBuilder()
-		KafkaConfig(appConfiguration, taskListService, kafkaPublisher, metrics).kafkaStreams(builder)
+		KafkaStreamsSetup(appConfiguration, taskListService, kafkaPublisher).kafkaStreams(builder)
 		val topology = builder.build()
 
 		// Dummy properties needed for test diver
@@ -43,7 +47,7 @@ open class TopologyTestDriverTests {
 			it[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = Serdes.StringSerde::class.java
 			it[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = SpecificAvroSerde::class.java
 			it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = KafkaExceptionHandler::class.java
-			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
+			it[SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
 			it[KAFKA_PUBLISHER] = kafkaPublisher
 			it[APP_CONFIGURATION] = appConfiguration
 		}
@@ -58,7 +62,7 @@ open class TopologyTestDriverTests {
 		val avroProcessingEventSerde = SpecificAvroSerde<ProcessingEvent>(schemaRegistry)
 
 		// Configure Serdes to use the same mock schema registry URL
-		val config = hashMapOf(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
+		val config = hashMapOf(SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
 		avroSoknadarkivschemaSerde.configure(config, false)
 		avroProcessingEventSerde.configure(config, false)
 
@@ -114,8 +118,8 @@ open class TopologyTestDriverTests {
 				.then { processingEventTopic.pipeInput(captor.value, ProcessingEvent(eventType)) }
 		}
 
-		fun setup(metrics: ArchivingMetrics) {
-			setupKafkaTopologyTestDriver(appConfiguration, taskListService, kafkaPublisher, metrics)
+		fun setup() {
+			setupKafkaTopologyTestDriver(appConfiguration, taskListService, kafkaPublisher)
 		}
 
 		private inline fun <reified T> argumentCaptor(): ArgumentCaptor<T> = ArgumentCaptor.forClass(T::class.java)

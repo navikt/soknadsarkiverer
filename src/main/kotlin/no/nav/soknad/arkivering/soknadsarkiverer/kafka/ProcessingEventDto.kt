@@ -1,4 +1,4 @@
-package no.nav.soknad.arkivering.soknadsarkiverer.dto
+package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent

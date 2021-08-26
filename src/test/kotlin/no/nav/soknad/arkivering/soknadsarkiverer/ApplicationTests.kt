@@ -95,7 +95,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 			.withTaskListService(taskListService)
 			.withKafkaPublisher(kafkaPublisherMock)
 			.putProcessingEventLogsOnTopic()
-			.setup(metrics)
+			.setup()
 	}
 
 	@AfterEach
