@@ -41,7 +41,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"ADMIN_USER_PASSWORD" to "password",
 ))
 
-private val secondsBetweenRetries = listOf(1, 25, 60, 120, 600, 1200) // As many retries will be attempted as there are elements in the list.
+private val secondsBetweenRetries = listOf(1, 60, 120, 600, 1200, 3600) // As many retries will be attempted as there are elements in the list.
 private val secondsBetweenRetriesForTests = listOf(0, 1, 1, 1, 1, 1)  // Note! Also update end-to-end-tests if the list size is changed!
 private const val startUpSeconds: Long = 90 //  1,5 minutes before starting processing incoming
 const val startUpSecondsForTest: Long = 8 // 8 seconds before starting processing incoming

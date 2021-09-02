@@ -169,6 +169,25 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyArchivingMetrics(tasksGivenUpOnBefore + 1,	metrics.getTasksGivenUpOn()) }
 
 	@Test
+	fun `Restart task after failing succeeds`() {
+		mockFilestorageIsWorking(fileUuid)
+		//mockJoarkIsDown()
+		mockJoarkRespondsAfterAttempts(appConfiguration.config.retryTime.size + 1)
+		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
+
+		putDataOnKafkaTopic(createSoknadarkivschema())
+
+		verifyProcessingEvents(1, FAILURE)
+		verifyArchivingMetrics(tasksGivenUpOnBefore + 1,	metrics.getTasksGivenUpOn())
+
+		val failedKeys = taskListService.getFailedTasks()
+		taskListService.startPaNytt(failedKeys.first())
+		verifyProcessingEvents(1, ARCHIVED)
+		verifyArchivingMetrics(tasksGivenUpOnBefore + 0,	metrics.getTasksGivenUpOn())
+	}
+
+
+	@Test
 	fun `Poison pill followed by proper event -- Only proper one is sent to Joark`() {
 		val keyForPoisionPill = UUID.randomUUID().toString()
 		mockFilestorageIsWorking(fileUuid)
@@ -225,6 +244,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 	@Test
 	fun `First attempt to Joark fails, the fourth succeeds`() {
 		val attemptsToFail = 3
+		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
 		mockFilestorageIsWorking(fileUuid)
 		mockJoarkRespondsAfterAttempts(attemptsToFail)
 
@@ -240,6 +260,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyKafkaMetric(4, "get files from filestorage")
 		verifyKafkaMetric(1, "send files to archive")
 		verifyKafkaMetric(1, "delete files from filestorage")
+		verifyArchivingMetrics(tasksGivenUpOnBefore + 0, metrics.getTasksGivenUpOn(), "Should not have given up on any task")
 	}
 
 	@Test
