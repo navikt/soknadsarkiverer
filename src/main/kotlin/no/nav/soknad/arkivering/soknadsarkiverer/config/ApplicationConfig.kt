@@ -27,7 +27,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_MESSAGE_TOPIC" to kafkaMessageTopic,
 	"KAFKA_METRICS_TOPIC" to kafkaMetricsTopic,
 
-	"APPLICATION_PROFILE" to "default",
+	"SPRING_PROFILES_ACTIVE" to "spring",
 	"MAX_MESSAGE_SIZE" to (1024 * 1024 * 300).toString(),
 	"CLIENTSECRET" to "",
 
@@ -41,7 +41,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"ADMIN_USER_PASSWORD" to "password",
 ))
 
-private val secondsBetweenRetries = listOf(1, 25, 60, 120, 600, 1200) // As many retries will be attempted as there are elements in the list.
+private val secondsBetweenRetries = listOf(1, 60, 120, 600, 1200, 3600) // As many retries will be attempted as there are elements in the list.
 private val secondsBetweenRetriesForTests = listOf(0, 1, 1, 1, 1, 1)  // Note! Also update end-to-end-tests if the list size is changed!
 private const val startUpSeconds: Long = 90 //  1,5 minutes before starting processing incoming
 const val startUpSecondsForTest: Long = 8 // 8 seconds before starting processing incoming
@@ -85,9 +85,9 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val clientsecret: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "CLIENTSECRET".configProperty()),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
-		val retryTime: List<Int> = if (!"test".equals("APPLICATION_PROFILE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
-		val secondsAfterStartupBeforeStarting: Long = if (!"test".equals("APPLICATION_PROFILE".configProperty(), true)) startUpSeconds else startUpSecondsForTest,
-		val profile: String = "APPLICATION_PROFILE".configProperty(),
+		val retryTime: List<Int> = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
+		val secondsAfterStartupBeforeStarting: Long = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) startUpSeconds else startUpSecondsForTest,
+		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty(),
 		val maxMessageSize: Int = "MAX_MESSAGE_SIZE".configProperty().toInt(),
 		val adminUser: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER", "ADMIN_USER".configProperty()),
 		val adminUserPassword: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER_PASSWORD", "ADMIN_USER_PASSWORD".configProperty()),
@@ -95,7 +95,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 
 	data class State(
 		var started: Boolean = false,
-		var alive: Boolean = false,
+		var up: Boolean = true,
 		var ready: Boolean = false,
 		var stopping: Boolean = false,
 		var busyCounter: Int = 0
@@ -110,6 +110,10 @@ class ConfigConfig(private val env: ConfigurableEnvironment) {
 	fun appConfiguration(): AppConfiguration {
 		val appConfiguration = AppConfiguration()
 		env.setActiveProfiles(appConfiguration.config.profile)
+		println("Using profile '${appConfiguration.config.profile}'")
+		appConfiguration.state.ready = true
+		appConfiguration.state.up = true
+
 		return appConfiguration
 	}
 }

@@ -74,12 +74,12 @@ class KafkaConfig(
 			.mapValues { processingEvents -> ProcessingEventDto(processingEvents) } // mapper eventtype til ProcessingEventDto
 			.mapValues { processingEvents -> processingEvents.getNewestState() }
 			.toStream()
-			.peek { key, state -> logger.debug("$key: ProcessingTopic filter with state $state") }
+			.peek { key, state -> logger.debug("$key: ProcessingTopic in state $state") }
 			.filter { key, state -> !(isConsideredFinished(key, state)) }
 			.leftJoin(inputTable, { state, soknadarkivschema -> soknadarkivschema to state }, joinDef) // Oppdatere state på tabell, archivingState, ved join av soknadarkivschema og state.
-			.filter { key, (soknadsarkivschema, _) -> filterSoknadsarkivschemaThatAreNull(key, soknadsarkivschema) } // Ta bort alle innslag i tabell der soknadarkivschema er null.
-			.peek { key, (soknadsarkivschema, state) -> logger.debug("$key: ProcessingTopic scehdule job in state $state - ${soknadsarkivschema.print()}") }
-			.foreach { key, (soknadsarkivschema, state) -> schedulerService.addOrUpdateTask(key, soknadsarkivschema, state.type) } // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
+			.filter { key, (soknadarkivschema, _) -> filterSoknadarkivschemaThatAreNull(key, soknadarkivschema) } // Ta bort alle innslag i tabell der soknadarkivschema er null.
+			.peek { key, (soknadarkivschema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state Soknadarkivschema: ${soknadarkivschema.print()}") }
+			.foreach { key, (soknadarkivschema, state) -> schedulerService.addOrUpdateTask(key, soknadarkivschema, state.type) } // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
 	}
 
 	private fun isConsideredFinished(key: String, processingEvent: ProcessingEvent): Boolean {
@@ -97,14 +97,14 @@ class KafkaConfig(
 	}
 
 
-	private fun filterSoknadsarkivschemaThatAreNull(key: String, soknadsarkiveschema: Soknadarkivschema?): Boolean {
-		if (soknadsarkiveschema == null)
-			logger.error("$key: Soknadsarkivschema is null!")
-		return soknadsarkiveschema != null
+	private fun filterSoknadarkivschemaThatAreNull(key: String, soknadarkivschema: Soknadarkivschema?): Boolean {
+		if (soknadarkivschema == null)
+			logger.error("$key: Soknadarkivschema is null!")
+		return soknadarkivschema != null
 	}
 
 	private fun Soknadarkivschema.print(): String {
-		val fnr = "" // Do not print fnr to log
+		val fnr = "***" // Do not print fnr to log
 		val a = Soknadarkivschema(this.behandlingsid, fnr, this.arkivtema, this.innsendtDato, this.soknadstype, this.mottatteDokumenter)
 		return a.toString()
 	}

@@ -37,6 +37,7 @@ spec:
   ingresses:
     - "https://soknadsarkiverer.nais.adeo.no"
     - "https://soknadsarkiverer.prod-fss.nais.io"
+    - "https://soknadsarkiverer.intern.nav.no"
   vault:
     enabled: true
     paths:
@@ -60,7 +61,7 @@ spec:
       value: SASL_SSL
     - name: KAFKA_SASLMEC
       value: PLAIN
-    - name: APPLICATION_PROFILE
+    - name: SPRING_PROFILES_ACTIVE
       value: prod
     - name: KAFKA_INPUT_TOPIC
       value: privat-soknadInnsendt-v1

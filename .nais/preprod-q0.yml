@@ -66,7 +66,7 @@ spec:
       value: SASL_SSL
     - name: KAFKA_SASLMEC
       value: PLAIN
-    - name: APPLICATION_PROFILE
+    - name: SPRING_PROFILES_ACTIVE
       value: dev
     - name: KAFKA_INPUT_TOPIC
       value: privat-soknadInnsendt-v1-q0

@@ -87,6 +87,7 @@ class TaskListService(
 			if (processRun && task.isRunningLock.tryAcquire()) {
 				jobMap[key] = GlobalScope.launch { start(key, state) } // Start new thread for handling archiving of application with key
 			}
+			updateNoOfFailedMetrics()
 		} else {
 			logger.debug("$key: Ignoring state - $state")
 		}
@@ -151,7 +152,6 @@ class TaskListService(
 		val task = tasks[key]
 		if (task != null && task.count < newCount) {
 			tasks[key] = Task(task.value, newCount, task.timeStarted, task.isRunningLock)
-			metrics.setTasksGivenUpOn(tasks.values.filter { it.count > appConfiguration.config.retryTime.size }.count().toDouble())
 		}
 	}
 
@@ -161,7 +161,7 @@ class TaskListService(
 
 	fun getSoknadarkivschema(key: String) = tasks[key]?.value
 
-	fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int? = 0) {
+	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int? = 0) {
 
 		if (tasks[key] == null || loggedTaskStates[key] == EventTypes.FAILURE || loggedTaskStates[key] == EventTypes.FINISHED) {
 			logger.warn("$key: Too many attempts ($attempt) or loggedstate ${loggedTaskStates[key]}, will not try again")
@@ -198,7 +198,7 @@ class TaskListService(
 	}
 
 	fun deleteFilesState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int? = 0) {
-		logger.info("$key: state = ARCHIVED. About deleteFiles in attempt $attempt")
+		logger.info("$key: state = ARCHIVED. About to delete files in attempt $attempt")
 		tryToDeleteFiles(key, soknadarkivschema)
 	}
 
@@ -223,7 +223,7 @@ class TaskListService(
 		if (tasks.containsKey(key)) {
 
 			loggedTaskStates[key] = EventTypes.FAILURE
-			metrics.setTasksGivenUpOn(1.0)
+			updateNoOfFailedMetrics()
 			val jobThread = jobMap.remove(key)
 			logger.info("$key: Failed task")
 			tasks[key]?.isRunningLock?.release()
@@ -232,6 +232,15 @@ class TaskListService(
 		} else {
 			logger.info("$key: Tried to fail task, but it is already finished")
 		}
+	}
+
+	public fun getFailedTasks(): Set<String> {
+		return loggedTaskStates.filter { it.value == EventTypes.FAILURE }.keys
+	}
+
+
+	private fun updateNoOfFailedMetrics() {
+		metrics.setTasksGivenUpOn(loggedTaskStates.values.filter{v -> v == EventTypes.FAILURE}.size)
 	}
 
 	private fun getSecondsToWait(attempt: Int): Long {
@@ -248,7 +257,7 @@ class TaskListService(
 		val timer = metrics.archivingLatencyStart()
 		val histogram = metrics.archivingLatencyHistogramStart(soknadarkivschema.arkivtema)
 		try {
-			logger.info("$key: Will now start to archive")
+			logger.info("$key: Will now start to fetch files and send to the archive")
 			val files = archiverService.fetchFiles(key, soknadarkivschema)
 
 			protectFromShutdownInterruption(appConfiguration) {
@@ -256,7 +265,7 @@ class TaskListService(
 				nextState = EventTypes.ARCHIVED
 			}
 
-			logger.info("$key: Finished archiving")
+			logger.info("$key: Finished sending to the archive")
 
 		} catch (e: ApplicationAlreadyArchivedException) {
 			// Log nothing, the Exceptions of this type are supposed to already have been logged

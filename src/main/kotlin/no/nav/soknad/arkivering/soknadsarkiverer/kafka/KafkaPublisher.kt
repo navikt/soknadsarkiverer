@@ -17,7 +17,6 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.springframework.stereotype.Service
 import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.collections.HashMap
 
 @Service
 class KafkaPublisher(private val appConfiguration: AppConfiguration) {
