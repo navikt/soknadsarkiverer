@@ -94,7 +94,6 @@ jobs:
           PRINT_PAYLOAD: true
           CLUSTER: dev-fss
           RESOURCE: .nais/preprod-q0.yml
-          VAR: app_version=${{env.TAG}}
           DRY_RUN: false
           IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}
 
@@ -128,7 +127,6 @@ jobs:
           PRINT_PAYLOAD: true
           CLUSTER: dev-fss
           RESOURCE: .nais/preprod-q1.yml
-          VAR: app_version=${{env.TAG}}
           DRY_RUN: false
           IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}
 
@@ -161,6 +159,5 @@ jobs:
           PRINT_PAYLOAD: true
           CLUSTER: dev-fss
           RESOURCE: .nais/preprod-teamsoknad.yml
-          VAR: app_version=${{env.TAG}}
           DRY_RUN: false
           IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}

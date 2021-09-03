@@ -86,11 +86,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 			whenever(kafkaPublisherMock.putProcessingEventOnTopic(any(), eq(ProcessingEvent(eventType)), any()))
 				.doAnswer { putDataOnProcessingTopic(key, ProcessingEvent(eventType)) }
 		}
-		mockPuttingProcessingEventOnTopic(RECEIVED)
-		mockPuttingProcessingEventOnTopic(STARTED)
-		mockPuttingProcessingEventOnTopic(ARCHIVED)
-		mockPuttingProcessingEventOnTopic(FINISHED)
-		mockPuttingProcessingEventOnTopic(FAILURE)
+		EventTypes.values().forEach { mockPuttingProcessingEventOnTopic(it) }
 
 
 		setupKafkaTopologyTestDriver()

@@ -43,6 +43,7 @@ spec:
     outbound:
       rules:
         - application: soknadsfillager
+        - application: arkiv-mock
   vault:
     enabled: true
     paths:
@@ -56,8 +57,6 @@ spec:
         kvPath: /apikey/appdynamics/dev
 
   env:
-    - name: APP_VERSION
-      value: {{ app_version }}
     - name: KAFKA_BOOTSTRAP_SERVERS
       value: b27apvl00045.preprod.local:8443,b27apvl00046.preprod.local:8443,b27apvl00047.preprod.local:8443
     - name: SCHEMA_REGISTRY_URL
@@ -68,8 +67,8 @@ spec:
       value: SASL_SSL
     - name: KAFKA_SASLMEC
       value: PLAIN
-    - name: SPRING_PROFILES_ACTIVE
-      value: dev
+    - name: APPLICATION_PROFILE
+      value: default
     - name: KAFKA_INPUT_TOPIC
       value: privat-soknadInnsendt-v1-teamsoknad
     - name: KAFKA_PROCESSING_TOPIC
@@ -83,4 +82,4 @@ spec:
     - name: FILESTORAGE_HOST
       value: https://soknadsfillager.dev.adeo.no
     - name: JOARK_HOST
-      value: https://dokarkiv-q0.dev.adeo.no
+      value: https://arkiv-mock.dev.intern.nav.no

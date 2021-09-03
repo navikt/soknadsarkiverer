@@ -28,7 +28,7 @@ private fun getTitleFromMainDocument(documents: List<Dokument>): String {
 
 private fun renameTitleDependingOnSoknadstype(tittel: String, soknadstype: Soknadstyper, erHovedskjema: Boolean): String {
 	return if (soknadstype == Soknadstyper.ETTERSENDING && erHovedskjema) {
-		"Ettersendelse til " + tittel.replaceFirst(tittel[0], tittel[0].lowercaseChar())
+		"Ettersendelse til " + tittel.replaceFirst(tittel[0], tittel[0].toLowerCase())
 	} else {
 		tittel
 	}
