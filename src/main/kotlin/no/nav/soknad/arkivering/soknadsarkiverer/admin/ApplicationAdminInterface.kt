@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @ProtectedWithClaims(issuer = "azuread")
 @RequestMapping("/admin")
-class AdminInterface(private val adminService: AdminService) {
+class ApplicationAdminInterface(private val adminService: IAdminService) {
 
 	@Operation(summary = "Requests that the task with the given key should be rerun. It might take a little while " +
 		"before the rerun is started.", tags = ["operations"])
@@ -34,11 +34,7 @@ class AdminInterface(private val adminService: AdminService) {
 	@GetMapping("/kafka/events/allEvents", produces = [APPLICATION_JSON_VALUE])
 	fun allEvents(): List<KafkaEvent<String>> {
 
-		val eventCollectionBuilder = EventCollection.Builder()
-			.withCapacity(maxNumberOfEventsReturned)
-			.withMostRecentEvents()
-
-		return adminService.getAllRequestedEvents(eventCollectionBuilder)
+		return adminService.getAllRequestedEvents(null, null)
 	}
 
 
@@ -56,11 +52,7 @@ class AdminInterface(private val adminService: AdminService) {
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long
 	): List<KafkaEvent<String>> {
 
-		val eventCollectionBuilder = EventCollection.Builder()
-			.withCapacity(maxNumberOfEventsReturned)
-			.withEventsBefore(timestamp)
-
-		return adminService.getAllRequestedEvents(eventCollectionBuilder)
+		return adminService.getAllRequestedEvents(true, timestamp)
 	}
 
 
@@ -78,11 +70,7 @@ class AdminInterface(private val adminService: AdminService) {
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long
 	): List<KafkaEvent<String>> {
 
-		val eventCollectionBuilder = EventCollection.Builder()
-			.withCapacity(maxNumberOfEventsReturned)
-			.withEventsAfter(timestamp)
-
-		return adminService.getAllRequestedEvents(eventCollectionBuilder)
+		return adminService.getAllRequestedEvents(false, timestamp)
 	}
 
 
@@ -97,11 +85,7 @@ class AdminInterface(private val adminService: AdminService) {
 	@GetMapping("/kafka/events/unfinishedEvents", produces = [APPLICATION_JSON_VALUE])
 	fun unfinishedEvents(): List<KafkaEvent<String>> {
 
-		val eventCollectionBuilder = EventCollection.Builder()
-			.withCapacity(maxNumberOfEventsReturned)
-			.withMostRecentEvents()
-
-		return adminService.getUnfinishedEvents(eventCollectionBuilder)
+		return adminService.getUnfinishedEvents(null, null)
 	}
 
 
@@ -118,11 +102,7 @@ class AdminInterface(private val adminService: AdminService) {
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long
 	): List<KafkaEvent<String>> {
 
-		val eventCollectionBuilder = EventCollection.Builder()
-			.withCapacity(maxNumberOfEventsReturned)
-			.withEventsBefore(timestamp)
-
-		return adminService.getUnfinishedEvents(eventCollectionBuilder)
+		return adminService.getUnfinishedEvents(true, timestamp)
 	}
 
 
@@ -139,13 +119,22 @@ class AdminInterface(private val adminService: AdminService) {
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long
 	): List<KafkaEvent<String>> {
 
-		val eventCollectionBuilder = EventCollection.Builder()
-			.withCapacity(maxNumberOfEventsReturned)
-			.withEventsAfter(timestamp)
-
-		return adminService.getUnfinishedEvents(eventCollectionBuilder)
+		return adminService.getUnfinishedEvents(false, timestamp)
 	}
 
+	@Operation(summary = "Lists the $maxNumberOfEventsReturned most recent events from all topics, where archiving have failed."
+		, tags = ["events"])
+	@ApiResponses(value = [
+		ApiResponse(responseCode = "200", description = "Return a list of the $maxNumberOfEventsReturned most recent events " +
+			"from all topics where archiving have failed." +
+			"\n\n" +
+			"An empty list is returned if there are no failed events.", content = [
+			Content(mediaType = APPLICATION_JSON_VALUE, array = ArraySchema(schema = Schema(implementation = KafkaEvent::class)))])])
+	@GetMapping("/kafka/events/failedEvents", produces = [APPLICATION_JSON_VALUE])
+	fun failedEvents(): List<KafkaEvent<String>> {
+
+		return adminService.getfailedEvents(null, null)
+	}
 
 	@Operation(summary = "Lists the $maxNumberOfEventsReturned most recent events from all topics that have a " +
 		"given key.", tags = ["events"])
@@ -158,12 +147,7 @@ class AdminInterface(private val adminService: AdminService) {
 		@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String
 	): List<KafkaEvent<String>> {
 
-		val eventCollectionBuilder = EventCollection.Builder()
-			.withCapacity(maxNumberOfEventsReturned)
-			.withMostRecentEvents()
-			.withFilter { it.innsendingKey == key }
-
-		return adminService.getAllRequestedEvents(eventCollectionBuilder)
+		return adminService.getAllRequestedEventsFilteredByKey(key, null, null)
 	}
 
 
@@ -182,12 +166,7 @@ class AdminInterface(private val adminService: AdminService) {
 		@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String
 	): List<KafkaEvent<String>> {
 
-		val eventCollectionBuilder = EventCollection.Builder()
-			.withCapacity(maxNumberOfEventsReturned)
-			.withEventsBefore(timestamp)
-			.withFilter { it.innsendingKey == key }
-
-		return adminService.getAllRequestedEvents(eventCollectionBuilder)
+		return adminService.getAllRequestedEventsFilteredByKey(key, true, timestamp)
 	}
 
 
@@ -206,12 +185,7 @@ class AdminInterface(private val adminService: AdminService) {
 		@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String
 	): List<KafkaEvent<String>> {
 
-		val eventCollectionBuilder = EventCollection.Builder()
-			.withCapacity(maxNumberOfEventsReturned)
-			.withEventsAfter(timestamp)
-			.withFilter { it.innsendingKey == key }
-
-		return adminService.getAllRequestedEvents(eventCollectionBuilder)
+		return adminService.getAllRequestedEventsFilteredByKey(key, false, timestamp)
 	}
 
 
@@ -228,12 +202,7 @@ class AdminInterface(private val adminService: AdminService) {
 		@Parameter(description = "Search phrase (Regex)") @PathVariable searchPhrase: String
 	): List<KafkaEvent<String>> {
 
-		val eventCollectionBuilder = EventCollection.Builder()
-			.withCapacity(maxNumberOfEventsReturned)
-			.withMostRecentEvents()
-			.withFilter { it.content.toString().contains(searchPhrase.toRegex()) }
-
-		return adminService.getAllRequestedEvents(eventCollectionBuilder)
+		return adminService.getAllRequestedEventsFilteredByRegx(searchPhrase, null, null)
 	}
 
 
@@ -253,12 +222,7 @@ class AdminInterface(private val adminService: AdminService) {
 		@Parameter(description = "Search phrase (Regex)") @PathVariable searchPhrase: String
 	): List<KafkaEvent<String>> {
 
-		val eventCollectionBuilder = EventCollection.Builder()
-			.withCapacity(maxNumberOfEventsReturned)
-			.withEventsBefore(timestamp)
-			.withFilter { it.content.toString().contains(searchPhrase.toRegex()) }
-
-		return adminService.getAllRequestedEvents(eventCollectionBuilder)
+		return adminService.getAllRequestedEventsFilteredByRegx(searchPhrase, true, timestamp)
 	}
 
 
@@ -283,7 +247,7 @@ class AdminInterface(private val adminService: AdminService) {
 			.withEventsAfter(timestamp)
 			.withFilter { it.content.toString().contains(searchPhrase.toRegex()) }
 
-		return adminService.getAllRequestedEvents(eventCollectionBuilder)
+		return adminService.getAllRequestedEventsFilteredByRegx(searchPhrase, false, timestamp)
 	}
 
 

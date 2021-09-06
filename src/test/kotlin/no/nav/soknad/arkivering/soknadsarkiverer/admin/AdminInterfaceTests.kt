@@ -36,8 +36,6 @@ import java.util.concurrent.TimeUnit
 @ActiveProfiles("test")
 @SpringBootTest
 @DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
-@ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
-@EnableConfigurationProperties(ClientConfigurationProperties::class)
 @Import(EmbeddedKafkaBrokerConfig::class)
 @EmbeddedKafka(topics = [kafkaInputTopic, kafkaProcessingTopic, kafkaMessageTopic, kafkaMetricsTopic], controlledShutdown = true)
 class AdminInterfaceTests {
@@ -64,7 +62,7 @@ class AdminInterfaceTests {
 	@Autowired
 	private lateinit var taskListService: TaskListService
 	@Autowired
-	private lateinit var adminInterface: AdminInterface
+	private lateinit var adminInterface: ApplicationAdminInterface
 	@Autowired
 	private lateinit var metricsInterface: MetricsInterface
 
@@ -138,9 +136,7 @@ class AdminInterfaceTests {
 		archiveOneEventSuccessfullyAndFailOne(key0, key1)
 
 		val eventsAfter = {
-			adminInterface.allEvents()
-				.filter { it.innsendingKey == key0 || it.innsendingKey == key1 }
-				.count()
+			adminInterface.allEvents().count { it.innsendingKey == key0 || it.innsendingKey == key1 }
 		}
 
 		val numberOfInputs = 2
@@ -167,6 +163,21 @@ class AdminInterfaceTests {
 		val numberOfProcessingEvents = 2 // 1*Started, 1*Failure
 		val numberOfMetricEvents = maxNumberOfAttempts // maxNumberOfAttempts getFiles-events for the failing
 		loopAndVerifyAtLeast(numberOfInputs + numberOfMessages + numberOfMetricEvents + numberOfProcessingEvents, eventsAfter)
+	}
+
+	@Test
+	fun `Can request failedEvents`() {
+		val key0 = UUID.randomUUID().toString()
+		val key1 = UUID.randomUUID().toString()
+		archiveOneEventSuccessfullyAndFailOne(key0, key1)
+
+		val eventsAfter = {
+			adminInterface.failedEvents()
+				.filter { it.type == PayloadType.FAILURE }
+				.count()
+		}
+
+		loopAndVerifyAtLeast(1, eventsAfter)
 	}
 
 	@Test

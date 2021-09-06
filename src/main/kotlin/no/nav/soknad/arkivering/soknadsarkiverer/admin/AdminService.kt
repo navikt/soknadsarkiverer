@@ -11,26 +11,27 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlread
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Configuration
+import java.security.Timestamp
 
 @Configuration
 class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 									 private val taskListService: TaskListService,
 									 private val fileService: FileserviceInterface,
-									 private val joarkService: JournalpostClientInterface) {
+									 private val joarkService: JournalpostClientInterface) : IAdminService {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 
-	fun rerun(key: String) {
+	override fun rerun(key: String) {
 		logger.info("$key: Performing forced rerun")
 		taskListService.startPaNytt(key)
 	}
 
-	fun pingJoark() = joarkService.isAlive()
+	override fun pingJoark() = joarkService.isAlive()
 
-	fun pingFilestorage() = fileService.ping()
+	override fun pingFilestorage() = fileService.ping()
 
-	fun filesExist(key: String): List<FilestorageExistenceResponse> {
+	override fun filesExist(key: String): List<FilestorageExistenceResponse> {
 		val soknadarkivschema = taskListService.getSoknadarkivschema(key)
 		if (soknadarkivschema == null) {
 			logger.warn("$key: Failed to find file ids for given key. The task is probably finished.")
@@ -45,10 +46,68 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 		}
 	}
 
-
-	internal fun getUnfinishedEvents(builder: EventCollection.Builder): List<KafkaEvent<String>> {
+	override fun getUnfinishedEvents(before: Boolean?, timestamp: Long?): List<KafkaEvent<String>> {
 		val finishedKeys = getAllFinishedKeys()
-		builder.withFilter { event -> !finishedKeys.contains(event.innsendingKey) }
+		val builder = if (before == null) EventCollection.Builder()
+			.withCapacity(maxNumberOfEventsReturned)
+			.withMostRecentEvents()
+			.withFilter { event -> !finishedKeys.contains(event.innsendingKey)  }
+		else if (before) EventCollection.Builder()
+			.withCapacity(maxNumberOfEventsReturned)
+			.withEventsBefore(timestamp ?: 0L)
+			.withFilter { event -> !finishedKeys.contains(event.innsendingKey)  }
+		else EventCollection.Builder()
+			.withCapacity(maxNumberOfEventsReturned)
+			.withEventsAfter(timestamp ?: 0L)
+			.withFilter { event -> !finishedKeys.contains(event.innsendingKey)  }
+
+		return getAllRequestedEvents(builder)
+	}
+
+	override fun getfailedEvents(before: Boolean?, timestamp: Long?): List<KafkaEvent<String>> {
+		val builder = if (before == null) EventCollection.Builder()
+			.withCapacity(maxNumberOfEventsReturned)
+			.withMostRecentEvents()
+			.withFilter { it.type == PayloadType.FAILURE }
+		else if (before) EventCollection.Builder()
+			.withCapacity(maxNumberOfEventsReturned)
+			.withEventsBefore(timestamp ?: 0L)
+			.withFilter { it.type == PayloadType.FAILURE }
+		else EventCollection.Builder()
+			.withCapacity(maxNumberOfEventsReturned)
+			.withEventsAfter(timestamp ?: 0L)
+			.withFilter { it.type == PayloadType.FAILURE }
+
+		return getAllRequestedEvents(builder)
+	}
+
+	override fun getAllRequestedEvents(before: Boolean?, timestamp: Long?): List<KafkaEvent<String>> {
+		val builder = if (before == null) EventCollection.Builder()
+			.withCapacity(maxNumberOfEventsReturned)
+			.withMostRecentEvents()
+		else if (before) EventCollection.Builder()
+			.withCapacity(maxNumberOfEventsReturned)
+			.withEventsBefore(timestamp ?: 0L)
+		else EventCollection.Builder()
+			.withCapacity(maxNumberOfEventsReturned)
+			.withEventsAfter(timestamp ?: 0L)
+
+		return getAllRequestedEvents(builder)
+	}
+
+	override fun getAllRequestedEventsFilteredByKey(key: String, before: Boolean?, timestamp: Long?): List<KafkaEvent<String>> {
+		val builder = if (before == null ) EventCollection.Builder()
+			.withCapacity(maxNumberOfEventsReturned)
+			.withMostRecentEvents()
+			.withFilter { it.innsendingKey == key }
+		else if (before) EventCollection.Builder()
+			.withCapacity(maxNumberOfEventsReturned)
+			.withEventsBefore(timestamp ?: 0L)
+			.withFilter { it.innsendingKey == key }
+		else EventCollection.Builder()
+			.withCapacity(maxNumberOfEventsReturned)
+			.withEventsAfter(timestamp ?: 0L)
+			.withFilter { it.innsendingKey == key }
 
 		return getAllRequestedEvents(builder)
 	}
@@ -61,6 +120,24 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 		return runBlocking { kafkaAdminConsumer.getAllProcessingRecordsAsync(processingEventCollectionBuilder).await() }
 			.map { it.innsendingKey }
 	}
+
+	override fun getAllRequestedEventsFilteredByRegx(searchPhrase: String, before: Boolean?, timestamp: Long? ): List<KafkaEvent<String>> {
+		val builder = if (before == null) EventCollection.Builder()
+			.withCapacity(maxNumberOfEventsReturned)
+			.withMostRecentEvents()
+			.withFilter { it.content.toString().contains(searchPhrase.toRegex()) }
+		else if (before) EventCollection.Builder()
+			.withCapacity(maxNumberOfEventsReturned)
+			.withEventsBefore(timestamp ?: 0L)
+			.withFilter { it.content.toString().contains(searchPhrase.toRegex()) }
+		else EventCollection.Builder()
+			.withCapacity(maxNumberOfEventsReturned)
+			.withEventsAfter(timestamp ?: 0L)
+			.withFilter { it.content.toString().contains(searchPhrase.toRegex()) }
+
+		return getAllRequestedEvents(builder)
+	}
+
 
 
 	internal fun getAllRequestedEvents(builder: EventCollection.Builder): List<KafkaEvent<String>> =
