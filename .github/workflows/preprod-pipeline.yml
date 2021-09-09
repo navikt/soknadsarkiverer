@@ -4,6 +4,7 @@ on:
     branches:
       - 'q0-pipeline'
       - 'q1-pipeline'
+      - 'sd-1545-arkivering-av-bid'
     paths-ignore:
       - '**.md'
   pull_request:
@@ -100,7 +101,7 @@ jobs:
   deploy-q1:
     name: Deploy to Q1
     needs: bygg-app-preprod-pipeline
-    if: github.ref == 'refs/heads/q1-pipeline'
+    if: github.ref == 'refs/heads/q1-pipeline' || github.ref == 'refs/heads/sd-1545-arkivering-av-bid'
     runs-on: ubuntu-latest
     steps:
       - name: Download tag file
