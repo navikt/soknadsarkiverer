@@ -133,7 +133,8 @@ class KafkaBootstrapConsumer(
 				break
 			if (hasTimedOut(startTime, timeout, records)) {
 				logger.warn("For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records " +
-					"${System.currentTimeMillis()} ms after starting. Has read ${records.size} records. Aborting consumption.")
+					"${System.currentTimeMillis() - startTime} ms after starting. Has read ${records.size} records." +
+					"Aborting consumption.")
 				break
 			}
 			if (newRecords.isEmpty())
