@@ -45,20 +45,16 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 		}
 	}
 
+
 	override fun getUnfinishedEvents(timeSelector: TimeSelector, timestamp: Long): List<KafkaEvent<String>> {
 		val finishedKeys = getAllFinishedKeys()
 
 		val builder = EventCollection.Builder()
 			.withCapacity(maxNumberOfEventsReturned)
 			.withFilter { event -> !finishedKeys.contains(event.innsendingKey) }
+			.withTimeSelector(timeSelector, timestamp)
 
-		val eventCollectionBuilder = when (timeSelector) {
-			TimeSelector.BEFORE -> builder.withEventsBefore(timestamp)
-			TimeSelector.AFTER  -> builder.withEventsAfter(timestamp)
-			TimeSelector.ANY    -> builder.withMostRecentEvents()
-		}
-
-		return getAllRequestedEvents(eventCollectionBuilder)
+		return getAllRequestedEvents(builder)
 	}
 
 	override fun getFailedEvents(timeSelector: TimeSelector, timestamp: Long): List<KafkaEvent<String>> {
@@ -66,27 +62,17 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 		val builder = EventCollection.Builder()
 			.withCapacity(maxNumberOfEventsReturned)
 			.withFilter { it.type == PayloadType.FAILURE }
+			.withTimeSelector(timeSelector, timestamp)
 
-		val eventCollectionBuilder = when (timeSelector) {
-			TimeSelector.BEFORE -> builder.withEventsBefore(timestamp)
-			TimeSelector.AFTER  -> builder.withEventsAfter(timestamp)
-			TimeSelector.ANY    -> builder.withMostRecentEvents()
-		}
-
-		return getAllRequestedEvents(eventCollectionBuilder)
+		return getAllRequestedEvents(builder)
 	}
 
 	override fun getAllEvents(timeSelector: TimeSelector, timestamp: Long): List<KafkaEvent<String>> {
 		val builder = EventCollection.Builder()
 			.withCapacity(maxNumberOfEventsReturned)
+			.withTimeSelector(timeSelector, timestamp)
 
-		val eventCollectionBuilder = when (timeSelector) {
-			TimeSelector.BEFORE -> builder.withEventsBefore(timestamp)
-			TimeSelector.AFTER  -> builder.withEventsAfter(timestamp)
-			TimeSelector.ANY    -> builder.withMostRecentEvents()
-		}
-
-		return getAllRequestedEvents(eventCollectionBuilder)
+		return getAllRequestedEvents(builder)
 	}
 
 	override fun getEventsByKey(key: String, timeSelector: TimeSelector, timestamp: Long): List<KafkaEvent<String>> {
@@ -94,14 +80,9 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 		val builder = EventCollection.Builder()
 			.withCapacity(maxNumberOfEventsReturned)
 			.withFilter { it.innsendingKey == key }
+			.withTimeSelector(timeSelector, timestamp)
 
-		val eventCollectionBuilder = when (timeSelector) {
-			TimeSelector.BEFORE -> builder.withEventsBefore(timestamp)
-			TimeSelector.AFTER  -> builder.withEventsAfter(timestamp)
-			TimeSelector.ANY    -> builder.withMostRecentEvents()
-		}
-
-		return getAllRequestedEvents(eventCollectionBuilder)
+		return getAllRequestedEvents(builder)
 	}
 
 	override fun getEventsByRegex(searchPhrase: String, timeSelector: TimeSelector, timestamp: Long): List<KafkaEvent<String>> {
@@ -109,15 +90,11 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 		val builder = EventCollection.Builder()
 			.withCapacity(maxNumberOfEventsReturned)
 			.withFilter { it.content.toString().contains(searchPhrase.toRegex()) }
+			.withTimeSelector(timeSelector, timestamp)
 
-		val eventCollectionBuilder = when (timeSelector) {
-			TimeSelector.BEFORE -> builder.withEventsBefore(timestamp)
-			TimeSelector.AFTER  -> builder.withEventsAfter(timestamp)
-			TimeSelector.ANY    -> builder.withMostRecentEvents()
-		}
-
-		return getAllRequestedEvents(eventCollectionBuilder)
+		return getAllRequestedEvents(builder)
 	}
+
 
 	private fun getAllFinishedKeys(): List<String> {
 		val processingEventCollectionBuilder = EventCollection.Builder()
@@ -155,6 +132,13 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 
 		return mapOfMetrics.map { MetricsObject(it.key, it.value) }
 	}
+
+	private fun EventCollection.Builder.withTimeSelector(timeSelector: TimeSelector, timestamp: Long) =
+		when (timeSelector) {
+			TimeSelector.BEFORE -> this.withEventsBefore(timestamp)
+			TimeSelector.AFTER  -> this.withEventsAfter(timestamp)
+			TimeSelector.ANY    -> this.withMostRecentEvents()
+		}
 }
 
 const val maxNumberOfEventsReturned = 50
