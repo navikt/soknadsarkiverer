@@ -234,7 +234,7 @@ class TaskListService(
 		}
 	}
 
-	public fun getFailedTasks(): Set<String> {
+	internal fun getFailedTasks(): Set<String> {
 		return loggedTaskStates.filter { it.value == EventTypes.FAILURE }.keys
 	}
 

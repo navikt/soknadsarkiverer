@@ -19,6 +19,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
@@ -171,19 +172,21 @@ class ApplicationTests: TopologyTestDriverTests() {
 	@Test
 	fun `Restart task after failing succeeds`() {
 		mockFilestorageIsWorking(fileUuid)
-		//mockJoarkIsDown()
 		mockJoarkRespondsAfterAttempts(appConfiguration.config.retryTime.size + 1)
 		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
 
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		verifyProcessingEvents(1, FAILURE)
-		verifyArchivingMetrics(tasksGivenUpOnBefore + 1,	metrics.getTasksGivenUpOn())
+		verifyArchivingMetrics(tasksGivenUpOnBefore + 1, metrics.getTasksGivenUpOn())
 
 		val failedKeys = taskListService.getFailedTasks()
-		taskListService.startPaNytt(failedKeys.first())
-		verifyProcessingEvents(1, ARCHIVED)
-		verifyArchivingMetrics(tasksGivenUpOnBefore + 0,	metrics.getTasksGivenUpOn())
+		assertTrue(failedKeys.contains(key))
+
+		taskListService.startPaNytt(key)
+
+		verifyProcessingEvents(1, FINISHED)
+		verifyArchivingMetrics(tasksGivenUpOnBefore + 0, metrics.getTasksGivenUpOn())
 	}
 
 
