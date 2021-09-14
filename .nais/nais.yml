@@ -77,5 +77,3 @@ spec:
       value: https://soknadsfillager.nais.adeo.no
     - name: JOARK_HOST
       value: https://dokarkiv.nais.adeo.no
-    - name: BOOTSTRAPPING_TIMEOUT
-      value: 0

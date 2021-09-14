@@ -111,6 +111,7 @@ class ConfigConfig(private val env: ConfigurableEnvironment) {
 		val appConfiguration = AppConfiguration()
 		env.setActiveProfiles(appConfiguration.config.profile)
 		println("Using profile '${appConfiguration.config.profile}'")
+
 		appConfiguration.state.ready = true
 		appConfiguration.state.up = true
 

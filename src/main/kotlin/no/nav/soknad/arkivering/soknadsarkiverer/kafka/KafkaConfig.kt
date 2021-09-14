@@ -113,8 +113,6 @@ class KafkaConfig(
 	@Bean
 	fun setupKafkaStreams(): KafkaStreams {
 		metrics.setUpOrDown(1.0)
-		appConfiguration.state.started = true
-		appConfiguration.state.up = true
 
 		logger.info("Starting Kafka Bootstrap Consumer to create tasks for any tasks that had not yet been finished")
 		KafkaBootstrapConsumer(appConfiguration, schedulerService).recreateState()
@@ -131,7 +129,7 @@ class KafkaConfig(
 		kafkaStreams.start()
 		Runtime.getRuntime().addShutdownHook(Thread(kafkaStreams::close))
 
-		appConfiguration.state.ready = true
+		appConfiguration.state.started = true
 		return kafkaStreams
 	}
 
