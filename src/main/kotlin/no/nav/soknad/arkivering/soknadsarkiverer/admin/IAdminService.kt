@@ -10,13 +10,15 @@ interface IAdminService {
 
 	fun filesExist(key: String): List<FilestorageExistenceResponse>
 
-	fun getUnfinishedEvents(before: Boolean?, timestamp: Long?): List<KafkaEvent<String>>
+	fun getUnfinishedEvents(timeSelector: TimeSelector, timestamp: Long): List<KafkaEvent<String>>
 
-	fun getfailedEvents(before: Boolean?, timestamp: Long?): List<KafkaEvent<String>>
+	fun getFailedEvents(timeSelector: TimeSelector, timestamp: Long): List<KafkaEvent<String>>
 
-	fun getAllRequestedEvents(before: Boolean?, timestamp: Long?): List<KafkaEvent<String>>
+	fun getAllEvents(timeSelector: TimeSelector, timestamp: Long): List<KafkaEvent<String>>
 
-	fun getAllRequestedEventsFilteredByKey(key: String, before: Boolean?, timestamp: Long?): List<KafkaEvent<String>>
+	fun getEventsByKey(key: String, timeSelector: TimeSelector, timestamp: Long): List<KafkaEvent<String>>
 
-	fun getAllRequestedEventsFilteredByRegx(searchPhrase: String, before: Boolean?, timestamp: Long? ): List<KafkaEvent<String>>
+	fun getEventsByRegex(searchPhrase: String, timeSelector: TimeSelector, timestamp: Long): List<KafkaEvent<String>>
 }
+
+enum class TimeSelector { BEFORE, AFTER, ANY }
