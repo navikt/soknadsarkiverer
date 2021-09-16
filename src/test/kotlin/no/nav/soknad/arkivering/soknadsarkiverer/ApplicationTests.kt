@@ -320,7 +320,6 @@ class ApplicationTests: TopologyTestDriverTests() {
 	}
 
 
-
 	@Test
 	fun `Application already archived will cause finishing archiving`() {
 		val tasksBefore = metrics.getTasks()

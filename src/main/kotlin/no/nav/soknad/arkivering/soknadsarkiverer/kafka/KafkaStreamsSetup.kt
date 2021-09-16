@@ -103,14 +103,14 @@ class KafkaStreamsSetup(
 	}
 
 
-	fun setupKafkaStreams(): KafkaStreams {
+	fun setupKafkaStreams(groupId: String): KafkaStreams {
 		logger.info("Setting up KafkaStreams")
 
 		val streamsBuilder = StreamsBuilder()
 		kafkaStreams(streamsBuilder)
 		val topology = streamsBuilder.build()
 
-		val kafkaStreams = KafkaStreams(topology, kafkaConfig(appConfiguration.kafkaConfig.groupId))
+		val kafkaStreams = KafkaStreams(topology, kafkaConfig(groupId))
 
 		kafkaStreams.cleanUp()
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
