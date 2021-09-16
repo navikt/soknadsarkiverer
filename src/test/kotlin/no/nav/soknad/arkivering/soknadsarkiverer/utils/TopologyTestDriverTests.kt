@@ -38,7 +38,7 @@ open class TopologyTestDriverTests {
 
 		// Dummy properties needed for test diver
 		val props = Properties().also {
-			it[StreamsConfig.APPLICATION_ID_CONFIG] = "test"
+			it[StreamsConfig.APPLICATION_ID_CONFIG] = "test_" + UUID.randomUUID().toString()
 			it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = "dummy:1234"
 			it[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = Serdes.StringSerde::class.java
 			it[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = SpecificAvroSerde::class.java
