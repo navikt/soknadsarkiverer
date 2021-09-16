@@ -234,6 +234,11 @@ class TaskListService(
 		}
 	}
 
+	internal fun getFailedTasks(): Set<String> {
+		return loggedTaskStates.filter { it.value == EventTypes.FAILURE }.keys
+	}
+
+
 	private fun updateNoOfFailedMetrics() {
 		metrics.setTasksGivenUpOn(loggedTaskStates.values.filter{v -> v == EventTypes.FAILURE}.size)
 	}

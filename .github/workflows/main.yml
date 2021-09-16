@@ -1,18 +1,11 @@
-name: Build-Deploy-Prod
+name: Build and Deploy
 on:
   push:
     branches:
-      - 'main'
-    paths-ignore:
-      - '**.md'
-  pull_request:
-    branches:
-      - 'main'
-    paths-ignore:
-      - '**.md'
-      - '.github/workflows/preprod-pipeline.yml'
+      - '*'
+      - '*/*'
 jobs:
-  bygg-app-prod:
+  bygg-app:
     name: Bygg app/image, push til github
     runs-on: ubuntu-latest
     steps:
@@ -61,9 +54,108 @@ jobs:
           name: docker_tag
           path: .docker_tag
 
+  deploy-team-soknad:
+    name: Deploy to team-soknad
+    needs: bygg-app
+    if: github.ref == 'refs/heads/q0-pipeline' || github.ref == 'refs/heads/q1-pipeline'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download tag file
+        uses: actions/download-artifact@v1
+        with:
+          name: docker_tag
+      - name: Unpack
+        run: |
+          cp docker_tag/.docker_tag .
+          TAG=$(cat .docker_tag)
+          echo "TAG=${TAG}" >> $GITHUB_ENV
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Login to Github Package Registry
+        env:
+          DOCKER_USERNAME: x-access-token
+          DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin docker.pkg.github.com
+      - name: Deploy
+        uses: nais/deploy/actions/deploy@v1
+        env:
+          APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
+          PRINT_PAYLOAD: true
+          CLUSTER: dev-fss
+          RESOURCE: .nais/preprod-teamsoknad.yml
+          DRY_RUN: false
+          IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}
+
+  deploy-q0:
+    name: Deploy to Q0
+    needs: bygg-app
+    if: github.ref == 'refs/heads/q0-pipeline'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download tag file
+        uses: actions/download-artifact@v1
+        with:
+          name: docker_tag
+      - name: Unpack
+        run: |
+          cp docker_tag/.docker_tag .
+          TAG=$(cat .docker_tag)
+          echo "TAG=${TAG}" >> $GITHUB_ENV
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Login to Github Package Registry
+        env:
+          DOCKER_USERNAME: x-access-token
+          DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin docker.pkg.github.com
+      - name: Deploy
+        uses: nais/deploy/actions/deploy@v1
+        env:
+          APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
+          PRINT_PAYLOAD: true
+          CLUSTER: dev-fss
+          RESOURCE: .nais/preprod-q0.yml
+          DRY_RUN: false
+          IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}
+
+  deploy-q1:
+    name: Deploy to Q1
+    needs: bygg-app
+    if: github.ref == 'refs/heads/q1-pipeline'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download tag file
+        uses: actions/download-artifact@v1
+        with:
+          name: docker_tag
+      - name: Unpack
+        run: |
+          cp docker_tag/.docker_tag .
+          TAG=$(cat .docker_tag)
+          echo "TAG=${TAG}" >> $GITHUB_ENV
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Login to Github Package Registry
+        env:
+          DOCKER_USERNAME: x-access-token
+          DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin docker.pkg.github.com
+      - name: Deploy
+        uses: nais/deploy/actions/deploy@v1
+        env:
+          APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
+          PRINT_PAYLOAD: true
+          CLUSTER: dev-fss
+          RESOURCE: .nais/preprod-q1.yml
+          DRY_RUN: false
+          IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}
+
   deploy-prod:
     name: Deploy to prod
-    needs: bygg-app-prod
+    needs: bygg-app
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
