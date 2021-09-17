@@ -25,6 +25,7 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
+	val bidClient: WebClient = webClient.mutate().defaultHeader("Nav-Consumer-Id", "dialogstyring-bidrag" ).build()
 
 	override fun isAlive(): String {
 		return webClient
@@ -42,7 +43,7 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 			val request: OpprettJournalpostRequest = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)
 
 			val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
-			val response = sendDataToJoark(request, url)
+			val response = sendDataToJoark(if (soknadarkivschema.arkivtema == "BID") bidClient else webClient, request, url)
 			val journalpostId = response?.journalpostId ?: "-1"
 
 			logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.behandlingsid}', got the following journalpostId: '$journalpostId'")
@@ -61,9 +62,9 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 		}
 	}
 
-	private fun sendDataToJoark(data: OpprettJournalpostRequest, uri: String): OpprettJournalpostResponse? {
+	private fun sendDataToJoark(client: WebClient, data: OpprettJournalpostRequest, uri: String): OpprettJournalpostResponse? {
 		val method = HttpMethod.POST
-		return webClient
+		return client
 			.method(method)
 			.uri(uri)
 			.contentType(APPLICATION_JSON)
@@ -83,4 +84,5 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 			.bodyToMono(OpprettJournalpostResponse::class.java)
 			.block()
 	}
+
 }

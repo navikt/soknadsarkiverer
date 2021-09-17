@@ -40,7 +40,7 @@ class WebClientConfig(private val appConfiguration: AppConfiguration) {
 	@Qualifier("archiveWebClient")
 	@Scope("prototype")
 	@Lazy
-	fun archiveTestWebClient() = WebClient.builder().build()
+	fun archiveTestWebClient() = WebClient.builder().defaultHeader("testHeader","test_value").build()
 
 
 	@Bean
