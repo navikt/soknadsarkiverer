@@ -35,6 +35,7 @@ class KafkaBootstrapConsumer(
 	fun recreateState() {
 		val (finishedKeys, unfinishedProcessingRecords) = getProcessingRecords()
 		val unfinishedInputRecords = getUnfinishedInputRecords(finishedKeys)
+		logger.info("When recreating state, found these unfinished input records: ${unfinishedInputRecords.map { it.key() }}")
 
 		val filteredUnfinishedProcessingEvents = unfinishedProcessingRecords
 			.map { it.key() to it.value() }
@@ -121,19 +122,21 @@ class KafkaBootstrapConsumer(
 		val startTime = System.currentTimeMillis()
 		val timeout = appConfiguration.kafkaConfig.bootstrappingTimeout.toInt() * 1000
 		var records = mutableListOf<ConsumerRecord<Key, T>>()
+		var hasReadRecords = false
 
 		while (true) {
 			val newRecords = retrieveKafkaRecords(kafkaConsumer)
 			val shouldStop = shouldStop(records, newRecords)
+			if (newRecords.isNotEmpty()) hasReadRecords = true
 
 			records.addAll(newRecords)
 			records = filter.invoke(records).toMutableList()
 
 			if (shouldStop)
 				break
-			if (hasTimedOut(startTime, timeout, records)) {
+			if (hasTimedOut(startTime, timeout, hasReadRecords)) {
 				logger.warn("For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records " +
-					"${System.currentTimeMillis() - startTime} ms after starting. Has read ${records.size} records." +
+					"${System.currentTimeMillis() - startTime} ms after starting. Has read ${records.size} records. " +
 					"Aborting consumption.")
 				break
 			}
@@ -143,15 +146,14 @@ class KafkaBootstrapConsumer(
 		return records
 	}
 
-	private fun hasTimedOut(startTime: Long, timeout: Int, records: List<*>): Boolean {
+	private fun hasTimedOut(startTime: Long, timeout: Int, hasReadRecords: Boolean): Boolean {
 
 		val shouldEnforceTimeout = timeout > 0
 		val hasTimedOut = System.currentTimeMillis() > startTime + timeout
 
 		val hasTimedOutWithoutRecords = System.currentTimeMillis() > startTime + timeoutWhenNotFindingRecords
-		val hasNotReadRecords = records.isEmpty()
 
-		return shouldEnforceTimeout && hasTimedOut || hasNotReadRecords && hasTimedOutWithoutRecords
+		return shouldEnforceTimeout && hasTimedOut || !hasReadRecords && hasTimedOutWithoutRecords
 	}
 
 	private fun shouldStop(previousRecords: List<*>, newRecords: List<*>) =
