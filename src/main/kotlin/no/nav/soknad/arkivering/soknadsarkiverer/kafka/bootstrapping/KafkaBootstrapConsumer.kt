@@ -35,7 +35,7 @@ class KafkaBootstrapConsumer(
 	fun recreateState() {
 		val (finishedKeys, unfinishedProcessingRecords) = getProcessingRecords()
 		val unfinishedInputRecords = getUnfinishedInputRecords(finishedKeys)
-		logger.info("When recreating state, found these unfinished input records: ${unfinishedInputRecords.map { it.key() }}")
+		logger.info("Recreating state, found these unfinished input records: ${unfinishedInputRecords.map { it.key() }}")
 
 		val filteredUnfinishedProcessingEvents = unfinishedProcessingRecords
 			.map { it.key() to it.value() }
@@ -56,8 +56,10 @@ class KafkaBootstrapConsumer(
 
 
 	private fun getUnfinishedInputRecords(finishedKeys: List<Key>): List<ConsumerRecord<Key, Soknadarkivschema>> {
+
+		val finishedKeysSet = finishedKeys.toHashSet()
 		val keepUnfinishedRecordsFilter = { records: List<ConsumerRecord<Key, Soknadarkivschema>> ->
-			records.filter { !finishedKeys.contains(it.key()) }
+			records.filter { !finishedKeysSet.contains(it.key()) }
 		}
 
 		val deserializer = PoisonSwallowingAvroDeserializer<Soknadarkivschema>()
