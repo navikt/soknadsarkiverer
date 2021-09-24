@@ -80,7 +80,6 @@ private fun setupKafkaStreams(
 
 private fun setupMetricsAndHealth(metrics: ArchivingMetrics, appConfiguration: AppConfiguration) {
 	metrics.setUpOrDown(1.0)
-	appConfiguration.state.started = true
 	appConfiguration.state.alive = true
 	appConfiguration.state.ready = true
 }

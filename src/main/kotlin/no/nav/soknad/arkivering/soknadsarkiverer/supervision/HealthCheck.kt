@@ -26,16 +26,6 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Hidden
-	@GetMapping("/isStarted")
-	fun isStarted() = if (applicationIsStarted()) {
-		"Ok"
-	} else {
-		metrics.setUpOrDown(0.0)
-		logger.warn("/isStarted called - application is not started")
-		throwException()
-	}
-
-	@Hidden
 	@GetMapping("/isAlive")
 	fun isAlive() = if (applicationIsAlive()) {
 		"Ok"
@@ -110,8 +100,6 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 		val status = HttpStatus.INTERNAL_SERVER_ERROR
 		throw HttpServerErrorException(status, message ?: status.name)
 	}
-
-	private fun applicationIsStarted() = appConfiguration.state.started
 
 	private fun applicationIsAlive() = appConfiguration.state.alive
 

@@ -71,22 +71,6 @@ class HealthCheckTests {
 
 
 	@Test
-	fun `isStarted returns Ok when application is started`() {
-		appConfiguration.state.started = true
-
-		assertEquals("Ok", healthCheck.isStarted())
-	}
-
-	@Test
-	fun `isStarted returns Status 500 when application is not started`() {
-		appConfiguration.state.started = false
-
-		val e = assertThrows<HttpServerErrorException> { healthCheck.isStarted() }
-		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, e.statusCode)
-	}
-
-
-	@Test
 	fun `isAlive returns Ok when application is well`() {
 		appConfiguration.state.alive = true
 

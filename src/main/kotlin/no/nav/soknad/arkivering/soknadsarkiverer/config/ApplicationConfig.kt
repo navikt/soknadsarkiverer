@@ -96,7 +96,6 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 	)
 
 	data class State(
-		var started: Boolean = false,
 		var alive: Boolean = false,
 		var ready: Boolean = false,
 		var stopping: Boolean = false,
@@ -113,10 +112,6 @@ class ConfigConfig(private val env: ConfigurableEnvironment) {
 		val appConfiguration = AppConfiguration()
 		env.setActiveProfiles(appConfiguration.config.profile)
 		println("Using profile '${appConfiguration.config.profile}'")
-
-		appConfiguration.state.ready = true
-		appConfiguration.state.alive = true
-
 		return appConfiguration
 	}
 }
