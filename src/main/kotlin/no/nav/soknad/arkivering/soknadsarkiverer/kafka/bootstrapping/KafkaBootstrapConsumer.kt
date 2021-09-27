@@ -128,13 +128,13 @@ class KafkaBootstrapConsumer(
 
 		while (true) {
 			val newRecords = retrieveKafkaRecords(kafkaConsumer)
-			val shouldStop = shouldStop(records, newRecords)
-			if (newRecords.isNotEmpty()) hasReadRecords = true
+			if (newRecords.isNotEmpty())
+				hasReadRecords = true
 
 			records.addAll(newRecords)
 			records = filter.invoke(records).toMutableList()
 
-			if (shouldStop)
+			if (shouldStop(hasReadRecords, newRecords))
 				break
 			if (hasTimedOut(startTime, timeout, hasReadRecords)) {
 				logger.warn("For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records " +
@@ -158,8 +158,8 @@ class KafkaBootstrapConsumer(
 		return shouldEnforceTimeout && hasTimedOut || !hasReadRecords && hasTimedOutWithoutRecords
 	}
 
-	private fun shouldStop(previousRecords: List<*>, newRecords: List<*>) =
-		previousRecords.isNotEmpty() && newRecords.isEmpty()
+	private fun shouldStop(hasPreviouslyReadRecords: Boolean, newRecords: List<*>) =
+		hasPreviouslyReadRecords && newRecords.isEmpty()
 
 	private fun <T> retrieveKafkaRecords(kafkaConsumer: KafkaConsumer<Key, T>): List<ConsumerRecord<Key, T>> {
 		logger.info("Retrieving Kafka records for ${kafkaConsumer.assignment()}")
