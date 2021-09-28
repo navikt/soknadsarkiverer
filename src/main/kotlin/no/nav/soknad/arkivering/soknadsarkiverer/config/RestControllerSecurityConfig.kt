@@ -53,7 +53,7 @@ class RestControllerSecurityConfig(private val config: AppConfiguration) : WebSe
 	}
 
 	@Bean
-	fun authenticationEntryPoint(): AuthenticationEntryPoint? {
+	fun authenticationEntryPoint(): AuthenticationEntryPoint {
 		val entryPoint = BasicAuthenticationEntryPoint()
 		entryPoint.realmName = "admin realm"
 		return entryPoint

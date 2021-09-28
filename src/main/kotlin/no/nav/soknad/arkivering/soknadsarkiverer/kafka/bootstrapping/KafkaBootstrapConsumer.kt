@@ -35,6 +35,7 @@ class KafkaBootstrapConsumer(
 	fun recreateState() {
 		val (finishedKeys, unfinishedProcessingRecords) = getProcessingRecords()
 		val unfinishedInputRecords = getUnfinishedInputRecords(finishedKeys)
+		logger.info("Recreating state, found these unfinished input records: ${unfinishedInputRecords.map { it.key() }}")
 
 		val filteredUnfinishedProcessingEvents = unfinishedProcessingRecords
 			.map { it.key() to it.value() }
@@ -55,11 +56,14 @@ class KafkaBootstrapConsumer(
 
 
 	private fun getUnfinishedInputRecords(finishedKeys: List<Key>): List<ConsumerRecord<Key, Soknadarkivschema>> {
+
+		val finishedKeysSet = finishedKeys.toHashSet()
 		val keepUnfinishedRecordsFilter = { records: List<ConsumerRecord<Key, Soknadarkivschema>> ->
-			records.filter { !finishedKeys.contains(it.key()) }
+			records.filter { !finishedKeysSet.contains(it.key()) }
 		}
 
-		return getAllKafkaRecords(inputTopic, "Input", PoisonSwallowingAvroDeserializer(), keepUnfinishedRecordsFilter)
+		val deserializer = PoisonSwallowingAvroDeserializer<Soknadarkivschema>()
+		return getAllKafkaRecords(inputTopic, "Input", deserializer, keepUnfinishedRecordsFilter)
 	}
 
 	private fun getProcessingRecords(): Pair<MutableList<Key>, List<ConsumerRecord<Key, ProcessingEvent>>> {
@@ -84,8 +88,13 @@ class KafkaBootstrapConsumer(
 		return allFinishedKeys to kafkaRecords
 	}
 
-	private fun <T> getAllKafkaRecords(topic: String, recordType: String, valueDeserializer: Deserializer<T>,
-																		 filter: (List<ConsumerRecord<Key, T>>) -> List<ConsumerRecord<Key, T>>): List<ConsumerRecord<Key, T>> {
+	private fun <T> getAllKafkaRecords(
+		topic: String,
+		recordType: String,
+		valueDeserializer: Deserializer<T>,
+		filter: (List<ConsumerRecord<Key, T>>) -> List<ConsumerRecord<Key, T>>
+	): List<ConsumerRecord<Key, T>> {
+
 		try {
 			val applicationId = "soknadsarkiverer-bootstrapping-$recordType-$uuid"
 			logger.info("About to bootstrap records from $topic")
@@ -115,28 +124,42 @@ class KafkaBootstrapConsumer(
 		val startTime = System.currentTimeMillis()
 		val timeout = appConfiguration.kafkaConfig.bootstrappingTimeout.toInt() * 1000
 		var records = mutableListOf<ConsumerRecord<Key, T>>()
+		var hasReadRecords = false
 
 		while (true) {
 			val newRecords = retrieveKafkaRecords(kafkaConsumer)
-			val shouldStop = shouldStop(records, newRecords)
+			if (newRecords.isNotEmpty())
+				hasReadRecords = true
 
 			records.addAll(newRecords)
 			records = filter.invoke(records).toMutableList()
 
-			if (shouldStop)
+			if (shouldStop(hasReadRecords, newRecords))
 				break
-			TimeUnit.MILLISECONDS.sleep(100)
-			if (System.currentTimeMillis() > startTime + timeout) {
-				logger.warn("For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records $timeout ms after " +
-					"starting. Aborting consumption.")
+			if (hasTimedOut(startTime, timeout, hasReadRecords)) {
+				logger.warn("For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records " +
+					"${System.currentTimeMillis() - startTime} ms after starting. Has read ${records.size} records. " +
+					"Aborting consumption.")
 				break
 			}
+			if (newRecords.isEmpty())
+				TimeUnit.MILLISECONDS.sleep(100)
 		}
 		return records
 	}
 
-	private fun shouldStop(previousRecords: List<*>, newRecords: List<*>) =
-		previousRecords.isNotEmpty() && newRecords.isEmpty()
+	private fun hasTimedOut(startTime: Long, timeout: Int, hasReadRecords: Boolean): Boolean {
+
+		val shouldEnforceTimeout = timeout > 0
+		val hasTimedOut = System.currentTimeMillis() > startTime + timeout
+
+		val hasTimedOutWithoutRecords = System.currentTimeMillis() > startTime + timeoutWhenNotFindingRecords
+
+		return shouldEnforceTimeout && hasTimedOut || !hasReadRecords && hasTimedOutWithoutRecords
+	}
+
+	private fun shouldStop(hasPreviouslyReadRecords: Boolean, newRecords: List<*>) =
+		hasPreviouslyReadRecords && newRecords.isEmpty()
 
 	private fun <T> retrieveKafkaRecords(kafkaConsumer: KafkaConsumer<Key, T>): List<ConsumerRecord<Key, T>> {
 		logger.info("Retrieving Kafka records for ${kafkaConsumer.assignment()}")
@@ -149,7 +172,8 @@ class KafkaBootstrapConsumer(
 			if (record.key() != null && record.value() != null)
 				records.add(record)
 			else
-				logger.error("For ${kafkaConsumer.assignment()}: Record had null attributes. Key='${record.key()}', value ${if (record.value() == null) "is" else "is not"} null")
+				logger.error("For ${kafkaConsumer.assignment()}: Record had null attributes. Key='${record.key()}', " +
+					"value ${if (record.value() == null) "is" else "is not"} null")
 		}
 		return records
 	}
@@ -204,7 +228,8 @@ class KafkaBootstrapConsumer(
 			return try {
 				super.deserialize(topic, bytes)
 			} catch (e: Exception) {
-				logger.error("Unable to deserialize event on topic $topic\nByte Array: ${bytes.asList()}\nString representation: '${String(bytes)}'", e)
+				logger.error("Unable to deserialize event on topic $topic\nByte Array: ${bytes.asList()}\n" +
+					"String representation: '${String(bytes)}'", e)
 				null
 			}
 		}
@@ -212,3 +237,4 @@ class KafkaBootstrapConsumer(
 }
 
 private typealias Key = String
+private const val timeoutWhenNotFindingRecords = 30 * 1000

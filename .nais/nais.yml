@@ -8,9 +8,6 @@ metadata:
 spec:
   image: {{image}}
   port: 8091
-  startup:
-    path: /internal/isStarted
-    initialDelay: 250
   liveness:
     path: /internal/isAlive
     initialDelay: 100
@@ -77,3 +74,5 @@ spec:
       value: https://soknadsfillager.nais.adeo.no
     - name: JOARK_HOST
       value: https://dokarkiv.nais.adeo.no
+    - name: BOOTSTRAPPING_TIMEOUT
+      value: "0"

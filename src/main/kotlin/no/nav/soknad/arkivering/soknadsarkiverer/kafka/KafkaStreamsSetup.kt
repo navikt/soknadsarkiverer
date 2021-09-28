@@ -1,15 +1,12 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
-import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.ProcessingEventDto
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.bootstrapping.KafkaBootstrapConsumer
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
-import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -26,16 +23,12 @@ import org.apache.kafka.streams.kstream.Joined
 import org.apache.kafka.streams.kstream.Materialized
 import org.apache.kafka.streams.state.KeyValueStore
 import org.slf4j.LoggerFactory
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
 import java.util.*
 
-@Configuration
-class KafkaConfig(
+class KafkaStreamsSetup(
 	private val appConfiguration: AppConfiguration,
-	private val schedulerService: TaskListService,
-	private val kafkaPublisher: KafkaPublisher,
-	private val metrics: ArchivingMetrics
+	private val taskListService: TaskListService,
+	private val kafkaPublisher: KafkaPublisher
 ) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
@@ -79,17 +72,17 @@ class KafkaConfig(
 			.leftJoin(inputTable, { state, soknadarkivschema -> soknadarkivschema to state }, joinDef) // Oppdatere state på tabell, archivingState, ved join av soknadarkivschema og state.
 			.filter { key, (soknadarkivschema, _) -> filterSoknadarkivschemaThatAreNull(key, soknadarkivschema) } // Ta bort alle innslag i tabell der soknadarkivschema er null.
 			.peek { key, (soknadarkivschema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state Soknadarkivschema: ${soknadarkivschema.print()}") }
-			.foreach { key, (soknadarkivschema, state) -> schedulerService.addOrUpdateTask(key, soknadarkivschema, state.type) } // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
+			.foreach { key, (soknadarkivschema, state) -> taskListService.addOrUpdateTask(key, soknadarkivschema, state.type) } // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
 	}
 
 	private fun isConsideredFinished(key: String, processingEvent: ProcessingEvent): Boolean {
 		return when (processingEvent.type) {
 			EventTypes.FINISHED -> {
-				schedulerService.finishTask(key)
+				taskListService.finishTask(key)
 				true
 			}
 			EventTypes.FAILURE -> {
-				schedulerService.failTask(key)
+				taskListService.failTask(key)
 				true
 			}
 			else -> false
@@ -110,31 +103,26 @@ class KafkaConfig(
 	}
 
 
-	@Bean
-	fun setupKafkaStreams(): KafkaStreams {
-		metrics.setUpOrDown(1.0)
-
-		logger.info("Starting Kafka Bootstrap Consumer to create tasks for any tasks that had not yet been finished")
-		KafkaBootstrapConsumer(appConfiguration, schedulerService).recreateState()
-		logger.info("Finished Kafka Bootstrap Consumer")
+	fun setupKafkaStreams(groupId: String): KafkaStreams {
+		logger.info("Setting up KafkaStreams")
 
 		val streamsBuilder = StreamsBuilder()
 		kafkaStreams(streamsBuilder)
 		val topology = streamsBuilder.build()
 
-		val kafkaStreams = KafkaStreams(topology, kafkaConfig(appConfiguration.kafkaConfig.groupId))
+		val kafkaStreams = KafkaStreams(topology, kafkaConfig(groupId))
 
 		kafkaStreams.cleanUp()
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
 		kafkaStreams.start()
 		Runtime.getRuntime().addShutdownHook(Thread(kafkaStreams::close))
 
-		appConfiguration.state.started = true
+		logger.info("Finished setting up KafkaStreams")
 		return kafkaStreams
 	}
 
 	private fun kafkaConfig(applicationId: String) = Properties().also {
-		it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
+		it[SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
 		it[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
 		it[StreamsConfig.APPLICATION_ID_CONFIG] = applicationId
 		it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers
@@ -164,7 +152,7 @@ class KafkaConfig(
 	private fun createSoknadarkivschemaSerde(): SpecificAvroSerde<Soknadarkivschema> = createAvroSerde()
 
 	private fun <T : SpecificRecord> createAvroSerde(): SpecificAvroSerde<T> {
-		val serdeConfig = hashMapOf(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
+		val serdeConfig = hashMapOf(SCHEMA_REGISTRY_URL_CONFIG to appConfiguration.kafkaConfig.schemaRegistryUrl)
 		return SpecificAvroSerde<T>().also { it.configure(serdeConfig, false) }
 	}
 }

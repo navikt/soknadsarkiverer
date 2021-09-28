@@ -41,6 +41,12 @@ import java.util.concurrent.TimeUnit
 @EmbeddedKafka(topics = [kafkaInputTopic, kafkaProcessingTopic, kafkaMessageTopic, kafkaMetricsTopic], controlledShutdown = true)
 class IntegrationTests {
 
+	@Value("\${application.mocked-port-for-external-services}")
+	private val portToExternalServices: Int? = null
+
+	@Value("\${spring.embedded.kafka.brokers}")
+	private val kafkaBrokers: String? = null
+
 	@Suppress("unused")
 	@MockBean
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
@@ -48,12 +54,6 @@ class IntegrationTests {
 	@Suppress("unused")
 	@MockBean
 	private lateinit var collectorRegistry: CollectorRegistry
-
-	@Value("\${application.mocked-port-for-external-services}")
-	private val portToExternalServices: Int? = null
-
-	@Value("\${spring.embedded.kafka.brokers}")
-	private val kafkaBrokers: String? = null
 
 	@Autowired
 	private lateinit var appConfiguration: AppConfiguration
@@ -117,7 +117,8 @@ class IntegrationTests {
 
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
-		verifyMockedDeleteRequests(expectedCount, appConfiguration.config.filestorageUrl.replace("?", "\\?") + ".*")
+		val url = appConfiguration.config.filestorageUrl.replace("?", "\\?") + ".*"
+		verifyMockedDeleteRequests(expectedCount, url)
 	}
 
 	private fun createSoknadarkivschema() = createSoknadarkivschema(fileId)

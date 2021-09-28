@@ -22,6 +22,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_SASLMEC" to "",
 	"KAFKA_GROUPID" to "soknadsarkiverer-group-defaultid",
 	"BOOTSTRAPPING_TIMEOUT" to 120.toString(),
+	"DELAY_BEFORE_KAFKA_INITIALIZATION" to 5.toString(),
 	"KAFKA_INPUT_TOPIC" to kafkaInputTopic,
 	"KAFKA_PROCESSING_TOPIC" to kafkaProcessingTopic,
 	"KAFKA_MESSAGE_TOPIC" to kafkaMessageTopic,
@@ -74,6 +75,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val messageTopic: String = "KAFKA_MESSAGE_TOPIC".configProperty(),
 		val metricsTopic: String = "KAFKA_METRICS_TOPIC".configProperty(),
 		val bootstrappingTimeout: String = "BOOTSTRAPPING_TIMEOUT".configProperty(),
+		val delayBeforeKafkaInitialization: String = "DELAY_BEFORE_KAFKA_INITIALIZATION".configProperty(),
 		val groupId: String = "KAFKA_GROUPID".configProperty()
 	)
 
@@ -94,8 +96,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 	)
 
 	data class State(
-		var started: Boolean = false,
-		var up: Boolean = true,
+		var alive: Boolean = false,
 		var ready: Boolean = false,
 		var stopping: Boolean = false,
 		var busyCounter: Int = 0
@@ -111,10 +112,6 @@ class ConfigConfig(private val env: ConfigurableEnvironment) {
 		val appConfiguration = AppConfiguration()
 		env.setActiveProfiles(appConfiguration.config.profile)
 		println("Using profile '${appConfiguration.config.profile}'")
-
-		appConfiguration.state.ready = true
-		appConfiguration.state.up = true
-
 		return appConfiguration
 	}
 }

@@ -95,7 +95,7 @@ class ApplicationTests: TopologyTestDriverTests() {
 			.withTaskListService(taskListService)
 			.withKafkaPublisher(kafkaPublisherMock)
 			.putProcessingEventLogsOnTopic()
-			.setup(metrics)
+			.setup()
 	}
 
 	@AfterEach
@@ -318,7 +318,6 @@ class ApplicationTests: TopologyTestDriverTests() {
 		verifyKafkaMetric(0, "send files to archive")
 		verifyKafkaMetric(0, "delete files from filestorage")
 	}
-
 
 
 	@Test

@@ -33,7 +33,7 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 
 
 	internal fun getAllKafkaRecords(eventCollectionBuilder: EventCollection.Builder): List<KafkaEvent<String>> {
-		val futureRecords = runBlocking {
+		val records = runBlocking {
 			awaitAll(
 				getAllInputRecordsAsync(eventCollectionBuilder),
 				getAllProcessingRecordsAsync(eventCollectionBuilder),
@@ -41,30 +41,32 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 				getAllMetricsRecordsAsync(eventCollectionBuilder)
 			)
 		}
-		return getKafkaRecords(futureRecords, eventCollectionBuilder)
+		return getKafkaRecords(records, eventCollectionBuilder)
 	}
 
 	internal fun getProcessingAndMetricsKafkaRecords(eventCollectionBuilder: EventCollection.Builder): List<KafkaEvent<String>> {
-		val futureRecords = runBlocking {
+		val records = runBlocking {
 			awaitAll(
 				getAllProcessingRecordsAsync(eventCollectionBuilder),
 				getAllMetricsRecordsAsync(eventCollectionBuilder)
 			)
 		}
-		return getKafkaRecords(futureRecords, eventCollectionBuilder)
+		return getKafkaRecords(records, eventCollectionBuilder)
 	}
 
 	private fun getKafkaRecords(
-		futureRecords: List<List<KafkaEvent<out Any>>>,
+		records: List<List<KafkaEvent<out Any>>>,
 		eventCollectionBuilder: EventCollection.Builder
 	): List<KafkaEvent<String>> {
 
-		val records = futureRecords
+		logger.debug("For Kafka Admin consumer, found these records: $records")
+
+		val kafkaEventRecords = records
 			.flatten()
 			.map { KafkaEvent(it.sequence, it.innsendingKey, it.messageId, it.timestamp, it.type, it.content.toString()) }
 
 		val eventCollection = eventCollectionBuilder.build<String>()
-		eventCollection.addEvents(records)
+		eventCollection.addEvents(kafkaEventRecords)
 		return eventCollection.getEvents()
 	}
 
@@ -81,7 +83,13 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 		getAllKafkaRecords(metricsTopic, "METRICS", PoisonSwallowingAvroDeserializer(), eventCollectionBuilder.build())
 	}
 
-	private fun <T> getAllKafkaRecords(topic: String, recordType: String, valueDeserializer: Deserializer<T>, eventCollection: EventCollection<T>): List<KafkaEvent<T>> {
+	private fun <T> getAllKafkaRecords(
+		topic: String,
+		recordType: String,
+		valueDeserializer: Deserializer<T>,
+		eventCollection: EventCollection<T>
+	): List<KafkaEvent<T>> {
+
 		try {
 			val applicationId = "soknadsarkiverer-admin-$recordType-${UUID.randomUUID()}"
 
@@ -102,7 +110,11 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 		}
 	}
 
-	private fun <T> loopUntilKafkaRecordsAreRetrieved(kafkaConsumer: KafkaConsumer<Key, T>, eventCollection: EventCollection<T>): List<KafkaEvent<T>> {
+	private fun <T> loopUntilKafkaRecordsAreRetrieved(
+		kafkaConsumer: KafkaConsumer<Key, T>,
+		eventCollection: EventCollection<T>
+	): List<KafkaEvent<T>> {
+
 		val startTime = System.currentTimeMillis()
 		val timeout = 30 * 1000
 
@@ -112,7 +124,8 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 			val shouldStop = eventCollection.addEvents(records)
 			if (shouldStop)
 				break
-			TimeUnit.MILLISECONDS.sleep(100)
+			if (records.isEmpty())
+				TimeUnit.MILLISECONDS.sleep(100)
 		}
 		return eventCollection.getEvents()
 	}
@@ -125,12 +138,14 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 		logger.info("Found ${consumerRecords.count()} consumerRecords for ${kafkaConsumer.assignment()}")
 		for (record in consumerRecords) {
 
-			val messageId = StringDeserializer().deserialize("", record.headers().headers(MESSAGE_ID).firstOrNull()?.value()) ?: "null"
+			val recordHeaderMessageId = record.headers().headers(MESSAGE_ID).firstOrNull()?.value()
+			val messageId = StringDeserializer().deserialize("", recordHeaderMessageId) ?: "null"
 
 			if (record.key() != null && record.value() != null)
 				records.add(KafkaEvent(record.key(), messageId, record.timestamp(), record.value()))
 			else
-				logger.error("For ${kafkaConsumer.assignment()}: Record had null attributes. Key='${record.key()}', value ${if (record.value() == null) "is" else "is not"} null")
+				logger.error("For ${kafkaConsumer.assignment()}: Record had null attributes. " +
+					"Key='${record.key()}', value ${if (record.value() == null) "is" else "is not"} null")
 		}
 		return records
 	}
@@ -161,7 +176,8 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 			return try {
 				super.deserialize(topic, bytes)
 			} catch (e: Exception) {
-				logger.error("Unable to deserialize event on topic $topic\nByte Array: ${bytes.asList()}\nString representation: '${String(bytes)}'", e)
+				logger.error("Unable to deserialize event on topic $topic\nByte Array: ${bytes.asList()}\n" +
+					"String representation: '${String(bytes)}'", e)
 				null
 			}
 		}
