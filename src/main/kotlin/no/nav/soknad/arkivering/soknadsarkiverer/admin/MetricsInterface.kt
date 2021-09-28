@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import no.nav.security.token.support.core.api.Unprotected
+import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController
 @Unprotected // TODO: This should not be unprotected, but as long as the metrics view is part of the BE and not the Admin App, it needs to be accessible
 @RequestMapping
 class MetricsInterface(private val adminService: AdminService) {
+	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Operation(summary = "Returns metrics", tags = ["metrics"])
 	@ApiResponses(value = [
@@ -26,6 +28,7 @@ class MetricsInterface(private val adminService: AdminService) {
 			Content(mediaType = APPLICATION_JSON_VALUE, array = ArraySchema(schema = Schema(implementation = MetricsObject::class)))])])
 	@GetMapping("/metrics", produces = [APPLICATION_JSON_VALUE])
 	fun metrics(): List<MetricsObject> {
+		logger.debug("Requesting /metrics")
 
 		val eventCollectionBuilder = EventCollection.Builder()
 			.withCapacity(maxNumberOfMetricsReturned)
@@ -47,6 +50,7 @@ class MetricsInterface(private val adminService: AdminService) {
 	fun allMetricsBefore(
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long
 	): List<MetricsObject> {
+		logger.debug("Requesting /metrics/before/$timestamp")
 
 		val eventCollectionBuilder = EventCollection.Builder()
 			.withCapacity(maxNumberOfMetricsReturned)
@@ -68,6 +72,7 @@ class MetricsInterface(private val adminService: AdminService) {
 	fun allMetricsAfter(
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long
 	): List<MetricsObject> {
+		logger.debug("Requesting /metrics/after/$timestamp")
 
 		val eventCollectionBuilder = EventCollection.Builder()
 			.withCapacity(maxNumberOfMetricsReturned)
@@ -90,6 +95,7 @@ class MetricsInterface(private val adminService: AdminService) {
 		@Parameter(description = "Timestamp of the start time (milliseconds since epoch)") @PathVariable starttime: Long,
 		@Parameter(description = "Timestamp of the end time (milliseconds since epoch)") @PathVariable endtime: Long
 	): List<MetricsObject> {
+		logger.debug("Requesting /metrics/between/$starttime/$endtime")
 
 		val eventCollectionBuilder = EventCollection.Builder()
 			.withCapacity(maxNumberOfMetricsReturned)
@@ -104,7 +110,7 @@ class MetricsInterface(private val adminService: AdminService) {
 
 
 	@Operation(summary = "Lists the $maxNumberOfMetricsReturned most recent metrics that have a " +
-		"given key.", tags = ["events"])
+		"given key.", tags = ["metrics"])
 	@ApiResponses(value = [
 		ApiResponse(responseCode = "200", description = "A list of the $maxNumberOfMetricsReturned most recent metrics " +
 			"that have a given key. An empty list is returned if the key is not found.", content = [
@@ -113,6 +119,7 @@ class MetricsInterface(private val adminService: AdminService) {
 	fun specificMetrics(
 		@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String
 	): List<MetricsObject> {
+		logger.debug("Requesting /metrics/key/$key")
 
 		val eventCollectionBuilder = EventCollection.Builder()
 			.withCapacity(maxNumberOfMetricsReturned)
@@ -136,6 +143,7 @@ class MetricsInterface(private val adminService: AdminService) {
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long,
 		@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String
 	): List<MetricsObject> {
+		logger.debug("Requesting /metrics/key/before/$timestamp/$key")
 
 		val eventCollectionBuilder = EventCollection.Builder()
 			.withCapacity(maxNumberOfMetricsReturned)
@@ -159,6 +167,7 @@ class MetricsInterface(private val adminService: AdminService) {
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long,
 		@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String
 	): List<MetricsObject> {
+		logger.debug("Requesting /metrics/key/after/$timestamp/$key")
 
 		val eventCollectionBuilder = EventCollection.Builder()
 			.withCapacity(maxNumberOfMetricsReturned)
@@ -183,6 +192,7 @@ class MetricsInterface(private val adminService: AdminService) {
 		@Parameter(description = "Timestamp of the end time (milliseconds since epoch)") @PathVariable endtime: Long,
 		@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String
 	): List<MetricsObject> {
+		logger.debug("Requesting /metrics/key/between/$starttime/$endtime/$key")
 
 		val eventCollectionBuilder = EventCollection.Builder()
 			.withCapacity(maxNumberOfMetricsReturned)

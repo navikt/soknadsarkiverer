@@ -59,7 +59,7 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 		eventCollectionBuilder: EventCollection.Builder
 	): List<KafkaEvent<String>> {
 
-		logger.debug("For Kafka Admin consumer, found these records: $records")
+		logger.debug("For Kafka Admin consumer, found these ${records.size} records: $records")
 
 		val kafkaEventRecords = records
 			.flatten()
