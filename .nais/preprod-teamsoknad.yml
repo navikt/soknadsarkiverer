@@ -32,7 +32,7 @@ spec:
       cpu: 1000m
       memory: 2Gi
   ingresses:
-    - "https://soknadsarkiverer.dev.adeo.no"
+    - "https://soknadsarkiverer.dev.intern.nav.no"
   accessPolicy:
     inbound:
       rules:
@@ -77,7 +77,7 @@ spec:
     - name: KAFKA_GROUPID
       value: soknadsarkiverer-groupid-teamsoknad
     - name: FILESTORAGE_HOST
-      value: https://soknadsfillager.dev.adeo.no
+      value: https://soknadsfillager.dev.intern.nav.no
     - name: JOARK_HOST
       value: https://arkiv-mock.dev.intern.nav.no
     - name: BOOTSTRAPPING_TIMEOUT
