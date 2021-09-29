@@ -12,7 +12,6 @@ import java.time.Instant
 import java.util.*
 import javax.annotation.PostConstruct
 
-
 @Service
 @Profile("!test")
 class KafkaSetup(
@@ -36,9 +35,10 @@ class KafkaSetup(
 	}
 
 	private fun bootstrapKafka() {
+		val startTime = System.currentTimeMillis()
 		logger.info("Starting Kafka Bootstrap Consumer to create tasks for any tasks that had not yet been finished")
 		KafkaBootstrapConsumer(appConfiguration, taskListService).recreateState()
-		logger.info("Finished Kafka Bootstrap Consumer")
+		logger.info("Finished Kafka Bootstrap Consumer in ${System.currentTimeMillis() - startTime} ms.")
 	}
 
 	private fun scheduleJob(jobToRun: () -> Unit) {
