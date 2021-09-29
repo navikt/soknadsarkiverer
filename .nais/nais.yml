@@ -32,9 +32,8 @@ spec:
       cpu: 1000m
       memory: 2Gi
   ingresses:
-    - "https://soknadsarkiverer.nais.adeo.no"
-    - "https://soknadsarkiverer.prod-fss.nais.io"
     - "https://soknadsarkiverer.intern.nav.no"
+    - "https://soknadsarkiverer.prod-fss.nais.io"
   vault:
     enabled: true
     paths:
@@ -71,7 +70,7 @@ spec:
     - name: KAFKA_GROUPID
       value: soknadsarkiverer-groupid-p
     - name: FILESTORAGE_HOST
-      value: https://soknadsfillager.nais.adeo.no
+      value: https://soknadsfillager.intern.nav.no
     - name: JOARK_HOST
       value: https://dokarkiv.nais.adeo.no
     - name: BOOTSTRAPPING_TIMEOUT
