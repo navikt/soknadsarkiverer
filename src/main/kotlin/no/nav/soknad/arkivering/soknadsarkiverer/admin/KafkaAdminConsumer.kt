@@ -6,6 +6,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
+import no.nav.soknad.arkivering.soknadsarkiverer.admin.EventCollection.TimeSelector.BEFORE
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import org.apache.avro.specific.SpecificRecord
@@ -117,17 +118,48 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 
 		val startTime = System.currentTimeMillis()
 		val timeout = 30 * 1000
+		var hasReadRecords = false
 
-		while (System.currentTimeMillis() < startTime + timeout) {
-			val records = retrieveKafkaRecords(kafkaConsumer)
+		while (true) {
+			val newRecords = retrieveKafkaRecords(kafkaConsumer)
+			if (newRecords.isNotEmpty())
+				hasReadRecords = true
 
-			val shouldStop = eventCollection.addEvents(records)
-			if (shouldStop)
+			val collectionIsSatisfied = eventCollection.addEvents(newRecords)
+
+			if (shouldStop(hasReadRecords, newRecords, collectionIsSatisfied, eventCollection))
 				break
-			if (records.isEmpty())
+			if (hasTimedOut(startTime, timeout, hasReadRecords)) {
+				logger.warn("For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records " +
+					"${System.currentTimeMillis() - startTime} ms after starting. Has read ${eventCollection.getEvents().size} records. " +
+					"Aborting consumption.")
+				break
+			}
+			if (newRecords.isEmpty())
 				TimeUnit.MILLISECONDS.sleep(100)
 		}
 		return eventCollection.getEvents()
+	}
+
+	private fun hasTimedOut(startTime: Long, timeout: Int, hasReadRecords: Boolean): Boolean {
+
+		val shouldEnforceTimeout = timeout > 0
+		val hasTimedOut = System.currentTimeMillis() > startTime + timeout
+
+		val hasTimedOutWithoutRecords = System.currentTimeMillis() > startTime + timeoutWhenNotFindingRecords
+
+		return shouldEnforceTimeout && hasTimedOut || !hasReadRecords && hasTimedOutWithoutRecords
+	}
+
+	private fun shouldStop(
+		hasPreviouslyReadRecords: Boolean,
+		newRecords: List<*>,
+		collectionIsSatisfied: Boolean,
+		eventCollection: EventCollection<*>
+	) : Boolean {
+
+		return hasPreviouslyReadRecords && newRecords.isEmpty() ||
+			collectionIsSatisfied && eventCollection.getTimeSelector() != BEFORE
 	}
 
 	private fun <T> retrieveKafkaRecords(kafkaConsumer: KafkaConsumer<Key, T>): List<KafkaEvent<T>> {
@@ -185,3 +217,4 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 }
 
 private typealias Key = String
+private const val timeoutWhenNotFindingRecords = 30 * 1000

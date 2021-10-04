@@ -42,6 +42,11 @@ internal class EventCollection<T> private constructor(
 		}
 
 	/**
+	 * @return The type of [TimeSelector] for this EventCollection.
+	 */
+	fun getTimeSelector() = timeSelector
+
+	/**
 	 * This function will take the [KafkaEvent]s in [list] that fulfill the class's filters, and add those
 	 * to the internal collection of the class.
 	 *
