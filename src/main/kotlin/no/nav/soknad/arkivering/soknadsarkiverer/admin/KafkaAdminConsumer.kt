@@ -89,24 +89,28 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 		eventCollectionBuilder: EventCollection.Builder
 	): List<KafkaEvent<T>> {
 
-		val applicationId = "soknadsarkiverer-admin-$recordType-${UUID.randomUUID()}"
-		val consumer = BootstrapConsumer<T>(appConfiguration, applicationId, eventCollectionBuilder.build())
-
-		return consumer.getAllKafkaRecords(topic, deserializer)
+		return BootstrapConsumer.Builder<T>()
+			.withAppConfiguration(appConfiguration)
+			.withKafkaGroupId("soknadsarkiverer-admin-$recordType-${UUID.randomUUID()}")
+			.withValueDeserializer(deserializer)
+			.withEventCollection(eventCollectionBuilder.build())
+			.forTopic(topic)
+			.getAllKafkaRecords()
 	}
 }
 
 
-private class BootstrapConsumer<T>(
+private class BootstrapConsumer<T> private constructor(
 	appConfiguration: AppConfiguration,
-	private val applicationId: String,
+	kafkaGroupId: String,
+	deserializer: Deserializer<T>,
+	topic: String,
 	private val eventCollection: EventCollection<T>
-) : KafkaRecordConsumer<T, KafkaEvent<T>>(appConfiguration) {
+) : KafkaRecordConsumer<T, KafkaEvent<T>>(appConfiguration, kafkaGroupId, deserializer, topic) {
 
 	private var collectionWasSatisfiedOnLastRecordAddition = false
 
 
-	override fun getApplicationId() = applicationId
 	override fun getTimeout() = 30 * 1000
 
 	override fun shouldStop(hasPreviouslyReadRecords: Boolean, newRecords: List<*>) =
@@ -127,4 +131,27 @@ private class BootstrapConsumer<T>(
 	}
 
 	override fun getRecords(): List<KafkaEvent<T>> = eventCollection.getEvents()
+
+
+	data class Builder<T>(
+		private var appConfiguration: AppConfiguration? = null,
+		private var kafkaGroupId: String? = null,
+		private var eventCollection: EventCollection<T>? = null,
+		private var deserializer: Deserializer<T>? = null,
+		private var topic: String? = null
+	) {
+
+		fun withAppConfiguration(appConfiguration: AppConfiguration) = apply { this.appConfiguration = appConfiguration }
+		fun withKafkaGroupId(kafkaGroupId: String) = apply { this.kafkaGroupId = kafkaGroupId }
+		fun withEventCollection(eventCollection: EventCollection<T>) = apply { this.eventCollection = eventCollection }
+		fun withValueDeserializer(deserializer: Deserializer<T>) = apply { this.deserializer = deserializer }
+		fun forTopic(topic: String) = apply { this.topic = topic }
+
+		fun getAllKafkaRecords(): List<KafkaEvent<T>> {
+			if (appConfiguration == null || kafkaGroupId == null || deserializer == null || topic == null || eventCollection == null)
+				throw Exception("When constructing BootstrapConsumer: Expected appConfiguration, kafkaGroupId, deserializer, " +
+					"topic and filter to be set!")
+			return BootstrapConsumer(appConfiguration!!, kafkaGroupId!!, deserializer!!, topic!!, eventCollection!!).getAllKafkaRecords()
+		}
+	}
 }

@@ -16,11 +16,17 @@ import java.time.Duration
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-abstract class KafkaRecordConsumer<T, R>(private val appConfiguration: AppConfiguration) {
+abstract class KafkaRecordConsumer<T, R>(
+	private val appConfiguration: AppConfiguration,
+	private val kafkaGroupId: String,
+	private val valueDeserializer: Deserializer<T>,
+	private val topic: String
+) {
+
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 
-	fun getAllKafkaRecords(topic: String, valueDeserializer: Deserializer<T>): List<R> {
+	fun getAllKafkaRecords(): List<R> {
 		try {
 			logger.info("About to read records from $topic")
 
@@ -100,7 +106,7 @@ abstract class KafkaRecordConsumer<T, R>(private val appConfiguration: AppConfig
 	private fun kafkaConfig(valueDeserializer: Deserializer<T>) = Properties().also {
 		it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
 		it[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
-		it[ConsumerConfig.GROUP_ID_CONFIG] = getApplicationId()
+		it[ConsumerConfig.GROUP_ID_CONFIG] = kafkaGroupId
 		it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers
 		it[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
 		it[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = valueDeserializer::class.java
@@ -112,8 +118,6 @@ abstract class KafkaRecordConsumer<T, R>(private val appConfiguration: AppConfig
 		}
 	}
 
-
-	abstract fun getApplicationId(): String
 
 	abstract fun getTimeout(): Int
 
