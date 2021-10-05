@@ -4,6 +4,7 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConsumerBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaRecordConsumer
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.Key
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.PoisonSwallowingAvroDeserializer
@@ -56,10 +57,10 @@ class KafkaBootstrapConsumer(
 		}
 
 		return BootstrapConsumer.Builder<Soknadarkivschema>()
+			.withFilter(keepUnfinishedRecordsFilter)
 			.withAppConfiguration(appConfiguration)
 			.withKafkaGroupId("soknadsarkiverer-bootstrapping-Input-$uuid")
 			.withValueDeserializer(PoisonSwallowingAvroDeserializer())
-			.withFilter(keepUnfinishedRecordsFilter)
 			.forTopic(inputTopic)
 			.getAllKafkaRecords()
 	}
@@ -78,10 +79,10 @@ class KafkaBootstrapConsumer(
 		}
 
 		val kafkaRecords = BootstrapConsumer.Builder<ProcessingEvent>()
+			.withFilter(keepUnfinishedRecordsFilter)
 			.withAppConfiguration(appConfiguration)
 			.withKafkaGroupId("soknadsarkiverer-bootstrapping-ProcessingEvent-$uuid")
 			.withValueDeserializer(PoisonSwallowingAvroDeserializer())
-			.withFilter(keepUnfinishedRecordsFilter)
 			.forTopic(processingTopic)
 			.getAllKafkaRecords()
 
@@ -141,25 +142,14 @@ private class BootstrapConsumer<T> private constructor(
 	override fun getRecords(): List<ConsumerRecord<Key, T>> = records
 
 
-	data class Builder<T>(
-		private var appConfiguration: AppConfiguration? = null,
-		private var kafkaGroupId: String? = null,
-		private var filter: ((List<ConsumerRecord<Key, T>>) -> List<ConsumerRecord<Key, T>>)? = null,
-		private var deserializer: Deserializer<T>? = null,
-		private var topic: String? = null
-	) {
+	class Builder<T>(private var filter: ((List<ConsumerRecord<Key, T>>) -> List<ConsumerRecord<Key, T>>)? = null) :
+		KafkaConsumerBuilder<T, ConsumerRecord<Key, T>>() {
 
-		fun withAppConfiguration(appConfiguration: AppConfiguration) = apply { this.appConfiguration = appConfiguration }
-		fun withKafkaGroupId(kafkaGroupId: String) = apply { this.kafkaGroupId = kafkaGroupId }
-		fun withFilter(filter: (List<ConsumerRecord<Key, T>>) -> List<ConsumerRecord<Key, T>>) = apply { this.filter = filter }
-		fun withValueDeserializer(deserializer: Deserializer<T>) = apply { this.deserializer = deserializer }
-		fun forTopic(topic: String) = apply { this.topic = topic }
+		fun withFilter(filter: (List<ConsumerRecord<Key, T>>) -> List<ConsumerRecord<Key, T>>) =
+			apply { this.filter = filter }
 
-		fun getAllKafkaRecords(): List<ConsumerRecord<Key, T>> {
-			if (appConfiguration == null || kafkaGroupId == null || deserializer == null || topic == null || filter == null)
-				throw Exception("When constructing BootstrapConsumer: Expected appConfiguration, kafkaGroupId, deserializer, " +
-					"topic and filter to be set!")
-			return BootstrapConsumer(appConfiguration!!, kafkaGroupId!!, deserializer!!, topic!!, filter!!).getAllKafkaRecords()
-		}
+		override fun getAllKafkaRecords() =
+			BootstrapConsumer(appConfiguration!!, kafkaGroupId!!, deserializer!!, topic!!, filter!!)
+				.getAllKafkaRecords()
 	}
 }

@@ -145,5 +145,19 @@ class PoisonSwallowingAvroDeserializer<T : SpecificRecord> : SpecificAvroDeseria
 	}
 }
 
+abstract class KafkaConsumerBuilder<T, R> {
+	var appConfiguration: AppConfiguration? = null
+	var kafkaGroupId: String? = null
+	var deserializer: Deserializer<T>? = null
+	var topic: String? = null
+
+	fun withAppConfiguration(appConfiguration: AppConfiguration) = apply { this.appConfiguration = appConfiguration }
+	fun withKafkaGroupId(kafkaGroupId: String) = apply { this.kafkaGroupId = kafkaGroupId }
+	fun withValueDeserializer(deserializer: Deserializer<T>) = apply { this.deserializer = deserializer }
+	fun forTopic(topic: String) = apply { this.topic = topic }
+
+	abstract fun getAllKafkaRecords(): List<R>
+}
+
 typealias Key = String
 private const val timeoutWhenNotFindingRecords = 30 * 1000
