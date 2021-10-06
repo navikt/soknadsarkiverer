@@ -86,7 +86,7 @@ abstract class KafkaRecordConsumer<T, R>(
 	}
 
 	private fun retrieveKafkaRecords(kafkaConsumer: KafkaConsumer<Key, T>): List<ConsumerRecord<Key, T>> {
-		logger.info("Retrieving Kafka records for ${kafkaConsumer.assignment()}")
+		logger.debug("Retrieving Kafka records for ${kafkaConsumer.assignment()}")
 		val records = mutableListOf<ConsumerRecord<Key, T>>()
 
 		val consumerRecords = kafkaConsumer.poll(Duration.ofSeconds(1))

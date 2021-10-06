@@ -10,10 +10,10 @@ import no.nav.soknad.arkivering.soknadsarkiverer.kafka.*
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.Deserializer
 import org.apache.kafka.common.serialization.StringDeserializer
-import org.springframework.context.annotation.Configuration
+import org.springframework.stereotype.Service
 import java.util.*
 
-@Configuration
+@Service
 class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 
 	private val inputTopic = appConfiguration.kafkaConfig.inputTopic
