@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import no.nav.security.token.support.core.api.ProtectedWithClaims
+import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.web.bind.annotation.*
 
@@ -15,13 +16,18 @@ import org.springframework.web.bind.annotation.*
 @ProtectedWithClaims(issuer = "azuread")
 @RequestMapping("/admin")
 class ApplicationAdminInterface(private val adminService: IAdminService) {
+	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Operation(summary = "Requests that the task with the given key should be rerun. It might take a little while " +
 		"before the rerun is started.", tags = ["operations"])
 	@ApiResponses(value = [ApiResponse(responseCode = "200", description = "Will always return successfully, but the " +
 		"actual rerun will be triggered some time in the future.")])
 	@PostMapping("/rerun/{key}")
-	fun rerun(@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String) = adminService.rerun(key)
+	fun rerun(@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String) {
+		logger.debug("Requesting /rerun/$key")
+
+		adminService.rerun(key)
+	}
 
 
 	@Operation(summary = "Lists the $maxNumberOfEventsReturned most recent events from all topics.", tags = ["events"])
@@ -33,6 +39,7 @@ class ApplicationAdminInterface(private val adminService: IAdminService) {
 			Content(mediaType = APPLICATION_JSON_VALUE, array = ArraySchema(schema = Schema(implementation = KafkaEvent::class)))])])
 	@GetMapping("/kafka/events/allEvents", produces = [APPLICATION_JSON_VALUE])
 	fun allEvents(): List<KafkaEvent<String>> {
+		logger.debug("Requesting /kafka/events/allEvents")
 
 		return adminService.getAllEvents(TimeSelector.ANY, 0)
 	}
@@ -51,6 +58,7 @@ class ApplicationAdminInterface(private val adminService: IAdminService) {
 	fun allEventsBefore(
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long
 	): List<KafkaEvent<String>> {
+		logger.debug("Requesting /kafka/events/allEvents/before/$timestamp")
 
 		return adminService.getAllEvents(TimeSelector.BEFORE, timestamp)
 	}
@@ -69,6 +77,7 @@ class ApplicationAdminInterface(private val adminService: IAdminService) {
 	fun allEventsAfter(
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long
 	): List<KafkaEvent<String>> {
+		logger.debug("Requesting /kafka/events/allEvents/after/$timestamp")
 
 		return adminService.getAllEvents(TimeSelector.AFTER, timestamp)
 	}
@@ -84,6 +93,7 @@ class ApplicationAdminInterface(private val adminService: IAdminService) {
 			Content(mediaType = APPLICATION_JSON_VALUE, array = ArraySchema(schema = Schema(implementation = KafkaEvent::class)))])])
 	@GetMapping("/kafka/events/unfinishedEvents", produces = [APPLICATION_JSON_VALUE])
 	fun unfinishedEvents(): List<KafkaEvent<String>> {
+		logger.debug("Requesting /kafka/events/unfinishedEvents")
 
 		return adminService.getUnfinishedEvents(TimeSelector.ANY, 0)
 	}
@@ -101,6 +111,7 @@ class ApplicationAdminInterface(private val adminService: IAdminService) {
 	fun unfinishedEventsBefore(
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long
 	): List<KafkaEvent<String>> {
+		logger.debug("Requesting /kafka/events/unfinishedEvents/before/$timestamp")
 
 		return adminService.getUnfinishedEvents(TimeSelector.BEFORE, timestamp)
 	}
@@ -118,6 +129,7 @@ class ApplicationAdminInterface(private val adminService: IAdminService) {
 	fun unfinishedEventsAfter(
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long
 	): List<KafkaEvent<String>> {
+		logger.debug("Requesting /kafka/events/unfinishedEvents/after/$timestamp")
 
 		return adminService.getUnfinishedEvents(TimeSelector.AFTER, timestamp)
 	}
@@ -133,6 +145,7 @@ class ApplicationAdminInterface(private val adminService: IAdminService) {
 			Content(mediaType = APPLICATION_JSON_VALUE, array = ArraySchema(schema = Schema(implementation = KafkaEvent::class)))])])
 	@GetMapping("/kafka/events/failedEvents", produces = [APPLICATION_JSON_VALUE])
 	fun failedEvents(): List<KafkaEvent<String>> {
+		logger.debug("Requesting /kafka/events/failedEvents")
 
 		return adminService.getFailedEvents(TimeSelector.ANY, 0)
 	}
@@ -149,6 +162,7 @@ class ApplicationAdminInterface(private val adminService: IAdminService) {
 	fun failedEventsBefore(
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long
 	): List<KafkaEvent<String>> {
+		logger.debug("Requesting /kafka/events/failedEvents/before/$timestamp")
 
 		return adminService.getFailedEvents(TimeSelector.BEFORE, timestamp)
 	}
@@ -165,6 +179,7 @@ class ApplicationAdminInterface(private val adminService: IAdminService) {
 	fun failedEventsAfter(
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long
 	): List<KafkaEvent<String>> {
+		logger.debug("Requesting /kafka/events/failedEvents/after/$timestamp")
 
 		return adminService.getFailedEvents(TimeSelector.AFTER, timestamp)
 	}
@@ -180,6 +195,7 @@ class ApplicationAdminInterface(private val adminService: IAdminService) {
 	fun specificEvent(
 		@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String
 	): List<KafkaEvent<String>> {
+		logger.debug("Requesting /kafka/events/key/$key")
 
 		return adminService.getEventsByKey(key, TimeSelector.ANY, 0)
 	}
@@ -199,6 +215,7 @@ class ApplicationAdminInterface(private val adminService: IAdminService) {
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long,
 		@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String
 	): List<KafkaEvent<String>> {
+		logger.debug("Requesting /kafka/events/key/before/$timestamp/$key")
 
 		return adminService.getEventsByKey(key, TimeSelector.BEFORE, timestamp)
 	}
@@ -218,6 +235,7 @@ class ApplicationAdminInterface(private val adminService: IAdminService) {
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long,
 		@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String
 	): List<KafkaEvent<String>> {
+		logger.debug("Requesting /kafka/events/key/after/$timestamp/$key")
 
 		return adminService.getEventsByKey(key, TimeSelector.AFTER, timestamp)
 	}
@@ -235,6 +253,7 @@ class ApplicationAdminInterface(private val adminService: IAdminService) {
 	fun search(
 		@Parameter(description = "Search phrase (Regex)") @PathVariable searchPhrase: String
 	): List<KafkaEvent<String>> {
+		logger.debug("Requesting /kafka/events/search/$searchPhrase")
 
 		return adminService.getEventsByRegex(searchPhrase, TimeSelector.ANY, 0)
 	}
@@ -255,6 +274,7 @@ class ApplicationAdminInterface(private val adminService: IAdminService) {
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long,
 		@Parameter(description = "Search phrase (Regex)") @PathVariable searchPhrase: String
 	): List<KafkaEvent<String>> {
+		logger.debug("Requesting /kafka/events/search/before/$timestamp/$searchPhrase")
 
 		return adminService.getEventsByRegex(searchPhrase, TimeSelector.BEFORE, timestamp)
 	}
@@ -275,6 +295,7 @@ class ApplicationAdminInterface(private val adminService: IAdminService) {
 		@Parameter(description = "Timestamp (milliseconds since epoch)") @PathVariable timestamp: Long,
 		@Parameter(description = "Search phrase (Regex)") @PathVariable searchPhrase: String
 	): List<KafkaEvent<String>> {
+		logger.debug("Requesting /kafka/events/search/after/$timestamp/$searchPhrase")
 
 		return adminService.getEventsByRegex(searchPhrase, TimeSelector.AFTER, timestamp)
 	}
@@ -302,6 +323,11 @@ class ApplicationAdminInterface(private val adminService: IAdminService) {
 			"Filestorage keys could not be found.", content = [
 			(Content(mediaType = APPLICATION_JSON_VALUE, array = (ArraySchema(schema = Schema(implementation = FilestorageExistenceResponse::class)))))])])
 	@GetMapping("/fillager/filesExist/{key}", produces = [APPLICATION_JSON_VALUE])
-	fun filesExists(@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String) =
-		adminService.filesExist(key)
+	fun filesExists(
+		@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String
+	): List<FilestorageExistenceResponse> {
+		logger.debug("Requesting /fillager/filesExist/$key")
+
+		return adminService.filesExist(key)
+	}
 }

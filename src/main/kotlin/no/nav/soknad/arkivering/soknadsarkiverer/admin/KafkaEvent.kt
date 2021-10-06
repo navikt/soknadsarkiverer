@@ -23,7 +23,7 @@ data class KafkaEvent<T>(
 		example = "81328274-d593-463a-89d1-309bc663a1a9", required = true)
 	val messageId: String,
 
-	@Schema(description = "Milliseconds since epoch, UTC",
+	@Schema(description = "The timestamp of the Kafka event, in milliseconds since epoch, UTC",
 		example = "1604334716511", required = true)
 	val timestamp: Long,
 
