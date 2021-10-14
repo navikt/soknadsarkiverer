@@ -30,7 +30,7 @@ class KafkaBootstrapConsumer(
 		val (finishedKeys, unfinishedProcessingRecords) = getProcessingRecords()
 		val unfinishedInputRecords = getUnfinishedInputRecords(finishedKeys)
 
-		unfinishedInputRecords.chunked(500).forEach { sublist ->
+		unfinishedInputRecords.chunked(250).forEach { sublist ->
 			logger.info("Recreating state, found these ${sublist.size} unfinished input records: ${sublist.map { it.key() }}")
 		}
 
