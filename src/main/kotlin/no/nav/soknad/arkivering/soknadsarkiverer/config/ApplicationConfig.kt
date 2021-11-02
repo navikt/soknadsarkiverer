@@ -13,8 +13,8 @@ const val kafkaMessageTopic = "privat-soknadInnsendt-messages-v1-teamsoknad"
 const val kafkaMetricsTopic = "privat-soknadInnsendt-metrics-v1-teamsoknad"
 
 private val defaultProperties = ConfigurationMap(mapOf(
-	"SOKNADSARKIVERER_USERNAME" to "arkiverer",
-	"SOKNADSARKIVERER_PASSWORD" to "",
+	"KAFKA_USERNAME" to "arkiverer",
+	"KAFKA_PASSWORD" to "",
 	"SCHEMA_REGISTRY_URL" to "http://localhost:8081",
 	"KAFKA_BOOTSTRAP_SERVERS" to "localhost:29092",
 	"KAFKA_SECURITY" to "",
@@ -32,11 +32,12 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"MAX_MESSAGE_SIZE" to (1024 * 1024 * 300).toString(),
 	"CLIENTSECRET" to "",
 
+	"BASICAUTH_USERNAME" to "arkiverer",
+	"BASICAUTH_PASSWORD" to "password",
 	"JOARK_HOST" to "http://localhost:8092",
 	"JOARK_URL" to "/rest/journalpostapi/v1/journalpost",
 	"FILESTORAGE_HOST" to "http://localhost:9042",
 	"FILESTORAGE_URL" to "/filer?ids=",
-	"SHARED_PASSWORD" to "password",
 
 	"ADMIN_USER" to "admin",
 	"ADMIN_USER_PASSWORD" to "password",
@@ -61,8 +62,8 @@ fun readFileAsText(fileName: String, default: String = "") = try { File(fileName
 
 data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val config: Config = Config(), val state: State = State()) {
 	data class KafkaConfig(
-		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "SOKNADSARKIVERER_USERNAME".configProperty()),
-		val password: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "SOKNADSARKIVERER_PASSWORD".configProperty()),
+		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "KAFKA_USERNAME".configProperty()),
+		val password: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "KAFKA_PASSWORD".configProperty()),
 		val servers: String = readFileAsText("/var/run/secrets/nais.io/kv/kafkaBootstrapServers", "KAFKA_BOOTSTRAP_SERVERS".configProperty()),
 		val schemaRegistryUrl: String = "SCHEMA_REGISTRY_URL".configProperty(),
 		val secure: String = "KAFKA_SECURITY".configProperty(),
@@ -82,8 +83,8 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 	data class Config(
 		val joarkHost: String = readFileAsText("/var/run/secrets/nais.io/kv/JOARK_HOST", "JOARK_HOST".configProperty()),
 		val joarkUrl: String = "JOARK_URL".configProperty(),
-		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "SOKNADSARKIVERER_USERNAME".configProperty()),
-		val sharedPassword: String = readFileAsText("/var/run/secrets/nais.io/kv/SHARED_PASSWORD", "SHARED_PASSWORD".configProperty()),
+		val username: String = readFileAsText("/secrets/innsending-data/username", "BASICAUTH_USERNAME".configProperty()),
+		val sharedPassword: String = readFileAsText("/secrets/innsending-data/password", "BASICAUTH_PASSWORD".configProperty()),
 		val clientsecret: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "CLIENTSECRET".configProperty()),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
