@@ -43,10 +43,12 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 			val request: OpprettJournalpostRequest = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)
 
 			val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
-			val response = sendDataToJoark(if (soknadarkivschema.arkivtema == "BID") bidClient else webClient, request, url)
+			val client = if (soknadarkivschema.arkivtema == "BID") bidClient else webClient
+			val response = sendDataToJoark(client, request, url)
 			val journalpostId = response?.journalpostId ?: "-1"
 
-			logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.behandlingsid}', got the following journalpostId: '$journalpostId'")
+			logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.behandlingsid}', " +
+				"got the following journalpostId: '$journalpostId'")
 			metrics.incJoarkSuccesses()
 			return journalpostId
 
@@ -62,7 +64,9 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 		}
 	}
 
-	private fun sendDataToJoark(client: WebClient, data: OpprettJournalpostRequest, uri: String): OpprettJournalpostResponse? {
+	private fun sendDataToJoark(client: WebClient, data: OpprettJournalpostRequest, uri: String):
+		OpprettJournalpostResponse? {
+
 		val method = HttpMethod.POST
 		return client
 			.method(method)
@@ -84,5 +88,4 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 			.bodyToMono(OpprettJournalpostResponse::class.java)
 			.block()
 	}
-
 }

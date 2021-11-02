@@ -90,7 +90,7 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 
 		if (fileIds.size != files.size) {
 			val fetchedFiles = files.map { it.uuid }
-			throw Exception("Was not able to fetch the files with these ids: ${fileIds.filter { !fetchedFiles.contains(it) }}")
+			throw Exception("Unable to fetch the files with these ids: ${fileIds.filter { !fetchedFiles.contains(it) }}")
 		}
 		return files
 	}
@@ -104,7 +104,8 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 			.retrieve()
 			.onStatus(
 				{ httpStatus -> httpStatus.is4xxClientError || httpStatus.is5xxServerError },
-				{ response -> response.bodyToMono(String::class.java).map { Exception("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'") } })
+				{ response -> response.bodyToMono(String::class.java).map { Exception("Got ${response.statusCode()} when " +
+					"requesting $method $uri - response body: '$it'") } })
 			.bodyToMono(String::class.java)
 			.block() // TODO Do we need to block?
 	}
@@ -120,7 +121,8 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 				{ httpStatus -> httpStatus.is4xxClientError || httpStatus.is5xxServerError },
 				{ response -> response.bodyToMono(String::class.java).map {
 						if (response.statusCode() == HttpStatus.GONE) {
-							FilesAlreadyDeletedException("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'")
+							FilesAlreadyDeletedException("Got ${response.statusCode()} when requesting $method $uri - " +
+								"response body: '$it'")
 						} else {
 							Exception("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'")
 						}
