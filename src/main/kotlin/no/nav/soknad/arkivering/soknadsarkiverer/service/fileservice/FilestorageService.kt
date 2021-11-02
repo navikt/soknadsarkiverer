@@ -136,7 +136,7 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 
 	private fun setupWebClient(uri: String, method: HttpMethod): WebClient.RequestBodySpec {
 
-		val auth = "${appConfiguration.config.username}:${appConfiguration.config.sharedPassword}"
+		val auth = "${appConfiguration.config.username}:${appConfiguration.config.password}"
 		val encodedAuth: ByteArray = Base64.encodeBase64(auth.toByteArray())
 		val authHeader = "Basic " + String(encodedAuth)
 
