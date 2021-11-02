@@ -59,20 +59,20 @@ class SelfDestructConfig(private val scheduler: Scheduler, private val appConfig
 	 *
 	 *
 	 * === Solution ===
-	 * The (ugly) solution to this bug is to shut down the pods every night (self destruct), which will cause Kubernetes
+	 * The (ugly) solution to this bug is to shut down the pods every night (self-destruct), which will cause Kubernetes
 	 * to restart the pods, thus triggering abandoned tasks to be picked up again.
 	 */
 	@Profile("prod | dev")
 	@Bean
 	fun scheduleSelfDestruct() {
 		val time = timeTomorrowNightBetween2and5()
-		logger.info("Will self destruct at $time")
+		logger.info("Will self-destruct at $time")
 		scheduler.scheduleSingleTask({ selfDestruct() }, time)
 	}
 
 	/**
-	 * Self destruct the next date, somewhere random between 02:00 and 05:00. Set it to random because we don't want
-	 * to bring down all running pods at once - the randomness will make it probable that they self destruct at
+	 * Self-destruct the next date, somewhere random between 02:00 and 05:00. Set it to random because we don't want
+	 * to bring down all running pods at once - the randomness will make it probable that they self-destruct at
 	 * different times during the night, meaning that it is very likely that there is at least one other pod running.
 	 */
 	private fun timeTomorrowNightBetween2and5(): Instant {
@@ -82,7 +82,7 @@ class SelfDestructConfig(private val scheduler: Scheduler, private val appConfig
 	}
 
 	private fun selfDestruct() {
-		logger.info("Initialising self destruction sequence")
+		logger.info("Initialising self-destruction sequence")
 		appConfiguration.state.alive = false
 	}
 }

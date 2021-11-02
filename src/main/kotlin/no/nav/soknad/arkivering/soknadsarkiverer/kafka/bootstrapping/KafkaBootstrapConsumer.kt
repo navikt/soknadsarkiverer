@@ -29,11 +29,14 @@ class KafkaBootstrapConsumer(
 	fun recreateState() {
 		val (finishedKeys, unfinishedProcessingRecords) = getProcessingRecords()
 		val unfinishedInputRecords = getUnfinishedInputRecords(finishedKeys)
-		logger.info("Recreating state, found these unfinished input records: ${unfinishedInputRecords.map { it.key() }}")
+
+		unfinishedInputRecords.chunked(250).forEach { sublist ->
+			logger.info("Recreating state, found these ${sublist.size} unfinished input records: ${sublist.map { it.key() }}")
+		}
 
 		val filteredUnfinishedProcessingEvents = unfinishedProcessingRecords
 			.map { it.key() to it.value() }
-			.fold(emptyMap<Key, ProcessingEvent>()) { acc, (key, processingEvent) ->
+			.fold(hashMapOf<Key, ProcessingEvent>()) { acc, (key, processingEvent) ->
 				getHighestProcessingEventState(key, acc, processingEvent)
 			}
 
@@ -92,11 +95,11 @@ class KafkaBootstrapConsumer(
 
 	private fun getHighestProcessingEventState(
 		key: Key,
-		oldProcessingEventMap: Map<Key, ProcessingEvent>,
+		processingEventMap: HashMap<Key, ProcessingEvent>,
 		processingEvent: ProcessingEvent
-	): Map<Key, ProcessingEvent> {
+	): HashMap<Key, ProcessingEvent> {
 
-		val oldProcessingEventType = oldProcessingEventMap[key] ?: EventTypes.RECEIVED
+		val oldProcessingEventType = processingEventMap[key] ?: EventTypes.RECEIVED
 
 		val highestState =
 			if (oldProcessingEventType == EventTypes.FINISHED || processingEvent.type == EventTypes.FINISHED) {
@@ -111,7 +114,6 @@ class KafkaBootstrapConsumer(
 				EventTypes.RECEIVED
 			}
 
-		val processingEventMap = oldProcessingEventMap.toMutableMap()
 		processingEventMap[key] = ProcessingEvent(highestState)
 		return processingEventMap
 	}

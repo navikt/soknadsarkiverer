@@ -1,6 +1,5 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest
 import org.springframework.context.annotation.Bean
@@ -18,10 +17,7 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationEn
 @EnableGlobalMethodSecurity(securedEnabled = true, prePostEnabled = true)
 class RestControllerSecurityConfig(private val config: AppConfiguration) : WebSecurityConfigurerAdapter() {
 
-	private val logger = LoggerFactory.getLogger(javaClass)
-
 	override fun configure(http: HttpSecurity) {
-		logger.info("In configure")
 		http
 			.csrf().disable()
 			.authorizeRequests()
@@ -39,7 +35,6 @@ class RestControllerSecurityConfig(private val config: AppConfiguration) : WebSe
 
 	@Autowired
 	fun configureGlobal(auth: AuthenticationManagerBuilder) {
-		logger.info("In configureGlobal")
 		val user = config.config.username
 		val password = config.config.sharedPassword
 		auth.inMemoryAuthentication()
