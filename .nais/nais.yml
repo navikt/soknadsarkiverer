@@ -41,6 +41,8 @@ spec:
         kvPath: /serviceuser/data/prod/srvsoknadarkiverer
       - mountPath: /var/run/secrets/nais.io/kv
         kvPath: /kv/prod/fss/soknadsarkiverer/default
+      - mountPath: /secrets/innsending-data
+        kvPath: secret/team-soknad/innsending/basicauth
       - mountPath: /var/run/secrets/nais.io/vault
         kvPath: /kv/prod/fss/soknadsarkiverer/environment
       - mountPath: /var/run/secrets/nais.io/appdynamics
