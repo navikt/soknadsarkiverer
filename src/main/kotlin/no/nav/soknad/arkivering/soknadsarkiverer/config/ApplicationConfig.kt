@@ -32,7 +32,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"MAX_MESSAGE_SIZE" to (1024 * 1024 * 300).toString(),
 	"CLIENTSECRET" to "",
 
-	"BASICAUTH_USERNAME" to "arkiverer",
+	"BASICAUTH_USERNAME" to "sender",
 	"BASICAUTH_PASSWORD" to "password",
 	"JOARK_HOST" to "http://localhost:8092",
 	"JOARK_URL" to "/rest/journalpostapi/v1/journalpost",
