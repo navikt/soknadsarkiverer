@@ -103,10 +103,9 @@ private class BootstrapConsumer<T> private constructor(
 	private var collectionWasSatisfiedOnLastRecordAddition = false
 
 
-	override fun getTimeout() = 30 * 1000
+	override fun getEnforcedTimeoutInMs() = 30 * 1000
 
-	override fun shouldStop(hasPreviouslyReadRecords: Boolean, newRecords: List<*>) =
-		hasPreviouslyReadRecords && newRecords.isEmpty() ||
+	override fun shouldStop(newRecords: List<ConsumerRecord<Key, T>>) = super.shouldStop(newRecords) ||
 			collectionWasSatisfiedOnLastRecordAddition && eventCollection.getTimeSelector() != BEFORE
 
 
