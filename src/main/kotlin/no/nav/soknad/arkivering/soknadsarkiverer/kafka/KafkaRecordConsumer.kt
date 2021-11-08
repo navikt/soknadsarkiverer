@@ -34,7 +34,6 @@ abstract class KafkaRecordConsumer<T, R>(
 
 			createKafkaConsumer(kafkaConfig(valueDeserializer))
 				.use {
-					val startTime = clock.currentTimeMillis()
 					it.subscribe(listOf(topic))
 
 					val records = loopUntilKafkaRecordsAreRetrieved(it)

@@ -42,13 +42,13 @@ class KafkaRecordConsumerTests {
 			.buildAndGetKafkaRecords()
 
 		assertTrue(result.isEmpty())
-		val actualTimeTaken = clock.currentTimeMillis() - clock.startTime - mockedTimeInMsForPolling
+		val actualTimeTaken = clock.getDurationSinceStart() - mockedTimeInMsForPolling
 		assertEquals(timeoutWhenNotFindingRecords, actualTimeTaken.toInt(),
 			"Should read for $timeoutWhenNotFindingRecords ms and then time out")
 	}
 
 	@Test
-	fun `Reads records with null value`() {
+	fun `Reads records with null keys and values`() {
 		val result = consumerBuilder
 			.mockPollReturnsRecordsInfinitely()
 			.mockPollReturnsNullKeysAndValues()
@@ -70,14 +70,14 @@ class KafkaRecordConsumerTests {
 			mockedTimeInMsForPolling + sleepInMsBetweenFetches + // First poll returns 0 records => sleep
 				mockedTimeInMsForPolling + // Second poll returns 500 records
 				mockedTimeInMsForPolling  // Third poll returns 71 records
-		val actualTimeTaken = clock.currentTimeMillis() - clock.startTime - timestampOfLastRead - sleepInMsBetweenFetches
+		val actualTimeTaken = clock.getDurationSinceStart() - timestampOfLastRead - sleepInMsBetweenFetches
 		assertEquals(timeoutWhenNotFindingNewRecords, actualTimeTaken.toInt(),
 			"Should read for $timeoutWhenNotFindingNewRecords ms and then time out")
 	}
 
 	@Test
-	fun `Has gaps in between returned records`() {
-		val numberOfRecordsReturnedInEachPolling = listOf(0, 68, 0, 71, 12, 0, 78,  0)
+	fun `Has gaps in between returned records - will consume all`() {
+		val numberOfRecordsReturnedInEachPolling = listOf(0, 0, 0, 68, 0, 71, 12, 0, 0, 78,  0)
 
 		val result = consumerBuilder
 			.mockPollReturnsRecordsOfGivenSizes(numberOfRecordsReturnedInEachPolling.asSequence())
@@ -96,24 +96,27 @@ class KafkaRecordConsumerTests {
 			.buildAndGetKafkaRecords()
 
 		assertFalse(result.isEmpty())
-		val actualTimeTaken = clock.currentTimeMillis() - clock.startTime - sleepInMsBetweenFetches
+		val actualTimeTaken = clock.getDurationSinceStart() - sleepInMsBetweenFetches
 		assertEquals(timeoutInMs, actualTimeTaken.toInt(),
 			"Should read for $timeoutInMs ms and then time out")
 	}
 
 	@Test
 	fun `Reads records, stops when encountering record newer than start time of consumption`() {
-		val magicNumber = 71
-		val numberOfRecordsBeforeRecentTimestamp = (1 until magicNumber).sum()
+		val randomlyChosenBreakpointNumber = 71
+		val numberOfRecordsBeforeCurrentTimestamp = (0 until randomlyChosenBreakpointNumber).sum()
 
 		val result = consumerBuilder
 			.mockPollReturnsRecordsInfinitely()
-			.mockPollUsesTimestampsAfterGivenNumberOfRecords(clock.startTime - 10, numberOfRecordsBeforeRecentTimestamp)
+			.setTimestampOfFirstRecord(clock.startTime - numberOfRecordsBeforeCurrentTimestamp)
 			.buildAndGetKafkaRecords()
 
-		assertEquals(numberOfRecordsBeforeRecentTimestamp + magicNumber, result.size)
+		assertEquals(numberOfRecordsBeforeCurrentTimestamp + randomlyChosenBreakpointNumber, result.size)
 	}
 
+	/**
+	 * Simple test to assure that custom logic can be applied to the [KafkaRecordConsumer.shouldStop] function.
+	 */
 	@Test
 	fun `Reads records, stops with custom logic`() {
 		val magicNumber = 71
@@ -138,6 +141,7 @@ private class ConsumerBuilder(testClock: TestClock) {
 
 	fun mockPollThrowsException(): ConsumerBuilder {
 		kafkaConsumer.mockPollThrowsException()
+		mockPollReturnsRecordsInfinitely()
 		return this
 	}
 
@@ -162,8 +166,8 @@ private class ConsumerBuilder(testClock: TestClock) {
 		return this
 	}
 
-	fun mockPollUsesTimestampsAfterGivenNumberOfRecords(timestamp: Time, numberOfRecordsThatTriggers: Int): ConsumerBuilder {
-		kafkaConsumer.setTimestampAfterNumberORecords(timestamp, numberOfRecordsThatTriggers)
+	fun setTimestampOfFirstRecord(timestamp: Time): ConsumerBuilder {
+		kafkaConsumer.setTimestampOfFirstRecord(timestamp)
 		return this
 	}
 
@@ -191,8 +195,7 @@ private class ConsumerBuilder(testClock: TestClock) {
 private class MockKafkaConsumer(private val clock: TestClock) : KafkaConsumer<Key, String>(kafkaProperties()) {
 	private lateinit var numberOfRecordsReturnedInEachPollCall: Iterator<Int>
 	private var kafkaTopicOffset = 0L
-	private var customTimestamp = beginningOfTime
-	private var numberOfRecordsThatTriggersTimestamps = 0
+	private var timestampOfFirstRecord = 0L
 	private var throwException = false
 	private var returnNullKeysAndValues = false
 
@@ -208,9 +211,8 @@ private class MockKafkaConsumer(private val clock: TestClock) : KafkaConsumer<Ke
 		returnNullKeysAndValues = true
 	}
 
-	fun setTimestampAfterNumberORecords(timestamp: Time, numberOfRecordsThatTriggersCustomTimestamps: Int) {
-		this.customTimestamp = timestamp
-		this.numberOfRecordsThatTriggersTimestamps = numberOfRecordsThatTriggersCustomTimestamps
+	fun setTimestampOfFirstRecord(timestamp: Time) {
+		this.timestampOfFirstRecord = timestamp
 	}
 
 
@@ -236,14 +238,7 @@ private class MockKafkaConsumer(private val clock: TestClock) : KafkaConsumer<Ke
 		return recordsToReturn
 	}
 
-	private fun getTimestamp(i: Int): Time {
-		val defaultTimestamp = beginningOfTime + kafkaTopicOffset + i
-
-		return if (kafkaTopicOffset + 1 > numberOfRecordsThatTriggersTimestamps)
-			customTimestamp + i
-		else
-			defaultTimestamp
-	}
+	private fun getTimestamp(i: Int) = timestampOfFirstRecord + kafkaTopicOffset + i
 
 	private fun consumerRecord(offset: Long, timestamp: Time): ConsumerRecord<Key, String> {
 		var key: String? = UUID.randomUUID().toString()
@@ -325,6 +320,8 @@ private class TestClock : Clock() {
 	fun stepForwardInTime(millis: Time) {
 		timeElapsed += millis
 	}
+
+	fun getDurationSinceStart() = timeElapsed
 }
 
 
@@ -348,4 +345,3 @@ private fun kafkaConfig() =	AppConfiguration.KafkaConfig(
 private typealias Time = Long
 private const val topic = "testTopic"
 private const val mockedTimeInMsForPolling = 500L
-private const val beginningOfTime: Time = 0
