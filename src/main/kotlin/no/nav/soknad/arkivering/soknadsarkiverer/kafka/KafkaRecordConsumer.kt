@@ -51,7 +51,6 @@ abstract class KafkaRecordConsumer<T, R>(
 
 	private fun loopUntilKafkaRecordsAreRetrieved(kafkaConsumer: KafkaConsumer<Key, T>): List<R> {
 
-		val startTime = clock.currentTimeMillis()
 		var timestampOfLastSuccessfulPoll = startTime
 		var hasReadRecords = false
 
@@ -66,7 +65,7 @@ abstract class KafkaRecordConsumer<T, R>(
 
 			if (shouldStop(newRecords))
 				break
-			if (hasTimedOut(startTime, timestampOfLastSuccessfulPoll, hasReadRecords)) {
+			if (hasTimedOut(timestampOfLastSuccessfulPoll, hasReadRecords)) {
 				logger.warn("For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records " +
 					"${clock.currentTimeMillis() - startTime} ms after starting. Has read ${getRecords().size} records. " +
 					"Aborting consumption.")
@@ -79,7 +78,7 @@ abstract class KafkaRecordConsumer<T, R>(
 	}
 
 
-	private fun hasTimedOut(startTime: Long, timestampOfLastPoll: Long, hasReadRecords: Boolean): Boolean {
+	private fun hasTimedOut(timestampOfLastPoll: Long, hasReadRecords: Boolean): Boolean {
 
 		val timeout = getEnforcedTimeoutInMs()
 		val shouldEnforceTimeout = timeout > 0
