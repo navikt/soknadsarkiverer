@@ -40,17 +40,19 @@ class WebClientConfig(private val appConfiguration: AppConfiguration) {
 	@Qualifier("archiveWebClient")
 	@Scope("prototype")
 	@Lazy
-	fun archiveTestWebClient() = WebClient.builder().defaultHeader("testHeader","test_value").build()
+	fun archiveTestWebClient() = WebClient.builder().defaultHeader("testHeader", "test_value").build()
 
 
 	@Bean
 	@Profile("prod | dev")
 	@Qualifier("archiveWebClient")
 	@Scope("prototype")
-	fun archiveWebClient(oAuth2AccessTokenService: OAuth2AccessTokenService,
-											 clientConfigurationProperties: ClientConfigurationProperties): WebClient {
+	fun archiveWebClient(
+		oAuth2AccessTokenService: OAuth2AccessTokenService,
+		clientConfigurationProperties: ClientConfigurationProperties
+	): WebClient {
 
-		logger.info("Initialiserer archiveWebClient")
+		logger.info("Initializing archiveWebClient")
 		val properties: ClientProperties = clientConfigurationProperties.registration
 			?. get("soknadsarkiverer")
 			?: throw RuntimeException("Could not find oauth2 client config for archiveWebClient")
@@ -87,17 +89,17 @@ class WebClientConfig(private val appConfiguration: AppConfiguration) {
 		}
 
 	private fun logClientProperties(properties: ClientProperties) {
-		logger.info("Properties.tokenEndpointUrl= ${properties.tokenEndpointUrl}")
-		logger.info("Properties.grantType= ${properties.grantType}")
-		logger.info("Properties.scope= ${properties.scope}")
-		logger.info("Properties.resourceUrl= ${properties.resourceUrl}")
-		logger.info("Properties.authentication.clientId= ${properties.authentication?.clientId}")
+		logger.info("Properties.tokenEndpointUrl = '${properties.tokenEndpointUrl}'")
+		logger.info("Properties.grantType = '${properties.grantType}'")
+		logger.info("Properties.scope = '${properties.scope}'")
+		logger.info("Properties.resourceUrl = '${properties.resourceUrl}'")
+		logger.info("Properties.authentication.clientId = '${properties.authentication?.clientId}'")
 		val clientSecret = when {
 			(properties.authentication?.clientSecret == null || properties.authentication?.clientSecret == "") -> "MISSING"
 			(properties.authentication.clientSecret == appConfiguration.kafkaConfig.password) -> "xxxx"
-			else -> properties.authentication.clientSecret.substring(0,2)
+			else -> properties.authentication.clientSecret.substring(0, 2)
 		}
-		logger.info("Properties.authentication.clientSecret= $clientSecret")
-		logger.info("Properties.authentication.clientAuthMethod= ${properties.authentication?.clientAuthMethod}")
+		logger.info("Properties.authentication.clientSecret = '$clientSecret'")
+		logger.info("Properties.authentication.clientAuthMethod = '${properties.authentication?.clientAuthMethod}'")
 	}
 }
