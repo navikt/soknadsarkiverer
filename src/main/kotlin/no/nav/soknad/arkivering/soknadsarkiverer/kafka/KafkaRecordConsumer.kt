@@ -20,24 +20,26 @@ abstract class KafkaRecordConsumer<T, R>(
 	private val appConfiguration: AppConfiguration,
 	private val kafkaGroupId: String,
 	private val valueDeserializer: Deserializer<T>,
-	private val topic: String
+	private val topic: String,
+	private val clock: Clock = Clock()
 ) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
+	private val startTime = clock.currentTimeMillis()
 
 
 	fun getAllKafkaRecords(): List<R> {
 		try {
 			logger.info("About to read records from $topic")
 
-			KafkaConsumer<Key, T>(kafkaConfig(valueDeserializer))
+			createKafkaConsumer(kafkaConfig(valueDeserializer))
 				.use {
-					val startTime = System.currentTimeMillis()
 					it.subscribe(listOf(topic))
 
 					val records = loopUntilKafkaRecordsAreRetrieved(it)
 
-					logger.info("For topic $topic: Found ${records.size} records in ${System.currentTimeMillis() - startTime}ms")
+					val timeTaken = clock.currentTimeMillis() - startTime
+					logger.info("For topic $topic: Found ${records.size} relevant records in $timeTaken ms")
 					return records
 				}
 
@@ -49,40 +51,48 @@ abstract class KafkaRecordConsumer<T, R>(
 
 	private fun loopUntilKafkaRecordsAreRetrieved(kafkaConsumer: KafkaConsumer<Key, T>): List<R> {
 
-		val startTime = System.currentTimeMillis()
-		val timeout = getTimeout()
+		var timestampOfLastSuccessfulPoll = startTime
 		var hasReadRecords = false
 
 		while (true) {
 			val newRecords = retrieveKafkaRecords(kafkaConsumer)
-			if (newRecords.isNotEmpty())
+			if (newRecords.isNotEmpty()) {
+				timestampOfLastSuccessfulPoll = clock.currentTimeMillis()
 				hasReadRecords = true
+			}
 
 			addRecords(newRecords)
 
-			if (shouldStop(hasReadRecords, newRecords))
+			if (shouldStop(newRecords))
 				break
-			if (hasTimedOut(startTime, timeout, hasReadRecords)) {
+			if (hasTimedOut(timestampOfLastSuccessfulPoll, hasReadRecords)) {
 				logger.warn("For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records " +
-					"${System.currentTimeMillis() - startTime} ms after starting. Has read ${getRecords().size} records. " +
+					"${clock.currentTimeMillis() - startTime} ms after starting. Has read ${getRecords().size} records. " +
 					"Aborting consumption.")
 				break
 			}
 			if (newRecords.isEmpty())
-				TimeUnit.MILLISECONDS.sleep(100)
+				clock.sleep(sleepInMsBetweenFetches)
 		}
 		return getRecords()
 	}
 
 
-	private fun hasTimedOut(startTime: Long, timeout: Int, hasReadRecords: Boolean): Boolean {
+	private fun hasTimedOut(timestampOfLastPoll: Long, hasReadRecords: Boolean): Boolean {
 
+		val timeout = getEnforcedTimeoutInMs()
 		val shouldEnforceTimeout = timeout > 0
-		val hasTimedOut = System.currentTimeMillis() > startTime + timeout
+		val hasTimedOut = clock.currentTimeMillis() >= startTime + timeout
 
-		val hasTimedOutWithoutRecords = System.currentTimeMillis() > startTime + timeoutWhenNotFindingRecords
+		val hasTimedOutWithoutRecords = clock.currentTimeMillis() >= startTime + timeoutWhenNotFindingRecords
 
-		return shouldEnforceTimeout && hasTimedOut || !hasReadRecords && hasTimedOutWithoutRecords
+		val hasTimedOutWithNoNewRecords = clock.currentTimeMillis() >= timestampOfLastPoll + timeoutWhenNotFindingNewRecords
+
+		return (
+			shouldEnforceTimeout && hasTimedOut ||
+			!hasReadRecords && hasTimedOutWithoutRecords ||
+			hasReadRecords && hasTimedOutWithNoNewRecords
+		)
 	}
 
 	private fun retrieveKafkaRecords(kafkaConsumer: KafkaConsumer<Key, T>): List<ConsumerRecord<Key, T>> {
@@ -118,14 +128,29 @@ abstract class KafkaRecordConsumer<T, R>(
 		}
 	}
 
+	internal open fun createKafkaConsumer(props: Properties) = KafkaConsumer<Key, T>(props)
 
-	abstract fun getTimeout(): Int
+	open fun shouldStop(newRecords: List<ConsumerRecord<Key, T>>) =
+		newRecords.isNotEmpty() && newRecords.last().timestamp() > startTime
 
-	abstract fun shouldStop(hasPreviouslyReadRecords: Boolean, newRecords: List<*>): Boolean
+
+	abstract fun getEnforcedTimeoutInMs(): Int
 
 	abstract fun addRecords(newRecords: List<ConsumerRecord<Key, T>>)
 
 	abstract fun getRecords(): List<R>
+}
+
+/**
+ * Used for fetching the current time and for sleeping. The purpose of putting this in its own class is to allow
+ * tests to pass in a custom Clock.
+ */
+open class Clock {
+	open fun sleep(millis: Long) {
+		TimeUnit.MILLISECONDS.sleep(millis)
+	}
+
+	open fun currentTimeMillis() = System.currentTimeMillis()
 }
 
 /**
@@ -160,4 +185,6 @@ abstract class KafkaConsumerBuilder<T, R> {
 }
 
 typealias Key = String
-private const val timeoutWhenNotFindingRecords = 30 * 1000
+const val sleepInMsBetweenFetches = 100L
+const val timeoutWhenNotFindingRecords = 30 * 1000
+const val timeoutWhenNotFindingNewRecords = 10 * 1000

@@ -131,10 +131,7 @@ private class BootstrapConsumer<T> private constructor(
 	private var records = mutableListOf<ConsumerRecord<Key, T>>()
 
 
-	override fun getTimeout() = appConfiguration.kafkaConfig.bootstrappingTimeout.toInt() * 1000
-
-	override fun shouldStop(hasPreviouslyReadRecords: Boolean, newRecords: List<*>) =
-		hasPreviouslyReadRecords && newRecords.isEmpty()
+	override fun getEnforcedTimeoutInMs() = appConfiguration.kafkaConfig.bootstrappingTimeout.toInt() * 1000
 
 	override fun addRecords(newRecords: List<ConsumerRecord<Key, T>>) {
 		records.addAll(newRecords)
