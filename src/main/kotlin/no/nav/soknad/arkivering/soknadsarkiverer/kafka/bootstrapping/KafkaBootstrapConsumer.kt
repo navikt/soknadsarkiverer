@@ -52,11 +52,10 @@ class KafkaBootstrapConsumer(
 	}
 
 
-	private fun getUnfinishedInputRecords(finishedKeys: List<Key>): List<ConsumerRecord<Key, Soknadarkivschema>> {
+	private fun getUnfinishedInputRecords(finishedKeys: HashSet<Key>): List<ConsumerRecord<Key, Soknadarkivschema>> {
 
-		val finishedKeysSet = finishedKeys.toHashSet()
 		val keepUnfinishedRecordsFilter = { records: List<ConsumerRecord<Key, Soknadarkivschema>> ->
-			records.filter { !finishedKeysSet.contains(it.key()) }
+			records.filter { !finishedKeys.contains(it.key()) }
 		}
 
 		return BootstrapConsumer.Builder<Soknadarkivschema>()
@@ -68,8 +67,8 @@ class KafkaBootstrapConsumer(
 			.getAllKafkaRecords()
 	}
 
-	private fun getProcessingRecords(): Pair<MutableList<Key>, List<ConsumerRecord<Key, ProcessingEvent>>> {
-		val allFinishedKeys = mutableListOf<Key>()
+	private fun getProcessingRecords(): Pair<HashSet<Key>, List<ConsumerRecord<Key, ProcessingEvent>>> {
+		val allFinishedKeys = hashSetOf<Key>()
 
 		val keepUnfinishedRecordsFilter = { records: List<ConsumerRecord<Key, ProcessingEvent>> ->
 
