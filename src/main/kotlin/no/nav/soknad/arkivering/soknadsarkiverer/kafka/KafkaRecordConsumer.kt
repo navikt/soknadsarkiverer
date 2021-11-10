@@ -187,5 +187,5 @@ abstract class KafkaConsumerBuilder<T, R> {
 
 typealias Key = String
 const val sleepInMsBetweenFetches = 100L
-const val timeoutWhenNotFindingRecords = 30 * 1000
-const val timeoutWhenNotFindingNewRecords = 10 * 1000
+const val timeoutWhenNotFindingRecords = 45 * 1000
+const val timeoutWhenNotFindingNewRecords = 30 * 1000

@@ -36,7 +36,7 @@ class KafkaRecordConsumerTests {
 	}
 
 	@Test
-	fun `Reads no records - times out after 30s`() {
+	fun `Reads no records - times out after the right time`() {
 		val result = consumerBuilder
 			.mockPollReturnsNothing()
 			.buildAndGetKafkaRecords()
@@ -58,7 +58,7 @@ class KafkaRecordConsumerTests {
 	}
 
 	@Test
-	fun `Reads two set of records but no more - times out 10s afterwards`() {
+	fun `Reads two set of records but no more - times out the right time afterwards`() {
 		val numberOfRecordsReturnedInEachPolling = listOf(0, 500, 71, 0)
 
 		val result = consumerBuilder
@@ -70,7 +70,7 @@ class KafkaRecordConsumerTests {
 			mockedTimeInMsForPolling + sleepInMsBetweenFetches + // First poll returns 0 records => sleep
 				mockedTimeInMsForPolling + // Second poll returns 500 records
 				mockedTimeInMsForPolling  // Third poll returns 71 records
-		val actualTimeTaken = clock.getDurationSinceStart() - timestampOfLastRead - sleepInMsBetweenFetches
+		val actualTimeTaken = clock.getDurationSinceStart() - timestampOfLastRead - mockedTimeInMsForPolling
 		assertEquals(timeoutWhenNotFindingNewRecords, actualTimeTaken.toInt(),
 			"Should read for $timeoutWhenNotFindingNewRecords ms and then time out")
 	}
