@@ -151,9 +151,7 @@ class AdminInterfaceTests {
 		archiveOneEventSuccessfullyAndFailOne(key0, key1)
 
 		val eventsAfter = {
-			adminInterface.unfinishedEvents()
-				.filter { it.innsendingKey == key0 || it.innsendingKey == key1 }
-				.count()
+			adminInterface.unfinishedEvents().count { it.innsendingKey == key0 || it.innsendingKey == key1 }
 		}
 
 		val numberOfInputs = 2
@@ -170,9 +168,7 @@ class AdminInterfaceTests {
 		archiveOneEventSuccessfullyAndFailOne(key0, key1)
 
 		val eventsAfter = {
-			adminInterface.failedEvents()
-				.filter { it.innsendingKey == key1 }
-				.count()
+			adminInterface.failedEvents().count { it.innsendingKey == key1 }
 		}
 
 		loopAndVerify(1, eventsAfter)
@@ -356,12 +352,10 @@ class AdminInterfaceTests {
 	}
 
 
-	private fun verifyNumberOfStartedEvents(key: String, expectedCount: Int) {
+	private fun verifyNumberOfStartedEvents(key: String, @Suppress("SameParameterValue") expectedCount: Int) {
 
 		val eventCounter = {
-			adminInterface.specificEvent(key)
-				.filter { it.type == PayloadType.STARTED }
-				.count()
+			adminInterface.specificEvent(key).count { it.type == PayloadType.STARTED }
 		}
 		loopAndVerifyAtLeast(expectedCount, eventCounter)
 	}
