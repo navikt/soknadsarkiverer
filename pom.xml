@@ -15,7 +15,7 @@
 	<description>Arkiverer soknader</description>
 
 	<properties>
-		<arkivering-schemas.version>9e47d9bd</arkivering-schemas.version>
+		<arkivering-schemas.version>6b4ceead30</arkivering-schemas.version>
 		<kafka-streams-avro-serde.version>6.1.1</kafka-streams-avro-serde.version>
 		<jackson-module-kotlin.version>2.12.3</jackson-module-kotlin.version>
 		<json-smart.version>2.4.7</json-smart.version>
@@ -97,8 +97,8 @@
 			<version>${kafka-streams-avro-serde.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>no.nav.soknad.arkivering</groupId>
-			<artifactId>avro-schemas</artifactId>
+			<groupId>com.github.navikt</groupId>
+			<artifactId>soknadarkiv-schema</artifactId>
 			<version>${arkivering-schemas.version}</version>
 		</dependency>
 
@@ -237,9 +237,8 @@
 
 	<repositories>
 		<repository>
-			<id>github</id>
-			<name>nav github</name>
-			<url>https://github-package-registry-mirror.gc.nav.no/cached/maven-release</url>
+			<id>jitpack.io</id>
+			<url>https://jitpack.io</url>
 		</repository>
 		<repository>
 			<id>confluent</id>
