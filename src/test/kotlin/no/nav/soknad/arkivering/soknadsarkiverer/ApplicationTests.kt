@@ -44,7 +44,7 @@ import kotlin.properties.Delegates
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
-class ApplicationTests: TopologyTestDriverTests() {
+class ApplicationTests: KafkaTopologyTestDriver() {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
