@@ -45,8 +45,6 @@ spec:
         kvPath: secret/team-soknad/innsending/basicauth
       - mountPath: /var/run/secrets/nais.io/vault
         kvPath: /kv/prod/fss/soknadsarkiverer/environment
-      - mountPath: /var/run/secrets/nais.io/appdynamics
-        kvPath: /apikey/appdynamics/prod
 
   env:
     - name: KAFKA_BOOTSTRAP_SERVERS
