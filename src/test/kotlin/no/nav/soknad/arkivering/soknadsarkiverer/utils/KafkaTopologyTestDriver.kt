@@ -20,7 +20,7 @@ import org.mockito.ArgumentCaptor
 import org.slf4j.LoggerFactory
 import java.util.*
 
-open class TopologyTestDriverTests {
+open class KafkaTopologyTestDriver {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	private lateinit var testDriver: TopologyTestDriver
@@ -66,10 +66,17 @@ open class TopologyTestDriverTests {
 		avroSoknadarkivschemaSerde.configure(config, false)
 		avroProcessingEventSerde.configure(config, false)
 
+
+		val stringSerializer = stringSerde.serializer()
+		val soknadarkivschemaSerializer = avroSoknadarkivschemaSerde.serializer()
+		val processingEventSerializer = avroProcessingEventSerde.serializer()
+		val inputTopicName = appConfiguration.kafkaConfig.inputTopic
+		val processingTopicName = appConfiguration.kafkaConfig.processingTopic
+
 		// Define input and output topics to use in tests
-		inputTopic = testDriver.createInputTopic(appConfiguration.kafkaConfig.inputTopic, stringSerde.serializer(), avroSoknadarkivschemaSerde.serializer())
-		inputTopicForBadData = testDriver.createInputTopic(appConfiguration.kafkaConfig.inputTopic, stringSerde.serializer(), stringSerde.serializer())
-		processingEventTopic = testDriver.createInputTopic(appConfiguration.kafkaConfig.processingTopic, stringSerde.serializer(), avroProcessingEventSerde.serializer())
+		inputTopic = testDriver.createInputTopic(inputTopicName, stringSerializer, soknadarkivschemaSerializer)
+		inputTopicForBadData = testDriver.createInputTopic(inputTopicName, stringSerializer, stringSerializer)
+		processingEventTopic = testDriver.createInputTopic(processingTopicName, stringSerializer, processingEventSerializer)
 	}
 
 	fun closeTestDriver() {
@@ -100,6 +107,7 @@ open class TopologyTestDriverTests {
 		fun withTaskListService(taskListService: TaskListService) = apply { this.taskListService = taskListService }
 		fun withKafkaPublisher(kafkaPublisher: KafkaPublisher) = apply { this.kafkaPublisher = kafkaPublisher }
 
+		@Suppress("unused")
 		fun runScheduledTasksOnScheduling(scheduler: Scheduler): TopologyTestDriverBuilder {
 			val captor = argumentCaptor<() -> Unit>()
 			whenever(scheduler.schedule(capture(captor), any()))
