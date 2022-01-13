@@ -3,11 +3,11 @@ package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.clients.consumer.ConsumerRecord.NULL_CHECKSUM
 import org.apache.kafka.clients.consumer.ConsumerRecord.NULL_SIZE
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.TopicPartition
+import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.record.TimestampType
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.junit.jupiter.api.AfterEach
@@ -253,8 +253,8 @@ private class MockKafkaConsumer(private val clock: TestClock) : KafkaConsumer<Ke
 		}
 
 		return ConsumerRecord(
-			topic, 0, offset, timestamp, TimestampType.CREATE_TIME, NULL_CHECKSUM.toLong(),
-			NULL_SIZE, NULL_SIZE, key, value
+			topic, 0, offset, timestamp, TimestampType.CREATE_TIME, NULL_SIZE, NULL_SIZE, key, value,
+			RecordHeaders(), Optional.empty()
 		)
 	}
 

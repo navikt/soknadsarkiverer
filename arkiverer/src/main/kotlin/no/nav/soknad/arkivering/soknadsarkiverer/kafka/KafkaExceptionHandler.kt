@@ -4,27 +4,34 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.errors.DeserializationExceptionHandler
+import org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler
 import org.apache.kafka.streams.processor.ProcessorContext
 import org.slf4j.LoggerFactory
 import java.io.PrintWriter
 import java.io.StringWriter
 
 
-class KafkaExceptionHandler : Thread.UncaughtExceptionHandler, DeserializationExceptionHandler {
+class KafkaExceptionHandler : StreamsUncaughtExceptionHandler, DeserializationExceptionHandler {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	private lateinit var kafkaPublisher: KafkaPublisher
 	private lateinit var appConfiguration: AppConfiguration
 
 
-	override fun uncaughtException(t: Thread, e: Throwable) {
+	override fun handle(e: Throwable): StreamsUncaughtExceptionHandler.StreamThreadExceptionResponse {
 
 		val message = createMessage("Uncaught exception", e)
 		logger.error(message)
 
 		appConfiguration.state.alive = false // Set state.alive=false, which (through the Health Endpoint) will trigger a restart of this app instance
 
-		kafkaPublisher.putMessageOnTopic("null", message)
+		try {
+			kafkaPublisher.putMessageOnTopic("null", message)
+		} catch (ex: Exception) {
+			logger.error("Failed to post error message on message topic", ex)
+		}
+
+		return StreamsUncaughtExceptionHandler.StreamThreadExceptionResponse.SHUTDOWN_APPLICATION
 	}
 
 	override fun handle(context: ProcessorContext, record: ConsumerRecord<ByteArray, ByteArray>, exception: Exception): DeserializationExceptionHandler.DeserializationHandlerResponse {
