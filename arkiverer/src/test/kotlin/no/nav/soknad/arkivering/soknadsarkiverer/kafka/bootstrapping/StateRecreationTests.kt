@@ -9,10 +9,10 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.*
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.EmbeddedKafkaBrokerConfig
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.ContainerizedKafka
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -24,18 +24,15 @@ import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.apache.kafka.streams.KafkaStreams
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
-import org.springframework.kafka.test.context.EmbeddedKafka
 import org.springframework.test.annotation.DirtiesContext
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -45,8 +42,7 @@ import java.util.concurrent.TimeUnit
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
-@Import(EmbeddedKafkaBrokerConfig::class)
-@EmbeddedKafka(topics = [kafkaInputTopic, kafkaProcessingTopic, kafkaMessageTopic, kafkaMetricsTopic], controlledShutdown = true)
+@Import(ContainerizedKafka::class)
 class StateRecreationTests {
 
 	@Suppress("unused")
@@ -61,10 +57,6 @@ class StateRecreationTests {
 	@MockBean
 	private lateinit var kafkaStreams: KafkaStreams // Mock this so that the real chain isn't run by the tests
 
-
-	@Value("\${spring.embedded.kafka.brokers}")
-	private val kafkaBrokers: String? = null
-
 	@Autowired
 	private lateinit var appConfiguration: AppConfiguration
 	private lateinit var kafkaInputTopicProducer: KafkaProducer<String, Soknadarkivschema>
@@ -77,7 +69,6 @@ class StateRecreationTests {
 
 	@BeforeAll
 	fun setup() {
-		assertEquals(kafkaBrokers, appConfiguration.kafkaConfig.servers, "The Kafka bootstrap server property is misconfigured!")
 		kafkaInputTopicProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProcessingEventProducer = KafkaProducer(kafkaConfigMap())
 		kafkaBootstrapConsumer = KafkaBootstrapConsumer(appConfiguration, taskListService)

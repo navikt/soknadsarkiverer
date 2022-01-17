@@ -25,6 +25,7 @@
 		<springdoc.version>1.6.4</springdoc.version>
 		<wiremock.version>2.27.2</wiremock.version>
 		<mockito-kotlin.version>2.2.0</mockito-kotlin.version>
+		<testcontainers.version>1.16.2</testcontainers.version>
 
 		<java.version>11</java.version>
 	</properties>
@@ -172,13 +173,9 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.springframework.kafka</groupId>
-			<artifactId>spring-kafka-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.kafka</groupId>
-			<artifactId>spring-kafka</artifactId>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>kafka</artifactId>
+			<version>${testcontainers.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

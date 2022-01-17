@@ -5,7 +5,7 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.*
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -16,7 +16,6 @@ import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -26,7 +25,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Import
-import org.springframework.kafka.test.context.EmbeddedKafka
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.util.*
@@ -37,15 +35,11 @@ import java.util.concurrent.TimeUnit
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
-@Import(EmbeddedKafkaBrokerConfig::class)
-@EmbeddedKafka(topics = [kafkaInputTopic, kafkaProcessingTopic, kafkaMessageTopic, kafkaMetricsTopic], controlledShutdown = true)
+@Import(ContainerizedKafka::class)
 class IntegrationTests {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
-
-	@Value("\${spring.embedded.kafka.brokers}")
-	private val kafkaBrokers: String? = null
 
 	@Suppress("unused")
 	@MockBean
@@ -66,8 +60,6 @@ class IntegrationTests {
 	@BeforeEach
 	fun setup() {
 		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
-
-		assertEquals(kafkaBrokers, appConfiguration.kafkaConfig.servers, "The Kafka bootstrap server property is misconfigured!")
 
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
