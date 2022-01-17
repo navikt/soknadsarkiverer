@@ -5,32 +5,22 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.client.CollectorRegistry
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
-import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
-import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.*
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaRecordConsumer
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.Key
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.PoisonSwallowingAvroDeserializer
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
-import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
-import org.apache.kafka.common.serialization.Deserializer
-import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -67,22 +57,22 @@ class ApplicationTests {
 	@Suppress("unused")
 	@MockBean
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
-
 	@Suppress("unused")
 	@MockBean
 	private lateinit var collectorRegistry: CollectorRegistry
-
 	@Autowired
 	private lateinit var appConfiguration: AppConfiguration
-
 	@Autowired
 	private lateinit var taskListService: TaskListService
-
 	@Autowired
 	private lateinit var objectMapper: ObjectMapper
-
 	@Autowired
 	private lateinit var metrics: ArchivingMetrics
+
+	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
+	private lateinit var kafkaProducerForBadData: KafkaProducer<String, String>
+	private lateinit var kafkaListener: KafkaListener
+
 
 	private var maxNumberOfAttempts by Delegates.notNull<Int>()
 
@@ -93,27 +83,7 @@ class ApplicationTests {
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 
-
-		processingEventKafkaListener = KafkaTestConsumer<ProcessingEvent>(
-			appConfiguration,
-			"ApplicationTests-ProcessingEvent-${UUID.randomUUID()}",
-			PoisonSwallowingAvroDeserializer(),
-			appConfiguration.kafkaConfig.processingTopic
-		).also { GlobalScope.launch { it.getAllKafkaRecords() } }
-
-		messageKafkaListener = KafkaTestConsumer(
-			appConfiguration,
-			"ApplicationTests-Message-${UUID.randomUUID()}",
-			StringDeserializer(),
-			appConfiguration.kafkaConfig.messageTopic
-		).also { GlobalScope.launch { it.getAllKafkaRecords() } }
-
-		metricKafkaListener = KafkaTestConsumer<InnsendingMetrics>(
-			appConfiguration,
-			"ApplicationTests-Metric-${UUID.randomUUID()}",
-			PoisonSwallowingAvroDeserializer(),
-			appConfiguration.kafkaConfig.metricsTopic
-		).also { GlobalScope.launch { it.getAllKafkaRecords() } }
+		kafkaListener = KafkaListener(appConfiguration.kafkaConfig)
 	}
 
 	@BeforeEach
@@ -130,7 +100,7 @@ class ApplicationTests {
 
 	@AfterAll
 	fun stopKafkaConsumers() {
-		allTestsAreDone = true
+		kafkaListener.close()
 	}
 
 
@@ -457,9 +427,9 @@ class ApplicationTests {
 		eventTypeAndCount.forEach { (expectedEventType: EventTypes, expectedCount: Int) ->
 
 			val seenEventTypes = {
-				processingEventKafkaListener.getRecords()
-					.filter { it.key() == key }
-					.filter { it.value().type == expectedEventType }
+				kafkaListener.getProcessingEvents()
+					.filter { it.key == key }
+					.filter { it.value.type == expectedEventType }
 					.size
 			}
 
@@ -473,9 +443,9 @@ class ApplicationTests {
 		messageAndCount.forEach { (expectedMessage: String, expectedCount: Int) ->
 
 			val seenMessages = {
-				messageKafkaListener.getRecords()
-					.filter { it.key() == key }
-					.filter { it.value().startsWith(expectedMessage) }
+				kafkaListener.getMessages()
+					.filter { it.key == key }
+					.filter { it.value.startsWith(expectedMessage) }
 					.size
 			}
 
@@ -489,9 +459,9 @@ class ApplicationTests {
 		metricAndCount.forEach { (expectedMetric: String, expectedCount: Int) ->
 
 			val seenMetrics = {
-				metricKafkaListener.getRecords()
-					.filter { it.key() == key }
-					.filter { it.value().action == expectedMetric }
+				kafkaListener.getMetrics()
+					.filter { it.key == key }
+					.filter { it.value.action == expectedMetric }
 					.size
 			}
 
@@ -567,36 +537,5 @@ class ApplicationTests {
 			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java
 		}
-	}
-
-	private class KafkaTestConsumer<T> constructor(
-		appConfiguration: AppConfiguration,
-		kafkaGroupId: String,
-		deserializer: Deserializer<T>,
-		topic: String
-	) : KafkaRecordConsumer<T, ConsumerRecord<Key, T>>(appConfiguration, kafkaGroupId, deserializer, topic) {
-
-		private var records = mutableListOf<ConsumerRecord<Key, T>>()
-
-
-		override fun getEnforcedTimeoutInMs() = 500 * 1000
-
-		override fun shouldStop(newRecords: List<ConsumerRecord<Key, T>>) = allTestsAreDone
-
-		override fun addRecords(newRecords: List<ConsumerRecord<Key, T>>) {
-			records.addAll(newRecords)
-		}
-
-		override fun getRecords(): List<ConsumerRecord<Key, T>> = records
-	}
-
-	companion object {
-		private var allTestsAreDone = false
-
-		private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
-		private lateinit var kafkaProducerForBadData: KafkaProducer<String, String>
-		private lateinit var processingEventKafkaListener: KafkaTestConsumer<ProcessingEvent>
-		private lateinit var messageKafkaListener: KafkaTestConsumer<String>
-		private lateinit var metricKafkaListener: KafkaTestConsumer<InnsendingMetrics>
 	}
 }
