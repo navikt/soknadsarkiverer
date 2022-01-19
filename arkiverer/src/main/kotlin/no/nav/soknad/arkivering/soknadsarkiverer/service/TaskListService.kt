@@ -240,7 +240,7 @@ class TaskListService(
 
 
 	private fun updateNoOfFailedMetrics() {
-		metrics.setTasksGivenUpOn(loggedTaskStates.values.filter{v -> v == EventTypes.FAILURE}.size)
+		metrics.setTasksGivenUpOn(getFailedTasks().size)
 	}
 
 	private fun getSecondsToWait(attempt: Int): Long {
