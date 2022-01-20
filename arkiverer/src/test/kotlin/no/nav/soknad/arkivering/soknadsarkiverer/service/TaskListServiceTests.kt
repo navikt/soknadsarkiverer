@@ -99,25 +99,24 @@ class TaskListServiceTests {
 		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), EventTypes.RECEIVED)
 		TimeUnit.SECONDS.sleep(startUpSecondsForTest + 2)
 
-		verify(archiverService, times(1)).archive(eq(key), any(), any())
-		verify(archiverService, times(1)).deleteFiles(eq(key), any())
-		verify(scheduler, times(1)).schedule(any(), any())
+		verify(archiverService, timeout(10_000).times(1)).archive(eq(key), any(), any())
+		verify(archiverService, timeout(10_000).times(1)).deleteFiles(eq(key), any())
+		verify(scheduler, timeout(10_000).times(1)).schedule(any(), any())
 		loopAndVerify(0, { taskListService.listTasks().size })
 	}
 
 	@Test
 	fun `Archiving does not succeed - will not remove task from list but attempt to schedule again`() {
-		val count = 0
 		val key = UUID.randomUUID().toString()
 		runScheduledTaskOnScheduling()
 		whenever(archiverService.archive(eq(key), any(), any())).thenThrow(RuntimeException("Mocked exception"))
 
 		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), EventTypes.RECEIVED)
 
-		loopAndVerify(count + 1, { getTaskListCount(key) })
+		loopAndVerify(1, { getTaskListCount(key) })
 		assertFalse(taskListService.listTasks().isEmpty())
-		verify(archiverService, atLeast(1)).archive(eq(key), any(), any())
-		verify(scheduler, atLeast(2)).schedule(any(), any())
+		verify(archiverService, timeout(10_000).atLeast(1)).archive(eq(key), any(), any())
+		verify(scheduler, timeout(10_000).atLeast(2)).schedule(any(), any())
 	}
 
 
