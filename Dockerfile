@@ -1,4 +1,4 @@
-FROM navikt/java:11
+FROM navikt/java:17
 
 ENV APPLICATION_NAME=soknadsarkiverer
 ENV JAVA_OPTS="-Dhttps.protocols=TLSv1,TLSv1.1,TLSv1.2 -XX:+ExitOnOutOfMemoryError"
