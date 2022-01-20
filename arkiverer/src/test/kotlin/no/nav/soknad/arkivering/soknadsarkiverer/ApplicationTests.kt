@@ -81,14 +81,19 @@ class ApplicationTests {
 	@BeforeAll
 	fun setupKafkaProducersAndListeners() {
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
-		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
+		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap()
+			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 
 		kafkaListener = KafkaListener(appConfiguration.kafkaConfig)
 	}
 
 	@BeforeEach
 	fun setup() {
-		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
+		setupMockedNetworkServices(
+			portToExternalServices!!,
+			appConfiguration.config.joarkUrl,
+			appConfiguration.config.filestorageUrl
+		)
 
 		maxNumberOfAttempts = appConfiguration.config.retryTime.size
 	}
@@ -163,7 +168,7 @@ class ApplicationTests {
 			"send files to archive" to 0,
 			"delete files from filestorage" to 0
 		))
-		verifyArchivingMetrics(tasksGivenUpOnBefore + 1, metrics.getTasksGivenUpOn())
+		verifyArchivingMetrics(tasksGivenUpOnBefore + 1, { metrics.getTasksGivenUpOn() })
 	}
 
 	@Test
@@ -176,7 +181,7 @@ class ApplicationTests {
 		putDataOnKafkaTopic(key, createSoknadarkivschema())
 
 		verifyProcessingEvents(key, mapOf(RECEIVED to 1, STARTED to maxNumberOfAttempts, ARCHIVED to 0, FINISHED to 0, FAILURE to 1))
-		verifyArchivingMetrics(tasksGivenUpOnBefore + 1, metrics.getTasksGivenUpOn())
+		verifyArchivingMetrics(tasksGivenUpOnBefore + 1, { metrics.getTasksGivenUpOn() })
 
 		val failedKeys = taskListService.getFailedTasks()
 		assertTrue(failedKeys.contains(key))
@@ -184,7 +189,7 @@ class ApplicationTests {
 		taskListService.startPaNytt(key)
 
 		verifyProcessingEvents(key, mapOf(FINISHED to 1))
-		verifyArchivingMetrics(tasksGivenUpOnBefore + 0, metrics.getTasksGivenUpOn())
+		verifyArchivingMetrics(tasksGivenUpOnBefore + 0, { metrics.getTasksGivenUpOn() })
 	}
 
 
@@ -234,12 +239,12 @@ class ApplicationTests {
 			"delete files from filestorage" to 1
 		))
 
-		verifyArchivingMetrics(getFilestorageSuccessesBefore + 2, metrics.getGetFilestorageSuccesses())
-		verifyArchivingMetrics(delFilestorageSuccessesBefore + 1, metrics.getDelFilestorageSuccesses())
-		verifyArchivingMetrics(joarkErrorsBefore + 1, metrics.getJoarkErrors())
-		verifyArchivingMetrics(joarkSuccessesBefore + 1, metrics.getJoarkSuccesses())
-		verifyArchivingMetrics(tasksBefore + 0, metrics.getTasks(), "Should have created and finished task")
-		verifyArchivingMetrics(tasksGivenUpOnBefore + 0, metrics.getTasksGivenUpOn(), "Should not have given up on any task")
+		verifyArchivingMetrics(getFilestorageSuccessesBefore + 2, { metrics.getGetFilestorageSuccesses() })
+		verifyArchivingMetrics(delFilestorageSuccessesBefore + 1, { metrics.getDelFilestorageSuccesses() })
+		verifyArchivingMetrics(joarkErrorsBefore + 1, { metrics.getJoarkErrors() })
+		verifyArchivingMetrics(joarkSuccessesBefore + 1, { metrics.getJoarkSuccesses() })
+		verifyArchivingMetrics(tasksBefore + 0, { metrics.getTasks() }, "Should have created and finished task")
+		verifyArchivingMetrics(tasksGivenUpOnBefore + 0, { metrics.getTasksGivenUpOn() }, "Should not have given up on any task")
 	}
 
 	@Test
@@ -261,7 +266,7 @@ class ApplicationTests {
 			"send files to archive" to 1,
 			"delete files from filestorage" to 1
 		))
-		verifyArchivingMetrics(tasksGivenUpOnBefore + 0, metrics.getTasksGivenUpOn(), "Should not have given up on any task")
+		verifyArchivingMetrics(tasksGivenUpOnBefore + 0, { metrics.getTasksGivenUpOn() }, "Should not have given up on any task")
 	}
 
 	@Test
@@ -289,11 +294,11 @@ class ApplicationTests {
 			"delete files from filestorage" to 1 // Metric succeeds even if the operation fails
 		))
 
-		verifyArchivingMetrics(getFilestorageSuccessesBefore + 1, metrics.getGetFilestorageSuccesses())
-		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, metrics.getDelFilestorageSuccesses())
-		verifyArchivingMetrics(delFilestorageErrorsBefore + 1, metrics.getDelFilestorageErrors())
-		verifyArchivingMetrics(joarkErrorsBefore + 0, metrics.getJoarkErrors())
-		verifyArchivingMetrics(joarkSuccessesBefore + 1, metrics.getJoarkSuccesses())
+		verifyArchivingMetrics(getFilestorageSuccessesBefore + 1, { metrics.getGetFilestorageSuccesses() })
+		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, { metrics.getDelFilestorageSuccesses() })
+		verifyArchivingMetrics(delFilestorageErrorsBefore + 1, { metrics.getDelFilestorageErrors() })
+		verifyArchivingMetrics(joarkErrorsBefore + 0, { metrics.getJoarkErrors() })
+		verifyArchivingMetrics(joarkSuccessesBefore + 1, { metrics.getJoarkSuccesses() })
 	}
 
 	@Test
@@ -341,13 +346,13 @@ class ApplicationTests {
 			"delete files from filestorage" to 1
 		))
 
-		verifyArchivingMetrics(getFilestorageErrorsBefore + 0, metrics.getGetFilestorageErrors())
-		verifyArchivingMetrics(getFilestorageSuccessesBefore + 1, metrics.getGetFilestorageSuccesses())
-		verifyArchivingMetrics(delFilestorageSuccessesBefore + 1, metrics.getDelFilestorageSuccesses())
-		verifyArchivingMetrics(joarkErrorsBefore + 0, metrics.getJoarkErrors())
-		verifyArchivingMetrics(joarkSuccessesBefore + 0, metrics.getJoarkSuccesses())
-		verifyArchivingMetrics(tasksBefore, metrics.getTasks())
-		verifyArchivingMetrics(tasksGivenUpOnBefore, metrics.getTasksGivenUpOn())
+		verifyArchivingMetrics(getFilestorageErrorsBefore + 0, { metrics.getGetFilestorageErrors() })
+		verifyArchivingMetrics(getFilestorageSuccessesBefore + 1, { metrics.getGetFilestorageSuccesses() })
+		verifyArchivingMetrics(delFilestorageSuccessesBefore + 1, { metrics.getDelFilestorageSuccesses() })
+		verifyArchivingMetrics(joarkErrorsBefore + 0, { metrics.getJoarkErrors() })
+		verifyArchivingMetrics(joarkSuccessesBefore + 0, { metrics.getJoarkSuccesses() })
+		verifyArchivingMetrics(tasksBefore, { metrics.getTasks() })
+		verifyArchivingMetrics(tasksGivenUpOnBefore, { metrics.getTasksGivenUpOn() })
 	}
 
 	@Test
@@ -375,13 +380,13 @@ class ApplicationTests {
 			"delete files from filestorage" to 0
 		))
 
-		verifyArchivingMetrics(getFilestorageErrorsBefore + maxNumberOfAttempts, metrics.getGetFilestorageErrors())
-		verifyArchivingMetrics(getFilestorageSuccessesBefore + 0, metrics.getGetFilestorageSuccesses())
-		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, metrics.getDelFilestorageSuccesses())
-		verifyArchivingMetrics(joarkErrorsBefore + 0, metrics.getJoarkErrors())
-		verifyArchivingMetrics(joarkSuccessesBefore + 0, metrics.getJoarkSuccesses())
-		verifyArchivingMetrics(tasksBefore + 1, metrics.getTasks())
-		verifyArchivingMetrics(tasksGivenUpOnBefore + 1, metrics.getTasksGivenUpOn())
+		verifyArchivingMetrics(getFilestorageErrorsBefore + maxNumberOfAttempts, { metrics.getGetFilestorageErrors() })
+		verifyArchivingMetrics(getFilestorageSuccessesBefore + 0, { metrics.getGetFilestorageSuccesses() })
+		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, { metrics.getDelFilestorageSuccesses() })
+		verifyArchivingMetrics(joarkErrorsBefore + 0, { metrics.getJoarkErrors() })
+		verifyArchivingMetrics(joarkSuccessesBefore + 0, { metrics.getJoarkSuccesses() })
+		verifyArchivingMetrics(tasksBefore + 1, { metrics.getTasks() })
+		verifyArchivingMetrics(tasksGivenUpOnBefore + 1, { metrics.getTasksGivenUpOn() })
 	}
 
 	@Test
@@ -409,18 +414,19 @@ class ApplicationTests {
 			"delete files from filestorage" to 1
 		))
 
-		verifyArchivingMetrics(getFilestorageErrorsBefore + 1, metrics.getGetFilestorageErrors())
-		verifyArchivingMetrics(getFilestorageSuccessesBefore + 0, metrics.getGetFilestorageSuccesses())
-		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, metrics.getDelFilestorageSuccesses())
-		verifyArchivingMetrics(joarkErrorsBefore + 0, metrics.getJoarkErrors())
-		verifyArchivingMetrics(joarkSuccessesBefore + 0, metrics.getJoarkSuccesses())
-		verifyArchivingMetrics(tasksBefore, metrics.getTasks())
-		verifyArchivingMetrics(tasksGivenUpOnBefore, metrics.getTasksGivenUpOn())
+		verifyArchivingMetrics(getFilestorageErrorsBefore + 1, { metrics.getGetFilestorageErrors() })
+		verifyArchivingMetrics(getFilestorageSuccessesBefore + 0, { metrics.getGetFilestorageSuccesses() })
+		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, { metrics.getDelFilestorageSuccesses() })
+		verifyArchivingMetrics(joarkErrorsBefore + 0, { metrics.getJoarkErrors() })
+		verifyArchivingMetrics(joarkSuccessesBefore + 0, { metrics.getJoarkSuccesses() })
+		verifyArchivingMetrics(tasksBefore, { metrics.getTasks() })
+		verifyArchivingMetrics(tasksGivenUpOnBefore, { metrics.getTasksGivenUpOn() })
 	}
 
 
-	private fun verifyArchivingMetrics(expected: Double, actual: Double, message: String? = null) {
-		loopAndVerify(expected.toInt(), { actual.toInt() }, { assertEquals(expected, actual, message) })
+	private fun verifyArchivingMetrics(expected: Double, actual: () -> Double, message: String? = null) {
+		loopAndVerify(expected.toInt(), { actual.invoke().toInt() },
+			{ assertEquals(expected.toInt(), actual.invoke().toInt(), message) })
 	}
 
 	private fun verifyProcessingEvents(key: Key, eventTypeAndCount: Map<EventTypes, Int>) {
