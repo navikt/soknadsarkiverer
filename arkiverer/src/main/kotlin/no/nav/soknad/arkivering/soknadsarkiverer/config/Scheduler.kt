@@ -1,29 +1,27 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
-import org.springframework.stereotype.Service
 import java.time.Instant
+import javax.annotation.PostConstruct
 
-@Service
+@EnableScheduling
+@Configuration
 class Scheduler {
 
-	@Autowired
-	private lateinit var normalTaskScheduler: ThreadPoolTaskScheduler
+	private val normalTaskScheduler = threadPoolTaskScheduler(5)
+	private val singleTaskScheduler = threadPoolTaskScheduler(1)
 
-	@Autowired
-	private lateinit var singleTaskScheduler: ThreadPoolTaskScheduler
-
-	@Bean(name = ["normalTaskScheduler"])
-	fun normalTaskScheduler() = threadPoolTaskScheduler(5)
-
-	@Bean(name = ["singleTaskScheduler"])
-	fun singleTaskScheduler() = threadPoolTaskScheduler(1)
-
-	fun threadPoolTaskScheduler(poolSize: Int) = ThreadPoolTaskScheduler().also {
+	private fun threadPoolTaskScheduler(poolSize: Int) = ThreadPoolTaskScheduler().also {
 		it.poolSize = poolSize
 		it.setThreadNamePrefix("ThreadPoolTaskSchedulerOfSize${poolSize}_")
+	}
+
+	@PostConstruct
+	fun setup() {
+		normalTaskScheduler.initialize()
+		singleTaskScheduler.initialize()
 	}
 
 
