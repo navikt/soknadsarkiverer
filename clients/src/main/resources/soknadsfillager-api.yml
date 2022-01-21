@@ -1,0 +1,197 @@
+openapi: 3.0.3
+info:
+  description: A file storage to which a client can upload, retrieve and delete files.
+  version: 2.0.0
+  title: Soknadsfillager
+  contact:
+    name: team-soknad
+    email: team-soknad@nav.no
+  license:
+    name: MIT License
+    url: https://github.com/navikt/soknadsfillager/blob/main/LICENSE
+tags:
+  - name: files
+    description: Access to the file storage
+
+paths:
+  /files:
+    post:
+      summary: Add new files to the file storage.
+      description: Adds new files to the file storage. If a file already exists with the given id, the old file is overwritten.
+      operationId: addFiles
+
+      requestBody:
+        description: Files that will be added to the storage.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/FileData"
+        required: true
+
+      parameters:
+        - in: header
+          name: X-innsendingId
+          description: Tracing id that will be used in logging statements.
+          example: 92ee15dd-dc49-4c95-b9b6-6224bae088a0
+          required: false
+          schema:
+            type: string
+
+      responses:
+        200:
+          description: Successful operation
+      tags:
+        - files
+
+  /files/{ids}:
+    head:
+      summary: Checks if the files with given ids exist.
+      description: Given a list of ids, this endpoint responds with whether all the files associated with those ids exists in the file storage. This endpoint checks whether the files exist but will not return them.
+      operationId: checkFilesByIds
+
+      parameters:
+        - name: ids
+          in: path
+          description: A list of ids of files to be checked whether they exist in the file storage.
+          required: true
+          schema:
+            type: string   # Fix until this is merged: https://github.com/OpenAPITools/openapi-generator/pull/11228
+#          schema:
+#            type: array
+#            items:
+#              type: string
+          style: simple
+
+        - in: header
+          name: X-innsendingId
+          description: Tracing id that will be used in logging statements.
+          example: 92ee15dd-dc49-4c95-b9b6-6224bae088a0
+          required: false
+          schema:
+            type: string
+
+      responses:
+        200:
+          description: Successful operation, **ALL** of the requested files were found.
+        404:
+          description: File Not Found, **NONE** of the requested files have ever been seen in the file storage.
+        409:
+          description: Conflict, **AT LEAST ONE** of the requested files had a different status than the others, e.g. one requested file exists, but another was deleted, and a third was never seen. The client needs to perform one request per file id instead of multiple ids in one request, in order to find out the status of each file.
+        410:
+          description: File Gone, **ALL** of the requested files have been present in the file storage but have since been deleted.
+      tags:
+        - files
+
+    get:
+      summary: Finds files with given ids.
+      description: Given a list of ids, this endpoint returns all files associated with those ids.
+      operationId: findFilesByIds
+
+      parameters:
+        - name: ids
+          in: path
+          description: A list of ids of files to be retrieved from the file storage.
+          required: true
+          schema:
+            type: string   # Fix until this is merged: https://github.com/OpenAPITools/openapi-generator/pull/11228
+#          schema:
+#            type: array
+#            items:
+#              type: string
+          style: simple
+
+        - in: header
+          name: X-innsendingId
+          description: Tracing id that will be used in logging statements.
+          example: 92ee15dd-dc49-4c95-b9b6-6224bae088a0
+          required: false
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: Successful operation, **ALL** of the requested files were found and are returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FileData"
+        404:
+          description: File Not Found, **NONE** of the requested files have ever been seen in the file storage.
+        409:
+          description: Conflict, **AT LEAST ONE** of the requested files had a different status than the others, e.g. one requested file exists, but another was deleted, and a third was never seen. The client needs to perform one request per file id instead of multiple ids in one request, in order to find out the status of each file.
+        410:
+          description: File Gone, **ALL** of the requested files have been present in the file storage but have since been deleted.
+      tags:
+        - files
+
+    delete:
+      summary: Deletes files with given ids.
+      description: Deletes the files with the given ids from the file storage. References to the files will still be kept, indicating that they once existed, but their content will be deleted. If any id provided does not match a file in the file storage, the response will still be 200.
+      operationId: deleteFiles
+
+      parameters:
+        - name: ids
+          in: path
+          description: Given a list of ids (strings), this endpoint returns all files associated with those ids.
+          required: true
+          schema:
+            type: string   # Fix until this is merged: https://github.com/OpenAPITools/openapi-generator/pull/11228
+#          schema:
+#            type: array
+#            items:
+#              type: string
+          style: simple
+
+        - in: header
+          name: X-innsendingId
+          description: Tracing id that will be used in logging statements.
+          example: 92ee15dd-dc49-4c95-b9b6-6224bae088a0
+          required: false
+          schema:
+            type: string
+
+      responses:
+        200:
+          description: The requested files were deleted.
+      tags:
+        - files
+
+components:
+  schemas:
+    FileData:
+      type: object
+      required:
+        - id
+        - content
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Unique id of the file
+          example: 2f9b8d25-1056-4827-8ddd-cedab7fafaaf
+        content:
+          type: string
+          format: byte
+          nullable: true
+          description: Byte array of the file content
+          example: Byte array with file content
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation date and time in UTC
+          example: 2021-12-03T14:10:00Z
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+
+security:
+  - basicAuth: []
+
+externalDocs:
+  description: Documentation of the whole archiving system
+  url: https://github.com/navikt/archiving-infrastructure/wiki
