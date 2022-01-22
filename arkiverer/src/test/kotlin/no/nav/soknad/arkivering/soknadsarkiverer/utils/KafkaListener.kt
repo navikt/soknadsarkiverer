@@ -2,11 +2,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.utils
 
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
@@ -21,16 +16,16 @@ import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler
 import org.apache.kafka.streams.kstream.Consumed
 import org.slf4j.LoggerFactory
 import java.util.*
+import java.util.concurrent.CopyOnWriteArrayList
 
 class KafkaListener(private val kafkaConfig: AppConfiguration.KafkaConfig) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 	private val verbose = true
 
-	private val lock = Mutex()
-	private val metricsReceived          = mutableListOf<Pair<Key, InnsendingMetrics>>()
-	private val messagesReceived         = mutableListOf<Pair<Key, String>>()
-	private val processingEventsReceived = mutableListOf<Pair<Key, ProcessingEvent>>()
+	private val metricsReceived          = CopyOnWriteArrayList<Pair<Key, InnsendingMetrics>>()
+	private val messagesReceived         = CopyOnWriteArrayList<Pair<Key, String>>()
+	private val processingEventsReceived = CopyOnWriteArrayList<Pair<Key, ProcessingEvent>>()
 
 	private val kafkaStreams: KafkaStreams
 
@@ -56,38 +51,15 @@ class KafkaListener(private val kafkaConfig: AppConfiguration.KafkaConfig) {
 
 		metricsStream
 			.peek { key, metrics -> log("$key: Metrics received  - $metrics") }
-			.foreach { key, metrics -> addRecord(metricsReceived, key, metrics) }
+			.foreach { key, metrics -> metricsReceived.add(key to metrics) }
 
 		messagesStream
 			.peek { key, message -> log("$key: Message received  - $message") }
-			.foreach { key, message -> addRecord(messagesReceived, key, message) }
+			.foreach { key, message -> messagesReceived.add(key to message) }
 
 		processingEventTopicStream
 			.peek { key, entity -> log("$key: Processing Events - $entity") }
-			.foreach { key, entity -> addRecord(processingEventsReceived, key, entity) }
-	}
-
-	private fun <T> addRecord(list: MutableList<Pair<Key, T>>, key: Key, record: T) {
-		performMutexGuardedOperation { list.add(key to record) }
-	}
-
-	private fun <T> getRecords(list: MutableList<Pair<Key, T>>): List<Record<T>> {
-		return performMutexGuardedOperation { list.map { Record(it.first, it.second) } }
-	}
-
-	/**
-	 * If we try to add a new record to the list of previously seen records, and at the same time map all
-	 * seen records to return them, then we get a ConcurrentModificationException. Use [lock], a [Mutex] to
-	 * guard against concurrent modification.
-	 */
-	private fun <T> performMutexGuardedOperation(operation: () -> T): T {
-		return runBlocking {
-			withContext(Dispatchers.Default) {
-				lock.withLock {
-					operation.invoke()
-				}
-			}
-		}
+			.foreach { key, entity -> processingEventsReceived.add(key to entity) }
 	}
 
 	private fun log(message: String) {
@@ -127,9 +99,9 @@ class KafkaListener(private val kafkaConfig: AppConfiguration.KafkaConfig) {
 	}
 
 
-	fun getMetrics() = getRecords(metricsReceived)
-	fun getMessages() = getRecords(messagesReceived)
-	fun getProcessingEvents() = getRecords(processingEventsReceived)
+	fun getMetrics() = metricsReceived.map { Record(it.first, it.second) }
+	fun getMessages() = messagesReceived.map { Record(it.first, it.second) }
+	fun getProcessingEvents() = processingEventsReceived.map { Record(it.first, it.second) }
 
 	data class Record<T>(val key: Key, val value: T)
 }
