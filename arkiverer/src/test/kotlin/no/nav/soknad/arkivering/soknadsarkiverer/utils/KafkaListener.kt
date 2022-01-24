@@ -16,15 +16,16 @@ import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler
 import org.apache.kafka.streams.kstream.Consumed
 import org.slf4j.LoggerFactory
 import java.util.*
+import java.util.concurrent.CopyOnWriteArrayList
 
 class KafkaListener(private val kafkaConfig: AppConfiguration.KafkaConfig) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 	private val verbose = true
 
-	private val metricsReceived          = mutableListOf<Pair<Key, InnsendingMetrics>>()
-	private val messagesReceived         = mutableListOf<Pair<Key, String>>()
-	private val processingEventsReceived = mutableListOf<Pair<Key, ProcessingEvent>>()
+	private val metricsReceived          = CopyOnWriteArrayList<Pair<Key, InnsendingMetrics>>()
+	private val messagesReceived         = CopyOnWriteArrayList<Pair<Key, String>>()
+	private val processingEventsReceived = CopyOnWriteArrayList<Pair<Key, ProcessingEvent>>()
 
 	private val kafkaStreams: KafkaStreams
 
