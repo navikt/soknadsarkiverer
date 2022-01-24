@@ -7,8 +7,8 @@ import com.github.tomakehurst.wiremock.http.RequestMethod
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import com.github.tomakehurst.wiremock.stubbing.Scenario
 import com.github.tomakehurst.wiremock.verification.LoggedRequest
-import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.Dokumenter
-import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.OpprettJournalpostResponse
+import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.Dokumenter
+import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.OpprettJournalpostResponse
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType

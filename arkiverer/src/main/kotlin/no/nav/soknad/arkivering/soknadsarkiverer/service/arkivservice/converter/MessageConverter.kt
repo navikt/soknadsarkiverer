@@ -1,10 +1,10 @@
-package no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.converter
+package no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.converter
 
 import no.nav.soknad.arkivering.avroschemas.MottattDokument
 import no.nav.soknad.arkivering.avroschemas.MottattVariant
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
-import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api.*
+import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import java.time.Instant
 import java.time.LocalDateTime
@@ -28,7 +28,7 @@ private fun getTitleFromMainDocument(documents: List<Dokument>): String {
 
 private fun renameTitleDependingOnSoknadstype(tittel: String, soknadstype: Soknadstyper, erHovedskjema: Boolean): String {
 	return if (soknadstype == Soknadstyper.ETTERSENDING && erHovedskjema) {
-		"Ettersendelse til " + tittel.replaceFirst(tittel[0], tittel[0].toLowerCase())
+		"Ettersendelse til " + tittel.replaceFirst(tittel[0], tittel[0].lowercaseChar())
 	} else {
 		tittel
 	}
@@ -91,5 +91,6 @@ private fun createDokumentVariant(variant: MottattVariant, attachedFiles: List<F
 	if (attachedFile[0].fil == null)
 		throw Exception("File with uuid '${variant.uuid}' was null!")
 
-	return DokumentVariant(variant.filnavn, if (variant.filtype == "PDF/A") "PDFA" else variant.filtype, attachedFile[0].fil!!, variant.variantformat)
+	val filtype = if (variant.filtype == "PDF/A") "PDFA" else variant.filtype
+	return DokumentVariant(variant.filnavn, filtype, attachedFile[0].fil!!, variant.variantformat)
 }

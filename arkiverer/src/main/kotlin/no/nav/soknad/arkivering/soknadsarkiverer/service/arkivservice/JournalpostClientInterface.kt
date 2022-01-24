@@ -1,4 +1,4 @@
-package no.nav.soknad.arkivering.soknadsarkiverer.arkivservice
+package no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice
 
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
