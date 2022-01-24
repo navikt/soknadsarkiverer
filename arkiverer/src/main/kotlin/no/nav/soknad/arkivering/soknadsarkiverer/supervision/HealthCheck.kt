@@ -3,7 +3,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 import io.swagger.v3.oas.annotations.Hidden
 import kotlinx.coroutines.*
 import no.nav.security.token.support.core.api.Unprotected
-import no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.JournalpostClientInterface
+import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.isBusy
 import no.nav.soknad.arkivering.soknadsarkiverer.config.stop

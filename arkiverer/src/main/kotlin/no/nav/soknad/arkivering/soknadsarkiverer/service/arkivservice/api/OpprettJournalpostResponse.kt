@@ -1,4 +1,4 @@
-package no.nav.soknad.arkivering.soknadsarkiverer.arkivservice.api
+package no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api
 
 data class OpprettJournalpostResponse(
 	val dokumenter: List<Dokumenter>,
