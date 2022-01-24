@@ -30,8 +30,8 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 				getAllMessageRecordsAsync(eventCollectionBuilder),
 				getAllMetricsRecordsAsync(eventCollectionBuilder)
 			)
-		}
-		return getKafkaRecords(records, eventCollectionBuilder)
+		}.flatten()
+		return collectKafkaRecords(records, eventCollectionBuilder)
 	}
 
 	internal fun getProcessingAndMetricsKafkaRecords(
@@ -43,17 +43,16 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 				getAllProcessingRecordsAsync(eventCollectionBuilder),
 				getAllMetricsRecordsAsync(eventCollectionBuilder)
 			)
-		}
-		return getKafkaRecords(records, eventCollectionBuilder)
+		}.flatten()
+		return collectKafkaRecords(records, eventCollectionBuilder)
 	}
 
-	private fun getKafkaRecords(
-		records: List<List<KafkaEvent<out Any>>>,
+	private fun collectKafkaRecords(
+		records: List<KafkaEvent<out Any>>,
 		eventCollectionBuilder: EventCollection.Builder
 	): List<KafkaEvent<String>> {
 
 		val kafkaEventRecords = records
-			.flatten()
 			.map { KafkaEvent(it.sequence, it.innsendingKey, it.messageId, it.timestamp, it.type, it.content.toString()) }
 
 		val eventCollection = eventCollectionBuilder.build<String>()
@@ -81,7 +80,7 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 		eventCollectionBuilder: EventCollection.Builder
 	): List<KafkaEvent<T>> {
 
-		return BootstrapConsumer.Builder<T>()
+		return AdminConsumer.Builder<T>()
 			.withEventCollection(eventCollectionBuilder.build())
 			.withAppConfiguration(appConfiguration)
 			.withKafkaGroupId("soknadsarkiverer-admin-$recordType-${UUID.randomUUID()}")
@@ -92,7 +91,7 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 }
 
 
-private class BootstrapConsumer<T> private constructor(
+private class AdminConsumer<T> private constructor(
 	appConfiguration: AppConfiguration,
 	kafkaGroupId: String,
 	deserializer: Deserializer<T>,
@@ -129,7 +128,7 @@ private class BootstrapConsumer<T> private constructor(
 		fun withEventCollection(eventCollection: EventCollection<T>) = apply { this.eventCollection = eventCollection }
 
 		override fun getAllKafkaRecords() =
-			BootstrapConsumer(appConfiguration!!, kafkaGroupId!!, deserializer!!, topic!!, eventCollection!!)
+			AdminConsumer(appConfiguration!!, kafkaGroupId!!, deserializer!!, topic!!, eventCollection!!)
 				.getAllKafkaRecords()
 	}
 }
