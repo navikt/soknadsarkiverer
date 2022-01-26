@@ -104,6 +104,14 @@ fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>) {
 	mockFilestorageIsWorking(uuidsAndResponses, ids)
 }
 
+fun mockFilestorageRespondsConflict() {
+	wiremockServer.stubFor(
+		get(urlMatching("$filestorageUrl.*"))
+			.willReturn(aResponse()
+				.withBody("Mocked exception for get - 409 Conflict")
+				.withStatus(HttpStatus.CONFLICT.value())))
+}
+
 fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>, idsForUrl: String) {
 	val urlPattern = urlMatching(filestorageUrl + idsForUrl)
 
@@ -114,10 +122,10 @@ fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>, ids
 				.withBody(createFilestorageResponse(uuidsAndResponses))
 				.withStatus(HttpStatus.OK.value())))
 
-	mockFilestoreageDeletionIsWorking(uuidsAndResponses.map { it.first })
+	mockFilestorageDeletionIsWorking(uuidsAndResponses.map { it.first })
 }
 
-fun mockFilestoreageDeletionIsWorking(uuids: List<String>) {
+fun mockFilestorageDeletionIsWorking(uuids: List<String>) {
 	val ids = uuids.joinToString(",")
 	val urlPattern = urlMatching(filestorageUrl + ids)
 
