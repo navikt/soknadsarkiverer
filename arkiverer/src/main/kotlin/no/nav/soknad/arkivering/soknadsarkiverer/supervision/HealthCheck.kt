@@ -76,7 +76,7 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 
 	private fun applicationIsReady(): Boolean {
 		val dependencies = listOf(
-			Dependency({ fileService.isReady() }, "Holla, si Ready", "FileStorage"),
+			Dependency({ fileService.isReady() }, "ok", "FileStorage"),
 			Dependency({ joarkService.isAlive() }, "Application is alive!", "Joark")
 		)
 		throwExceptionIfDependenciesAreDown(dependencies)

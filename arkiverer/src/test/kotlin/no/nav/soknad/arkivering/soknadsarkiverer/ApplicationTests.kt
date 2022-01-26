@@ -478,7 +478,7 @@ class ApplicationTests {
 
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
-		verifyMockedDeleteRequests(expectedCount, appConfiguration.config.filestorageUrl.replace("?", "\\?") + ".*")
+		verifyMockedDeleteRequests(expectedCount, appConfiguration.config.filestorageUrl + ".*")
 	}
 
 	private fun createSoknadarkivschema() = createSoknadarkivschema(fileUuid)

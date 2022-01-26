@@ -2,10 +2,11 @@ package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
 import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
-import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
+import no.nav.soknad.arkivering.soknadsfillager.infrastructure.ServerException
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -113,8 +114,8 @@ class HealthCheckTests {
 	fun `isReady returns Status 500 when Filestorage is unwell`() {
 		mockFilestorageIsReadyIsNotWorking()
 
-		val e = assertThrows<WebClientResponseException.InternalServerError> { healthCheck.isReady() }
-		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, e.statusCode)
+		val e = assertThrows<ServerException> { healthCheck.isReady() }
+		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.statusCode)
 	}
 
 	@Test
@@ -135,8 +136,8 @@ class HealthCheckTests {
 	fun `ping returns Status 500 when Filestorage is unwell`() {
 		mockFilestoragePingIsNotWorking()
 
-		val e = assertThrows<WebClientResponseException.InternalServerError> { healthCheck.ping() }
-		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, e.statusCode)
+		val e = assertThrows<ServerException> { healthCheck.ping() }
+		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.statusCode)
 	}
 
 	@Test

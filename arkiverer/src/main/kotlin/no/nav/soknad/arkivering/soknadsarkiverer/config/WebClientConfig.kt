@@ -28,14 +28,6 @@ class WebClientConfig(private val appConfiguration: AppConfiguration) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Bean
-	@Qualifier("basicWebClient")
-	fun createWebClient() = WebClient.builder()
-		.codecs { configurer -> configurer
-			.defaultCodecs()
-			.maxInMemorySize(50 * 1024 * 1024) }
-		.build()
-
-	@Bean
 	@Profile("spring | test | docker | default")
 	@Qualifier("archiveWebClient")
 	@Scope("prototype")

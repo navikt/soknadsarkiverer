@@ -37,7 +37,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"JOARK_HOST" to "http://localhost:8092",
 	"JOARK_URL" to "/rest/journalpostapi/v1/journalpost",
 	"FILESTORAGE_HOST" to "http://localhost:9042",
-	"FILESTORAGE_URL" to "/filer?ids=",
+	"FILESTORAGE_URL" to "/files/",
 
 	"ADMIN_USER" to "admin",
 	"ADMIN_USER_PASSWORD" to "password",

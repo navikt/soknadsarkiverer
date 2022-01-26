@@ -12,6 +12,8 @@ info:
 tags:
   - name: files
     description: Access to the file storage
+  - name: health
+    description: Application health endpoint
 
 paths:
   /files:
@@ -159,6 +161,48 @@ paths:
           description: The requested files were deleted.
       tags:
         - files
+
+
+  /health/ping:
+    get:
+      summary: Pings the application to see if it responds
+      description: Pings the application to see if it responds
+      operationId: ping
+
+      responses:
+        '200':
+          description: Successful operation; application is responding
+      tags:
+        - health
+
+  /health/isAlive:
+    get:
+      summary: Checks if the application and its dependencies up
+      description: Checks if the application and its dependencies are up and running.
+      operationId: isAlive
+
+      responses:
+        '200':
+          description: Successful operation; application is alive
+        '500':
+          description: The application or one of its dependencies are not up and running.
+      tags:
+        - health
+
+  /health/isReady:
+    get:
+      summary: Checks if the application is ready to accept traffic
+      description: Checks if the application is ready to accept traffic.
+      operationId: isReady
+
+      responses:
+        '200':
+          description: Successful operation; application is ready
+        '503':
+          description: The application or one of its dependencies are not ready
+      tags:
+        - health
+
 
 components:
   schemas:
