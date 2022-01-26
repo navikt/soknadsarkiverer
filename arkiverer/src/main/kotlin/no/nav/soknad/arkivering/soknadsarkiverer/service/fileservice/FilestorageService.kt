@@ -5,6 +5,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
+import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.apache.tomcat.util.codec.binary.Base64
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
@@ -13,11 +14,14 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 @Service
-class FilestorageService(@Qualifier("basicWebClient") private val webClient: WebClient,
-												 private val appConfiguration: AppConfiguration,
-												 private val metrics: ArchivingMetrics
+class FilestorageService(
+	@Qualifier("basicWebClient") private val webClient: WebClient,
+	private val appConfiguration: AppConfiguration,
+	private val metrics: ArchivingMetrics
 ) : FileserviceInterface {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
@@ -32,15 +36,16 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 		.block()!!
 
 
-	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): List<FilElementDto> {
+	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): List<FileData> {
 		val timer = metrics.filestorageGetLatencyStart()
 		try {
 			val fileIds = getFileIds(data)
 			logger.info("$key: Getting files with ids: '$fileIds'")
 
 			val files = getFiles(fileIds)
+				.map { FileData(it.uuid, it.fil, OffsetDateTime.now(ZoneOffset.UTC)) }
 
-			logger.info("$key: Received ${files.size} files with a sum of ${files.sumOf { it.fil?.size ?: 0 }} bytes")
+			logger.info("$key: Received ${files.size} files with a sum of ${files.sumOf { it.content?.size ?: 0 }} bytes")
 			metrics.incGetFilestorageSuccesses()
 			return files
 

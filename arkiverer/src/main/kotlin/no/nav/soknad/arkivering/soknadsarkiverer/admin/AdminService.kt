@@ -39,7 +39,7 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 
 		return try {
 			val response = fileService.getFilesFromFilestorage(key, soknadarkivschema)
-			response.map { FilestorageExistenceResponse(it.uuid, if (it.fil != null) EXISTS else DOES_NOT_EXIST) }
+			response.map { FilestorageExistenceResponse(it.id, if (it.content != null) EXISTS else DOES_NOT_EXIST) }
 		} catch (e: FilesAlreadyDeletedException) {
 			listOf(FilestorageExistenceResponse(key, DELETED))
 		}

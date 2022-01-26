@@ -4,8 +4,8 @@ import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
+import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -202,17 +202,17 @@ class FilestorageServiceTests {
 	}
 
 
-	private fun assertFileContentIsCorrect(files: List<FilElementDto>) {
+	private fun assertFileContentIsCorrect(files: List<FileData>) {
 		assertAll("All files should have the right content",
 			files.map { result -> {
-				assertEquals(fileIdsAndResponses.first { it.first == result.uuid }.second, result.fil?.map { it.toInt().toChar() }?.joinToString(""))
+				assertEquals(fileIdsAndResponses.first { it.first == result.id }.second, result.content?.map { it.toInt().toChar() }?.joinToString(""))
 			} })
 	}
 
 	private fun makeUrl(fileIdsAndResponses: List<Pair<String, String>>) =
 		appConfiguration.config.filestorageUrl.replace("?", "\\?") + fileIdsAndResponses.joinToString(",") { it.first }
 
-	private fun mockNumberOfFilesAndPerformRequest(numberOfFiles: Int): List<FilElementDto> {
+	private fun mockNumberOfFilesAndPerformRequest(numberOfFiles: Int): List<FileData> {
 		mockFilestorageIsWorking(fileIdsAndResponses.take(numberOfFiles))
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 
