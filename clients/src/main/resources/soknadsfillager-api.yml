@@ -59,11 +59,9 @@ paths:
           description: A list of ids of files to be checked whether they exist in the file storage.
           required: true
           schema:
-            type: string   # Fix until this is merged: https://github.com/OpenAPITools/openapi-generator/pull/11228
-#          schema:
-#            type: array
-#            items:
-#              type: string
+            type: array
+            items:
+              type: string
           style: simple
 
         - in: header
@@ -97,11 +95,9 @@ paths:
           description: A list of ids of files to be retrieved from the file storage.
           required: true
           schema:
-            type: string   # Fix until this is merged: https://github.com/OpenAPITools/openapi-generator/pull/11228
-#          schema:
-#            type: array
-#            items:
-#              type: string
+            type: array
+            items:
+              type: string
           style: simple
 
         - in: header
@@ -141,11 +137,9 @@ paths:
           description: Given a list of ids (strings), this endpoint returns all files associated with those ids.
           required: true
           schema:
-            type: string   # Fix until this is merged: https://github.com/OpenAPITools/openapi-generator/pull/11228
-#          schema:
-#            type: array
-#            items:
-#              type: string
+            type: array
+            items:
+              type: string
           style: simple
 
         - in: header

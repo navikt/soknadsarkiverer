@@ -75,7 +75,6 @@ class FilestorageService(
 		val timer = metrics.filestorageDelLatencyStart()
 
 		val fileIds = getFileIds(data)
-			.joinToString(",")
 		try {
 
 			logger.info("$key: Calling file storage to delete '$fileIds'")
@@ -98,18 +97,17 @@ class FilestorageService(
 
 		val idChunks = fileIds
 			.chunked(filesInOneRequestToFilestorage)
-			.map { it.joinToString(",") }
 
 		return idChunks
 			.map { performGetCall(key, it) }
 			.flatten()
 	}
 
-	private fun deleteFiles(key: String, fileIds: String) {
+	private fun deleteFiles(key: String, fileIds: List<String>) {
 		filesApi.deleteFiles(fileIds, key)
 	}
 
-	private fun performGetCall(key: String, fileIds: String): List<FileData> {
+	private fun performGetCall(key: String, fileIds: List<String>): List<FileData> {
 		return try {
 			filesApi.findFilesByIds(fileIds, key)
 
