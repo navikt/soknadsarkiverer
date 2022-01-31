@@ -17,7 +17,8 @@
 		<jackson.version>2.13.1</jackson.version>
 		<okhttp.version>4.9.3</okhttp.version>
 
-		<openapi-generator-maven-plugin.version>5.3.1</openapi-generator-maven-plugin.version>
+		<openapi-generator-maven-plugin.version>5.4.0</openapi-generator-maven-plugin.version>
+		<remote-comparer-maven-plugin.version>1.0.3</remote-comparer-maven-plugin.version>
 
 		<kotlin.version>1.6.10</kotlin.version>
 		<java.version>11</java.version>
@@ -75,6 +76,24 @@
 				</executions>
 			</plugin>
 
+			<plugin>
+				<groupId>com.github.sjoblomj</groupId>
+				<artifactId>remote-comparer-maven-plugin</artifactId>
+				<version>${remote-comparer-maven-plugin.version}</version>
+				<executions>
+					<execution>
+						<id>compare OpenAPI specs</id>
+						<goals>
+							<goal>remote-compare</goal>
+						</goals>
+						<configuration>
+							<localFilePath>src/main/resources/soknadsfillager-api.yml</localFilePath>
+							<remoteFileUri>https://raw.githubusercontent.com/navikt/soknadsfillager/main/api/src/main/resources/soknadsfillager-api.yml</remoteFileUri>
+							<timeoutMs>20000</timeoutMs>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 
 			<plugin>
 				<groupId>org.jetbrains.kotlin</groupId>
@@ -102,4 +121,10 @@
 			<url>https://repo1.maven.org/maven2</url>
 		</repository>
 	</repositories>
+	<pluginRepositories>
+		<pluginRepository>
+			<id>jitpack.io</id>
+			<url>https://jitpack.io</url>
+		</pluginRepository>
+	</pluginRepositories>
 </project>
