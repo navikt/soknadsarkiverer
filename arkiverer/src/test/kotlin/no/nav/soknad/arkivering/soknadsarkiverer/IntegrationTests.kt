@@ -109,7 +109,7 @@ class IntegrationTests {
 
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
-		val url = appConfiguration.config.filestorageUrl.replace("?", "\\?") + ".*"
+		val url = appConfiguration.config.filestorageUrl + ".*"
 		verifyMockedDeleteRequests(expectedCount, url)
 	}
 

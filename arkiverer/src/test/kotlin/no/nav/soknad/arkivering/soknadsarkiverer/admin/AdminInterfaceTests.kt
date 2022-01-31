@@ -109,7 +109,7 @@ class AdminInterfaceTests {
 
 		putDataOnTopic(key, soknadarkivschema)
 		loopAndVerify(0, { taskListService.listTasks(key).size })
-		verifyMockedDeleteRequests(1, appConfiguration.config.filestorageUrl.replace("?", "\\?") + ".*")
+		verifyMockedDeleteRequests(1, appConfiguration.config.filestorageUrl + ".*")
 		TimeUnit.SECONDS.sleep(2) // Give the system 2 seconds to finish the task after the deletion occurred.
 
 		adminInterface.rerun(key)

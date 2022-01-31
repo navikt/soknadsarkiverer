@@ -1,6 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.utils
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.http.RequestMethod
@@ -9,9 +10,11 @@ import com.github.tomakehurst.wiremock.stubbing.Scenario
 import com.github.tomakehurst.wiremock.verification.LoggedRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.Dokumenter
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.OpprettJournalpostResponse
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
+import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 
 const val filestorageContent = "filestoragecontent"
@@ -101,8 +104,16 @@ fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>) {
 	mockFilestorageIsWorking(uuidsAndResponses, ids)
 }
 
+fun mockFilestorageRespondsConflict() {
+	wiremockServer.stubFor(
+		get(urlMatching("$filestorageUrl.*"))
+			.willReturn(aResponse()
+				.withBody("Mocked exception for get - 409 Conflict")
+				.withStatus(HttpStatus.CONFLICT.value())))
+}
+
 fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>, idsForUrl: String) {
-	val urlPattern = urlMatching(filestorageUrl.replace("?", "\\?") + idsForUrl)
+	val urlPattern = urlMatching(filestorageUrl + idsForUrl)
 
 	wiremockServer.stubFor(
 		get(urlPattern)
@@ -111,12 +122,12 @@ fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>, ids
 				.withBody(createFilestorageResponse(uuidsAndResponses))
 				.withStatus(HttpStatus.OK.value())))
 
-	mockFilestoreageDeletionIsWorking(uuidsAndResponses.map { it.first })
+	mockFilestorageDeletionIsWorking(uuidsAndResponses.map { it.first })
 }
 
-fun mockFilestoreageDeletionIsWorking(uuids: List<String>) {
+fun mockFilestorageDeletionIsWorking(uuids: List<String>) {
 	val ids = uuids.joinToString(",")
-	val urlPattern = urlMatching(filestorageUrl.replace("?", "\\?") + ids)
+	val urlPattern = urlMatching(filestorageUrl + ids)
 
 	wiremockServer.stubFor(
 		delete(urlPattern)
@@ -126,7 +137,7 @@ fun mockFilestoreageDeletionIsWorking(uuids: List<String>) {
 
 fun mockFilestorageDeletionIsNotWorking() {
 	wiremockServer.stubFor(
-		delete(urlMatching(filestorageUrl.replace("?", "\\?") + ".*"))
+		delete(urlMatching("$filestorageUrl.*"))
 			.willReturn(aResponse()
 				.withBody("Mocked exception for deletion")
 				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
@@ -134,7 +145,7 @@ fun mockFilestorageDeletionIsNotWorking() {
 
 fun mockFilestorageIsDown() {
 	wiremockServer.stubFor(
-		get(urlMatching(filestorageUrl.replace("?", "\\?") + ".*"))
+		get(urlMatching("$filestorageUrl.*"))
 			.willReturn(aResponse()
 				.withBody("Mocked exception for filestorage")
 				.withStatus(HttpStatus.SERVICE_UNAVAILABLE.value())))
@@ -142,7 +153,7 @@ fun mockFilestorageIsDown() {
 
 fun mockRequestedFileIsGone() {
 	wiremockServer.stubFor(
-		get(urlMatching(filestorageUrl.replace("?", "\\?") + ".*"))
+		get(urlMatching("$filestorageUrl.*"))
 			.willReturn(aResponse()
 				.withBody("Mocked exception for filestorage")
 				.withStatus(HttpStatus.GONE.value())))
@@ -150,15 +161,14 @@ fun mockRequestedFileIsGone() {
 
 fun mockFilestoragePingIsWorking() {
 	wiremockServer.stubFor(
-		get("/internal/ping")
+		get("/health/ping")
 			.willReturn(aResponse()
-				.withBody("pong")
 				.withStatus(HttpStatus.OK.value())))
 }
 
 fun mockFilestoragePingIsNotWorking() {
 	wiremockServer.stubFor(
-		get("/internal/ping")
+		get("/health/ping")
 			.willReturn(aResponse()
 				.withBody("Mocked ping error response for filestorage")
 				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
@@ -166,15 +176,14 @@ fun mockFilestoragePingIsNotWorking() {
 
 fun mockFilestorageIsReadyIsWorking() {
 	wiremockServer.stubFor(
-		get("/internal/isReady")
+		get("/health/isReady")
 			.willReturn(aResponse()
-				.withBody("Holla, si Ready")
 				.withStatus(HttpStatus.OK.value())))
 }
 
 fun mockFilestorageIsReadyIsNotWorking() {
 	wiremockServer.stubFor(
-		get("/internal/isReady")
+		get("/health/isReady")
 			.willReturn(aResponse()
 				.withBody("Mocked isReady error response for filestorage")
 				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
@@ -197,10 +206,14 @@ fun mockJoarkIsAliveIsNotWorking() {
 }
 
 
-private fun createFilestorageResponse(uuidsAndResponses: List<Pair<String, String?>>): String =
-	ObjectMapper().writeValueAsString(
-		uuidsAndResponses.map { (uuid, response) -> FilElementDto(uuid, response?.toByteArray()) }
-	)
+private fun createFilestorageResponse(uuidsAndResponses: List<Pair<String, String?>>): String {
+	val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
+	return ObjectMapper()
+		.registerModule(JavaTimeModule())
+		.writeValueAsString(
+			uuidsAndResponses.map { (uuid, response) -> FileData(uuid, response?.toByteArray(), createdAt) }
+		)
+}
 
 private fun createJoarkResponse(): String = ObjectMapper().writeValueAsString(
 	OpprettJournalpostResponse(listOf(Dokumenter("brevkode", "dokumentInfoId", "tittel")),

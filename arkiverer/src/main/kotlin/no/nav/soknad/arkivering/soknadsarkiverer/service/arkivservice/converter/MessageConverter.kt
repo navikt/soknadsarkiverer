@@ -5,14 +5,14 @@ import no.nav.soknad.arkivering.avroschemas.MottattVariant
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
+import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 
-fun createOpprettJournalpostRequest(o: Soknadarkivschema, attachedFiles: List<FilElementDto>): OpprettJournalpostRequest {
+fun createOpprettJournalpostRequest(o: Soknadarkivschema, attachedFiles: List<FileData>): OpprettJournalpostRequest {
 	val date = DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(o.innsendtDato), ZoneOffset.UTC))
 
 	val documents = createDocuments(o.mottatteDokumenter, attachedFiles, o.soknadstype)
@@ -34,7 +34,7 @@ private fun renameTitleDependingOnSoknadstype(tittel: String, soknadstype: Sokna
 	}
 }
 
-private fun createDocuments(mottatteDokumenter: List<MottattDokument>, attachedFiles: List<FilElementDto>,
+private fun createDocuments(mottatteDokumenter: List<MottattDokument>, attachedFiles: List<FileData>,
 														soknadstype: Soknadstyper): List<Dokument> {
 
 	val hovedDokument = createHoveddokument(mottatteDokumenter, attachedFiles, soknadstype)
@@ -43,7 +43,7 @@ private fun createDocuments(mottatteDokumenter: List<MottattDokument>, attachedF
 	return arrayOf(arrayOf(hovedDokument), vedlegg.toTypedArray()).flatten()
 }
 
-private fun createHoveddokument(documents: List<MottattDokument>, attachedFiles: List<FilElementDto>,
+private fun createHoveddokument(documents: List<MottattDokument>, attachedFiles: List<FileData>,
 																soknadstype: Soknadstyper): Dokument {
 	val hoveddokument = documents
 		.filter { it.erHovedskjema }
@@ -54,14 +54,14 @@ private fun createHoveddokument(documents: List<MottattDokument>, attachedFiles:
 	return hoveddokument[0]
 }
 
-private fun createVedlegg(documents: List<MottattDokument>, attachedFiles: List<FilElementDto>,
+private fun createVedlegg(documents: List<MottattDokument>, attachedFiles: List<FileData>,
 													soknadstype: Soknadstyper): List<Dokument> {
 	return documents
 		.filter { !it.erHovedskjema }
 		.map { createDokument(it, attachedFiles, soknadstype) }
 }
 
-private fun createDokument(document: MottattDokument, attachedFiles: List<FilElementDto>, soknadstype: Soknadstyper): Dokument {
+private fun createDokument(document: MottattDokument, attachedFiles: List<FileData>, soknadstype: Soknadstyper): Dokument {
 	val dokumentvarianter = document.mottatteVarianter.map { createDokumentVariant(it, attachedFiles) }
 	val skjemanummer = getSkjemanummer(document, soknadstype)
 
@@ -83,14 +83,14 @@ private fun getSkjemanummer(document: MottattDokument, soknadstype: Soknadstyper
 		document.skjemanummer
 }
 
-private fun createDokumentVariant(variant: MottattVariant, attachedFiles: List<FilElementDto>): DokumentVariant {
-	val attachedFile = attachedFiles.filter { it.uuid == variant.uuid }
+private fun createDokumentVariant(variant: MottattVariant, attachedFiles: List<FileData>): DokumentVariant {
+	val attachedFile = attachedFiles.filter { it.id == variant.uuid }
 
 	if (attachedFile.size != 1)
 		throw Exception("Found ${attachedFile.size} files matching uuid '${variant.uuid}', expected 1")
-	if (attachedFile[0].fil == null)
+	if (attachedFile[0].content == null)
 		throw Exception("File with uuid '${variant.uuid}' was null!")
 
 	val filtype = if (variant.filtype == "PDF/A") "PDFA" else variant.filtype
-	return DokumentVariant(variant.filnavn, filtype, attachedFile[0].fil!!, variant.variantformat)
+	return DokumentVariant(variant.filnavn, filtype, attachedFile[0].content!!, variant.variantformat)
 }

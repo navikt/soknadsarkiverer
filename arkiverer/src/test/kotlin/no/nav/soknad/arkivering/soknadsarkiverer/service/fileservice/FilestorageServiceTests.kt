@@ -4,8 +4,8 @@ import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
+import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -90,7 +90,7 @@ class FilestorageServiceTests {
 		val numberOfFiles = 6
 		mockFilestorageIsWorking(fileIdsAndResponses.take(filesInOneRequestToFilestorage))
 		mockFilestorageIsWorking(fileIdsAndResponses.drop(filesInOneRequestToFilestorage).take(1))
-		mockFilestoreageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
+		mockFilestorageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 
 		val files = filestorageService.getFilesFromFilestorage(key, soknadarkivschema)
@@ -107,7 +107,7 @@ class FilestorageServiceTests {
 		mockFilestorageIsWorking(fileIdsAndResponses.take(filesInOneRequestToFilestorage))
 		mockFilestorageIsWorking(fileIdsAndResponses.drop(filesInOneRequestToFilestorage).take(filesInOneRequestToFilestorage))
 		mockFilestorageIsWorking(fileIdsAndResponses.drop(filesInOneRequestToFilestorage * 2).take(1))
-		mockFilestoreageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
+		mockFilestorageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 
 		val files = filestorageService.getFilesFromFilestorage(key, soknadarkivschema)
@@ -120,11 +120,8 @@ class FilestorageServiceTests {
 	}
 
 	@Test
-	fun `getFilesFromFilestorage - Asking for 3 files - Only 2 is returned - will throw exception`() {
-		val threeFilesInRequest = fileIdsAndResponses.take(3).joinToString(",") { it.first }
-		val twoFilesInResponse = fileIdsAndResponses.take(2)
-		mockFilestorageIsWorking(twoFilesInResponse, threeFilesInRequest)
-		mockFilestoreageDeletionIsWorking(fileIdsAndResponses.take(3).map { it.first })
+	fun `getFilesFromFilestorage - Filestorage responds with 409 Conflict - will throw exception`() {
+		mockFilestorageRespondsConflict()
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(3).map { it.first })
 
 		assertThrows<ArchivingException> {
@@ -136,7 +133,7 @@ class FilestorageServiceTests {
 	fun `getFilesFromFilestorage - Asking for 3 files - Filestorage is down - will throw exception`() {
 		val numberOfFiles = 3
 		mockFilestorageIsDown()
-		mockFilestoreageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
+		mockFilestorageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 
 		assertThrows<ArchivingException> {
@@ -148,7 +145,7 @@ class FilestorageServiceTests {
 	fun `getFilesFromFilestorage - Asking for 3 files - One of the files have been deleted - will throw FilesAlreadyDeletedException`() {
 		val numberOfFiles = 3
 		mockRequestedFileIsGone()
-		mockFilestoreageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
+		mockFilestorageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 
 		val e = assertThrows<Exception> {
@@ -160,7 +157,7 @@ class FilestorageServiceTests {
 	@Test
 	fun `deleteFilesFromFilestorage - Deleting 0 files - Makes one request`() {
 		val numberOfFiles = 0
-		mockFilestoreageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
+		mockFilestorageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 
 		filestorageService.deleteFilesFromFilestorage(key, soknadarkivschema)
@@ -171,7 +168,7 @@ class FilestorageServiceTests {
 	@Test
 	fun `deleteFilesFromFilestorage - Deleting 1 files - Makes one request`() {
 		val numberOfFiles = 1
-		mockFilestoreageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
+		mockFilestorageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 
 		filestorageService.deleteFilesFromFilestorage(key, soknadarkivschema)
@@ -182,7 +179,7 @@ class FilestorageServiceTests {
 	@Test
 	fun `deleteFilesFromFilestorage - Deleting 11 files - Makes one request`() {
 		val numberOfFiles = 11
-		mockFilestoreageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
+		mockFilestorageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 
 		filestorageService.deleteFilesFromFilestorage(key, soknadarkivschema)
@@ -202,17 +199,17 @@ class FilestorageServiceTests {
 	}
 
 
-	private fun assertFileContentIsCorrect(files: List<FilElementDto>) {
+	private fun assertFileContentIsCorrect(files: List<FileData>) {
 		assertAll("All files should have the right content",
 			files.map { result -> {
-				assertEquals(fileIdsAndResponses.first { it.first == result.uuid }.second, result.fil?.map { it.toInt().toChar() }?.joinToString(""))
+				assertEquals(fileIdsAndResponses.first { it.first == result.id }.second, result.content?.map { it.toInt().toChar() }?.joinToString(""))
 			} })
 	}
 
 	private fun makeUrl(fileIdsAndResponses: List<Pair<String, String>>) =
-		appConfiguration.config.filestorageUrl.replace("?", "\\?") + fileIdsAndResponses.joinToString(",") { it.first }
+		appConfiguration.config.filestorageUrl + fileIdsAndResponses.joinToString(",") { it.first }
 
-	private fun mockNumberOfFilesAndPerformRequest(numberOfFiles: Int): List<FilElementDto> {
+	private fun mockNumberOfFilesAndPerformRequest(numberOfFiles: Int): List<FileData> {
 		mockFilestorageIsWorking(fileIdsAndResponses.take(numberOfFiles))
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 

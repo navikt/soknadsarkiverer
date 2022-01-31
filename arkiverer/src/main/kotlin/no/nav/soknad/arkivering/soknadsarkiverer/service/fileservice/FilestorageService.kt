@@ -1,46 +1,58 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
-import org.apache.tomcat.util.codec.binary.Base64
+import no.nav.soknad.arkivering.soknadsfillager.api.FilesApi
+import no.nav.soknad.arkivering.soknadsfillager.api.HealthApi
+import no.nav.soknad.arkivering.soknadsfillager.infrastructure.ApiClient
+import no.nav.soknad.arkivering.soknadsfillager.infrastructure.ClientException
+import no.nav.soknad.arkivering.soknadsfillager.infrastructure.Serializer.jacksonObjectMapper
+import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
-import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.stereotype.Service
-import org.springframework.web.reactive.function.client.WebClient
 
 @Service
-class FilestorageService(@Qualifier("basicWebClient") private val webClient: WebClient,
-												 private val appConfiguration: AppConfiguration,
-												 private val metrics: ArchivingMetrics
+class FilestorageService(
+	appConfiguration: AppConfiguration,
+	private val metrics: ArchivingMetrics
 ) : FileserviceInterface {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	override fun ping() = healthCheck(appConfiguration.config.filestorageHost + "/internal/ping")
-	override fun isReady() = healthCheck(appConfiguration.config.filestorageHost + "/internal/isReady")
-	private fun healthCheck(uri: String) = webClient
-		.get()
-		.uri(uri)
-		.retrieve()
-		.bodyToMono(String::class.java)
-		.block()!!
+	private val filesApi: FilesApi
+	private val healthApi: HealthApi
+
+	init {
+		jacksonObjectMapper.registerModule(JavaTimeModule())
+		ApiClient.username = appConfiguration.config.username
+		ApiClient.password = appConfiguration.config.password
+		filesApi = FilesApi(appConfiguration.config.filestorageHost)
+		healthApi = HealthApi(appConfiguration.config.filestorageHost)
+	}
+
+	override fun ping(): String {
+		healthApi.ping()
+		return "pong"
+	}
+	override fun isReady(): String {
+		healthApi.isReady()
+		return "ok"
+	}
 
 
-	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): List<FilElementDto> {
+	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): List<FileData> {
 		val timer = metrics.filestorageGetLatencyStart()
 		try {
 			val fileIds = getFileIds(data)
 			logger.info("$key: Getting files with ids: '$fileIds'")
 
-			val files = getFiles(fileIds)
+			val files = getFiles(key, fileIds)
 
-			logger.info("$key: Received ${files.size} files with a sum of ${files.sumOf { it.fil?.size ?: 0 }} bytes")
+			logger.info("$key: Received ${files.size} files with a sum of ${files.sumOf { it.content?.size ?: 0 }} bytes")
 			metrics.incGetFilestorageSuccesses()
 			return files
 
@@ -62,11 +74,12 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 	override fun deleteFilesFromFilestorage(key: String, data: Soknadarkivschema) {
 		val timer = metrics.filestorageDelLatencyStart()
 
-		val fileIds = getFileIds(data).joinToString(",")
+		val fileIds = getFileIds(data)
+			.joinToString(",")
 		try {
 
 			logger.info("$key: Calling file storage to delete '$fileIds'")
-			deleteFiles(fileIds)
+			deleteFiles(key, fileIds)
 			logger.info("$key: The files: $fileIds are deleted")
 
 			metrics.incDelFilestorageSuccesses()
@@ -81,71 +94,35 @@ class FilestorageService(@Qualifier("basicWebClient") private val webClient: Web
 	}
 
 
-	private fun getFiles(fileIds: List<String>): List<FilElementDto> {
+	private fun getFiles(key: String, fileIds: List<String>): List<FileData> {
 
-		val idChunks = fileIds.chunked(filesInOneRequestToFilestorage).map { it.joinToString(",") }
-		val files = idChunks
-			.mapNotNull { performGetCall(it) }
+		val idChunks = fileIds
+			.chunked(filesInOneRequestToFilestorage)
+			.map { it.joinToString(",") }
+
+		return idChunks
+			.map { performGetCall(key, it) }
 			.flatten()
+	}
 
-		if (fileIds.size != files.size) {
-			val fetchedFiles = files.map { it.uuid }
-			throw Exception("Unable to fetch the files with these ids: ${fileIds.filter { !fetchedFiles.contains(it) }}")
+	private fun deleteFiles(key: String, fileIds: String) {
+		filesApi.deleteFiles(fileIds, key)
+	}
+
+	private fun performGetCall(key: String, fileIds: String): List<FileData> {
+		return try {
+			filesApi.findFilesByIds(fileIds, key)
+
+		} catch (e: ClientException) {
+			val errorMsg = "Got ${e.statusCode} when requesting files '$fileIds' - response: '${e.response}'"
+
+			if (e.statusCode == HttpStatus.GONE.value())
+				throw Exception(FilesAlreadyDeletedException(errorMsg))
+			else {
+				logger.error(errorMsg, e)
+				throw e
+			}
 		}
-		return files
-	}
-
-	private fun deleteFiles(fileIds: String) {
-		val uri = appConfiguration.config.filestorageHost + appConfiguration.config.filestorageUrl + fileIds
-		val method = HttpMethod.DELETE
-		val webClient = setupWebClient(uri, method)
-
-		webClient
-			.retrieve()
-			.onStatus(
-				{ httpStatus -> httpStatus.is4xxClientError || httpStatus.is5xxServerError },
-				{ response -> response.bodyToMono(String::class.java).map { Exception("Got ${response.statusCode()} when " +
-					"requesting $method $uri - response body: '$it'") } })
-			.bodyToMono(String::class.java)
-			.block() // TODO Do we need to block?
-	}
-
-	private fun performGetCall(fileIds: String): List<FilElementDto>? {
-		val uri = appConfiguration.config.filestorageHost + appConfiguration.config.filestorageUrl + fileIds
-		val method = HttpMethod.GET
-		val webClient = setupWebClient(uri, method)
-
-		return webClient
-			.retrieve()
-			.onStatus(
-				{ httpStatus -> httpStatus.is4xxClientError || httpStatus.is5xxServerError },
-				{ response -> response.bodyToMono(String::class.java).map {
-						if (response.statusCode() == HttpStatus.GONE) {
-							FilesAlreadyDeletedException("Got ${response.statusCode()} when requesting $method $uri - " +
-								"response body: '$it'")
-						} else {
-							Exception("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'")
-						}
-					}
-				}
-			)
-			.bodyToFlux(FilElementDto::class.java)
-			.collectList()
-			.block() // TODO Do we need to block?
-	}
-
-	private fun setupWebClient(uri: String, method: HttpMethod): WebClient.RequestBodySpec {
-
-		val auth = "${appConfiguration.config.username}:${appConfiguration.config.password}"
-		val encodedAuth: ByteArray = Base64.encodeBase64(auth.toByteArray())
-		val authHeader = "Basic " + String(encodedAuth)
-
-		return webClient
-			.method(method)
-			.uri(uri)
-			.contentType(APPLICATION_JSON)
-			.accept(APPLICATION_JSON)
-			.header("Authorization", authHeader)
 	}
 
 

@@ -2,11 +2,11 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ShuttingDownException
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
+import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.io.PrintWriter
@@ -18,7 +18,7 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 											private val kafkaPublisher: KafkaPublisher) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	fun archive(key: String, data: Soknadarkivschema, files: List<FilElementDto>) {
+	fun archive(key: String, data: Soknadarkivschema, files: List<FileData>) {
 		try {
 			val startTime = System.currentTimeMillis()
 			val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
@@ -31,7 +31,7 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 		}
 	}
 
-	fun fetchFiles(key: String, data: Soknadarkivschema): List<FilElementDto> {
+	fun fetchFiles(key: String, data: Soknadarkivschema): List<FileData> {
 		return try {
 			val startTime = System.currentTimeMillis()
 			val files = filestorageService.getFilesFromFilestorage(key, data)

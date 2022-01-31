@@ -4,16 +4,14 @@ import com.google.gson.Gson
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.converter.createOpprettJournalpostRequest
-import no.nav.soknad.arkivering.soknadsarkiverer.dto.FilElementDto
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattDokumentBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattVariantBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.SoknadarkivschemaBuilder
+import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
+import java.time.*
 import java.time.format.DateTimeFormatter
 import java.util.*
 
@@ -24,7 +22,7 @@ class MessageConverterTests {
 		val tittel = "Apa bepa"
 		val skjemanummer = "NAV 11-13.06"
 		val uuid = UUID.randomUUID().toString()
-		val files = listOf(FilElementDto(uuid, "apa".toByteArray()))
+		val files = listOf(FileData(uuid, "apa".toByteArray(), OffsetDateTime.now(ZoneOffset.UTC)))
 
 		val schema = SoknadarkivschemaBuilder()
 			.withSoknadstype(Soknadstyper.SOKNAD)
@@ -54,7 +52,7 @@ class MessageConverterTests {
 		val tittel = "Apa bepa"
 		val skjemanummer = "NAV 11-13.06"
 		val uuid = UUID.randomUUID().toString()
-		val files = listOf(FilElementDto(uuid, "apa".toByteArray()))
+		val files = listOf(FileData(uuid, "apa".toByteArray(), OffsetDateTime.now(ZoneOffset.UTC)))
 
 		val schema = SoknadarkivschemaBuilder()
 			.withSoknadstype(Soknadstyper.ETTERSENDING)
@@ -88,9 +86,10 @@ class MessageConverterTests {
 		val uuid1 = UUID.randomUUID().toString()
 		val uuid2 = UUID.randomUUID().toString()
 		val uuid3 = UUID.randomUUID().toString()
+		val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
 		val files = listOf(
-			FilElementDto(uuid0, "apa".toByteArray()), FilElementDto(uuid1, "bepa".toByteArray()),
-			FilElementDto(uuid2, "cepa".toByteArray()), FilElementDto(uuid3, "depa".toByteArray())
+			FileData(uuid0, "apa".toByteArray(), createdAt), FileData(uuid1, "bepa".toByteArray(), createdAt),
+			FileData(uuid2, "cepa".toByteArray(), createdAt), FileData(uuid3, "depa".toByteArray(), createdAt)
 		)
 
 
@@ -165,7 +164,7 @@ class MessageConverterTests {
 		assertEquals(schema.mottatteDokumenter[0].mottatteVarianter[0].filnavn, joarkData.dokumenter[0].dokumentvarianter[0].filnavn)
 		assertEquals(schema.mottatteDokumenter[0].mottatteVarianter[0].filtype, joarkData.dokumenter[0].dokumentvarianter[0].filtype)
 		assertEquals(schema.mottatteDokumenter[0].mottatteVarianter[0].variantformat, joarkData.dokumenter[0].dokumentvarianter[0].variantformat)
-		assertEquals(files[0].fil, joarkData.dokumenter[0].dokumentvarianter[0].fysiskDokument)
+		assertEquals(files[0].content, joarkData.dokumenter[0].dokumentvarianter[0].fysiskDokument)
 
 
 		assertEquals(schema.mottatteDokumenter[1].tittel, joarkData.dokumenter[1].tittel)
@@ -176,12 +175,12 @@ class MessageConverterTests {
 		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[0].filnavn, joarkData.dokumenter[1].dokumentvarianter[0].filnavn)
 		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[0].filtype, joarkData.dokumenter[1].dokumentvarianter[0].filtype)
 		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[0].variantformat, joarkData.dokumenter[1].dokumentvarianter[0].variantformat)
-		assertEquals(files[1].fil, joarkData.dokumenter[1].dokumentvarianter[0].fysiskDokument)
+		assertEquals(files[1].content, joarkData.dokumenter[1].dokumentvarianter[0].fysiskDokument)
 
 		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[1].filnavn, joarkData.dokumenter[1].dokumentvarianter[1].filnavn)
 		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[1].filtype, joarkData.dokumenter[1].dokumentvarianter[1].filtype)
 		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[1].variantformat, joarkData.dokumenter[1].dokumentvarianter[1].variantformat)
-		assertEquals(files[2].fil, joarkData.dokumenter[1].dokumentvarianter[1].fysiskDokument)
+		assertEquals(files[2].content, joarkData.dokumenter[1].dokumentvarianter[1].fysiskDokument)
 
 
 		assertEquals(schema.mottatteDokumenter[2].tittel, joarkData.dokumenter[2].tittel)
@@ -192,7 +191,7 @@ class MessageConverterTests {
 		assertEquals(schema.mottatteDokumenter[2].mottatteVarianter[0].filnavn, joarkData.dokumenter[2].dokumentvarianter[0].filnavn)
 		assertEquals(schema.mottatteDokumenter[2].mottatteVarianter[0].filtype, joarkData.dokumenter[2].dokumentvarianter[0].filtype)
 		assertEquals(schema.mottatteDokumenter[2].mottatteVarianter[0].variantformat, joarkData.dokumenter[2].dokumentvarianter[0].variantformat)
-		assertEquals(files[3].fil, joarkData.dokumenter[2].dokumentvarianter[0].fysiskDokument)
+		assertEquals(files[3].content, joarkData.dokumenter[2].dokumentvarianter[0].fysiskDokument)
 	}
 
 
@@ -200,7 +199,8 @@ class MessageConverterTests {
 	fun `Several Hovedskjemas -- should throw exception`() {
 		val uuid0 = UUID.randomUUID().toString()
 		val uuid1 = UUID.randomUUID().toString()
-		val files = listOf(FilElementDto(uuid0, "apa".toByteArray()), FilElementDto(uuid1, "bepa".toByteArray()))
+		val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
+		val files = listOf(FileData(uuid0, "apa".toByteArray(), createdAt), FileData(uuid1, "bepa".toByteArray(), createdAt))
 
 		val schema = SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
@@ -227,7 +227,8 @@ class MessageConverterTests {
 	fun `No Hovedskjema -- should throw exception`() {
 		val uuid0 = UUID.randomUUID().toString()
 		val uuid1 = UUID.randomUUID().toString()
-		val files = listOf(FilElementDto(uuid0, "apa".toByteArray()), FilElementDto(uuid1, "bepa".toByteArray()))
+		val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
+		val files = listOf(FileData(uuid0, "apa".toByteArray(), createdAt), FileData(uuid1, "bepa".toByteArray(), createdAt))
 
 		val schema = SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
@@ -252,7 +253,7 @@ class MessageConverterTests {
 
 	@Test
 	fun `No MottatteDokumenter -- should throw exception`() {
-		val files = listOf(FilElementDto(UUID.randomUUID().toString(), "apa".toByteArray()))
+		val files = listOf(FileData(UUID.randomUUID().toString(), "apa".toByteArray(), OffsetDateTime.now(ZoneOffset.UTC)))
 
 		val schema = SoknadarkivschemaBuilder().build()
 
@@ -264,7 +265,7 @@ class MessageConverterTests {
 
 	@Test
 	fun `No MottatteVarianter -- should throw exception`() {
-		val files = listOf(FilElementDto(UUID.randomUUID().toString(), "apa".toByteArray()))
+		val files = listOf(FileData(UUID.randomUUID().toString(), "apa".toByteArray(), OffsetDateTime.now(ZoneOffset.UTC)))
 
 		val schema = SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
@@ -300,7 +301,8 @@ class MessageConverterTests {
 		val uuid0 = UUID.randomUUID().toString()
 		val uuid1 = UUID.randomUUID().toString()
 		val uuidNotInFileList = UUID.randomUUID().toString()
-		val files = listOf(FilElementDto(uuid0, "apa".toByteArray()), FilElementDto(uuid1, "bepa".toByteArray()))
+		val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
+		val files = listOf(FileData(uuid0, "apa".toByteArray(), createdAt), FileData(uuid1, "bepa".toByteArray(), createdAt))
 
 		val schema = SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
@@ -319,7 +321,7 @@ class MessageConverterTests {
 	@Test
 	fun `Matching file is null -- should throw exception`() {
 		val uuid = UUID.randomUUID().toString()
-		val files = listOf(FilElementDto(uuid, null))
+		val files = listOf(FileData(uuid, null, OffsetDateTime.now(ZoneOffset.UTC)))
 
 		val schema = SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
@@ -388,11 +390,12 @@ class MessageConverterTests {
 	@Test
 	fun `Real case - Ettersending - should convert correctly`() {
 		val excpeted = "NAVe 10-07.40"
+		val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
 		val files = listOf(
-			FilElementDto("43121902-305c-4b31-b9ab-581f89f8da2c", "apa".toByteArray()),
-			FilElementDto("6e8db379-91c0-4395-ad95-c72dabea421c", "apa".toByteArray()),
-			FilElementDto("31115802-706f-4cde-8392-cd19b0edc777", "apa".toByteArray()),
-			FilElementDto("7311e586-c424-4898-a6b1-a2085ecf461d", "apa".toByteArray())
+			FileData("43121902-305c-4b31-b9ab-581f89f8da2c", "apa".toByteArray(), createdAt),
+			FileData("6e8db379-91c0-4395-ad95-c72dabea421c", "apa".toByteArray(), createdAt),
+			FileData("31115802-706f-4cde-8392-cd19b0edc777", "apa".toByteArray(), createdAt),
+			FileData("7311e586-c424-4898-a6b1-a2085ecf461d", "apa".toByteArray(), createdAt)
 		)
 
 		val schema = convertJsonTilInnsendtSoknad()
