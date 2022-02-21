@@ -112,7 +112,7 @@ class FilestorageService(
 			filesApi.findFilesByIds(fileIds, key)
 
 		} catch (e: ClientException) {
-			val errorMsg = "Got ${e.statusCode} when requesting files '$fileIds' - response: '${e.response}'"
+			val errorMsg = "$key: Got ${e.statusCode} when requesting files '$fileIds' - response: '${e.response}'"
 
 			if (e.statusCode == HttpStatus.GONE.value())
 				throw Exception(FilesAlreadyDeletedException(errorMsg))
