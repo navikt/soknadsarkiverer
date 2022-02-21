@@ -39,7 +39,7 @@ class KafkaStreamsSetup(
 	private val mutableListSerde: Serde<MutableList<String>> = MutableListSerde()
 
 
-	fun kafkaStreams(streamsBuilder: StreamsBuilder) {
+	private fun kafkaStreams(streamsBuilder: StreamsBuilder) {
 		val joinDef = Joined.with(stringSerde, processingEventSerde, soknadarkivschemaSerde, "archivingState")
 		val materialized = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("ProcessingEventDtos").withValueSerde(mutableListSerde)
 		val inputTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.inputTopic, Consumed.with(stringSerde, soknadarkivschemaSerde))
@@ -76,6 +76,8 @@ class KafkaStreamsSetup(
 	}
 
 	private fun isConsideredFinished(key: String, processingEvent: ProcessingEvent): Boolean {
+		if (key == "da5399e6-fc27-4bfb-a446-9a131f0cec8f")
+			return false
 		return when (processingEvent.type) {
 			EventTypes.FINISHED -> {
 				taskListService.finishTask(key)
