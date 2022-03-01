@@ -6,12 +6,10 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
-import no.nav.soknad.arkivering.soknadsfillager.infrastructure.ServerException
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
@@ -19,10 +17,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.web.client.HttpServerErrorException
-import org.springframework.web.reactive.function.client.WebClientResponseException
 
 @ActiveProfiles("test")
 @SpringBootTest
@@ -75,15 +72,18 @@ class HealthCheckTests {
 	fun `isAlive returns Ok when application is well`() {
 		appConfiguration.state.alive = true
 
-		assertEquals("Ok", healthCheck.isAlive())
+		val response = healthCheck.isAlive()
+
+		assertEquals(ResponseEntity<String>(HttpStatus.OK), response)
 	}
 
 	@Test
 	fun `isAlive returns Status 500 when application is unwell`() {
 		appConfiguration.state.alive = false
 
-		val e = assertThrows<HttpServerErrorException> { healthCheck.isAlive() }
-		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, e.statusCode)
+		val response = healthCheck.isAlive()
+
+		assertEquals(ResponseEntity<String>("Application is not alive", HttpStatus.INTERNAL_SERVER_ERROR), response)
 	}
 
 
@@ -91,60 +91,84 @@ class HealthCheckTests {
 	fun `isReady returns Ok when application and dependencies are well`() {
 		appConfiguration.state.ready = true
 
-		assertEquals("Ready for actions", healthCheck.isReady())
+		val response = healthCheck.isReady()
+
+		assertEquals(ResponseEntity<String>(HttpStatus.OK), response)
 	}
 
 	@Test
 	fun `isReady returns Status 500 when application is unwell`() {
 		appConfiguration.state.ready = false
 
-		val e = assertThrows<HttpServerErrorException> { healthCheck.isReady() }
-		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, e.statusCode)
+		val response = healthCheck.isReady()
+
+		assertEquals(ResponseEntity<String>("Application is not ready", HttpStatus.INTERNAL_SERVER_ERROR), response)
 	}
 
 	@Test
 	fun `isReady returns Status 500 when application is stopping`() {
 		healthCheck.stop()
 
-		val e = assertThrows<HttpServerErrorException> { healthCheck.isReady() }
-		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, e.statusCode)
+		val response = healthCheck.isReady()
+
+		assertEquals(ResponseEntity<String>("Application is not ready", HttpStatus.INTERNAL_SERVER_ERROR), response)
 	}
 
 	@Test
 	fun `isReady returns Status 500 when Filestorage is unwell`() {
 		mockFilestorageIsReadyIsNotWorking()
 
-		val e = assertThrows<ServerException> { healthCheck.isReady() }
-		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.statusCode)
+		val response = healthCheck.isReady()
+
+		val expected = ResponseEntity<String>(
+			"Application is not ready: Server error : 500 Server Error",
+			HttpStatus.INTERNAL_SERVER_ERROR
+		)
+		assertEquals(expected, response)
 	}
 
 	@Test
 	fun `isReady returns Status 500 when Joark is unwell`() {
 		mockJoarkIsAliveIsNotWorking()
 
-		val e = assertThrows<WebClientResponseException.InternalServerError> { healthCheck.isReady() }
-		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, e.statusCode)
+		val response = healthCheck.isReady()
+
+		val expected = ResponseEntity<String>(
+			"Application is not ready: 500 Internal Server Error from GET http://localhost:2908/isAlive",
+			HttpStatus.INTERNAL_SERVER_ERROR
+		)
+		assertEquals(expected, response)
 	}
 
 
 	@Test
 	fun `ping returns Pong when dependencies are well`() {
-		assertEquals("pong", healthCheck.ping())
+		assertEquals(ResponseEntity<String>("pong", HttpStatus.OK), healthCheck.ping())
 	}
 
 	@Test
 	fun `ping returns Status 500 when Filestorage is unwell`() {
 		mockFilestoragePingIsNotWorking()
 
-		val e = assertThrows<ServerException> { healthCheck.ping() }
-		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.statusCode)
+		val response = healthCheck.ping()
+
+		val expected = ResponseEntity<String>(
+			"Ping failed: Server error : 500 Server Error",
+			HttpStatus.INTERNAL_SERVER_ERROR
+		)
+		assertEquals(expected, response)
 	}
 
 	@Test
 	fun `ping returns Status 500 when Joark is unwell`() {
 		mockJoarkIsAliveIsNotWorking()
 
-		val e = assertThrows<WebClientResponseException.InternalServerError> { healthCheck.isReady() }
-		assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, e.statusCode)
+		val response = healthCheck.ping()
+
+		val expected = ResponseEntity<String>(
+			"Ping failed: 500 Internal Server Error from GET http://localhost:2908/isAlive",
+			HttpStatus.INTERNAL_SERVER_ERROR
+		)
+		assertEquals(expected, response)
 	}
 }
