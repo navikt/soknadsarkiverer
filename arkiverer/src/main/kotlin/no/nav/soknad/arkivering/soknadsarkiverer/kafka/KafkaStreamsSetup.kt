@@ -76,8 +76,6 @@ class KafkaStreamsSetup(
 	}
 
 	private fun isConsideredFinished(key: String, processingEvent: ProcessingEvent): Boolean {
-		if (key == "da5399e6-fc27-4bfb-a446-9a131f0cec8f")
-			return false
 		return when (processingEvent.type) {
 			EventTypes.FINISHED -> {
 				taskListService.finishTask(key)
@@ -99,7 +97,7 @@ class KafkaStreamsSetup(
 	}
 
 	private fun Soknadarkivschema.print(): String {
-		val fnr = "***" // Do not print fnr to log
+		val fnr = "**fnr can be found in Soknadsmottaker's secure logs**"
 		val a = Soknadarkivschema(this.behandlingsid, fnr, this.arkivtema, this.innsendtDato, this.soknadstype, this.mottatteDokumenter)
 		return a.toString()
 	}
