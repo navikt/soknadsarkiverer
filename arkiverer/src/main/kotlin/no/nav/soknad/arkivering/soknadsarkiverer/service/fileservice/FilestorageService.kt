@@ -77,9 +77,9 @@ class FilestorageService(
 		val fileIds = getFileIds(data)
 		try {
 
-			logger.info("$key: Calling file storage to delete '$fileIds'")
+			logger.info("$key: Calling file storage to delete $fileIds")
 			deleteFiles(key, fileIds)
-			logger.info("$key: The files: $fileIds are deleted")
+			logger.info("$key: Deleted these files: $fileIds")
 
 			metrics.incDelFilestorageSuccesses()
 		} catch (e: Exception) {
