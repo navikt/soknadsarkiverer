@@ -26,10 +26,13 @@ class TaskListServiceTests {
 
 	private val taskListService = TaskListService(archiverService, AppConfiguration(), scheduler, metrics, kafkaPublisher)
 
+	private val soknadarkivschema = createSoknadarkivschema()
+
 	@AfterEach
 	fun teardown() {
 		metrics.unregister()
 	}
+
 
 	@Test
 	fun `No tasks, can list`() {
@@ -38,7 +41,7 @@ class TaskListServiceTests {
 
 	@Test
 	fun `Can add task`() {
-		taskListService.addOrUpdateTask(UUID.randomUUID().toString(), createSoknadarkivschema(), EventTypes.RECEIVED)
+		taskListService.addOrUpdateTask(UUID.randomUUID().toString(), soknadarkivschema, EventTypes.RECEIVED)
 
 		assertEquals(1, taskListService.listTasks().size)
 	}
@@ -46,7 +49,7 @@ class TaskListServiceTests {
 	@Test
 	fun `Newly added tasks are started after a short delay`() {
 		val key = UUID.randomUUID().toString()
-		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), EventTypes.RECEIVED)
+		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.RECEIVED)
 		assertEquals(0, getTaskListLock(key).availablePermits())
 
 		verifyTaskIsRunning(key)
@@ -57,15 +60,15 @@ class TaskListServiceTests {
 		val originalCount = 0
 		val key = UUID.randomUUID().toString()
 
-		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), EventTypes.RECEIVED)
+		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.RECEIVED)
 		assertEquals(1, taskListService.listTasks().size)
 		assertEquals(originalCount, getTaskListCount(key))
 
-		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), EventTypes.STARTED)
+		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.STARTED)
 		assertEquals(1, taskListService.listTasks().size)
 		assertEquals(originalCount, getTaskListCount(key))
 
-		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), EventTypes.ARCHIVED)
+		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.ARCHIVED)
 		assertEquals(1, taskListService.listTasks().size)
 		assertEquals(originalCount, getTaskListCount(key))
 	}
@@ -75,7 +78,7 @@ class TaskListServiceTests {
 		assertTrue(taskListService.listTasks().isEmpty())
 
 		val key = UUID.randomUUID().toString()
-		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), EventTypes.RECEIVED)
+		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.RECEIVED)
 		assertFalse(taskListService.listTasks().isEmpty())
 
 		taskListService.finishTask(key)
@@ -96,7 +99,7 @@ class TaskListServiceTests {
 		val key = UUID.randomUUID().toString()
 		runScheduledTaskOnScheduling()
 
-		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), EventTypes.RECEIVED)
+		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.RECEIVED)
 		TimeUnit.SECONDS.sleep(startUpSecondsForTest + 2)
 
 		verify(archiverService, timeout(10_000).times(1)).archive(eq(key), any(), any())
@@ -111,7 +114,7 @@ class TaskListServiceTests {
 		runScheduledTaskOnScheduling()
 		whenever(archiverService.archive(eq(key), any(), any())).thenThrow(RuntimeException("Mocked exception"))
 
-		taskListService.addOrUpdateTask(key, createSoknadarkivschema(), EventTypes.RECEIVED)
+		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.RECEIVED)
 
 		loopAndVerify(1, { getTaskListCount(key) })
 		assertFalse(taskListService.listTasks().isEmpty())
