@@ -185,6 +185,7 @@ jobs:
           RESOURCE: .nais/nais.yml
           DRY_RUN: false
           IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}
+
   deploy-topics-dev:
     name: Deploy topics to dev
     if: github.ref == 'refs/heads/aiven'
@@ -195,4 +196,4 @@ jobs:
         env:
           APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
           CLUSTER: dev-gcp
-          RESOURCE: .nais/topics/config-soknadinnsending-topic-dev.yml,.nais/topics/config-metrics-topic-dev.yml,.nais/topics/config-soknadinnsending-topic-loadtests.yml,.nais/topics/config-metrics-topic-loadtests.yml
+          RESOURCE: .nais/topics/config-messages-topic-dev.yml,.nais/topics/config-metrics-topic-dev.yml,.nais/topics/config-processingeventlog-topic-dev.yml,.nais/topics/config-soknadinnsending-topic-dev.yml,.nais/topics/config-messages-topic-loadtests.yml,.nais/topics/config-metrics-topic-loadtests.yml,.nais/topics/config-processingeventlog-topic-loadtests.yml,.nais/topics/config-soknadinnsending-topic-loadtests.yml

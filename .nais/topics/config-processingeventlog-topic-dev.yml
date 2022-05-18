@@ -1,23 +1,23 @@
 apiVersion: kafka.nais.io/v1
 kind: Topic
 metadata:
-  name: privat-soknadinnsending-metrics-v1
+  name: privat-soknadinnsending-processingeventlog-v1-dev
   namespace: team-soknad
   labels:
     team: team-soknad
 spec:
-  pool: nav-prod
+  pool: nav-dev
   config:
     cleanupPolicy: delete
     minimumInSyncReplicas: 2
     partitions: 1
     replication: 3
     retentionBytes: -1  # -1 means unlimited
-    retentionHours: 72
+    retentionHours: 336
   acl:
     - team: team-soknad
-      application: soknadsmottaker
+      application: soknadsarkiverer
       access: readwrite
     - team: team-soknad
-      application: soknadsarkiverer
+      application: innsending-system-tests
       access: read
