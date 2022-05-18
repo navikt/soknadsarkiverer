@@ -330,7 +330,7 @@ private class TestClock : Clock() {
  */
 private fun kafkaProperties() = Properties().also {
 	it[ConsumerConfig.GROUP_ID_CONFIG] = kafkaConfig().groupId
-	it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig().servers
+	it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig().kafkaBrokers
 	it[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
 	it[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
 }

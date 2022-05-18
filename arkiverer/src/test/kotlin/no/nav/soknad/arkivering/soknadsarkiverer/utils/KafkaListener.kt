@@ -70,7 +70,7 @@ class KafkaListener(private val kafkaConfig: AppConfiguration.KafkaConfig) {
 	private fun kafkaConfig() = Properties().also {
 		it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = kafkaConfig.schemaRegistryUrl
 		it[StreamsConfig.APPLICATION_ID_CONFIG] = "soknadarkiverer-tests"
-		it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig.servers
+		it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig.kafkaBrokers
 		it[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = Serdes.StringSerde::class.java
 		it[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = SpecificAvroSerde::class.java
 		it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = LogAndContinueExceptionHandler::class.java

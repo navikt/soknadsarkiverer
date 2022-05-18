@@ -35,6 +35,7 @@ spec:
     - "https://soknadsarkiverer-q1.dev.intern.nav.no"
   kafka:
     streams: true
+    pool: nav-dev
   azure:
     application:
       enabled: true
@@ -58,32 +59,32 @@ spec:
         kvPath: /kv/preprod/fss/soknadsarkiverer/environment
 
   env:
-    - name: KAFKA_BOOTSTRAP_SERVERS
-      value: b27apvl00045.preprod.local:8443,b27apvl00046.preprod.local:8443,b27apvl00047.preprod.local:8443
-    - name: SCHEMA_REGISTRY_URL
-      value: https://kafka-schema-registry.nais.preprod.local
+    #- name: KAFKA_BOOTSTRAP_SERVERS
+    #  value: b27apvl00045.preprod.local:8443,b27apvl00046.preprod.local:8443,b27apvl00047.preprod.local:8443
+    #- name: SCHEMA_REGISTRY_URL
+    #  value: https://kafka-schema-registry.nais.preprod.local
     - name: KAFKA_SECURITY
       value: 'TRUE'
-    - name: KAFKA_SECPROT
-      value: SASL_SSL
-    - name: KAFKA_SASLMEC
-      value: PLAIN
+    #- name: KAFKA_SECPROT
+    #  value: SASL_SSL
+    #- name: KAFKA_SASLMEC
+    #  value: PLAIN
     - name: SPRING_PROFILES_ACTIVE
       value: dev
     - name: KAFKA_INPUT_TOPIC
-      value: privat-soknadInnsendt-v1-q1
+      value: privat-soknadinnsending-v1-dev
     - name: KAFKA_PROCESSING_TOPIC
-      value: privat-soknadInnsendt-processingEventLog-v1-q1
+      value: privat-soknadinnsending-processingeventlog-v1-dev
     - name: KAFKA_MESSAGE_TOPIC
-      value: privat-soknadInnsendt-messages-v1-q1
+      value: privat-soknadinnsending-messages-v1-dev
     - name: KAFKA_METRICS_TOPIC
-      value: privat-soknadInnsendt-metrics-v1-q1
+      value: privat-soknadinnsending-metrics-v1-dev
     - name: KAFKA_GROUPID
       value: soknadsarkiverer-groupid-q1
     - name: FILESTORAGE_HOST
-      value: https://soknadsfillager-q1.dev.intern.nav.no
+      value: https://soknadsfillager-gcp.dev.intern.nav.no
     - name: JOARK_HOST
-      value: https://dokarkiv-q1.dev.adeo.no
+      value: https://dokarkiv.dev-fss-pub.nais.io
     - name: BOOTSTRAPPING_TIMEOUT
       value: "0"
     - name: DOKARKIV_SCOPE

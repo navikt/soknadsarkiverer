@@ -44,5 +44,5 @@ class ContainerizedKafka : Closeable {
 	@Primary
 	@Bean
 	fun kafkaAppConfiguration() =
-		AppConfiguration(kafkaConfig = AppConfiguration.KafkaConfig(servers = kafkaContainer.bootstrapServers))
+		AppConfiguration(kafkaConfig = AppConfiguration.KafkaConfig(kafkaBrokers = kafkaContainer.bootstrapServers))
 }

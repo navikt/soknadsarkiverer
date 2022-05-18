@@ -33,7 +33,6 @@ spec:
       memory: 2Gi
   ingresses:
     - "https://soknadsarkiverer.intern.nav.no"
-    - "https://soknadsarkiverer.prod-fss.nais.io"
   azure:
     application:
       enabled: true
@@ -75,7 +74,7 @@ spec:
     - name: FILESTORAGE_HOST
       value: https://soknadsfillager.intern.nav.no
     - name: JOARK_HOST
-      value: https://dokarkiv.nais.adeo.no
+      value: https://dokarkiv.prod-fss-pub.nais.io
     - name: BOOTSTRAPPING_TIMEOUT
       value: "0"
     - name: DOKARKIV_SCOPE

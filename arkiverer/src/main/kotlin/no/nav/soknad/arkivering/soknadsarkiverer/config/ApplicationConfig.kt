@@ -64,12 +64,17 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 	data class KafkaConfig(
 		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "KAFKA_USERNAME".configProperty()),
 		val password: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "KAFKA_PASSWORD".configProperty()),
-		val servers: String = readFileAsText("/var/run/secrets/nais.io/kv/kafkaBootstrapServers", "KAFKA_BOOTSTRAP_SERVERS".configProperty()),
-		val schemaRegistryUrl: String = "SCHEMA_REGISTRY_URL".configProperty(),
+		val kafkaBrokers: String = "KAFKA_BROKERS".configProperty(),
+		val schemaRegistryUrl: String = "KAFKA_SCHEMA_REGISTRY".configProperty(),
 		val secure: String = "KAFKA_SECURITY".configProperty(),
-		val protocol: String = "KAFKA_SECPROT".configProperty(), // SASL_PLAINTEXT | SASL_SSL
-		val salsmec: String = "KAFKA_SASLMEC".configProperty(), // PLAIN
-		val saslJaasConfig: String = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"$username\" password=\"$password\";",
+		val protocol: String = "SSL", // SASL_PLAINTEXT | SASL_SSL
+		val keyStorePath: String = "KAFKA_KEYSTORE_PATH".configProperty(),
+		val keyStorePassword: String = "KAFKA_CREDSTORE_PASSWORD".configProperty(),
+		val trustStorePath: String = "KAFKA_TRUSTSTORE_PATH".configProperty(),
+		val trustStorePassword: String = "KAFKA_CREDSTORE_PASSWORD".configProperty(),
+		val keystoreType: String = "PKCS12",
+		//val salsmec: String = "KAFKA_SASLMEC".configProperty(), // PLAIN
+		//val saslJaasConfig: String = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"$username\" password=\"$password\";",
 
 		val inputTopic: String = "KAFKA_INPUT_TOPIC".configProperty(),
 		val processingTopic: String = "KAFKA_PROCESSING_TOPIC".configProperty(),

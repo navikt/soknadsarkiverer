@@ -8,7 +8,7 @@ import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.apache.kafka.common.config.SaslConfigs
+import org.apache.kafka.common.config.SslConfigs.*
 import org.apache.kafka.common.serialization.Deserializer
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.slf4j.LoggerFactory
@@ -114,18 +114,26 @@ abstract class KafkaRecordConsumer<T, R>(
 
 
 	private fun kafkaConfig(valueDeserializer: Deserializer<T>) = Properties().also {
-		it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
+		it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] =  appConfiguration.kafkaConfig.schemaRegistryUrl
 		it[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
 		it[ConsumerConfig.GROUP_ID_CONFIG] = kafkaGroupId
 		it[ConsumerConfig.MAX_POLL_RECORDS_CONFIG] = 5000
-		it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers
+		it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.kafkaBrokers
 		it[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
 		it[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = valueDeserializer::class.java
 
 		if (appConfiguration.kafkaConfig.secure == "TRUE") {
 			it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = appConfiguration.kafkaConfig.protocol
-			it[SaslConfigs.SASL_JAAS_CONFIG] = appConfiguration.kafkaConfig.saslJaasConfig
-			it[SaslConfigs.SASL_MECHANISM] = appConfiguration.kafkaConfig.salsmec
+			//it[SSL_TRUSTSTORE_TYPE_CONFIG] = "jks"
+			it[SSL_KEYSTORE_TYPE_CONFIG] = "PKCS12"
+			it[SSL_TRUSTSTORE_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
+			it[SSL_KEYSTORE_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
+			it[SSL_KEY_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
+			it[SSL_TRUSTSTORE_LOCATION_CONFIG] =appConfiguration.kafkaConfig.trustStorePath
+			it[SSL_KEYSTORE_LOCATION_CONFIG] =appConfiguration.kafkaConfig.keyStorePath
+			//it[SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG] =  ""
+			//it[SaslConfigs.SASL_JAAS_CONFIG] = appConfiguration.kafkaConfig.saslJaasConfig
+			//it[SaslConfigs.SASL_MECHANISM] = appConfiguration.kafkaConfig.salsmec
 		}
 	}
 
