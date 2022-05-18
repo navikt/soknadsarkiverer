@@ -74,10 +74,10 @@ no.nav.security.jwt:
   client:
     registration:
       soknadsarkiverer:
-        token-endpoint-url: ${TOKENENDPOINTURL}
-        grant-type: ${GRANTTYPE}
-        scope: ${SCOPE}
+        token-endpoint-url: ${AZURE_OPENID_CONFIG_TOKEN_ENDPOINT}
+        grant-type: client_credentials
+        scope: ${DOKARKIV_SCOPE}
         authentication:
-          client-id: ${CLIENTID}
-          client-secret: ${CLIENTSECRET}
-          client-auth-method: ${CLIENTAUTHMETHOD}
+          client-id: ${AZURE_APP_CLIENT_ID}
+          client-secret: ${AZURE_APP_CLIENT_SECRET}
+          client-auth-method: client_secret_basic

@@ -32,36 +32,28 @@ spec:
       cpu: 1000m
       memory: 2Gi
   ingresses:
-    - "https://soknadsarkiverer-q1.dev.intern.nav.no"
-  kafka:
-    streams: true
+    - "https://soknadsarkiverer.intern.nav.no"
+    - "https://soknadsarkiverer.prod-fss.nais.io"
   azure:
     application:
       enabled: true
-  accessPolicy:
-    inbound:
-      rules:
-        - application: soknadsadmins
-    outbound:
-      rules:
-        - application: soknadsfillager
   vault:
     enabled: true
     paths:
       - mountPath: /var/run/secrets/nais.io/serviceuser
-        kvPath: /serviceuser/data/dev/srvsoknadarkiverer
+        kvPath: /serviceuser/data/prod/srvsoknadarkiverer
       - mountPath: /var/run/secrets/nais.io/kv
-        kvPath: /kv/preprod/fss/soknadsarkiverer/default
+        kvPath: /kv/prod/fss/soknadsarkiverer/default
       - mountPath: /secrets/innsending-data
         kvPath: secret/team-soknad/innsending/basicauth
       - mountPath: /var/run/secrets/nais.io/vault
-        kvPath: /kv/preprod/fss/soknadsarkiverer/environment
+        kvPath: /kv/prod/fss/soknadsarkiverer/environment
 
   env:
     - name: KAFKA_BOOTSTRAP_SERVERS
-      value: b27apvl00045.preprod.local:8443,b27apvl00046.preprod.local:8443,b27apvl00047.preprod.local:8443
+      value: SASL_SSL://a01apvl00145.adeo.no:8443,SASL_SSL://a01apvl00146.adeo.no:8443,SASL_SSL://a01apvl00147.adeo.no:8443,SASL_SSL://a01apvl00149.adeo.no:8443
     - name: SCHEMA_REGISTRY_URL
-      value: https://kafka-schema-registry.nais.preprod.local
+      value: https://kafka-schema-registry.nais.adeo.no
     - name: KAFKA_SECURITY
       value: 'TRUE'
     - name: KAFKA_SECPROT
@@ -69,23 +61,22 @@ spec:
     - name: KAFKA_SASLMEC
       value: PLAIN
     - name: SPRING_PROFILES_ACTIVE
-      value: dev
+      value: prod
     - name: KAFKA_INPUT_TOPIC
-      value: privat-soknadInnsendt-v1-q1
+      value: privat-soknadInnsendt-v1
     - name: KAFKA_PROCESSING_TOPIC
-      value: privat-soknadInnsendt-processingEventLog-v1-q1
+      value: privat-soknadInnsendt-processingEventLog-v1
     - name: KAFKA_MESSAGE_TOPIC
-      value: privat-soknadInnsendt-messages-v1-q1
+      value: privat-soknadInnsendt-messages-v1
     - name: KAFKA_METRICS_TOPIC
-      value: privat-soknadInnsendt-metrics-v1-q1
+      value: privat-soknadInnsendt-metrics-v1
     - name: KAFKA_GROUPID
-      value: soknadsarkiverer-groupid-q1
+      value: soknadsarkiverer-groupid-p
     - name: FILESTORAGE_HOST
-      value: https://soknadsfillager-q1.dev.intern.nav.no
+      value: https://soknadsfillager.intern.nav.no
     - name: JOARK_HOST
-      value: https://dokarkiv-q1.dev.adeo.no
+      value: https://dokarkiv.nais.adeo.no
     - name: BOOTSTRAPPING_TIMEOUT
       value: "0"
     - name: DOKARKIV_SCOPE
-      value: api://dev-fss.teamdokumenthandtering.dokarkiv-q1/.default
-
+      value: api://dev-fss.teamdokumenthandtering.dokarkiv/.default

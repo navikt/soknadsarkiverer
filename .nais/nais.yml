@@ -34,6 +34,9 @@ spec:
   ingresses:
     - "https://soknadsarkiverer.intern.nav.no"
     - "https://soknadsarkiverer.prod-fss.nais.io"
+  azure:
+    application:
+      enabled: true
   vault:
     enabled: true
     paths:
