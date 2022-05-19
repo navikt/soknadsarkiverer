@@ -33,7 +33,7 @@ jobs:
         env:
           GITHUB_USERNAME: x-access-token
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: mvn install --file pom.xml
+        run: mvn -Dmaven.test.skip=true install --file pom.xml
       - name: Create Docker tag
         env:
           NAME: soknadsarkiverer
@@ -149,7 +149,7 @@ jobs:
           APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
           PRINT_PAYLOAD: true
           CLUSTER: dev-gcp
-          RESOURCE: .nais/preprod-q1.yml
+          RESOURCE: .nais/nais-preprod.yml
           DRY_RUN: false
           IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}
 
