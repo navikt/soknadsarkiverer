@@ -1,7 +1,7 @@
 apiVersion: "nais.io/v1alpha1"
 kind: "Application"
 metadata:
-  name: soknadsarkiverer
+  name: {{appname}}
   namespace: team-soknad
   labels:
     team: team-soknad
@@ -32,7 +32,7 @@ spec:
       cpu: 1000m
       memory: 2Gi
   ingresses:
-    - "https://soknadsarkiverer-q1.dev.intern.nav.no"
+    - {{ingress}}
   kafka:
     streams: true
     pool: nav-dev
@@ -45,39 +45,32 @@ spec:
         - application: soknadsadmins
     outbound:
       rules:
-        - application: soknadsfillager
+      {{#each outbound}}
+        - application: "{{this}}"
+      {{/each}}
   envFrom:
     - secret: soknadsarkiver-google-secret
     - secret: shared-innsending-secret
   env:
-    #- name: KAFKA_BOOTSTRAP_SERVERS
-    #  value: b27apvl00045.preprod.local:8443,b27apvl00046.preprod.local:8443,b27apvl00047.preprod.local:8443
-    #- name: SCHEMA_REGISTRY_URL
-    #  value: https://kafka-schema-registry.nais.preprod.local
     - name: KAFKA_SECURITY
       value: 'TRUE'
-    #- name: KAFKA_SECPROT
-    #  value: SASL_SSL
-    #- name: KAFKA_SASLMEC
-    #  value: PLAIN
     - name: SPRING_PROFILES_ACTIVE
       value: dev
     - name: KAFKA_INPUT_TOPIC
-      value: privat-soknadinnsending-v1-dev
+      value: {{kafka-main-topic}}
     - name: KAFKA_PROCESSING_TOPIC
-      value: privat-soknadinnsending-processingeventlog-v1-dev
+      value: {{kafka-processingeventlog-topic}}
     - name: KAFKA_MESSAGE_TOPIC
-      value: privat-soknadinnsending-messages-v1-dev
+      value: {{kafka-message-topic}}
     - name: KAFKA_METRICS_TOPIC
-      value: privat-soknadinnsending-metrics-v1-dev
+      value: {{kafka-metrics-topic}}
     - name: KAFKA_GROUPID
-      value: soknadsarkiverer-groupid-q1
+      value: {{kafka-groupid}}
     - name: FILESTORAGE_HOST
       value: https://soknadsfillager-gcp.dev.intern.nav.no
     - name: JOARK_HOST
-      value: https://dokarkiv.dev-fss-pub.nais.io
+      value: {{joark-host}}
     - name: BOOTSTRAPPING_TIMEOUT
       value: "0"
     - name: DOKARKIV_SCOPE
       value: api://dev-fss.teamdokumenthandtering.dokarkiv-q1/.default
-
