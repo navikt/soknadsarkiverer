@@ -150,6 +150,7 @@ jobs:
           PRINT_PAYLOAD: true
           CLUSTER: dev-gcp
           RESOURCE: .nais/nais-preprod.yml
+          VARS: .nais/config-preprod.json
           DRY_RUN: false
           IMAGE: docker.pkg.github.com/${{ github.repository }}/soknadsarkiverer:${{env.TAG}}
 
