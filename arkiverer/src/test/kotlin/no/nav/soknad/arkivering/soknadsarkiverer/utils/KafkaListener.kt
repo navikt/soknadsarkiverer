@@ -8,6 +8,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.common.config.SaslConfigs
+import org.apache.kafka.common.config.SslConfigs
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.StreamsBuilder
@@ -78,8 +79,12 @@ class KafkaListener(private val kafkaConfig: AppConfiguration.KafkaConfig) {
 
 		if (kafkaConfig.secure == "TRUE") {
 			it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = kafkaConfig.protocol
-			it[SaslConfigs.SASL_JAAS_CONFIG] = kafkaConfig.saslJaasConfig
-			it[SaslConfigs.SASL_MECHANISM] = kafkaConfig.salsmec
+			it[SslConfigs.SSL_KEYSTORE_TYPE_CONFIG] = "PKCS12"
+			it[SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG] = kafkaConfig.keyStorePassword
+			it[SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG] = kafkaConfig.keyStorePassword
+			it[SslConfigs.SSL_KEY_PASSWORD_CONFIG] = kafkaConfig.keyStorePassword
+			it[SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG] = kafkaConfig.trustStorePath
+			it[SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG] = kafkaConfig.keyStorePath
 		}
 	}
 

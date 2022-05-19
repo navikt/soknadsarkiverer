@@ -87,7 +87,6 @@ class WebClientConfig(private val appConfiguration: AppConfiguration) {
 		logger.info("Properties.resourceUrl = '${properties.resourceUrl}'")
 		val clientSecret = when {
 			(properties.authentication?.clientSecret == null || properties.authentication?.clientSecret == "") -> "MISSING"
-			(properties.authentication.clientSecret == appConfiguration.kafkaConfig.password) -> "xxxx"
 			else -> properties.authentication.clientSecret.substring(0, 2)
 		}
 		logger.info("Properties.authentication.clientSecret = '$clientSecret'")

@@ -11,6 +11,7 @@ import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.config.SaslConfigs
+import org.apache.kafka.common.config.SslConfigs
 import org.apache.kafka.common.serialization.Serde
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.common.utils.Bytes
@@ -133,8 +134,13 @@ class KafkaStreamsSetup(
 
 		if (appConfiguration.kafkaConfig.secure == "TRUE") {
 			it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = appConfiguration.kafkaConfig.protocol
-			it[SaslConfigs.SASL_JAAS_CONFIG] = appConfiguration.kafkaConfig.saslJaasConfig
-			it[SaslConfigs.SASL_MECHANISM] = appConfiguration.kafkaConfig.salsmec
+			it[SslConfigs.SSL_KEYSTORE_TYPE_CONFIG] = "PKCS12"
+			it[SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
+			it[SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
+			it[SslConfigs.SSL_KEY_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
+			it[SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.trustStorePath
+			it[SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.keyStorePath
+
 		}
 
 		it[KAFKA_PUBLISHER] = kafkaPublisher
