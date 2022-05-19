@@ -21,7 +21,6 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_KEYSTORE_PATH" to "",
 	"KAFKA_CREDSTORE_PASSWORD" to "",
 	"KAFKA_TRUSTSTORE_PATH" to "",
-	"KAFKA_CREDSTORE_PASSWORD" to "",
 
 	"BOOTSTRAPPING_TIMEOUT" to 120.toString(),
 	"DELAY_BEFORE_KAFKA_INITIALIZATION" to 5.toString(),

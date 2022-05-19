@@ -336,10 +336,9 @@ private fun kafkaProperties() = Properties().also {
 }
 
 private fun kafkaConfig() =	AppConfiguration.KafkaConfig(
-	"username", "password", "localhost:17171",	"localhost:16868", "FALSE",
-	"SASL_PLAINTEXT", "PLAIN", "", topic, "processingTopic",
-	"messageTopic", "metricsTopic", "0", "0",
-	"testGroupId"
+	kafkaBrokers = "localhost:17171", schemaRegistryUrl = "localhost:16868", secure = "FALSE", inputTopic = topic, processingTopic = "processingTopic",
+	messageTopic = "messageTopic", metricsTopic =  "metricsTopic",bootstrappingTimeout = "0", delayBeforeKafkaInitialization = "0",
+ 	groupId = "testGroupId"
 )
 
 private typealias Time = Long
