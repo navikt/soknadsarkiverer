@@ -46,17 +46,6 @@ spec:
     outbound:
       rules:
         - application: soknadsfillager
-  vault:
-    enabled: true
-    paths:
-      - mountPath: /var/run/secrets/nais.io/serviceuser
-        kvPath: /serviceuser/data/dev/srvsoknadarkiverer
-      - mountPath: /var/run/secrets/nais.io/kv
-        kvPath: /kv/preprod/fss/soknadsarkiverer/default
-      - mountPath: /secrets/innsending-data
-        kvPath: secret/team-soknad/innsending/basicauth
-      - mountPath: /var/run/secrets/nais.io/vault
-        kvPath: /kv/preprod/fss/soknadsarkiverer/environment
   envFrom:
     - secret: soknadsarkiver-google-secret
     - secret: shared-innsending-secret

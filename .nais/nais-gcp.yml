@@ -36,29 +36,20 @@ spec:
   azure:
     application:
       enabled: true
-  vault:
-    enabled: true
-    paths:
-      - mountPath: /var/run/secrets/nais.io/serviceuser
-        kvPath: /serviceuser/data/prod/srvsoknadarkiverer
-      - mountPath: /var/run/secrets/nais.io/kv
-        kvPath: /kv/prod/fss/soknadsarkiverer/default
-      - mountPath: /secrets/innsending-data
-        kvPath: secret/team-soknad/innsending/basicauth
-      - mountPath: /var/run/secrets/nais.io/vault
-        kvPath: /kv/prod/fss/soknadsarkiverer/environment
-
+  envFrom:
+    - secret: soknadsarkiver-google-secret
+    - secret: shared-innsending-secret
   env:
-    - name: KAFKA_BOOTSTRAP_SERVERS
-      value: SASL_SSL://a01apvl00145.adeo.no:8443,SASL_SSL://a01apvl00146.adeo.no:8443,SASL_SSL://a01apvl00147.adeo.no:8443,SASL_SSL://a01apvl00149.adeo.no:8443
-    - name: SCHEMA_REGISTRY_URL
-      value: https://kafka-schema-registry.nais.adeo.no
+    #- name: KAFKA_BOOTSTRAP_SERVERS
+    #  value: SASL_SSL://a01apvl00145.adeo.no:8443,SASL_SSL://a01apvl00146.adeo.no:8443,SASL_SSL://a01apvl00147.adeo.no:8443,SASL_SSL://a01apvl00149.adeo.no:8443
+    #- name: SCHEMA_REGISTRY_URL
+    #  value: https://kafka-schema-registry.nais.adeo.no
     - name: KAFKA_SECURITY
       value: 'TRUE'
-    - name: KAFKA_SECPROT
-      value: SASL_SSL
-    - name: KAFKA_SASLMEC
-      value: PLAIN
+    #- name: KAFKA_SECPROT
+    #  value: SASL_SSL
+    #- name: KAFKA_SASLMEC
+    #  value: PLAIN
     - name: SPRING_PROFILES_ACTIVE
       value: prod
     - name: KAFKA_INPUT_TOPIC
