@@ -60,16 +60,9 @@ spring:
       on-profile: spring | default | docker | dev | prod
 
 no.nav.security.jwt:
-  expirythreshold: ${EXPIRYTHRESHOLD} #threshold in minutes until token expires
-
-  issuer.isso:
-      discoveryurl: ${DISCOVERYURL}
-      accepted_audience: ${ACCEPTEDAUDIENCE}
-      cookie_name: ${COOKIENAME}
   issuer.azuread:
       discoveryurl: ${AZURE_WELL_KNOWN_URL}
       accepted_audience: ${ACCEPTEDAUDIENCE}, api://${ACCEPTEDAUDIENCE}
-      proxyurl: http://webproxy-nais.nav.no:8088
       cookie_name: azure_token
   client:
     registration:
