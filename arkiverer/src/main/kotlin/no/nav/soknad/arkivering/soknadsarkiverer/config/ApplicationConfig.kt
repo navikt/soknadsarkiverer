@@ -17,6 +17,12 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_BROKERS" to "localhost:29092",
 	"KAFKA_SECURITY" to "FALSE",
 	"KAFKA_GROUPID" to "soknadsarkiverer-group-defaultid",
+
+	"KAFKA_KEYSTORE_PATH" to "",
+	"KAFKA_CREDSTORE_PASSWORD" to "",
+	"KAFKA_TRUSTSTORE_PATH" to "",
+	"KAFKA_CREDSTORE_PASSWORD" to "",
+
 	"BOOTSTRAPPING_TIMEOUT" to 120.toString(),
 	"DELAY_BEFORE_KAFKA_INITIALIZATION" to 5.toString(),
 	"KAFKA_INPUT_TOPIC" to kafkaInputTopic,
