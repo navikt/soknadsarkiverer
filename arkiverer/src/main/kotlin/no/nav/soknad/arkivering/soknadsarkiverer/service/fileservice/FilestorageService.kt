@@ -28,8 +28,8 @@ class FilestorageService(
 
 	init {
 		jacksonObjectMapper.registerModule(JavaTimeModule())
-		ApiClient.username = appConfiguration.config.username
-		ApiClient.password = appConfiguration.config.password
+		ApiClient.username = appConfiguration.config.innsendingUsername
+		ApiClient.password = appConfiguration.config.innsendingPassword
 		filesApi = FilesApi(appConfiguration.config.filestorageHost)
 		healthApi = HealthApi(appConfiguration.config.filestorageHost)
 	}

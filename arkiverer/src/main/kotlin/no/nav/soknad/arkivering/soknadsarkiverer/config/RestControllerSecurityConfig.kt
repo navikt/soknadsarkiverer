@@ -36,8 +36,8 @@ class RestControllerSecurityConfig(private val config: AppConfiguration) : WebSe
 	@Autowired
 	fun configureGlobal(auth: AuthenticationManagerBuilder) {
 		auth.inMemoryAuthentication()
-			.withUser(config.config.username)
-			.password("{noop}${config.config.password}")
+			.withUser(config.config.innsendingUsername)
+			.password("{noop}${config.config.innsendingPassword}")
 			.roles("USER", "ADMIN")
 			.and()
 			.withUser(config.config.adminUser)

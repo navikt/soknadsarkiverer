@@ -66,9 +66,11 @@ abstract class KafkaRecordConsumer<T, R>(
 			if (shouldStop(newRecords))
 				break
 			if (hasTimedOut(timestampOfLastSuccessfulPoll, hasReadRecords)) {
-				logger.warn("For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records " +
-					"${clock.currentTimeMillis() - startTime} ms after starting. Has read ${getRecords().size} records. " +
-					"Aborting consumption.")
+				logger.warn(
+					"For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records " +
+						"${clock.currentTimeMillis() - startTime} ms after starting. Has read ${getRecords().size} records. " +
+						"Aborting consumption."
+				)
 				break
 			}
 			if (newRecords.isEmpty())
@@ -90,9 +92,9 @@ abstract class KafkaRecordConsumer<T, R>(
 
 		return (
 			shouldEnforceTimeout && hasTimedOut ||
-			!hasReadRecords && hasTimedOutWithoutRecords ||
-			hasReadRecords && hasTimedOutWithNoNewRecords
-		)
+				!hasReadRecords && hasTimedOutWithoutRecords ||
+				hasReadRecords && hasTimedOutWithNoNewRecords
+			)
 	}
 
 	private fun retrieveKafkaRecords(kafkaConsumer: KafkaConsumer<Key, T>): List<ConsumerRecord<Key, T>> {
@@ -106,15 +108,17 @@ abstract class KafkaRecordConsumer<T, R>(
 			if (record.key() != null && record.value() != null)
 				records.add(record)
 			else
-				logger.error("For ${kafkaConsumer.assignment()}: Record had null attributes. " +
-					"Key='${record.key()}', value ${if (record.value() == null) "is" else "is not"} null")
+				logger.error(
+					"For ${kafkaConsumer.assignment()}: Record had null attributes. " +
+						"Key='${record.key()}', value ${if (record.value() == null) "is" else "is not"} null"
+				)
 		}
 		return records
 	}
 
 
 	private fun kafkaConfig(valueDeserializer: Deserializer<T>) = Properties().also {
-		it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] =  appConfiguration.kafkaConfig.schemaRegistryUrl
+		it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
 		it[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
 		it[ConsumerConfig.GROUP_ID_CONFIG] = kafkaGroupId
 		it[ConsumerConfig.MAX_POLL_RECORDS_CONFIG] = 5000
@@ -129,8 +133,8 @@ abstract class KafkaRecordConsumer<T, R>(
 			it[SSL_TRUSTSTORE_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
 			it[SSL_KEYSTORE_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
 			it[SSL_KEY_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
-			it[SSL_TRUSTSTORE_LOCATION_CONFIG] =appConfiguration.kafkaConfig.trustStorePath
-			it[SSL_KEYSTORE_LOCATION_CONFIG] =appConfiguration.kafkaConfig.keyStorePath
+			it[SSL_TRUSTSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.trustStorePath
+			it[SSL_KEYSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.keyStorePath
 			//it[SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG] =  ""
 			//it[SaslConfigs.SASL_JAAS_CONFIG] = appConfiguration.kafkaConfig.saslJaasConfig
 			//it[SaslConfigs.SASL_MECHANISM] = appConfiguration.kafkaConfig.salsmec
@@ -172,8 +176,10 @@ class PoisonSwallowingAvroDeserializer<T : SpecificRecord> : SpecificAvroDeseria
 		return try {
 			super.deserialize(topic, bytes)
 		} catch (e: Exception) {
-			logger.error("Unable to deserialize event on topic $topic\nByte Array: ${bytes.asList()}\n" +
-				"String representation: '${String(bytes)}'", e)
+			logger.error(
+				"Unable to deserialize event on topic $topic\nByte Array: ${bytes.asList()}\n" +
+					"String representation: '${String(bytes)}'", e
+			)
 			null
 		}
 	}
@@ -194,6 +200,7 @@ abstract class KafkaConsumerBuilder<T, R> {
 }
 
 typealias Key = String
+
 const val sleepInMsBetweenFetches = 100L
 const val timeoutWhenNotFindingRecords = 45 * 1000
 const val timeoutWhenNotFindingNewRecords = 30 * 1000

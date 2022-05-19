@@ -7,19 +7,15 @@ import org.springframework.core.env.ConfigurableEnvironment
 import java.io.File
 import javax.annotation.Priority
 
-const val kafkaInputTopic = "privat-soknadInnsendt-v1-teamsoknad"
-const val kafkaProcessingTopic = "privat-soknadInnsendt-processingEventLog-v1-teamsoknad"
-const val kafkaMessageTopic = "privat-soknadInnsendt-messages-v1-teamsoknad"
-const val kafkaMetricsTopic = "privat-soknadInnsendt-metrics-v1-teamsoknad"
+const val kafkaInputTopic = "privat-soknadinnsending-v1-dev"
+const val kafkaProcessingTopic = "privat-soknadinnsending-processingeventlog-v1-dev"
+const val kafkaMessageTopic = "privat-soknadinnsending-messages-v1-dev"
+const val kafkaMetricsTopic = "privat-soknadinnsending-metrics-v1-dev"
 
 private val defaultProperties = ConfigurationMap(mapOf(
-	"KAFKA_USERNAME" to "arkiverer",
-	"KAFKA_PASSWORD" to "",
-	"SCHEMA_REGISTRY_URL" to "http://localhost:8081",
-	"KAFKA_BOOTSTRAP_SERVERS" to "localhost:29092",
-	"KAFKA_SECURITY" to "",
-	"KAFKA_SECPROT" to "",
-	"KAFKA_SASLMEC" to "",
+	"KAFKA_SCHEMA_REGISTRY" to "http://localhost:8081",
+	"KAFKA_BROKERS" to "localhost:29092",
+	"KAFKA_SECURITY" to "FALSE",
 	"KAFKA_GROUPID" to "soknadsarkiverer-group-defaultid",
 	"BOOTSTRAPPING_TIMEOUT" to 120.toString(),
 	"DELAY_BEFORE_KAFKA_INITIALIZATION" to 5.toString(),
@@ -32,8 +28,8 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"MAX_MESSAGE_SIZE" to (1024 * 1024 * 300).toString(),
 	"CLIENTSECRET" to "",
 
-	"BASICAUTH_USERNAME" to "sender",
-	"BASICAUTH_PASSWORD" to "password",
+	"INNSENDING_USERNAME" to "sender",
+	"INNSENDING_PASSWORD" to "password",
 	"JOARK_HOST" to "http://localhost:8092",
 	"JOARK_URL" to "/rest/journalpostapi/v1/journalpost",
 	"FILESTORAGE_HOST" to "http://localhost:9042",
@@ -62,8 +58,6 @@ fun readFileAsText(fileName: String, default: String = "") = try { File(fileName
 
 data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val config: Config = Config(), val state: State = State()) {
 	data class KafkaConfig(
-		val username: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/username", "KAFKA_USERNAME".configProperty()),
-		val password: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "KAFKA_PASSWORD".configProperty()),
 		val kafkaBrokers: String = "KAFKA_BROKERS".configProperty(),
 		val schemaRegistryUrl: String = "KAFKA_SCHEMA_REGISTRY".configProperty(),
 		val secure: String = "KAFKA_SECURITY".configProperty(),
@@ -73,8 +67,6 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val trustStorePath: String = "KAFKA_TRUSTSTORE_PATH".configProperty(),
 		val trustStorePassword: String = "KAFKA_CREDSTORE_PASSWORD".configProperty(),
 		val keystoreType: String = "PKCS12",
-		//val salsmec: String = "KAFKA_SASLMEC".configProperty(), // PLAIN
-		//val saslJaasConfig: String = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"$username\" password=\"$password\";",
 
 		val inputTopic: String = "KAFKA_INPUT_TOPIC".configProperty(),
 		val processingTopic: String = "KAFKA_PROCESSING_TOPIC".configProperty(),
@@ -86,19 +78,18 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 	)
 
 	data class Config(
-		val joarkHost: String = readFileAsText("/var/run/secrets/nais.io/kv/JOARK_HOST", "JOARK_HOST".configProperty()),
+		val joarkHost: String = "JOARK_HOST".configProperty(),
 		val joarkUrl: String = "JOARK_URL".configProperty(),
-		val username: String = readFileAsText("/secrets/innsending-data/username", "BASICAUTH_USERNAME".configProperty()),
-		val password: String = readFileAsText("/secrets/innsending-data/password", "BASICAUTH_PASSWORD".configProperty()),
-		val clientsecret: String = readFileAsText("/var/run/secrets/nais.io/serviceuser/password", "CLIENTSECRET".configProperty()),
+		val innsendingUsername: String = "INNSENDING_USERNAME".configProperty(),
+		val innsendingPassword: String = "INNSENDING_PASSWORD".configProperty(),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
 		val retryTime: List<Int> = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
 		val secondsAfterStartupBeforeStarting: Long = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) startUpSeconds else startUpSecondsForTest,
 		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty(),
 		val maxMessageSize: Int = "MAX_MESSAGE_SIZE".configProperty().toInt(),
-		val adminUser: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER", "ADMIN_USER".configProperty()),
-		val adminUserPassword: String = readFileAsText("/var/run/secrets/nais.io/kv/ADMIN_USER_PASSWORD", "ADMIN_USER_PASSWORD".configProperty()),
+		val adminUser: String = "ADMIN_USER".configProperty(),
+		val adminUserPassword: String = "ADMIN_USER_PASSWORD".configProperty(),
 	)
 
 	data class State(

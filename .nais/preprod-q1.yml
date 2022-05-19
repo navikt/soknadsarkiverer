@@ -57,7 +57,9 @@ spec:
         kvPath: secret/team-soknad/innsending/basicauth
       - mountPath: /var/run/secrets/nais.io/vault
         kvPath: /kv/preprod/fss/soknadsarkiverer/environment
-
+  envFrom:
+    - secret: soknadsarkiver-google-secret
+    - secret: shared-innsending-secret
   env:
     #- name: KAFKA_BOOTSTRAP_SERVERS
     #  value: b27apvl00045.preprod.local:8443,b27apvl00046.preprod.local:8443,b27apvl00047.preprod.local:8443
