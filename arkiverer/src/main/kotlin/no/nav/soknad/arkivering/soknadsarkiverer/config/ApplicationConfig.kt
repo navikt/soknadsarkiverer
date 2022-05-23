@@ -16,7 +16,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_SCHEMA_REGISTRY" to "http://localhost:8081",
 	"KAFKA_BROKERS" to "localhost:29092",
 	"KAFKA_SECURITY" to "FALSE",
-	"KAFKA_GROUPID" to "soknadsarkiverer-group-defaultid",
+	"KAFKA_STREAMS_APPLICATION_ID" to "soknadsarkiverer-group-defaultid",
 	"KAFKA_SCHEMA_REGISTRY_USER" to "username",
 	"KAFKA_SCHEMA_REGISTRY_PASSWORD" to "password",
 
@@ -83,7 +83,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val metricsTopic: String = "KAFKA_METRICS_TOPIC".configProperty(),
 		val bootstrappingTimeout: String = "BOOTSTRAPPING_TIMEOUT".configProperty(),
 		val delayBeforeKafkaInitialization: String = "DELAY_BEFORE_KAFKA_INITIALIZATION".configProperty(),
-		val groupId: String = "KAFKA_GROUPID".configProperty()
+		val applicationId: String = "KAFKA_STREAMS_APPLICATION_ID".configProperty()
 	)
 
 	data class Config(

@@ -60,8 +60,6 @@ spec:
       value: privat-soknadinnsending-messages-v1
     - name: KAFKA_METRICS_TOPIC
       value: privat-soknadinnsending-metrics-v1
-    - name: KAFKA_GROUPID
-      value: soknadsarkiverer-groupid-p
     - name: FILESTORAGE_HOST
       value: https://soknadsfillager.intern.nav.no
     - name: JOARK_HOST

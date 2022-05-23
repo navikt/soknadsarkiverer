@@ -64,8 +64,6 @@ spec:
       value: {{kafka-message-topic}}
     - name: KAFKA_METRICS_TOPIC
       value: {{kafka-metrics-topic}}
-    - name: KAFKA_GROUPID
-      value: {{kafka-groupid}}
     - name: FILESTORAGE_HOST
       value: https://soknadsfillager-gcp.dev.intern.nav.no
     - name: JOARK_HOST

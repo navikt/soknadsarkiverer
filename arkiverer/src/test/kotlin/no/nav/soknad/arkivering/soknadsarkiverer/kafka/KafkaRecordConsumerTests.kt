@@ -77,7 +77,7 @@ class KafkaRecordConsumerTests {
 
 	@Test
 	fun `Has gaps in between returned records - will consume all`() {
-		val numberOfRecordsReturnedInEachPolling = listOf(0, 0, 0, 68, 0, 71, 12, 0, 0, 78,  0)
+		val numberOfRecordsReturnedInEachPolling = listOf(0, 0, 0, 68, 0, 71, 12, 0, 0, 78, 0)
 
 		val result = consumerBuilder
 			.mockPollReturnsRecordsOfGivenSizes(numberOfRecordsReturnedInEachPolling.asSequence())
@@ -127,7 +127,7 @@ class KafkaRecordConsumerTests {
 			.setCustomStopLogic(stopsWhenReturnedRecordsAreOfCertainSize)
 			.buildAndGetKafkaRecords()
 
-		assertEquals((0 .. magicNumber).sum(), result.size)
+		assertEquals((0..magicNumber).sum(), result.size)
 	}
 }
 
@@ -329,18 +329,26 @@ private class TestClock : Clock() {
  * Boilerplate required by underlying libraries.
  */
 private fun kafkaProperties() = Properties().also {
-	it[ConsumerConfig.GROUP_ID_CONFIG] = kafkaConfig().groupId
+	it[ConsumerConfig.GROUP_ID_CONFIG] = kafkaConfig().applicationId
 	it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig().kafkaBrokers
 	it[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
 	it[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
 }
 
-private fun kafkaConfig() =	AppConfiguration.KafkaConfig(
-	kafkaBrokers = "localhost:17171", schemaRegistryUrl = "localhost:16868", secure = "FALSE", inputTopic = topic, processingTopic = "processingTopic",
-	messageTopic = "messageTopic", metricsTopic =  "metricsTopic",bootstrappingTimeout = "0", delayBeforeKafkaInitialization = "0",
- 	groupId = "testGroupId"
+private fun kafkaConfig() = AppConfiguration.KafkaConfig(
+	kafkaBrokers = "localhost:17171",
+	schemaRegistryUrl = "localhost:16868",
+	secure = "FALSE",
+	inputTopic = topic,
+	processingTopic = "processingTopic",
+	messageTopic = "messageTopic",
+	metricsTopic = "metricsTopic",
+	bootstrappingTimeout = "0",
+	delayBeforeKafkaInitialization = "0",
+	applicationId = "testApplicationId"
 )
 
 private typealias Time = Long
+
 private const val topic = "testTopic"
 private const val mockedTimeInMsForPolling = 500L

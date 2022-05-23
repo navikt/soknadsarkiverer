@@ -104,14 +104,14 @@ class KafkaStreamsSetup(
 	}
 
 
-	fun setupKafkaStreams(groupId: String): KafkaStreams {
+	fun setupKafkaStreams(): KafkaStreams {
 		logger.info("Setting up KafkaStreams")
 
 		val streamsBuilder = StreamsBuilder()
 		kafkaStreams(streamsBuilder)
 		val topology = streamsBuilder.build()
 
-		val kafkaStreams = KafkaStreams(topology, kafkaConfig(groupId))
+		val kafkaStreams = KafkaStreams(topology, kafkaConfig())
 
 		kafkaStreams.cleanUp()
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
@@ -122,10 +122,10 @@ class KafkaStreamsSetup(
 		return kafkaStreams
 	}
 
-	private fun kafkaConfig(applicationId: String) = Properties().also {
+	private fun kafkaConfig() = Properties().also {
 		it[SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
 		it[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
-		it[StreamsConfig.APPLICATION_ID_CONFIG] = applicationId
+		it[StreamsConfig.APPLICATION_ID_CONFIG] = appConfiguration.kafkaConfig.applicationId
 		it[StreamsConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.kafkaBrokers
 		it[StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG] = Serdes.StringSerde::class.java
 		it[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = SpecificAvroSerde::class.java
@@ -149,8 +149,11 @@ class KafkaStreamsSetup(
 
 	private fun kafkaExceptionHandler() = KafkaExceptionHandler().also {
 		it.configure(
-			kafkaConfig("soknadsarkiverer-exception")
-				.also { config -> config[APP_CONFIGURATION] = appConfiguration }
+			kafkaConfig()
+				.also { config ->
+					config[APP_CONFIGURATION] = appConfiguration
+					config[StreamsConfig.APPLICATION_ID_CONFIG] = "soknadsarkiverer-exception"
+				}
 				.map { (k, v) -> k.toString() to v }.toMap()
 		)
 	}

@@ -63,8 +63,7 @@ class KafkaSetupTest(
 
 		setupMetricsAndHealth(metrics, appConfiguration)
 
-		val groupId = appConfiguration.kafkaConfig.groupId + "_" + UUID.randomUUID().toString()
-		setupKafkaStreams(appConfiguration, taskListService, kafkaPublisher, groupId)
+		setupKafkaStreams(appConfiguration, taskListService, kafkaPublisher)
 	}
 }
 
@@ -72,10 +71,8 @@ private fun setupKafkaStreams(
 	appConfiguration: AppConfiguration,
 	taskListService: TaskListService,
 	kafkaPublisher: KafkaPublisher,
-	groupId: String? = null
 ) {
-	val id = groupId ?: appConfiguration.kafkaConfig.groupId
-	KafkaStreamsSetup(appConfiguration, taskListService, kafkaPublisher).setupKafkaStreams(id)
+	KafkaStreamsSetup(appConfiguration, taskListService, kafkaPublisher).setupKafkaStreams()
 }
 
 private fun setupMetricsAndHealth(metrics: ArchivingMetrics, appConfiguration: AppConfiguration) {

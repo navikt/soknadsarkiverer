@@ -2,6 +2,7 @@ application:
   SPRING_PROFILES_ACTIVE: test
   schema-registry-scope: mocked-scope
   KAFKA_SCHEMA_REGISTRY: mock://mocked-scope
+  KAFKA_STREAMS_APPLICATION_ID: testApplicationId_${random.uuid}
   mocked-port-for-external-services: 2908
   JOARK_HOST: http://localhost:2908
   FILESTORAGE_HOST: http://localhost:2908
