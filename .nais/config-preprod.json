@@ -4,10 +4,10 @@
 	"outbound": [
 		"soknadsfillager"
 	],
-	"kafka-main-topic": "privat-soknadinnsending-v1-dev",
-	"kafka-processingeventlog-topic": "privat-soknadinnsending-processingeventlog-v1-dev",
-	"kafka-message-topic": "privat-soknadinnsending-messages-v1-dev",
-	"kafka-metrics-topic": "privat-soknadinnsending-metrics-v1-dev",
+	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v1-dev",
+	"kafka-processingeventlog-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v1-dev",
+	"kafka-message-topic": "team-soknad.privat-soknadinnsending-messages-v1-dev",
+	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v1-dev",
 	"kafka-groupid": "soknadsarkiverer-groupid-q1-test",
 	"joark-host": "https://dokarkiv.dev-fss-pub.nais.io"
 }
