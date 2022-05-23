@@ -61,16 +61,16 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 	}
 
 	private fun getAllInputRecordsAsync(eventCollectionBuilder: EventCollection.Builder) = GlobalScope.async {
-		getRecords(inputTopic, "INPUT", PoisonSwallowingAvroDeserializer(), eventCollectionBuilder)
+		getRecords(inputTopic, "input", PoisonSwallowingAvroDeserializer(), eventCollectionBuilder)
 	}
 	internal fun getAllProcessingRecordsAsync(eventCollectionBuilder: EventCollection.Builder) = GlobalScope.async {
-		getRecords(processingTopic, "PROCESSINGEVENT", PoisonSwallowingAvroDeserializer(), eventCollectionBuilder)
+		getRecords(processingTopic, "processingevent", PoisonSwallowingAvroDeserializer(), eventCollectionBuilder)
 	}
 	private fun getAllMessageRecordsAsync(eventCollectionBuilder: EventCollection.Builder) = GlobalScope.async {
-		getRecords(messageTopic, "MESSAGE", StringDeserializer(), eventCollectionBuilder)
+		getRecords(messageTopic, "message", StringDeserializer(), eventCollectionBuilder)
 	}
 	private fun getAllMetricsRecordsAsync(eventCollectionBuilder: EventCollection.Builder) = GlobalScope.async {
-		getRecords(metricsTopic, "METRICS", PoisonSwallowingAvroDeserializer(), eventCollectionBuilder)
+		getRecords(metricsTopic, "metrics", PoisonSwallowingAvroDeserializer(), eventCollectionBuilder)
 	}
 
 	private fun <T> getRecords(
