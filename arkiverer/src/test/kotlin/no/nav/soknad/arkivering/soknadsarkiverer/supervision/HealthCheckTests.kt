@@ -83,7 +83,7 @@ class HealthCheckTests {
 
 		val response = healthCheck.isAlive()
 
-		assertEquals(ResponseEntity<String>("Application is not alive", HttpStatus.INTERNAL_SERVER_ERROR), response)
+		assertEquals(ResponseEntity("Application is not alive", HttpStatus.INTERNAL_SERVER_ERROR), response)
 	}
 
 
@@ -102,7 +102,7 @@ class HealthCheckTests {
 
 		val response = healthCheck.isReady()
 
-		assertEquals(ResponseEntity<String>("Application is not ready", HttpStatus.INTERNAL_SERVER_ERROR), response)
+		assertEquals(ResponseEntity("Application is not ready", HttpStatus.INTERNAL_SERVER_ERROR), response)
 	}
 
 	@Test
@@ -111,7 +111,7 @@ class HealthCheckTests {
 
 		val response = healthCheck.isReady()
 
-		assertEquals(ResponseEntity<String>("Application is not ready", HttpStatus.INTERNAL_SERVER_ERROR), response)
+		assertEquals(ResponseEntity("Application is not ready", HttpStatus.INTERNAL_SERVER_ERROR), response)
 	}
 
 	@Test
@@ -120,7 +120,7 @@ class HealthCheckTests {
 
 		val response = healthCheck.isReady()
 
-		val expected = ResponseEntity<String>(
+		val expected = ResponseEntity(
 			"Application is not ready: Server error : 500 Server Error",
 			HttpStatus.INTERNAL_SERVER_ERROR
 		)
@@ -133,7 +133,7 @@ class HealthCheckTests {
 
 		val response = healthCheck.isReady()
 
-		val expected = ResponseEntity<String>(
+		val expected = ResponseEntity(
 			"Application is not ready: 500 Internal Server Error from GET http://localhost:2908/isAlive",
 			HttpStatus.INTERNAL_SERVER_ERROR
 		)
@@ -143,7 +143,7 @@ class HealthCheckTests {
 
 	@Test
 	fun `ping returns Pong when dependencies are well`() {
-		assertEquals(ResponseEntity<String>("pong", HttpStatus.OK), healthCheck.ping())
+		assertEquals(ResponseEntity("pong", HttpStatus.OK), healthCheck.ping())
 	}
 
 	@Test
@@ -152,7 +152,7 @@ class HealthCheckTests {
 
 		val response = healthCheck.ping()
 
-		val expected = ResponseEntity<String>(
+		val expected = ResponseEntity(
 			"Ping failed: Server error : 500 Server Error",
 			HttpStatus.INTERNAL_SERVER_ERROR
 		)
@@ -165,7 +165,7 @@ class HealthCheckTests {
 
 		val response = healthCheck.ping()
 
-		val expected = ResponseEntity<String>(
+		val expected = ResponseEntity(
 			"Ping failed: 500 Internal Server Error from GET http://localhost:2908/isAlive",
 			HttpStatus.INTERNAL_SERVER_ERROR
 		)
