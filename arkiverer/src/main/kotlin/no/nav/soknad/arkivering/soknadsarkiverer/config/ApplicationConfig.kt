@@ -17,6 +17,8 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"KAFKA_BROKERS" to "localhost:29092",
 	"KAFKA_SECURITY" to "FALSE",
 	"KAFKA_GROUPID" to "soknadsarkiverer-group-defaultid",
+	"KAFKA_SCHEMA_REGISTRY_USER" to "username",
+	"KAFKA_SCHEMA_REGISTRY_PASSWORD" to "password",
 
 	"KAFKA_KEYSTORE_PATH" to "",
 	"KAFKA_CREDSTORE_PASSWORD" to "",
@@ -65,6 +67,8 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 	data class KafkaConfig(
 		val kafkaBrokers: String = "KAFKA_BROKERS".configProperty(),
 		val schemaRegistryUrl: String = "KAFKA_SCHEMA_REGISTRY".configProperty(),
+		val schemaRegistryUsername: String = "KAFKA_SCHEMA_REGISTRY_USER".configProperty(),
+		val schemaRegistryPassword: String = "KAFKA_SCHEMA_REGISTRY_PASSWORD".configProperty(),
 		val secure: String = "KAFKA_SECURITY".configProperty(),
 		val protocol: String = "SSL", // SASL_PLAINTEXT | SASL_SSL
 		val keyStorePath: String = "KAFKA_KEYSTORE_PATH".configProperty(),

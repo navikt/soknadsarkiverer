@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
+import io.confluent.kafka.schemaregistry.client.SchemaRegistryClientConfig
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
@@ -10,7 +11,6 @@ import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
-import org.apache.kafka.common.config.SaslConfigs
 import org.apache.kafka.common.config.SslConfigs
 import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
@@ -63,13 +63,15 @@ class KafkaPublisher(private val appConfiguration: AppConfiguration) {
 			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java
 			if (appConfiguration.kafkaConfig.secure == "TRUE") {
+				it[SchemaRegistryClientConfig.USER_INFO_CONFIG] = "${appConfiguration.kafkaConfig.schemaRegistryUsername}:${appConfiguration.kafkaConfig.schemaRegistryPassword}"
+				it[SchemaRegistryClientConfig.BASIC_AUTH_CREDENTIALS_SOURCE] = "USER_INFO"
 				it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = appConfiguration.kafkaConfig.protocol
 				it[SslConfigs.SSL_KEYSTORE_TYPE_CONFIG] = "PKCS12"
+				it[SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.trustStorePath
 				it[SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
+				it[SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.keyStorePath
 				it[SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
 				it[SslConfigs.SSL_KEY_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
-				it[SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.trustStorePath
-				it[SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.keyStorePath
 			}
 		}
 	}

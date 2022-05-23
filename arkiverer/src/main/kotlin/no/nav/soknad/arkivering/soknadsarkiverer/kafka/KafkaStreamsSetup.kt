@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
+import io.confluent.kafka.schemaregistry.client.SchemaRegistryClientConfig
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
 import no.nav.soknad.arkivering.avroschemas.EventTypes
@@ -10,7 +11,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.common.config.SaslConfigs
 import org.apache.kafka.common.config.SslConfigs
 import org.apache.kafka.common.serialization.Serde
 import org.apache.kafka.common.serialization.Serdes
@@ -133,14 +133,15 @@ class KafkaStreamsSetup(
 		it[StreamsConfig.COMMIT_INTERVAL_MS_CONFIG] = 1000
 
 		if (appConfiguration.kafkaConfig.secure == "TRUE") {
+			it[SchemaRegistryClientConfig.USER_INFO_CONFIG] = "${appConfiguration.kafkaConfig.schemaRegistryUsername}:${appConfiguration.kafkaConfig.schemaRegistryPassword}"
+			it[SchemaRegistryClientConfig.BASIC_AUTH_CREDENTIALS_SOURCE] = "USER_INFO"
 			it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = appConfiguration.kafkaConfig.protocol
 			it[SslConfigs.SSL_KEYSTORE_TYPE_CONFIG] = "PKCS12"
+			it[SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.trustStorePath
 			it[SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
+			it[SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.keyStorePath
 			it[SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
 			it[SslConfigs.SSL_KEY_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
-			it[SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.trustStorePath
-			it[SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.keyStorePath
-
 		}
 
 		it[KAFKA_PUBLISHER] = kafkaPublisher

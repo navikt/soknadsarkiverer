@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
+import io.confluent.kafka.schemaregistry.client.SchemaRegistryClientConfig
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroDeserializer
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
@@ -127,17 +128,15 @@ abstract class KafkaRecordConsumer<T, R>(
 		it[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = valueDeserializer::class.java
 
 		if (appConfiguration.kafkaConfig.secure == "TRUE") {
+			it[SchemaRegistryClientConfig.USER_INFO_CONFIG] = "${appConfiguration.kafkaConfig.schemaRegistryUsername}:${appConfiguration.kafkaConfig.schemaRegistryPassword}"
+			it[SchemaRegistryClientConfig.BASIC_AUTH_CREDENTIALS_SOURCE] = "USER_INFO"
 			it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = appConfiguration.kafkaConfig.protocol
-			//it[SSL_TRUSTSTORE_TYPE_CONFIG] = "jks"
 			it[SSL_KEYSTORE_TYPE_CONFIG] = "PKCS12"
+			it[SSL_TRUSTSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.trustStorePath
 			it[SSL_TRUSTSTORE_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
+			it[SSL_KEYSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.keyStorePath
 			it[SSL_KEYSTORE_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
 			it[SSL_KEY_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
-			it[SSL_TRUSTSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.trustStorePath
-			it[SSL_KEYSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.keyStorePath
-			//it[SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG] =  ""
-			//it[SaslConfigs.SASL_JAAS_CONFIG] = appConfiguration.kafkaConfig.saslJaasConfig
-			//it[SaslConfigs.SASL_MECHANISM] = appConfiguration.kafkaConfig.salsmec
 		}
 	}
 
