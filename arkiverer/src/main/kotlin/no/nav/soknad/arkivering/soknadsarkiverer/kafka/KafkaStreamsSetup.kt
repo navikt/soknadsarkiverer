@@ -131,8 +131,9 @@ class KafkaStreamsSetup(
 		it[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = SpecificAvroSerde::class.java
 		it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = LogAndContinueExceptionHandler::class.java
 		it[StreamsConfig.COMMIT_INTERVAL_MS_CONFIG] = 1000
-
+		logger.info("I am outside appConfiguration.kafkaConfig.secure == \"TRUE\"")
 		if (appConfiguration.kafkaConfig.secure == "TRUE") {
+			logger.info("I am inside appConfiguration.kafkaConfig.secure == \"TRUE\"")
 			it[SchemaRegistryClientConfig.USER_INFO_CONFIG] = "${appConfiguration.kafkaConfig.schemaRegistryUsername}:${appConfiguration.kafkaConfig.schemaRegistryPassword}"
 			it[SchemaRegistryClientConfig.BASIC_AUTH_CREDENTIALS_SOURCE] = "USER_INFO"
 			it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = appConfiguration.kafkaConfig.protocol
