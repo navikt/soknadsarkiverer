@@ -125,12 +125,12 @@ class IntegrationTests {
 	}
 
 	private fun putDataOnTopic(key: String, value: Soknadarkivschema, headers: Headers = RecordHeaders()): RecordMetadata {
-		val topic = appConfiguration.kafkaConfig.inputTopic
+		val topic = appConfiguration.kafkaConfig.mainTopic
 		return putDataOnTopic(key, value, headers, topic, kafkaProducer)
 	}
 
 	private fun putDataOnTopic(key: String, value: String, headers: Headers = RecordHeaders()): RecordMetadata {
-		val topic = appConfiguration.kafkaConfig.inputTopic
+		val topic = appConfiguration.kafkaConfig.mainTopic
 		return putDataOnTopic(key, value, headers, topic, kafkaProducerForBadData)
 	}
 

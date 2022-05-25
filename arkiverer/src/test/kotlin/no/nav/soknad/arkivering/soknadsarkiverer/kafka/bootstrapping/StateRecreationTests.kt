@@ -59,7 +59,7 @@ class StateRecreationTests {
 
 	@Autowired
 	private lateinit var appConfiguration: AppConfiguration
-	private lateinit var kafkaInputTopicProducer: KafkaProducer<String, Soknadarkivschema>
+	private lateinit var kafkaMainTopicProducer: KafkaProducer<String, Soknadarkivschema>
 	private lateinit var kafkaProcessingEventProducer: KafkaProducer<String, ProcessingEvent>
 	private lateinit var kafkaBootstrapConsumer: KafkaBootstrapConsumer
 
@@ -69,7 +69,7 @@ class StateRecreationTests {
 
 	@BeforeAll
 	fun setup() {
-		kafkaInputTopicProducer = KafkaProducer(kafkaConfigMap())
+		kafkaMainTopicProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProcessingEventProducer = KafkaProducer(kafkaConfigMap())
 		kafkaBootstrapConsumer = KafkaBootstrapConsumer(appConfiguration, taskListService)
 
@@ -320,8 +320,8 @@ class StateRecreationTests {
 
 	private fun publishSoknadsarkivschemas(vararg keys: String) {
 		keys.forEach {
-			val topic = appConfiguration.kafkaConfig.inputTopic
-			putDataOnTopic(it, soknadarkivschema, RecordHeaders(), topic, kafkaInputTopicProducer)
+			val topic = appConfiguration.kafkaConfig.mainTopic
+			putDataOnTopic(it, soknadarkivschema, RecordHeaders(), topic, kafkaMainTopicProducer)
 		}
 	}
 

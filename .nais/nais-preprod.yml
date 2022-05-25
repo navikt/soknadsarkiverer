@@ -56,7 +56,7 @@ spec:
       value: 'TRUE'
     - name: SPRING_PROFILES_ACTIVE
       value: dev
-    - name: KAFKA_INPUT_TOPIC
+    - name: KAFKA_MAIN_TOPIC
       value: {{kafka-main-topic}}
     - name: KAFKA_PROCESSING_TOPIC
       value: {{kafka-processingeventlog-topic}}

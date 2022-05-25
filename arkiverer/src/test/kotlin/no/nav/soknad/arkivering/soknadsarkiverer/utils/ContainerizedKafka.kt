@@ -16,7 +16,7 @@ class ContainerizedKafka : Closeable {
 
 	init {
 		kafkaContainer.start()
-		listOf(kafkaInputTopic, kafkaProcessingTopic, kafkaMessageTopic, kafkaMetricsTopic)
+		listOf(kafkaMainTopic, kafkaProcessingTopic, kafkaMessageTopic, kafkaMetricsTopic)
 			.forEach { createTopic(it) }
 	}
 

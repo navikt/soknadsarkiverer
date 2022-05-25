@@ -130,11 +130,11 @@ class AdminInterfaceTests {
 			adminInterface.allEvents().count { it.innsendingKey == key0 || it.innsendingKey == key1 }
 		}
 
-		val numberOfInputs = 2
+		val numberOfMainRecords = 2
 		val numberOfMessages = 1 + maxNumberOfAttempts // 1 "ok" message, a number of mocked exceptions
 		val numberOfProcessingEvents = 4 + 3  // 4 for the first event, 3 for the second
 		val numberOfMetricEvents = 3 + maxNumberOfAttempts // 3 for the successful event, maxNumberOfAttempts getFiles-events for the failing
-		loopAndVerifyAtLeast(numberOfInputs + numberOfMessages + numberOfProcessingEvents + numberOfMetricEvents, eventsAfter)
+		loopAndVerifyAtLeast(numberOfMainRecords + numberOfMessages + numberOfProcessingEvents + numberOfMetricEvents, eventsAfter)
 	}
 
 	@Test
@@ -147,11 +147,11 @@ class AdminInterfaceTests {
 			adminInterface.unfinishedEvents().count { it.innsendingKey == key0 || it.innsendingKey == key1 }
 		}
 
-		val numberOfInputs = 2
+		val numberOfMainRecords = 2
 		val numberOfMessages = maxNumberOfAttempts // mocked exceptions
 		val numberOfProcessingEvents = 2 // 1*Started, 1*Failure
 		val numberOfMetricEvents = maxNumberOfAttempts // maxNumberOfAttempts getFiles-events for the failing
-		loopAndVerifyAtLeast(numberOfInputs + numberOfMessages + numberOfMetricEvents + numberOfProcessingEvents, eventsAfter)
+		loopAndVerifyAtLeast(numberOfMainRecords + numberOfMessages + numberOfMetricEvents + numberOfProcessingEvents, eventsAfter)
 	}
 
 	@Test
@@ -175,11 +175,11 @@ class AdminInterfaceTests {
 
 		val events = adminInterface.specificEvent(key0)
 
-		val numberOfInputs = 1
+		val numberOfMainRecords = 1
 		val numberOfMessages = 1 // "ok" message
 		val numberOfProcessingEvents = 4
 		val numberOfMetricEvents = 3 // 3 for the successful event
-		assertEquals(numberOfInputs + numberOfMessages + numberOfMetricEvents + numberOfProcessingEvents, events.size)
+		assertEquals(numberOfMainRecords + numberOfMessages + numberOfMetricEvents + numberOfProcessingEvents, events.size)
 	}
 
 
@@ -359,7 +359,7 @@ class AdminInterfaceTests {
 	private fun putDataOnTopic(key: String, value: Soknadarkivschema, headers: Headers = RecordHeaders()): RecordMetadata {
 		keysSentToKafka.add(key)
 
-		val topic = appConfiguration.kafkaConfig.inputTopic
+		val topic = appConfiguration.kafkaConfig.mainTopic
 
 		val producerRecord = ProducerRecord(topic, key, value)
 		headers.add(MESSAGE_ID, UUID.randomUUID().toString().toByteArray())

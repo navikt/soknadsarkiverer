@@ -52,7 +52,7 @@ spec:
     #  value: PLAIN
     - name: SPRING_PROFILES_ACTIVE
       value: prod
-    - name: KAFKA_INPUT_TOPIC
+    - name: KAFKA_MAIN_TOPIC
       value: privat-soknadinnsending-v1
     - name: KAFKA_PROCESSING_TOPIC
       value: privat-soknadinnsending-processingeventlog-v1

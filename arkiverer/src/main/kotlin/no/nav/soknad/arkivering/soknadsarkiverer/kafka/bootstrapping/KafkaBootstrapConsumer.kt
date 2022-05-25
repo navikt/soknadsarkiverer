@@ -21,18 +21,18 @@ class KafkaBootstrapConsumer(
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	private val inputTopic = appConfiguration.kafkaConfig.inputTopic
+	private val mainTopic = appConfiguration.kafkaConfig.mainTopic
 	private val processingTopic = appConfiguration.kafkaConfig.processingTopic
 	private val uuid = UUID.randomUUID().toString()
 
 
 	fun recreateState() {
 		val (finishedKeys, unfinishedProcessingRecords) = getProcessingRecords()
-		val unfinishedInputRecords = getUnfinishedInputRecords(finishedKeys)
+		val unfinishedMainRecords = getUnfinishedMainRecords(finishedKeys)
 
-		logger.info("Recreating state, found a total of ${unfinishedInputRecords.size} unfinished input records")
-		unfinishedInputRecords.chunked(250).forEach { sublist ->
-			logger.info("Recreating state, found these ${sublist.size} unfinished input records: ${sublist.map { it.key() }}")
+		logger.info("Recreating state, found a total of ${unfinishedMainRecords.size} unfinished main records")
+		unfinishedMainRecords.chunked(250).forEach { sublist ->
+			logger.info("Recreating state, found these ${sublist.size} unfinished main records: ${sublist.map { it.key() }}")
 		}
 
 		val filteredUnfinishedProcessingEvents = unfinishedProcessingRecords
@@ -41,7 +41,7 @@ class KafkaBootstrapConsumer(
 				getHighestProcessingEventState(key, acc, processingEvent)
 			}
 
-		unfinishedInputRecords
+		unfinishedMainRecords
 			.map { it.key() to it.value() }
 			.shuffled() // Only one event at a time will be processed while restarting. Shuffle in case several pods go down,
 									// so they don't process in the same order and can thus better parallelise.
@@ -53,7 +53,7 @@ class KafkaBootstrapConsumer(
 	}
 
 
-	private fun getUnfinishedInputRecords(finishedKeys: HashSet<Key>): List<ConsumerRecord<Key, Soknadarkivschema>> {
+	private fun getUnfinishedMainRecords(finishedKeys: HashSet<Key>): List<ConsumerRecord<Key, Soknadarkivschema>> {
 
 		val keepUnfinishedRecordsFilter = { records: List<ConsumerRecord<Key, Soknadarkivschema>> ->
 			records.filter { !finishedKeys.contains(it.key()) }
@@ -62,9 +62,9 @@ class KafkaBootstrapConsumer(
 		return BootstrapConsumer.Builder<Soknadarkivschema>()
 			.withFilter(keepUnfinishedRecordsFilter)
 			.withAppConfiguration(appConfiguration)
-			.withKafkaGroupId("soknadsarkiverer-bootstrapping-input-$uuid")
+			.withKafkaGroupId("soknadsarkiverer-bootstrapping-main-$uuid")
 			.withValueDeserializer(PoisonSwallowingAvroDeserializer())
-			.forTopic(inputTopic)
+			.forTopic(mainTopic)
 			.getAllKafkaRecords()
 	}
 

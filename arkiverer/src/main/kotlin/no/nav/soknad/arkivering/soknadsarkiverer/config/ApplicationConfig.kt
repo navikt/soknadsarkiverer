@@ -7,7 +7,7 @@ import org.springframework.core.env.ConfigurableEnvironment
 import java.io.File
 import javax.annotation.Priority
 
-const val kafkaInputTopic = "privat-soknadinnsending-v1-dev"
+const val kafkaMainTopic = "privat-soknadinnsending-v1-dev"
 const val kafkaProcessingTopic = "privat-soknadinnsending-processingeventlog-v1-dev"
 const val kafkaMessageTopic = "privat-soknadinnsending-messages-v1-dev"
 const val kafkaMetricsTopic = "privat-soknadinnsending-metrics-v1-dev"
@@ -26,7 +26,7 @@ private val defaultProperties = ConfigurationMap(mapOf(
 
 	"BOOTSTRAPPING_TIMEOUT" to 120.toString(),
 	"DELAY_BEFORE_KAFKA_INITIALIZATION" to 5.toString(),
-	"KAFKA_INPUT_TOPIC" to kafkaInputTopic,
+	"KAFKA_MAIN_TOPIC" to kafkaMainTopic,
 	"KAFKA_PROCESSING_TOPIC" to kafkaProcessingTopic,
 	"KAFKA_MESSAGE_TOPIC" to kafkaMessageTopic,
 	"KAFKA_METRICS_TOPIC" to kafkaMetricsTopic,
@@ -77,7 +77,7 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val trustStorePassword: String = "KAFKA_CREDSTORE_PASSWORD".configProperty(),
 		val keystoreType: String = "PKCS12",
 
-		val inputTopic: String = "KAFKA_INPUT_TOPIC".configProperty(),
+		val mainTopic: String = "KAFKA_MAIN_TOPIC".configProperty(),
 		val processingTopic: String = "KAFKA_PROCESSING_TOPIC".configProperty(),
 		val messageTopic: String = "KAFKA_MESSAGE_TOPIC".configProperty(),
 		val metricsTopic: String = "KAFKA_METRICS_TOPIC".configProperty(),

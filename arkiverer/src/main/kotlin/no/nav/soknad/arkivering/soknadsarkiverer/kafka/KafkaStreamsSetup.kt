@@ -43,13 +43,13 @@ class KafkaStreamsSetup(
 	private fun kafkaStreams(streamsBuilder: StreamsBuilder) {
 		val joinDef = Joined.with(stringSerde, processingEventSerde, soknadarkivschemaSerde, "archivingState")
 		val materialized = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("processingeventdtos").withValueSerde(mutableListSerde)
-		val inputTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.inputTopic, Consumed.with(stringSerde, soknadarkivschemaSerde))
+		val mainTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.mainTopic, Consumed.with(stringSerde, soknadarkivschemaSerde))
 		val processingTopicStream = streamsBuilder.stream(appConfiguration.kafkaConfig.processingTopic, Consumed.with(stringSerde, processingEventSerde))
 
-		val inputTable = inputTopicStream.toTable()
+		val mainTopicTable = mainTopicStream.toTable()
 
-		inputTopicStream
-			.peek { key, value -> logger.info("$key: Processing InputTopic. BehandlingsId: ${value.behandlingsid}") }
+		mainTopicStream
+			.peek { key, value -> logger.info("$key: Processing MainTopic. BehandlingsId: ${value.behandlingsid}") }
 			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
 
 		processingTopicStream
@@ -70,7 +70,7 @@ class KafkaStreamsSetup(
 			.toStream()
 			.peek { key, state -> logger.debug("$key: ProcessingTopic in state $state") }
 			.filter { key, state -> !(isConsideredFinished(key, state)) }
-			.leftJoin(inputTable, { state, soknadarkivschema -> soknadarkivschema to state }, joinDef) // Oppdatere state på tabell, archivingState, ved join av soknadarkivschema og state.
+			.leftJoin(mainTopicTable, { state, soknadarkivschema -> soknadarkivschema to state }, joinDef) // Oppdatere state på tabell, archivingState, ved join av soknadarkivschema og state.
 			.filter { key, (soknadarkivschema, _) -> filterSoknadarkivschemaThatAreNull(key, soknadarkivschema) } // Ta bort alle innslag i tabell der soknadarkivschema er null.
 			.peek { key, (soknadarkivschema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state Soknadarkivschema: ${soknadarkivschema.print()}") }
 			.foreach { key, (soknadarkivschema, state) -> taskListService.addOrUpdateTask(key, soknadarkivschema, state.type) } // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask

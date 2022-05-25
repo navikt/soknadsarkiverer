@@ -41,7 +41,7 @@ data class KafkaEvent<T>(
 
 private fun getTypeRepresentation(data: Any?): PayloadType {
 	return when(data) {
-		is Soknadarkivschema -> PayloadType.INPUT
+		is Soknadarkivschema -> PayloadType.MAIN
 		is InnsendingMetrics -> PayloadType.METRIC
 		is ProcessingEvent -> {
 			when (data.type) {
@@ -64,4 +64,4 @@ private fun getTypeRepresentation(data: Any?): PayloadType {
 	}
 }
 
-enum class PayloadType { INPUT, RECEIVED, STARTED, ARCHIVED, FINISHED, FAILURE, MESSAGE_OK, MESSAGE_EXCEPTION, METRIC, UNKNOWN }
+enum class PayloadType { MAIN, RECEIVED, STARTED, ARCHIVED, FINISHED, FAILURE, MESSAGE_OK, MESSAGE_EXCEPTION, METRIC, UNKNOWN }

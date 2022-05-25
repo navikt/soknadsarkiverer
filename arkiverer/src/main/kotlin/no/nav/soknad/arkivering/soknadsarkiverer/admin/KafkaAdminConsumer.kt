@@ -16,7 +16,7 @@ import java.util.*
 @Service
 class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 
-	private val inputTopic = appConfiguration.kafkaConfig.inputTopic
+	private val mainTopic = appConfiguration.kafkaConfig.mainTopic
 	private val processingTopic = appConfiguration.kafkaConfig.processingTopic
 	private val messageTopic = appConfiguration.kafkaConfig.messageTopic
 	private val metricsTopic = appConfiguration.kafkaConfig.metricsTopic
@@ -25,7 +25,7 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 	internal fun getAllKafkaRecords(eventCollectionBuilder: EventCollection.Builder): List<KafkaEvent<String>> {
 		val records = runBlocking {
 			awaitAll(
-				getAllInputRecordsAsync(eventCollectionBuilder),
+				getAllMainRecordsAsync(eventCollectionBuilder),
 				getAllProcessingRecordsAsync(eventCollectionBuilder),
 				getAllMessageRecordsAsync(eventCollectionBuilder),
 				getAllMetricsRecordsAsync(eventCollectionBuilder)
@@ -60,8 +60,8 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 		return eventCollection.getEvents()
 	}
 
-	private fun getAllInputRecordsAsync(eventCollectionBuilder: EventCollection.Builder) = GlobalScope.async {
-		getRecords(inputTopic, "input", PoisonSwallowingAvroDeserializer(), eventCollectionBuilder)
+	private fun getAllMainRecordsAsync(eventCollectionBuilder: EventCollection.Builder) = GlobalScope.async {
+		getRecords(mainTopic, "main", PoisonSwallowingAvroDeserializer(), eventCollectionBuilder)
 	}
 	internal fun getAllProcessingRecordsAsync(eventCollectionBuilder: EventCollection.Builder) = GlobalScope.async {
 		getRecords(processingTopic, "processingevent", PoisonSwallowingAvroDeserializer(), eventCollectionBuilder)

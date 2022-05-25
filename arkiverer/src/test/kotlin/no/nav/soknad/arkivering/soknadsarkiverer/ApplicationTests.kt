@@ -515,12 +515,12 @@ class ApplicationTests {
 
 
 	private fun putDataOnKafkaTopic(key: Key, soknadarkivschema: Soknadarkivschema, headers: Headers = RecordHeaders()) {
-		val topic = appConfiguration.kafkaConfig.inputTopic
+		val topic = appConfiguration.kafkaConfig.mainTopic
 		putDataOnTopic(key, soknadarkivschema, headers, topic, kafkaProducer)
 	}
 
 	private fun putDataOnKafkaTopic(key: Key, badData: String, headers: Headers = RecordHeaders()) {
-		val topic = appConfiguration.kafkaConfig.inputTopic
+		val topic = appConfiguration.kafkaConfig.mainTopic
 		putDataOnTopic(key, badData, headers, topic, kafkaProducerForBadData)
 	}
 

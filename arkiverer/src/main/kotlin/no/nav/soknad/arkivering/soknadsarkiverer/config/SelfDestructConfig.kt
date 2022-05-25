@@ -23,7 +23,7 @@ class SelfDestructConfig(private val scheduler: Scheduler, private val appConfig
 	 *
 	 *
 	 * === Kafka topics and tasks ===
-	 * The application subscribes to [kafkaInputTopic] and [kafkaProcessingTopic]. When an event comes in on the former
+	 * The application subscribes to [kafkaMainTopic] and [kafkaProcessingTopic]. When an event comes in on the former
 	 * topic, a [no.nav.soknad.arkivering.avroschemas.ProcessingEvent] is created on the latter topic, to keep track of
 	 * how far into the processing the application has come. An internal, in-memory task is also created in the
 	 * [no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService]. The events on the Kafka topics are typically
