@@ -53,7 +53,7 @@ spec:
     - secret: shared-innsending-secret
   env:
     - name: KAFKA_SECURITY
-      value: 'TRUE'
+      value: TRUE
     - name: SPRING_PROFILES_ACTIVE
       value: dev
     - name: KAFKA_INPUT_TOPIC
