@@ -20,4 +20,4 @@ spec:
       access: readwrite
     - team: team-soknad
       application: soknadsarkiverer
-      access: read
+      access: readwrite
