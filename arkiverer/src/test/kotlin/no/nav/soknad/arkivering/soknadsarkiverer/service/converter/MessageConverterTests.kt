@@ -173,7 +173,7 @@ class MessageConverterTests {
 
 		assertEquals(2, joarkData.dokumenter[1].dokumentvarianter.size)
 		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[0].filnavn, joarkData.dokumenter[1].dokumentvarianter[0].filnavn)
-		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[0].filtype, joarkData.dokumenter[1].dokumentvarianter[0].filtype)
+		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[0].filtype.uppercase(), joarkData.dokumenter[1].dokumentvarianter[0].filtype)
 		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[0].variantformat, joarkData.dokumenter[1].dokumentvarianter[0].variantformat)
 		assertEquals(files[1].content, joarkData.dokumenter[1].dokumentvarianter[0].fysiskDokument)
 

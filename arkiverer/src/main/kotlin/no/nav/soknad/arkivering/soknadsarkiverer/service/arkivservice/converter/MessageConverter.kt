@@ -91,6 +91,6 @@ private fun createDokumentVariant(variant: MottattVariant, attachedFiles: List<F
 	if (attachedFile[0].content == null)
 		throw Exception("File with uuid '${variant.uuid}' was null!")
 
-	val filtype = if (variant.filtype == "PDF/A") "PDFA" else variant.filtype
+	val filtype = if (variant.filtype.equals("PDF/A",true) ) "PDFA" else variant.filtype.uppercase()
 	return DokumentVariant(variant.filnavn, filtype, attachedFile[0].content!!, variant.variantformat)
 }
