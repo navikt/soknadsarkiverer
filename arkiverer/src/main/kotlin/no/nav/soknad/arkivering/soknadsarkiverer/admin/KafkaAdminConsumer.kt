@@ -14,12 +14,12 @@ import org.springframework.stereotype.Service
 import java.util.*
 
 @Service
-class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
+class KafkaAdminConsumer(private val kafkaConfig: KafkaConfig) {
 
-	private val mainTopic = appConfiguration.kafkaConfig.mainTopic
-	private val processingTopic = appConfiguration.kafkaConfig.processingTopic
-	private val messageTopic = appConfiguration.kafkaConfig.messageTopic
-	private val metricsTopic = appConfiguration.kafkaConfig.metricsTopic
+	private val mainTopic = kafkaConfig.topics.mainTopic
+	private val processingTopic = kafkaConfig.topics.processingTopic
+	private val messageTopic = kafkaConfig.topics.messageTopic
+	private val metricsTopic = kafkaConfig.topics.metricsTopic
 
 
 	internal fun getAllKafkaRecords(eventCollectionBuilder: EventCollection.Builder): List<KafkaEvent<String>> {
@@ -82,7 +82,7 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 
 		return AdminConsumer.Builder<T>()
 			.withEventCollection(eventCollectionBuilder.build())
-			.withAppConfiguration(appConfiguration)
+			.withKafkaConfig(kafkaConfig)
 			.withKafkaGroupId("soknadsarkiverer-admin-$recordType-${UUID.randomUUID()}")
 			.withValueDeserializer(deserializer)
 			.forTopic(topic)
@@ -92,12 +92,12 @@ class KafkaAdminConsumer(private val appConfiguration: AppConfiguration) {
 
 
 private class AdminConsumer<T> private constructor(
-	appConfiguration: AppConfiguration,
+	kafkaConfig: KafkaConfig,
 	kafkaGroupId: String,
 	deserializer: Deserializer<T>,
 	topic: String,
 	private val eventCollection: EventCollection<T>
-) : KafkaRecordConsumer<T, KafkaEvent<T>>(appConfiguration, kafkaGroupId, deserializer, topic) {
+) : KafkaRecordConsumer<T, KafkaEvent<T>>(kafkaConfig, kafkaGroupId, deserializer, topic) {
 
 	private var collectionWasSatisfiedOnLastRecordAddition = false
 
@@ -128,7 +128,7 @@ private class AdminConsumer<T> private constructor(
 		fun withEventCollection(eventCollection: EventCollection<T>) = apply { this.eventCollection = eventCollection }
 
 		override fun getAllKafkaRecords() =
-			AdminConsumer(appConfiguration!!, kafkaGroupId!!, deserializer!!, topic!!, eventCollection!!)
+			AdminConsumer(kafkaConfig!!, kafkaGroupId!!, deserializer!!, topic!!, eventCollection!!)
 				.getAllKafkaRecords()
 	}
 }

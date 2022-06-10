@@ -1,18 +1,39 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.utils
 
 import no.nav.soknad.arkivering.soknadsarkiverer.config.*
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import org.junit.jupiter.api.fail
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.boot.test.util.TestPropertyValues
+import org.springframework.context.ApplicationContextInitializer
+import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.KafkaContainer
 import org.testcontainers.utility.DockerImageName
 import java.io.Closeable
 
+
 @Configuration
+//@ContextConfiguration(initializers = {ContainerizedKafka::EnvInitializer.class})
 class ContainerizedKafka : Closeable {
-	private val kafkaContainer: KafkaContainer = KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka"))
-		.withNetworkAliases("kafka-broker")
+
+	companion object {
+
+		 val kafkaContainer: KafkaContainer = KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka"))
+			.withNetworkAliases("kafka-broker")
+
+		@JvmStatic
+		@DynamicPropertySource
+		fun properties(registry: DynamicPropertyRegistry) {
+			registry.add(
+				"kafka.brokers", kafkaContainer::getBootstrapServers
+			)
+		}
+	}
 
 	init {
 		kafkaContainer.start()
@@ -41,8 +62,28 @@ class ContainerizedKafka : Closeable {
 		}
 	}
 
+
+	internal class EnvInitializer : ApplicationContextInitializer<ConfigurableApplicationContext> {
+		override fun initialize(applicationContext: ConfigurableApplicationContext) {
+			TestPropertyValues.of(
+				java.lang.String.format(
+					"kafka.brokers.url=",
+					kafkaContainer.bootstrapServers
+				)
+			).applyTo(applicationContext)
+		}
+	}
+
+/*
+	@Bean()
 	@Primary
-	@Bean
-	fun kafkaAppConfiguration() =
-		AppConfiguration(kafkaConfig = AppConfiguration.KafkaConfig(kafkaBrokers = kafkaContainer.bootstrapServers))
+	fun kafkaAppConfiguration(kafkaConfig: KafkaConfig) = KafkaConfig(kafkaConfig.applicationId,
+																																	  kafkaContainer.bootstrapServers,
+																																		kafkaConfig.bootstrappingTimeout,
+																																		kafkaConfig.delayBeforeKafkaInitialization,
+																																		kafkaConfig.security,
+																																		kafkaConfig.topics,
+																																		kafkaConfig.schemaRegistry)
+*/
 }
+

@@ -18,6 +18,28 @@ management:
         request:
           autotime:
             enabled: true
+kafka:
+  applicationId: ${KAFKA_STREAMS_APPLICATION_ID}
+  brokers: ${KAFKA_BROKERS}
+  bootstrappingTimeout: ${BOOTSTRAPPING_TIMEOUT}
+  delayBeforeKafkaInitialization: ${DELAY_BEFORE_KAFKA_INITIALIZATION}
+  security:
+    enabled: ${KAFKA_SECURITY}
+    protocol: SSL
+    keyStoreType: PKCS12
+    keyStorePath: ${KAFKA_KEYSTORE_PATH}
+    keyStorePassword: ${KAFKA_CREDSTORE_PASSWORD}
+    trustStorePath: ${KAFKA_TRUSTSTORE_PATH}
+    trustStorePassword: ${KAFKA_CREDSTORE_PASSWORD}
+  topics:
+    mainTopic: ${KAFKA_MAIN_TOPIC}
+    processingTopic: ${KAFKA_PROCESSING_TOPIC}
+    messageTopic: ${KAFKA_MESSAGE_TOPIC}
+    metricsTopic: ${KAFKA_METRICS_TOPIC}
+  schemaRegistry:
+    url: ${KAFKA_SCHEMA_REGISTRY}
+    username: ${KAFKA_SCHEMA_REGISTRY_USER}
+    password: ${KAFKA_SCHEMA_REGISTRY_PASSWORD}
 
 springdoc:
   swagger-ui:
@@ -57,7 +79,7 @@ no.nav.security.jwt:
 spring:
   config:
     activate:
-      on-profile: spring | default | docker | dev | prod
+      on-profile: spring | default | dev | prod
 
 no.nav.security.jwt:
   issuer.azuread:

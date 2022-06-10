@@ -4,10 +4,7 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConsumerBuilder
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaRecordConsumer
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.Key
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.PoisonSwallowingAvroDeserializer
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.*
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.Deserializer
@@ -15,14 +12,14 @@ import org.slf4j.LoggerFactory
 import java.util.*
 
 class KafkaBootstrapConsumer(
-	private val appConfiguration: AppConfiguration,
-	private val taskListService: TaskListService
+	private val taskListService: TaskListService,
+	private val kafkaConfig: KafkaConfig
 ) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	private val mainTopic = appConfiguration.kafkaConfig.mainTopic
-	private val processingTopic = appConfiguration.kafkaConfig.processingTopic
+	private val mainTopic = kafkaConfig.topics.mainTopic
+	private val processingTopic = kafkaConfig.topics.processingTopic
 	private val uuid = UUID.randomUUID().toString()
 
 
@@ -61,7 +58,6 @@ class KafkaBootstrapConsumer(
 
 		return BootstrapConsumer.Builder<Soknadarkivschema>()
 			.withFilter(keepUnfinishedRecordsFilter)
-			.withAppConfiguration(appConfiguration)
 			.withKafkaGroupId("soknadsarkiverer-bootstrapping-main-$uuid")
 			.withValueDeserializer(PoisonSwallowingAvroDeserializer())
 			.forTopic(mainTopic)
@@ -83,7 +79,7 @@ class KafkaBootstrapConsumer(
 
 		val kafkaRecords = BootstrapConsumer.Builder<ProcessingEvent>()
 			.withFilter(keepUnfinishedRecordsFilter)
-			.withAppConfiguration(appConfiguration)
+			.withKafkaConfig(kafkaConfig)
 			.withKafkaGroupId("soknadsarkiverer-bootstrapping-processingevent-$uuid")
 			.withValueDeserializer(PoisonSwallowingAvroDeserializer())
 			.forTopic(processingTopic)
@@ -121,17 +117,17 @@ class KafkaBootstrapConsumer(
 
 
 private class BootstrapConsumer<T> private constructor(
-	private val appConfiguration: AppConfiguration,
+	private val kafkaConfig: KafkaConfig,
 	kafkaGroupId: String,
 	deserializer: Deserializer<T>,
 	topic: String,
 	private val filter: (List<ConsumerRecord<Key, T>>) -> List<ConsumerRecord<Key, T>>
-) : KafkaRecordConsumer<T, ConsumerRecord<Key, T>>(appConfiguration, kafkaGroupId, deserializer, topic) {
+) : KafkaRecordConsumer<T, ConsumerRecord<Key, T>>(kafkaConfig, kafkaGroupId, deserializer, topic) {
 
 	private var records = mutableListOf<ConsumerRecord<Key, T>>()
 
 
-	override fun getEnforcedTimeoutInMs() = appConfiguration.kafkaConfig.bootstrappingTimeout.toInt() * 1000
+	override fun getEnforcedTimeoutInMs() = kafkaConfig.bootstrappingTimeout * 1000
 
 	override fun addRecords(newRecords: List<ConsumerRecord<Key, T>>) {
 		records.addAll(newRecords)
@@ -148,7 +144,7 @@ private class BootstrapConsumer<T> private constructor(
 			apply { this.filter = filter }
 
 		override fun getAllKafkaRecords() =
-			BootstrapConsumer(appConfiguration!!, kafkaGroupId!!, deserializer!!, topic!!, filter!!)
+			BootstrapConsumer(kafkaConfig!!, kafkaGroupId!!, deserializer!!, topic!!, filter!!)
 				.getAllKafkaRecords()
 	}
 }

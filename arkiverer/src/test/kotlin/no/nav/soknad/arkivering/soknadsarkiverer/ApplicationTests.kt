@@ -11,6 +11,7 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -43,11 +45,11 @@ import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
 @ActiveProfiles("test")
-@SpringBootTest
+@SpringBootTest()
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
-@EnableConfigurationProperties(ClientConfigurationProperties::class)
+@EnableConfigurationProperties(ClientConfigurationProperties::class,KafkaConfig::class)
 @Import(ContainerizedKafka::class)
 class ApplicationTests {
 
@@ -62,6 +64,8 @@ class ApplicationTests {
 	private lateinit var collectorRegistry: CollectorRegistry
 	@Autowired
 	private lateinit var appConfiguration: AppConfiguration
+	@Autowired
+	private lateinit var kafkaConfig: KafkaConfig
 	@Autowired
 	private lateinit var taskListService: TaskListService
 	@Autowired
@@ -84,7 +88,7 @@ class ApplicationTests {
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap()
 			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 
-		kafkaListener = KafkaListener(appConfiguration.kafkaConfig)
+		kafkaListener = KafkaListener(kafkaConfig)
 	}
 
 	@BeforeEach
@@ -515,12 +519,12 @@ class ApplicationTests {
 
 
 	private fun putDataOnKafkaTopic(key: Key, soknadarkivschema: Soknadarkivschema, headers: Headers = RecordHeaders()) {
-		val topic = appConfiguration.kafkaConfig.mainTopic
+		val topic = kafkaConfig.topics.mainTopic
 		putDataOnTopic(key, soknadarkivschema, headers, topic, kafkaProducer)
 	}
 
 	private fun putDataOnKafkaTopic(key: Key, badData: String, headers: Headers = RecordHeaders()) {
-		val topic = appConfiguration.kafkaConfig.mainTopic
+		val topic = kafkaConfig.topics.mainTopic
 		putDataOnTopic(key, badData, headers, topic, kafkaProducerForBadData)
 	}
 
@@ -539,7 +543,7 @@ class ApplicationTests {
 	private fun kafkaConfigMap(): MutableMap<String, Any> {
 		return HashMap<String, Any>().also {
 			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = "mock://mocked-scope"
-			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.kafkaBrokers
+			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig.brokers
 			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java
 		}

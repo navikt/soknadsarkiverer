@@ -10,6 +10,7 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.ContainerizedKafka
@@ -59,6 +60,8 @@ class StateRecreationTests {
 
 	@Autowired
 	private lateinit var appConfiguration: AppConfiguration
+	@Autowired
+	private lateinit var kafkaConfig: KafkaConfig
 	private lateinit var kafkaMainTopicProducer: KafkaProducer<String, Soknadarkivschema>
 	private lateinit var kafkaProcessingEventProducer: KafkaProducer<String, ProcessingEvent>
 	private lateinit var kafkaBootstrapConsumer: KafkaBootstrapConsumer
@@ -71,7 +74,7 @@ class StateRecreationTests {
 	fun setup() {
 		kafkaMainTopicProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProcessingEventProducer = KafkaProducer(kafkaConfigMap())
-		kafkaBootstrapConsumer = KafkaBootstrapConsumer(appConfiguration, taskListService)
+		kafkaBootstrapConsumer = KafkaBootstrapConsumer(taskListService,kafkaConfig)
 
 		kafkaBootstrapConsumer.recreateState() // Other test classes could have left Kafka events on the topics. Consume them before running the tests in this class.
 	}
@@ -320,14 +323,14 @@ class StateRecreationTests {
 
 	private fun publishSoknadsarkivschemas(vararg keys: String) {
 		keys.forEach {
-			val topic = appConfiguration.kafkaConfig.mainTopic
+			val topic = kafkaConfig.topics.mainTopic
 			putDataOnTopic(it, soknadarkivschema, RecordHeaders(), topic, kafkaMainTopicProducer)
 		}
 	}
 
 	private fun publishProcessingEvents(vararg keysAndEventTypes: Pair<String, EventTypes>) {
 		keysAndEventTypes.forEach { (key, eventType) ->
-			val topic = appConfiguration.kafkaConfig.processingTopic
+			val topic = kafkaConfig.topics.processingTopic
 			putDataOnTopic(key, ProcessingEvent(eventType), RecordHeaders(), topic, kafkaProcessingEventProducer)
 		}
 	}
@@ -397,7 +400,7 @@ class StateRecreationTests {
 	private fun kafkaConfigMap(): MutableMap<String, Any> {
 		return HashMap<String, Any>().also {
 			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = "mock://mocked-scope"
-			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.kafkaBrokers
+			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig.brokers
 			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java
 		}
