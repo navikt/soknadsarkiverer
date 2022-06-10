@@ -2,42 +2,40 @@ package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.ConstructorBinding
-import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration
 import org.springframework.stereotype.Component
 
-//@ConstructorBinding
-@Configuration
+@ConstructorBinding
 @ConfigurationProperties(prefix = "kafka")
 data class KafkaConfig(
-	var applicationId : String,
-	var brokers: String,
-	var bootstrappingTimeout: Int,
-	var delayBeforeKafkaInitialization: Long,
-  var security : SecurityConfig,
-	var topics : Topics,
-	var schemaRegistry: SchemaRegistry
+	val applicationId : String,
+	val brokers: String,
+	val bootstrappingTimeout: Int,
+	val delayBeforeKafkaInitialization: Long,
+  val security : SecurityConfig,
+	val topics : Topics,
+	val schemaRegistry: SchemaRegistry
 )
 
 data class SecurityConfig(
-	var enabled  : String,
-	var protocol : String,
-	var keyStoreType : String,
-	var keyStorePath : String,
-	var keyStorePassword : String,
-	var trustStorePath : String,
-	var trustStorePassword : String
+	val enabled  : String,
+	val protocol : String,
+	val keyStoreType : String,
+	val keyStorePath : String,
+	val keyStorePassword : String,
+	val trustStorePath : String,
+	val trustStorePassword : String
 )
 
 data class Topics(
-	var mainTopic : String,
-	var processingTopic : String,
-	var messageTopic : String,
-	var metricsTopic : String
+	val mainTopic : String,
+	val processingTopic : String,
+	val messageTopic : String,
+	val metricsTopic : String
 )
 
 data class SchemaRegistry(
-	var url : String,
-	var username : String,
-	var password : String
+	val url : String,
+	val username : String,
+	val password : String
 )
