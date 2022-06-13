@@ -36,6 +36,9 @@ spec:
   azure:
     application:
       enabled: true
+  kafka:
+    pool: {{ kafka-pool }}
+    streams: true
   envFrom:
     - secret: soknadsarkiver-google-secret
     - secret: shared-innsending-secret

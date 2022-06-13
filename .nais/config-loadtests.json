@@ -9,5 +9,6 @@
 	"kafka-processingeventlog-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v1-loadtests",
 	"kafka-message-topic": "team-soknad.privat-soknadinnsending-messages-v1-loadtests",
 	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v1-loadtests",
-	"joark-host": "https://arkiv-mock-gcp.dev.intern.nav.no"
+	"joark-host": "https://arkiv-mock-gcp.dev.intern.nav.no",
+	"kafka-pool": "nav-dev"
 }
