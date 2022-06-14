@@ -272,7 +272,7 @@ private class TestConsumer(
 	private val kafkaConsumer: KafkaConsumer<Key, String>,
 	testClock: Clock
 ) : KafkaRecordConsumer<String, ConsumerRecord<Key, String>>(
-	AppConfiguration(kafkaConfig()),
+	kafkaConfig(),
 	"testId",
 	StringDeserializer(),
 	topic,
@@ -330,22 +330,19 @@ private class TestClock : Clock() {
  */
 private fun kafkaProperties() = Properties().also {
 	it[ConsumerConfig.GROUP_ID_CONFIG] = kafkaConfig().applicationId
-	it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig().kafkaBrokers
+	it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig().brokers
 	it[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
 	it[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
 }
 
-private fun kafkaConfig() = AppConfiguration.KafkaConfig(
-	kafkaBrokers = "localhost:17171",
-	schemaRegistryUrl = "localhost:16868",
-	secure = "FALSE",
-	mainTopic = topic,
-	processingTopic = "processingTopic",
-	messageTopic = "messageTopic",
-	metricsTopic = "metricsTopic",
+private fun kafkaConfig() = KafkaConfig(
+	applicationId = "testApplicationId",
+	brokers = "localhost:17171",
 	bootstrappingTimeout = "0",
 	delayBeforeKafkaInitialization = "0",
-	applicationId = "testApplicationId"
+	schemaRegistry = SchemaRegistry(url = "localhost:16868","dummy","dummy"),
+	security = SecurityConfig("FALSE","dummy","dummy","dummy","dummy","dummy","dummy"),
+	topics = Topics(topic,"processingTopic", messageTopic = "messageTopic",metricsTopic = "metricsTopic")
 )
 
 private typealias Time = Long

@@ -19,7 +19,8 @@ class KafkaSetup(
 	private val taskListService: TaskListService,
 	private val kafkaPublisher: KafkaPublisher,
 	private val scheduler: Scheduler,
-	private val metrics: ArchivingMetrics
+	private val metrics: ArchivingMetrics,
+	private val kafkaConfig: KafkaConfig
 ) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -30,20 +31,20 @@ class KafkaSetup(
 
 		scheduleJob {
 			bootstrapKafka()
-			setupKafkaStreams(appConfiguration, taskListService, kafkaPublisher)
+			setupKafkaStreams(appConfiguration, taskListService, kafkaPublisher, kafkaConfig = kafkaConfig )
 		}
 	}
 
 	private fun bootstrapKafka() {
 		val startTime = System.currentTimeMillis()
 		logger.info("Starting Kafka Bootstrap Consumer to create tasks for any tasks that had not yet been finished")
-		KafkaBootstrapConsumer(appConfiguration, taskListService).recreateState()
+		KafkaBootstrapConsumer( taskListService, kafkaConfig).recreateState()
 		logger.info("Finished Kafka Bootstrap Consumer in ${System.currentTimeMillis() - startTime} ms.")
 	}
 
 	private fun scheduleJob(jobToRun: () -> Unit) {
-		val delay = appConfiguration.kafkaConfig.delayBeforeKafkaInitialization.toLong()
-		scheduler.scheduleSingleTask(jobToRun, Instant.now().plusSeconds(delay))
+		val delay = kafkaConfig.delayBeforeKafkaInitialization
+		scheduler.scheduleSingleTask(jobToRun, Instant.now().plusSeconds(delay.toLong()))
 	}
 }
 
@@ -53,7 +54,8 @@ class KafkaSetupTest(
 	private val appConfiguration: AppConfiguration,
 	private val taskListService: TaskListService,
 	private val kafkaPublisher: KafkaPublisher,
-	private val metrics: ArchivingMetrics
+	private val metrics: ArchivingMetrics,
+	private val kafkaConfig : KafkaConfig
 ) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -63,8 +65,8 @@ class KafkaSetupTest(
 
 		setupMetricsAndHealth(metrics, appConfiguration)
 
-		val groupId = appConfiguration.kafkaConfig.applicationId + "_" + UUID.randomUUID().toString()
-		setupKafkaStreams(appConfiguration, taskListService, kafkaPublisher, groupId)
+		val groupId = kafkaConfig.applicationId + "_" + UUID.randomUUID().toString()
+		setupKafkaStreams(appConfiguration, taskListService, kafkaPublisher, groupId,kafkaConfig)
 	}
 }
 
@@ -72,10 +74,11 @@ private fun setupKafkaStreams(
 	appConfiguration: AppConfiguration,
 	taskListService: TaskListService,
 	kafkaPublisher: KafkaPublisher,
-	groupId: String? = null
+	groupId: String? = null,
+	kafkaConfig : KafkaConfig
 ) {
-	val id = groupId ?: appConfiguration.kafkaConfig.applicationId
-	KafkaStreamsSetup(appConfiguration, taskListService, kafkaPublisher).setupKafkaStreams(id)
+	val id = groupId ?: kafkaConfig.applicationId
+	KafkaStreamsSetup(appConfiguration, taskListService, kafkaPublisher,kafkaConfig).setupKafkaStreams(id)
 }
 
 private fun setupMetricsAndHealth(metrics: ArchivingMetrics, appConfiguration: AppConfiguration) {

@@ -7,31 +7,8 @@ import org.springframework.core.env.ConfigurableEnvironment
 import java.io.File
 import javax.annotation.Priority
 
-const val kafkaMainTopic = "privat-soknadinnsending-v1-dev"
-const val kafkaProcessingTopic = "privat-soknadinnsending-processingeventlog-v1-dev"
-const val kafkaMessageTopic = "privat-soknadinnsending-messages-v1-dev"
-const val kafkaMetricsTopic = "privat-soknadinnsending-metrics-v1-dev"
-
 private val defaultProperties = ConfigurationMap(mapOf(
-	"KAFKA_SCHEMA_REGISTRY" to "http://localhost:8081",
-	"KAFKA_BROKERS" to "localhost:29092",
-	"KAFKA_SECURITY" to "FALSE",
-	"KAFKA_STREAMS_APPLICATION_ID" to "soknadsarkiverer-group-defaultid",
-	"KAFKA_SCHEMA_REGISTRY_USER" to "username",
-	"KAFKA_SCHEMA_REGISTRY_PASSWORD" to "password",
 
-	"KAFKA_KEYSTORE_PATH" to "",
-	"KAFKA_CREDSTORE_PASSWORD" to "",
-	"KAFKA_TRUSTSTORE_PATH" to "",
-
-	"BOOTSTRAPPING_TIMEOUT" to 120.toString(),
-	"DELAY_BEFORE_KAFKA_INITIALIZATION" to 5.toString(),
-	"KAFKA_MAIN_TOPIC" to kafkaMainTopic,
-	"KAFKA_PROCESSING_TOPIC" to kafkaProcessingTopic,
-	"KAFKA_MESSAGE_TOPIC" to kafkaMessageTopic,
-	"KAFKA_METRICS_TOPIC" to kafkaMetricsTopic,
-
-	"SPRING_PROFILES_ACTIVE" to "spring",
 	"MAX_MESSAGE_SIZE" to (1024 * 1024 * 300).toString(),
 	"CLIENTSECRET" to "",
 
@@ -63,7 +40,9 @@ private fun String.configProperty(): String = appConfig[Key(this, stringType)]
 
 fun readFileAsText(fileName: String, default: String = "") = try { File(fileName).readText(Charsets.UTF_8) } catch (e: Exception) { default }
 
-data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val config: Config = Config(), val state: State = State()) {
+
+data class AppConfiguration(val config: Config = Config(), val state: State = State()) {
+	/*
 	data class KafkaConfig(
 		val kafkaBrokers: String = "KAFKA_BROKERS".configProperty(),
 		val schemaRegistryUrl: String = "KAFKA_SCHEMA_REGISTRY".configProperty(),
@@ -85,6 +64,8 @@ data class AppConfiguration(val kafkaConfig: KafkaConfig = KafkaConfig(), val co
 		val delayBeforeKafkaInitialization: String = "DELAY_BEFORE_KAFKA_INITIALIZATION".configProperty(),
 		val applicationId: String = "KAFKA_STREAMS_APPLICATION_ID".configProperty()
 	)
+
+	 */
 
 	data class Config(
 		val joarkHost: String = "JOARK_HOST".configProperty(),

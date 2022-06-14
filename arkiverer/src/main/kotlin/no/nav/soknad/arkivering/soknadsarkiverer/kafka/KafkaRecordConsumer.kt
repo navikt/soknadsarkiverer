@@ -18,7 +18,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 abstract class KafkaRecordConsumer<T, R>(
-	private val appConfiguration: AppConfiguration,
+	private val kafkaConfig: KafkaConfig,
 	private val kafkaGroupId: String,
 	private val valueDeserializer: Deserializer<T>,
 	private val topic: String,
@@ -119,24 +119,24 @@ abstract class KafkaRecordConsumer<T, R>(
 
 
 	private fun kafkaConfig(valueDeserializer: Deserializer<T>) = Properties().also {
-		it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
+		it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = kafkaConfig.schemaRegistry.url
 		it[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
 		it[ConsumerConfig.GROUP_ID_CONFIG] = kafkaGroupId
 		it[ConsumerConfig.MAX_POLL_RECORDS_CONFIG] = 5000
-		it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.kafkaBrokers
+		it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig.brokers
 		it[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
 		it[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = valueDeserializer::class.java
 
-		if (appConfiguration.kafkaConfig.secure == "TRUE") {
-			it[SchemaRegistryClientConfig.USER_INFO_CONFIG] = "${appConfiguration.kafkaConfig.schemaRegistryUsername}:${appConfiguration.kafkaConfig.schemaRegistryPassword}"
+		if (kafkaConfig.security.enabled == "TRUE") {
+			it[SchemaRegistryClientConfig.USER_INFO_CONFIG] = "${kafkaConfig.schemaRegistry.username}:${kafkaConfig.schemaRegistry.password}"
 			it[SchemaRegistryClientConfig.BASIC_AUTH_CREDENTIALS_SOURCE] = "USER_INFO"
-			it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = appConfiguration.kafkaConfig.protocol
+			it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = kafkaConfig.security.protocol
 			it[SSL_KEYSTORE_TYPE_CONFIG] = "PKCS12"
-			it[SSL_TRUSTSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.trustStorePath
-			it[SSL_TRUSTSTORE_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
-			it[SSL_KEYSTORE_LOCATION_CONFIG] = appConfiguration.kafkaConfig.keyStorePath
-			it[SSL_KEYSTORE_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
-			it[SSL_KEY_PASSWORD_CONFIG] = appConfiguration.kafkaConfig.keyStorePassword
+			it[SSL_TRUSTSTORE_LOCATION_CONFIG] = kafkaConfig.security.trustStorePath
+			it[SSL_TRUSTSTORE_PASSWORD_CONFIG] = kafkaConfig.security.keyStorePassword
+			it[SSL_KEYSTORE_LOCATION_CONFIG] = kafkaConfig.security.keyStorePath
+			it[SSL_KEYSTORE_PASSWORD_CONFIG] = kafkaConfig.security.keyStorePassword
+			it[SSL_KEY_PASSWORD_CONFIG] = kafkaConfig.security.keyStorePassword
 		}
 	}
 
@@ -185,12 +185,12 @@ class PoisonSwallowingAvroDeserializer<T : SpecificRecord> : SpecificAvroDeseria
 }
 
 abstract class KafkaConsumerBuilder<T, R> {
-	var appConfiguration: AppConfiguration? = null
+	var kafkaConfig: KafkaConfig? = null
 	var kafkaGroupId: String? = null
 	var deserializer: Deserializer<T>? = null
 	var topic: String? = null
 
-	fun withAppConfiguration(appConfiguration: AppConfiguration) = apply { this.appConfiguration = appConfiguration }
+	fun withKafkaConfig(kafkaConfig: KafkaConfig) = apply { this.kafkaConfig = kafkaConfig }
 	fun withKafkaGroupId(kafkaGroupId: String) = apply { this.kafkaGroupId = kafkaGroupId }
 	fun withValueDeserializer(deserializer: Deserializer<T>) = apply { this.deserializer = deserializer }
 	fun forTopic(topic: String) = apply { this.topic = topic }
