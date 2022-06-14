@@ -34,8 +34,8 @@ import java.util.concurrent.TimeUnit
 @ActiveProfiles("test")
 @SpringBootTest
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@Import(ContainerizedKafka::class)
-class AdminInterfaceTests {
+//@Import(ContainerizedKafka::class)
+class AdminInterfaceTests : ContainerizedKafka() {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null

@@ -44,7 +44,7 @@ class KafkaSetup(
 
 	private fun scheduleJob(jobToRun: () -> Unit) {
 		val delay = kafkaConfig.delayBeforeKafkaInitialization
-		scheduler.scheduleSingleTask(jobToRun, Instant.now().plusSeconds(delay))
+		scheduler.scheduleSingleTask(jobToRun, Instant.now().plusSeconds(delay.toLong()))
 	}
 }
 

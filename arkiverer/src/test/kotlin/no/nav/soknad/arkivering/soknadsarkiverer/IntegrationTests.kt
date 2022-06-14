@@ -34,10 +34,7 @@ import java.util.concurrent.TimeUnit
 @ActiveProfiles("test")
 @SpringBootTest
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
-@EnableConfigurationProperties(ClientConfigurationProperties::class)
-@Import(ContainerizedKafka::class)
-class IntegrationTests {
+class IntegrationTests : ContainerizedKafka() {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
@@ -52,6 +49,7 @@ class IntegrationTests {
 
 	@Autowired
 	private lateinit var appConfiguration: AppConfiguration
+	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
 	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 	private lateinit var kafkaProducerForBadData: KafkaProducer<String, String>

@@ -42,9 +42,9 @@ import java.util.concurrent.TimeUnit
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
-@EnableConfigurationProperties(ClientConfigurationProperties::class)
-@Import(ContainerizedKafka::class)
-class StateRecreationTests {
+@EnableConfigurationProperties(ClientConfigurationProperties::class,KafkaConfig::class)
+//@Import(ContainerizedKafka::class)
+class StateRecreationTests : ContainerizedKafka() {
 
 	@Suppress("unused")
 	@MockBean

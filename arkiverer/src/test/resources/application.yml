@@ -2,6 +2,7 @@ spring:
   profiles:
     active: test
 application:
+  SPRING_PROFILES_ACTIVE: test
   schema-registry-scope: mocked-scope
   KAFKA_SCHEMA_REGISTRY: mock://mocked-scope
   KAFKA_STREAMS_APPLICATION_ID: testApplicationId
@@ -12,7 +13,7 @@ application:
   DELAY_BEFORE_KAFKA_INITIALIZATION: 0
 kafka:
   applicationId: ${application.KAFKA_STREAMS_APPLICATION_ID}
-  brokers: dummy
+  brokers: localhost:29092
   bootstrappingTimeout: ${application.BOOTSTRAPPING_TIMEOUT}
   delayBeforeKafkaInitialization: ${application.DELAY_BEFORE_KAFKA_INITIALIZATION}
   security:
@@ -30,5 +31,5 @@ kafka:
     metricsTopic: privat-soknadinnsending-metrics-v1-dev
   schemaRegistry:
     url: ${application.KAFKA_SCHEMA_REGISTRY}
-    username: ${application.KAFKA_SCHEMA_REGISTRY_USER}
-    password: ${application.KAFKA_SCHEMA_REGISTRY_PASSWORD}
+    username: dummy
+    password: dummy

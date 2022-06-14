@@ -338,8 +338,8 @@ private fun kafkaProperties() = Properties().also {
 private fun kafkaConfig() = KafkaConfig(
 	applicationId = "testApplicationId",
 	brokers = "localhost:17171",
-	bootstrappingTimeout = 0,
-	delayBeforeKafkaInitialization = 0,
+	bootstrappingTimeout = "0",
+	delayBeforeKafkaInitialization = "0",
 	schemaRegistry = SchemaRegistry(url = "localhost:16868","dummy","dummy"),
 	security = SecurityConfig("FALSE","dummy","dummy","dummy","dummy","dummy","dummy"),
 	topics = Topics(topic,"processingTopic", messageTopic = "messageTopic",metricsTopic = "metricsTopic")

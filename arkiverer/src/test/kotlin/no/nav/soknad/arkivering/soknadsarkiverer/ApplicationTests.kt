@@ -48,10 +48,7 @@ import kotlin.properties.Delegates
 @SpringBootTest()
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
-@EnableConfigurationProperties(ClientConfigurationProperties::class,KafkaConfig::class)
-@Import(ContainerizedKafka::class)
-class ApplicationTests {
+class ApplicationTests : ContainerizedKafka() {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
@@ -110,6 +107,7 @@ class ApplicationTests {
 	@AfterAll
 	fun stopKafkaConsumers() {
 		kafkaListener.close()
+//		super.close()
 	}
 
 

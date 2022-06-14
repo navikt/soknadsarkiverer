@@ -58,6 +58,7 @@ class KafkaBootstrapConsumer(
 
 		return BootstrapConsumer.Builder<Soknadarkivschema>()
 			.withFilter(keepUnfinishedRecordsFilter)
+			.withKafkaConfig(kafkaConfig)
 			.withKafkaGroupId("soknadsarkiverer-bootstrapping-main-$uuid")
 			.withValueDeserializer(PoisonSwallowingAvroDeserializer())
 			.forTopic(mainTopic)
@@ -127,7 +128,7 @@ private class BootstrapConsumer<T> private constructor(
 	private var records = mutableListOf<ConsumerRecord<Key, T>>()
 
 
-	override fun getEnforcedTimeoutInMs() = kafkaConfig.bootstrappingTimeout * 1000
+	override fun getEnforcedTimeoutInMs() = kafkaConfig.bootstrappingTimeout.toInt() * 1000
 
 	override fun addRecords(newRecords: List<ConsumerRecord<Key, T>>) {
 		records.addAll(newRecords)
