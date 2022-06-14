@@ -107,7 +107,6 @@ class ApplicationTests : ContainerizedKafka() {
 	@AfterAll
 	fun stopKafkaConsumers() {
 		kafkaListener.close()
-//		super.close()
 	}
 
 

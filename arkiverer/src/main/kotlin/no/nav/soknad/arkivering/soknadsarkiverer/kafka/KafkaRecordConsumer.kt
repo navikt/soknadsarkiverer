@@ -190,7 +190,7 @@ abstract class KafkaConsumerBuilder<T, R> {
 	var deserializer: Deserializer<T>? = null
 	var topic: String? = null
 
-	fun withKafkaConfig(appConfiguration: KafkaConfig) = apply { this.kafkaConfig = appConfiguration }
+	fun withKafkaConfig(kafkaConfig: KafkaConfig) = apply { this.kafkaConfig = kafkaConfig }
 	fun withKafkaGroupId(kafkaGroupId: String) = apply { this.kafkaGroupId = kafkaGroupId }
 	fun withValueDeserializer(deserializer: Deserializer<T>) = apply { this.deserializer = deserializer }
 	fun forTopic(topic: String) = apply { this.topic = topic }

@@ -1,12 +1,9 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.utils
 
-import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
-import org.apache.commons.compress.harmony.pack200.PackingUtils.config
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.fail
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean
-import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.context.properties.bind.Binder
 import org.springframework.boot.context.properties.source.ConfigurationPropertySource
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource
@@ -15,15 +12,14 @@ import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.KafkaContainer
 import org.testcontainers.utility.DockerImageName
-import java.util.Properties
+import java.util.*
 
 
-open class ContainerizedKafka  {
-
+open class ContainerizedKafka {
 
 
 	companion object {
-		private val kafkaConfig : KafkaConfig
+		private val kafkaConfig: KafkaConfig
 
 		init {
 			val factoryBean = YamlPropertiesFactoryBean()
@@ -39,7 +35,7 @@ open class ContainerizedKafka  {
 
 
 		// @Container
-		 val kafkaContainer: KafkaContainer = KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka"))
+		val kafkaContainer: KafkaContainer = KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka"))
 			.withNetworkAliases("kafka-broker")
 
 		@JvmStatic
@@ -51,12 +47,15 @@ open class ContainerizedKafka  {
 			)
 		}
 
-	//	@JvmStatic
-	//	@BeforeAll
 		private fun start() {
 			kafkaContainer.start()
 
-		listOf(  kafkaConfig.topics.mainTopic, kafkaConfig.topics.processingTopic, kafkaConfig.topics.messageTopic, kafkaConfig.topics.metricsTopic)
+			listOf(
+				kafkaConfig.topics.mainTopic,
+				kafkaConfig.topics.processingTopic,
+				kafkaConfig.topics.messageTopic,
+				kafkaConfig.topics.metricsTopic
+			)
 				.forEach { createTopic(it) }
 		}
 
@@ -66,7 +65,6 @@ open class ContainerizedKafka  {
 			println("Stopping Kafka Container")
 			kafkaContainer.stop()
 		}
-
 
 
 		private fun createTopic(topic: String) {
