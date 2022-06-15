@@ -7,10 +7,10 @@
 	"outbound": [
 		"soknadsfillager"
 	],
-	"kafka-main-topic": "privat-soknadinnsending-v1",
-	"kafka-processingeventlog-topic": "privat-soknadinnsending-processingeventlog-v1",
-	"kafka-message-topic": "privat-soknadinnsending-messages-v1",
-	"kafka-metrics-topic": "privat-soknadinnsending-metrics-v1",
+	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v1",
+	"kafka-processingeventlog-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v1",
+	"kafka-message-topic": "team-soknad.privat-soknadinnsending-messages-v1",
+	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v1",
 	"filestorage-host": "https://soknadsfillager.intern.nav.no",
 	"joark-host": "https://dokarkiv.prod-fss-pub.nais.io",
 	"dokarkiv-scope": "api://dev-fss.teamdokumenthandtering.dokarkiv/.default",
