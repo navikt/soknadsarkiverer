@@ -44,7 +44,7 @@ jobs:
         env:
           GITHUB_USERNAME: x-access-token
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: mvn install --file pom.xml
+        run: mvn install --file pom.xml -DskipTests
       - uses: docker/build-push-action@v3
         with:
           context: .
