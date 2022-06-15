@@ -3,7 +3,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClientConfig
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroDeserializer
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -133,7 +132,7 @@ abstract class KafkaRecordConsumer<T, R>(
 			it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = kafkaConfig.security.protocol
 			it[SSL_KEYSTORE_TYPE_CONFIG] = "PKCS12"
 			it[SSL_TRUSTSTORE_LOCATION_CONFIG] = kafkaConfig.security.trustStorePath
-			it[SSL_TRUSTSTORE_PASSWORD_CONFIG] = kafkaConfig.security.keyStorePassword
+			it[SSL_TRUSTSTORE_PASSWORD_CONFIG] = kafkaConfig.security.trustStorePassword
 			it[SSL_KEYSTORE_LOCATION_CONFIG] = kafkaConfig.security.keyStorePath
 			it[SSL_KEYSTORE_PASSWORD_CONFIG] = kafkaConfig.security.keyStorePassword
 			it[SSL_KEY_PASSWORD_CONFIG] = kafkaConfig.security.keyStorePassword

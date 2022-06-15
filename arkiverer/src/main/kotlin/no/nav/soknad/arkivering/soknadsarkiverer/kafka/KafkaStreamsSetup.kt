@@ -105,7 +105,7 @@ class KafkaStreamsSetup(
 	}
 
 
-	fun setupKafkaStreams( id : String ): KafkaStreams {
+	fun setupKafkaStreams(id: String): KafkaStreams {
 		logger.info("Setting up KafkaStreams")
 
 		val streamsBuilder = StreamsBuilder()
@@ -123,7 +123,7 @@ class KafkaStreamsSetup(
 		return kafkaStreams
 	}
 
-	private fun kafkaConfig(id : String) = Properties().also {
+	private fun kafkaConfig(id: String) = Properties().also {
 		it[SCHEMA_REGISTRY_URL_CONFIG] = kafkaConfig.schemaRegistry.url
 		it[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
 		it[StreamsConfig.APPLICATION_ID_CONFIG] = id
@@ -132,15 +132,13 @@ class KafkaStreamsSetup(
 		it[StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG] = SpecificAvroSerde::class.java
 		it[StreamsConfig.DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG] = LogAndContinueExceptionHandler::class.java
 		it[StreamsConfig.COMMIT_INTERVAL_MS_CONFIG] = 1000
-		logger.info("I am outside appConfiguration.kafkaConfig.secure == \"TRUE\"")
 		if (kafkaConfig.security.enabled == "TRUE") {
-			logger.info("I am inside appConfiguration.kafkaConfig.secure == \"TRUE\"")
 			it[SchemaRegistryClientConfig.USER_INFO_CONFIG] = "${kafkaConfig.schemaRegistry.username}:${kafkaConfig.schemaRegistry.password}"
 			it[SchemaRegistryClientConfig.BASIC_AUTH_CREDENTIALS_SOURCE] = "USER_INFO"
 			it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = kafkaConfig.security.protocol
 			it[SslConfigs.SSL_KEYSTORE_TYPE_CONFIG] = "PKCS12"
 			it[SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG] = kafkaConfig.security.trustStorePath
-			it[SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG] = kafkaConfig.security.keyStorePassword
+			it[SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG] = kafkaConfig.security.trustStorePassword
 			it[SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG] = kafkaConfig.security.keyStorePath
 			it[SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG] = kafkaConfig.security.keyStorePassword
 			it[SslConfigs.SSL_KEY_PASSWORD_CONFIG] = kafkaConfig.security.keyStorePassword
@@ -164,10 +162,11 @@ class KafkaStreamsSetup(
 	private fun createSoknadarkivschemaSerde(): SpecificAvroSerde<Soknadarkivschema> = createAvroSerde()
 
 	private fun <T : SpecificRecord> createAvroSerde(): SpecificAvroSerde<T> {
-		val serdeConfig = hashMapOf(SCHEMA_REGISTRY_URL_CONFIG to kafkaConfig.schemaRegistry.url,
-																SchemaRegistryClientConfig.BASIC_AUTH_CREDENTIALS_SOURCE to "USER_INFO",
-																SchemaRegistryClientConfig.USER_INFO_CONFIG to "${kafkaConfig.schemaRegistry.username}:${kafkaConfig.schemaRegistry.password}"
-																)
+		val serdeConfig = hashMapOf(
+			SCHEMA_REGISTRY_URL_CONFIG to kafkaConfig.schemaRegistry.url,
+			SchemaRegistryClientConfig.BASIC_AUTH_CREDENTIALS_SOURCE to "USER_INFO",
+			SchemaRegistryClientConfig.USER_INFO_CONFIG to "${kafkaConfig.schemaRegistry.username}:${kafkaConfig.schemaRegistry.password}"
+		)
 		return SpecificAvroSerde<T>().also { it.configure(serdeConfig, false) }
 	}
 }
