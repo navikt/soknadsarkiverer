@@ -44,7 +44,7 @@ jobs:
         env:
           GITHUB_USERNAME: x-access-token
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: mvn install --file pom.xml
+        run: mvn install --file pom.xml -DskipTests
       - uses: docker/build-push-action@v3
         with:
           context: .
@@ -62,7 +62,7 @@ jobs:
         env:
           APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
           CLUSTER: dev-gcp
-          RESOURCE: .nais/nais-preprod.yml
+          RESOURCE: .nais/nais.yml
           VARS: .nais/config-preprod.json
           VAR: image=${{ env.docker_image }}
 
@@ -77,7 +77,7 @@ jobs:
         env:
           APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
           CLUSTER: dev-gcp
-          RESOURCE: .nais/nais-preprod.yml
+          RESOURCE: .nais/nais.yml
           VARS: .nais/config-loadtests.json
           VAR: image=${{ env.docker_image }}
 
@@ -93,4 +93,5 @@ jobs:
           APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
           CLUSTER: prod-gcp
           RESOURCE: .nais/nais.yml
+          VARS: .nais/config-prod.json
           VAR: image=${{ env.docker_image }}
