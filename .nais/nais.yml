@@ -60,6 +60,8 @@ spec:
   env:
     - name: SPRING_PROFILES_ACTIVE
       value: {{profile}}
+    - name: DELAY_BEFORE_KAFKA_INITIALIZATION
+      value: "5"
     - name: BOOTSTRAPPING_TIMEOUT
       value: "0"
     - name: KAFKA_SECURITY
