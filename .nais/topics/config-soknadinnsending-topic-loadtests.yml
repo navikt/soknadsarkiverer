@@ -16,8 +16,8 @@ spec:
     retentionHours: 72
   acl:
     - team: team-soknad
-      application: soknadsmottaker
+      application: soknadsmottaker-loadtests
       access: readwrite
     - team: team-soknad
-      application: soknadsarkiverer
+      application: soknadsarkiverer-loadtests
       access: read
