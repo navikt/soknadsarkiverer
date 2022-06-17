@@ -22,6 +22,10 @@ jobs:
     name: Build and push Docker container
     runs-on: ubuntu-latest
     steps:
+      - name: Print deployment info
+        shell: bash
+        run: |
+          echo "Deploying branch '${GITHUB_REF##*/}' to environment '${{ github.event.inputs.environment }}'"
       - uses: actions/checkout@v3
       - uses: docker/login-action@v2
         with:
