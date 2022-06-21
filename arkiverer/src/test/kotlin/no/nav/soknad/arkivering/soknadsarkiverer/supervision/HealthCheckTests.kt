@@ -47,13 +47,15 @@ class HealthCheckTests  {
 
 	@Autowired
 	private lateinit var metrics: ArchivingMetrics
+	@Value("\${joark.journal-post}")
+	private lateinit var joarnalPostUrl: String
 
 	private val appConfiguration = AppConfiguration()
 	private lateinit var healthCheck: HealthCheck
 
 	@BeforeEach
 	fun setup() {
-		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
+		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, appConfiguration.config.filestorageUrl)
 
 		mockFilestoragePingIsWorking()
 		mockFilestorageIsReadyIsWorking()

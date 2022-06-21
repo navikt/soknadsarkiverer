@@ -40,6 +40,8 @@ class FilestorageServiceTests {
 
 	@Autowired
 	private lateinit var appConfiguration: AppConfiguration
+	@Value("\${joark.journal-post}")
+	private lateinit var joarnalPostUrl: String
 
 	@Autowired
 	private lateinit var filestorageService: FilestorageService
@@ -49,7 +51,7 @@ class FilestorageServiceTests {
 
 	@BeforeAll
 	fun beforeAll() {
-		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
+		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, appConfiguration.config.filestorageUrl)
 	}
 
 	@BeforeEach

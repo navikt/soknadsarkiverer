@@ -25,9 +25,9 @@ open class ContainerizedKafka {
 			val factoryBean = YamlPropertiesFactoryBean()
 			factoryBean.setResources(ClassPathResource("application.yml"))
 
-			val properties: Properties? = factoryBean.getObject()
+			val properties = factoryBean.getObject()
 
-			val propertySource: ConfigurationPropertySource = MapConfigurationPropertySource(properties)
+			val propertySource = MapConfigurationPropertySource(properties)
 			val binder = Binder(propertySource)
 
 			kafkaConfig = binder.bind("kafka", KafkaConfig::class.java).get()

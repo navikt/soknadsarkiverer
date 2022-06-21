@@ -28,6 +28,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -66,12 +67,15 @@ class StateRecreationTests : ContainerizedKafka() {
 	private lateinit var kafkaProcessingEventProducer: KafkaProducer<String, ProcessingEvent>
 	private lateinit var kafkaBootstrapConsumer: KafkaBootstrapConsumer
 
-	private val taskListService = mock<TaskListService>()
+	//@MockBean
+	private  val taskListService = mock<TaskListService>()
 
 	private val soknadarkivschema = createSoknadarkivschema()
 
 	@BeforeAll
 	fun setup() {
+
+		Mockito.doNothing().`when`(taskListService).addOrUpdateTask(any(),any(),any(),any())
 		kafkaMainTopicProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProcessingEventProducer = KafkaProducer(kafkaConfigMap())
 		kafkaBootstrapConsumer = KafkaBootstrapConsumer(taskListService,kafkaConfig)

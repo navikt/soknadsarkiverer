@@ -21,8 +21,8 @@ management:
 kafka:
   applicationId: ${KAFKA_STREAMS_APPLICATION_ID}
   brokers: ${KAFKA_BROKERS}
-  bootstrappingTimeout: ${BOOTSTRAPPING_TIMEOUT}
-  delayBeforeKafkaInitialization: ${DELAY_BEFORE_KAFKA_INITIALIZATION}
+  bootstrappingTimeout: 120
+  delayBeforeKafkaInitialization: 5
   security:
     enabled: ${KAFKA_SECURITY}
     protocol: SSL
@@ -40,12 +40,20 @@ kafka:
     url: ${KAFKA_SCHEMA_REGISTRY}
     username: ${KAFKA_SCHEMA_REGISTRY_USER}
     password: ${KAFKA_SCHEMA_REGISTRY_PASSWORD}
-
+services:
+  tasklist:
+    scheduling:
+      startUpSeconds: 90
+      secondsBetweenRetries: [1, 60, 120, 600, 1200, 3600]
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
     tags-sorter: alpha
     operations-sorter: alpha
+joark:
+  host: ${JOARK_HOST}
+  journal-post: /rest/journalpostapi/v1/journalpost
+  joark-is-alive: /isAlive
 
 ---
 spring:

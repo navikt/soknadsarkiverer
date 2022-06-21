@@ -33,3 +33,13 @@ kafka:
     url: ${application.KAFKA_SCHEMA_REGISTRY}
     username: dummy
     password: dummy
+services:
+  tasklist:
+    scheduling:
+      startUpSeconds: 8
+      secondsBetweenRetries: [0,1,1,1,1,1]
+joark:
+  host: http://localhost:2908
+  journal-post: /rest/journalpostapi/v1/journalpost
+  joark-is-alive: /isAlive
+

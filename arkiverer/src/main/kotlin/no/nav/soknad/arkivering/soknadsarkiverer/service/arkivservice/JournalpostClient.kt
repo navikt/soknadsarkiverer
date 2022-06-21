@@ -1,7 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice
 
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.ApplicationAlreadyArchivedException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.OpprettJournalpostRequest
@@ -11,6 +10,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON
@@ -19,7 +19,9 @@ import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
 
 @Service
-class JournalpostClient(private val appConfiguration: AppConfiguration,
+class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
+												@Value("\${joark.journal-post}") private val journalPostUrl: String,
+												@Value("\${joark.joark-is-alive}") private val joarkIsAlive: String,
 												@Qualifier("archiveWebClient") private val webClient: WebClient,
 												private val metrics: ArchivingMetrics): JournalpostClientInterface {
 
@@ -30,7 +32,7 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 	override fun isAlive(): String {
 		return webClient
 			.get()
-			.uri(appConfiguration.config.joarkHost + "/isAlive")
+			.uri(joarkHost + joarkIsAlive)
 			.retrieve()
 			.bodyToMono(String::class.java)
 			.block()!!
@@ -42,9 +44,8 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 			logger.info("$key: About to create journalpost for behandlingsId: '${soknadarkivschema.behandlingsid}'")
 			val request: OpprettJournalpostRequest = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)
 
-			val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
 			val client = if (soknadarkivschema.arkivtema == "BID") bidClient else webClient
-			val response = sendDataToJoark(client, request, url)
+			val response = sendDataToJoark(client, request, joarkHost + journalPostUrl)
 			val journalpostId = response?.journalpostId ?: "-1"
 
 			logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.behandlingsid}', " +

@@ -8,6 +8,7 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
+import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -60,17 +61,20 @@ class AdminInterfaceTests : ContainerizedKafka() {
 	private lateinit var adminInterface: ApplicationAdminInterface
 	@Autowired
 	private lateinit var metricsInterface: MetricsInterface
-
+	@Autowired
+	private lateinit var taskListProperties: TaskListProperties
+	@Value("\${joark.journal-post}")
+	private lateinit var joarnalPostUrl: String
 	private var maxNumberOfAttempts = 0
 	private val keysSentToKafka = mutableListOf<String>()
 
 	@BeforeEach
 	fun setup() {
-		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
+		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, appConfiguration.config.filestorageUrl)
 
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 
-		maxNumberOfAttempts = appConfiguration.config.retryTime.size
+		maxNumberOfAttempts = taskListProperties.secondsBetweenRetries.size
 	}
 
 	@AfterEach
@@ -98,7 +102,7 @@ class AdminInterfaceTests : ContainerizedKafka() {
 		adminInterface.rerun(key)
 
 		loopAndVerify(0, { taskListService.listTasks(key).size })
-		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
+		verifyMockedPostRequests(1, joarnalPostUrl)
 	}
 
 	@Test
@@ -118,7 +122,7 @@ class AdminInterfaceTests : ContainerizedKafka() {
 
 		TimeUnit.SECONDS.sleep(1)
 		loopAndVerify(0, { taskListService.listTasks(key).size })
-		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
+		verifyMockedPostRequests(1, joarnalPostUrl)
 	}
 
 
@@ -221,7 +225,7 @@ class AdminInterfaceTests : ContainerizedKafka() {
 		mockJoarkIsWorking()
 
 		putDataOnTopic(key, soknadarkivschema)
-		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
+		verifyMockedPostRequests(1, joarnalPostUrl)
 
 
 		val nonExistingKey = "non-existing-key"
@@ -338,7 +342,7 @@ class AdminInterfaceTests : ContainerizedKafka() {
 		mockJoarkIsWorking()
 
 		putDataOnTopic(key0, soknadarkivschema0)
-		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
+		verifyMockedPostRequests(1, joarnalPostUrl)
 
 		mockJoarkIsDown()
 

@@ -10,8 +10,6 @@ import javax.annotation.Priority
 private val defaultProperties = ConfigurationMap(mapOf(
 
 	"MAX_MESSAGE_SIZE" to (1024 * 1024 * 300).toString(),
-	"CLIENTSECRET" to "",
-
 	"INNSENDING_USERNAME" to "sender",
 	"INNSENDING_PASSWORD" to "password",
 	"JOARK_HOST" to "http://localhost:8092",
@@ -42,41 +40,15 @@ fun readFileAsText(fileName: String, default: String = "") = try { File(fileName
 
 
 data class AppConfiguration(val config: Config = Config(), val state: State = State()) {
-	/*
-	data class KafkaConfig(
-		val kafkaBrokers: String = "KAFKA_BROKERS".configProperty(),
-		val schemaRegistryUrl: String = "KAFKA_SCHEMA_REGISTRY".configProperty(),
-		val schemaRegistryUsername: String = "KAFKA_SCHEMA_REGISTRY_USER".configProperty(),
-		val schemaRegistryPassword: String = "KAFKA_SCHEMA_REGISTRY_PASSWORD".configProperty(),
-		val secure: String = "KAFKA_SECURITY".configProperty(),
-		val protocol: String = "SSL", // SASL_PLAINTEXT | SASL_SSL
-		val keyStorePath: String = "KAFKA_KEYSTORE_PATH".configProperty(),
-		val keyStorePassword: String = "KAFKA_CREDSTORE_PASSWORD".configProperty(),
-		val trustStorePath: String = "KAFKA_TRUSTSTORE_PATH".configProperty(),
-		val trustStorePassword: String = "KAFKA_CREDSTORE_PASSWORD".configProperty(),
-		val keystoreType: String = "PKCS12",
 
-		val mainTopic: String = "KAFKA_MAIN_TOPIC".configProperty(),
-		val processingTopic: String = "KAFKA_PROCESSING_TOPIC".configProperty(),
-		val messageTopic: String = "KAFKA_MESSAGE_TOPIC".configProperty(),
-		val metricsTopic: String = "KAFKA_METRICS_TOPIC".configProperty(),
-		val bootstrappingTimeout: String = "BOOTSTRAPPING_TIMEOUT".configProperty(),
-		val delayBeforeKafkaInitialization: String = "DELAY_BEFORE_KAFKA_INITIALIZATION".configProperty(),
-		val applicationId: String = "KAFKA_STREAMS_APPLICATION_ID".configProperty()
-	)
-
-	 */
 
 	data class Config(
-		val joarkHost: String = "JOARK_HOST".configProperty(),
-		val joarkUrl: String = "JOARK_URL".configProperty(),
+	//	val joarkHost: String = "JOARK_HOST".configProperty(),
+	//	val joarkUrl: String = "JOARK_URL".configProperty(),
 		val innsendingUsername: String = "INNSENDING_USERNAME".configProperty(),
 		val innsendingPassword: String = "INNSENDING_PASSWORD".configProperty(),
 		val filestorageHost: String = "FILESTORAGE_HOST".configProperty(),
 		val filestorageUrl: String = "FILESTORAGE_URL".configProperty(),
-		val retryTime: List<Int> = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) secondsBetweenRetries else secondsBetweenRetriesForTests,
-		val secondsAfterStartupBeforeStarting: Long = if (!"test".equals("SPRING_PROFILES_ACTIVE".configProperty(), true)) startUpSeconds else startUpSecondsForTest,
-		val profile: String = "SPRING_PROFILES_ACTIVE".configProperty(),
 		val maxMessageSize: Int = "MAX_MESSAGE_SIZE".configProperty().toInt(),
 		val adminUser: String = "ADMIN_USER".configProperty(),
 		val adminUserPassword: String = "ADMIN_USER_PASSWORD".configProperty(),
@@ -92,13 +64,8 @@ data class AppConfiguration(val config: Config = Config(), val state: State = St
 
 @org.springframework.context.annotation.Configuration
 @Priority(-1)
-class ConfigConfig(private val env: ConfigurableEnvironment) {
+class ConfigConfig() {
 
 	@Bean
-	fun appConfiguration(): AppConfiguration {
-		val appConfiguration = AppConfiguration()
-		env.setActiveProfiles(appConfiguration.config.profile)
-		println("Using profile '${appConfiguration.config.profile}'")
-		return appConfiguration
-	}
+	fun appConfiguration() = AppConfiguration()
 }

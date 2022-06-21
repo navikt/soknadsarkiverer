@@ -9,6 +9,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_SINGLETON
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Service
@@ -16,10 +17,11 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.util.concurrent.Semaphore
 
-@Scope(SCOPE_SINGLETON) // This is a stateful component so it must be singleton
-@Service
-class TaskListService(
+
+open class TaskListService(
 	private val archiverService: ArchiverService,
+	private val startUpSeconds: String,
+	private val secondsBetweenRetries :Array<Int>,
 	private val appConfiguration: AppConfiguration,
 	private val scheduler: Scheduler,
 	private val metrics: ArchivingMetrics,
@@ -34,14 +36,14 @@ class TaskListService(
 
 	private val processRun: Boolean = false // Hvis true så vil all behandling av ulike states på søknader initieres fra topology. Pt vil testene feilene hvis = true
 
-	private val startUpEndTime = Instant.now().plusSeconds(appConfiguration.config.secondsAfterStartupBeforeStarting)
+	private val startUpEndTime = Instant.now().plusSeconds(startUpSeconds.toLong())
 
 	init {
 		logger.info("startUpEndTime=$startUpEndTime")
 	}
 
 	@Synchronized
-	fun addOrUpdateTask(
+	open fun addOrUpdateTask(
 		key: String,
 		soknadarkivschema: Soknadarkivschema,
 		state: EventTypes,
@@ -111,9 +113,9 @@ class TaskListService(
 		if (tasks[key] != null && startUpEndTime.isAfter(Instant.now()) && (state == EventTypes.RECEIVED || state == EventTypes.STARTED || state == EventTypes.ARCHIVED)) {
 			// When recreating state, there could be more state updates in the processLoggTopic.
 			// Wait a little while to make sure we don't start before all queued states are read inorder to process the most recent state.
-			logger.debug("$key: Sleeping for ${appConfiguration.config.secondsAfterStartupBeforeStarting} sec state - $state")
-			delay(appConfiguration.config.secondsAfterStartupBeforeStarting * 1000)
-			logger.debug("$key: Slept ${appConfiguration.config.secondsAfterStartupBeforeStarting} sec state - $state")
+			logger.debug("$key: Sleeping for ${startUpSeconds} sec state - $state")
+			delay(startUpSeconds.toLong() * 1000)
+			logger.debug("$key: Slept ${startUpSeconds.toLong()} sec state - $state")
 		}
 
 		val task = tasks[key]
@@ -244,12 +246,12 @@ class TaskListService(
 	}
 
 	private fun getSecondsToWait(attempt: Int): Long {
-		val index = if (attempt < appConfiguration.config.retryTime.size)
+		val index = if (attempt < secondsBetweenRetries.size)
 			attempt
 		else
-			appConfiguration.config.retryTime.lastIndex
+			secondsBetweenRetries.lastIndex
 
-		return appConfiguration.config.retryTime[index].toLong()
+		return secondsBetweenRetries[index].toLong()
 	}
 
 	internal fun tryToArchive(key: String, soknadarkivschema: Soknadarkivschema) {
@@ -342,7 +344,7 @@ class TaskListService(
 			return null
 
 		val count = incrementRetryCount(key)
-		return if (count >= appConfiguration.config.retryTime.size) {
+		return if (count >= secondsBetweenRetries.size) {
 			EventTypes.FAILURE
 		} else {
 			EventTypes.STARTED
