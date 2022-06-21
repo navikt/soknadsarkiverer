@@ -5,7 +5,6 @@ import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -24,7 +23,9 @@ class KafkaPublisher(private val kafkaConfig: KafkaConfig) {
 
 	private val kafkaProcessingEventProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap())
 	private val kafkaMetricsProducer = KafkaProducer<String, InnsendingMetrics>(kafkaConfigMap())
-	private val kafkaMessageProducer = KafkaProducer<String, String>(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
+	private val kafkaMessageProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
+		it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
+	})
 
 	fun putProcessingEventOnTopic(key: String, value: ProcessingEvent, headers: Headers = RecordHeaders()) {
 		val topic = kafkaConfig.topics.processingTopic
@@ -44,8 +45,10 @@ class KafkaPublisher(private val kafkaConfig: KafkaConfig) {
 		putDataOnTopic(key, value, headers, topic, kafkaProducer)
 	}
 
-	private fun <T> putDataOnTopic(key: String?, value: T, headers: Headers, topic: String,
-																 kafkaProducer: KafkaProducer<String, T>): RecordMetadata {
+	private fun <T> putDataOnTopic(
+		key: String?, value: T, headers: Headers, topic: String,
+		kafkaProducer: KafkaProducer<String, T>
+	): RecordMetadata {
 
 		val producerRecord = ProducerRecord(topic, key, value)
 		headers.add(MESSAGE_ID, UUID.randomUUID().toString().toByteArray())
@@ -68,7 +71,7 @@ class KafkaPublisher(private val kafkaConfig: KafkaConfig) {
 				it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = kafkaConfig.security.protocol
 				it[SslConfigs.SSL_KEYSTORE_TYPE_CONFIG] = "PKCS12"
 				it[SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG] = kafkaConfig.security.trustStorePath
-				it[SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG] = kafkaConfig.security.keyStorePassword
+				it[SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG] = kafkaConfig.security.trustStorePassword
 				it[SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG] = kafkaConfig.security.keyStorePath
 				it[SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG] = kafkaConfig.security.keyStorePassword
 				it[SslConfigs.SSL_KEY_PASSWORD_CONFIG] = kafkaConfig.security.keyStorePassword

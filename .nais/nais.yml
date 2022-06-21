@@ -1,7 +1,7 @@
 apiVersion: "nais.io/v1alpha1"
 kind: "Application"
 metadata:
-  name: soknadsarkiverer
+  name: {{appname}}
   namespace: team-soknad
   labels:
     team: team-soknad
@@ -22,8 +22,8 @@ spec:
     enabled: true
     path: /internal/prometheus
   replicas:
-    min: 2
-    max: 4
+    min: {{replicas-min}}
+    max: {{replicas-max}}
   resources:
     limits:
       cpu: 3000m
@@ -32,42 +32,51 @@ spec:
       cpu: 1000m
       memory: 2Gi
   ingresses:
-    - "https://soknadsarkiverer.intern.nav.no"
+    - {{ingress}}
+  kafka:
+    pool: {{kafka-pool}}
+    streams: true
   azure:
     application:
       enabled: true
-  kafka:
-    pool: {{ kafka-pool }}
-    streams: true
+  accessPolicy:
+    inbound:
+      rules:
+        - application: soknadsadmins
+    outbound:
+      rules:
+      {{#each outbound}}
+        - application: "{{this}}"
+      {{/each}}
   envFrom:
     - secret: soknadsarkiver-google-secret
+      metadata:
+        annotations:
+          reloader.stakater.com/match: "true"
     - secret: shared-innsending-secret
+      metadata:
+        annotations:
+          reloader.stakater.com/match: "true"
   env:
-    #- name: KAFKA_BOOTSTRAP_SERVERS
-    #  value: SASL_SSL://a01apvl00145.adeo.no:8443,SASL_SSL://a01apvl00146.adeo.no:8443,SASL_SSL://a01apvl00147.adeo.no:8443,SASL_SSL://a01apvl00149.adeo.no:8443
-    #- name: SCHEMA_REGISTRY_URL
-    #  value: https://kafka-schema-registry.nais.adeo.no
-    - name: KAFKA_SECURITY
-      value: 'TRUE'
-    #- name: KAFKA_SECPROT
-    #  value: SASL_SSL
-    #- name: KAFKA_SASLMEC
-    #  value: PLAIN
     - name: SPRING_PROFILES_ACTIVE
-      value: prod
-    - name: KAFKA_MAIN_TOPIC
-      value: privat-soknadinnsending-v1
-    - name: KAFKA_PROCESSING_TOPIC
-      value: privat-soknadinnsending-processingeventlog-v1
-    - name: KAFKA_MESSAGE_TOPIC
-      value: privat-soknadinnsending-messages-v1
-    - name: KAFKA_METRICS_TOPIC
-      value: privat-soknadinnsending-metrics-v1
-    - name: FILESTORAGE_HOST
-      value: https://soknadsfillager.intern.nav.no
-    - name: JOARK_HOST
-      value: https://dokarkiv.prod-fss-pub.nais.io
+      value: {{profile}}
+    - name: DELAY_BEFORE_KAFKA_INITIALIZATION
+      value: "5"
     - name: BOOTSTRAPPING_TIMEOUT
       value: "0"
+    - name: KAFKA_SECURITY
+      value: 'TRUE'
+    - name: KAFKA_MAIN_TOPIC
+      value: {{kafka-main-topic}}
+    - name: KAFKA_PROCESSING_TOPIC
+      value: {{kafka-processingeventlog-topic}}
+    - name: KAFKA_MESSAGE_TOPIC
+      value: {{kafka-message-topic}}
+    - name: KAFKA_METRICS_TOPIC
+      value: {{kafka-metrics-topic}}
+    - name: FILESTORAGE_HOST
+      value: {{filestorage-host}}
+    - name: JOARK_HOST
+      value: {{joark-host}}
     - name: DOKARKIV_SCOPE
-      value: api://dev-fss.teamdokumenthandtering.dokarkiv/.default
+      value: {{dokarkiv-scope}}

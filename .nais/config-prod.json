@@ -1,0 +1,18 @@
+{
+	"appname": "soknadsarkiverer",
+	"profile": "prod",
+	"replicas-min": "2",
+	"replicas-max": "4",
+	"ingress": "https://soknadsarkiverer.intern.nav.no",
+	"outbound": [
+		"soknadsfillager"
+	],
+	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v1",
+	"kafka-processingeventlog-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v1",
+	"kafka-message-topic": "team-soknad.privat-soknadinnsending-messages-v1",
+	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v1",
+	"filestorage-host": "https://soknadsfillager-gcp.intern.nav.no",
+	"joark-host": "https://dokarkiv.prod-fss-pub.nais.io",
+	"dokarkiv-scope": "api://dev-fss.teamdokumenthandtering.dokarkiv/.default",
+	"kafka-pool": "nav-prod"
+}

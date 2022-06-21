@@ -18,21 +18,22 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping(value = ["/internal"])
 @Unprotected
-class HealthCheck(private val appConfiguration: AppConfiguration,
-									private val fileService: FileserviceInterface,
-									private val joarkService: JournalpostClientInterface,
-									private val metrics: ArchivingMetrics) {
-
+class HealthCheck(
+	private val appConfiguration: AppConfiguration,
+	private val fileService: FileserviceInterface,
+	private val joarkService: JournalpostClientInterface,
+	private val metrics: ArchivingMetrics
+) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Hidden
 	@GetMapping("/isAlive")
 	fun isAlive() = if (applicationIsAlive()) {
-		ResponseEntity<String>(HttpStatus.OK)
+		ResponseEntity(HttpStatus.OK)
 	} else {
 		metrics.setUpOrDown(0.0)
 		logger.warn("/isAlive called - application is not alive")
-		ResponseEntity<String>("Application is not alive", HttpStatus.INTERNAL_SERVER_ERROR)
+		ResponseEntity("Application is not alive", HttpStatus.INTERNAL_SERVER_ERROR)
 	}
 
 	@Hidden
@@ -40,14 +41,14 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 	fun isReady(): ResponseEntity<String> {
 		return try {
 			if (applicationIsReady()) {
-				ResponseEntity<String>(HttpStatus.OK)
+				ResponseEntity(HttpStatus.OK)
 			} else {
 				metrics.setUpOrDown(0.0)
 				logger.warn("/isReady called - application is not ready")
-				ResponseEntity<String>("Application is not ready", HttpStatus.INTERNAL_SERVER_ERROR)
+				ResponseEntity("Application is not ready", HttpStatus.INTERNAL_SERVER_ERROR)
 			}
 		} catch (e: Exception) {
-			ResponseEntity<String>("Application is not ready: ${e.message}", HttpStatus.INTERNAL_SERVER_ERROR)
+			ResponseEntity("Application is not ready: ${e.message}", HttpStatus.INTERNAL_SERVER_ERROR)
 		}
 	}
 
@@ -62,11 +63,11 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 		try {
 			throwExceptionIfDependenciesAreDown(dependencies)
 		} catch (e: Exception) {
-			return ResponseEntity<String>("Ping failed: ${e.message}", HttpStatus.INTERNAL_SERVER_ERROR)
+			return ResponseEntity("Ping failed: ${e.message}", HttpStatus.INTERNAL_SERVER_ERROR)
 		}
 
 		logger.info("/ping called")
-		return ResponseEntity<String>("pong", HttpStatus.OK)
+		return ResponseEntity("pong", HttpStatus.OK)
 	}
 
 	@Hidden
@@ -109,7 +110,9 @@ class HealthCheck(private val appConfiguration: AppConfiguration,
 	private fun applicationIsAlive() = appConfiguration.state.alive
 
 
-	private data class Dependency(val dependencyEndpoint: () -> String,
-																val expectedResponse: String,
-																val dependencyName: String)
+	private data class Dependency(
+		val dependencyEndpoint: () -> String,
+		val expectedResponse: String,
+		val dependencyName: String
+	)
 }
