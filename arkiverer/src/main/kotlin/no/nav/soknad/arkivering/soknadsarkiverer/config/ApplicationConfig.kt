@@ -3,8 +3,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.config
 import com.natpryce.konfig.*
 import com.natpryce.konfig.ConfigurationProperties.Companion.systemProperties
 import org.springframework.context.annotation.Bean
-import org.springframework.core.env.ConfigurableEnvironment
-import java.io.File
 import javax.annotation.Priority
 
 private val defaultProperties = ConfigurationMap(mapOf(
@@ -21,11 +19,6 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"ADMIN_USER_PASSWORD" to "password",
 ))
 
-private val secondsBetweenRetries = listOf(1, 60, 120, 600, 1200, 3600) // As many retries will be attempted as there are elements in the list.
-private val secondsBetweenRetriesForTests = listOf(0, 1, 1, 1, 1, 1)  // Note! Also update end-to-end-tests if the list size is changed!
-private const val startUpSeconds: Long = 90 //  1,5 minutes before starting processing incoming
-const val startUpSecondsForTest: Long = 8 // 8 seconds before starting processing incoming
-
 
 private val appConfig =
 	EnvironmentVariables() overriding
@@ -36,11 +29,8 @@ private val appConfig =
 
 private fun String.configProperty(): String = appConfig[Key(this, stringType)]
 
-fun readFileAsText(fileName: String, default: String = "") = try { File(fileName).readText(Charsets.UTF_8) } catch (e: Exception) { default }
-
 
 data class AppConfiguration(val config: Config = Config(), val state: State = State()) {
-
 
 	data class Config(
 	//	val joarkHost: String = "JOARK_HOST".configProperty(),
@@ -64,7 +54,7 @@ data class AppConfiguration(val config: Config = Config(), val state: State = St
 
 @org.springframework.context.annotation.Configuration
 @Priority(-1)
-class ConfigConfig() {
+class ConfigConfig {
 
 	@Bean
 	fun appConfiguration() = AppConfiguration()
