@@ -8,7 +8,7 @@ import javax.annotation.Priority
 private val defaultProperties = ConfigurationMap(mapOf(
 
 	"MAX_MESSAGE_SIZE" to (1024 * 1024 * 300).toString(),
-	"INNSENDING_USERNAME" to "sender",
+	"INNSENDING_USERNAME" to "innsending",
 	"INNSENDING_PASSWORD" to "password",
 	"JOARK_HOST" to "http://localhost:8092",
 	"JOARK_URL" to "/rest/journalpostapi/v1/journalpost",
