@@ -64,6 +64,8 @@ spec:
       value: "5"
     - name: BOOTSTRAPPING_TIMEOUT
       value: "0"
+    - name: TASK_STARTUP_INIT_DELAY
+      value: "90"
     - name: KAFKA_SECURITY
       value: "TRUE"
     - name: KAFKA_MAIN_TOPIC

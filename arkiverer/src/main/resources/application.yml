@@ -19,12 +19,12 @@ management:
           autotime:
             enabled: true
 kafka:
-  applicationId: ${KAFKA_STREAMS_APPLICATION_ID}
-  brokers: ${KAFKA_BROKERS}
-  bootstrappingTimeout: 120
+  applicationId: ${KAFKA_STREAMS_APPLICATION_ID:application_id}
+  brokers: ${KAFKA_BROKERS:localhost:9092}
+  bootstrappingTimeout: ${BOOTSTRAPPING_TIMEOUT:120}
   delayBeforeKafkaInitialization: 5
   security:
-    enabled: ${KAFKA_SECURITY}
+    enabled: ${KAFKA_SECURITY:false}
     protocol: SSL
     keyStoreType: PKCS12
     keyStorePath: ${KAFKA_KEYSTORE_PATH}
@@ -32,18 +32,18 @@ kafka:
     trustStorePath: ${KAFKA_TRUSTSTORE_PATH}
     trustStorePassword: ${KAFKA_CREDSTORE_PASSWORD}
   topics:
-    mainTopic: ${KAFKA_MAIN_TOPIC}
-    processingTopic: ${KAFKA_PROCESSING_TOPIC}
-    messageTopic: ${KAFKA_MESSAGE_TOPIC}
-    metricsTopic: ${KAFKA_METRICS_TOPIC}
+    mainTopic: ${KAFKA_MAIN_TOPIC:privat-soknadinnsending-v1-dev}
+    processingTopic: ${KAFKA_PROCESSING_TOPIC:privat-soknadinnsending-processingeventlog-v1-dev}
+    messageTopic: ${KAFKA_MESSAGE_TOPIC:privat-soknadinnsending-messages-v1-dev}
+    metricsTopic: ${KAFKA_METRICS_TOPIC:privat-soknadinnsending-metrics-v1-dev}
   schemaRegistry:
-    url: ${KAFKA_SCHEMA_REGISTRY}
+    url: ${KAFKA_SCHEMA_REGISTRY:http://localhost:8081}
     username: ${KAFKA_SCHEMA_REGISTRY_USER}
     password: ${KAFKA_SCHEMA_REGISTRY_PASSWORD}
 services:
   tasklist:
     scheduling:
-      startUpSeconds: 90
+      startUpSeconds: ${TASK_STARTUP_INIT_DELAY:60}
       secondsBetweenRetries: [1, 60, 120, 600, 1200, 3600]
 springdoc:
   swagger-ui:
@@ -51,7 +51,7 @@ springdoc:
     tags-sorter: alpha
     operations-sorter: alpha
 joark:
-  host: ${JOARK_HOST}
+  host: ${JOARK_HOST:http://localhost:8092}
   journal-post: /rest/journalpostapi/v1/journalpost
   joark-is-alive: /isAlive
 
@@ -82,6 +82,12 @@ no.nav.security.jwt:
           client-id: testclient
           client-secret: testsecret
           client-auth-method: client_secret_basic
+
+services:
+  tasklist:
+    scheduling:
+      startUpSeconds: 8
+      secondsBetweenRetries: [0, 1, 1, 1, 1, 1]
 
 ---
 spring:
