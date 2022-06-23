@@ -7,18 +7,9 @@ jobs:
   run-end-to-end-tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Read/save .m2 cache
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-maven-
-
       - uses: actions/setup-java@v1
         with:
           java-version: '17'
-
-
       - name: 'Build the code for soknadsmottaker'
         uses: navikt/archiving-infrastructure/.github/checkout-and-build@main
         with:
