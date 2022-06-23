@@ -2,7 +2,7 @@ apiVersion: "nais.io/v1alpha1"
 kind: "Application"
 metadata:
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: 320m
+    nginx.ingress.kubernetes.io/proxy-body-size: "320M"
   name: {{appname}}
   namespace: team-soknad
   labels:
