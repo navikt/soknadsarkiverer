@@ -17,6 +17,19 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationEn
 @EnableGlobalMethodSecurity(securedEnabled = true, prePostEnabled = true)
 class RestControllerSecurityConfig(private val config: AppConfiguration) : WebSecurityConfigurerAdapter() {
 
+	@Autowired
+	fun configureGlobal(auth: AuthenticationManagerBuilder) {
+		auth.inMemoryAuthentication()
+			.withUser(config.config.innsendingUsername)
+			.password("{noop}${config.config.innsendingPassword}")
+			.roles("USER", "ADMIN")
+			.and()
+			.withUser(config.config.adminUser)
+			.password("{noop}${config.config.adminUserPassword}")
+			.roles("USER", "ADMIN")
+	}
+
+
 	override fun configure(http: HttpSecurity) {
 		http
 			.csrf().disable()
@@ -30,19 +43,6 @@ class RestControllerSecurityConfig(private val config: AppConfiguration) : WebSe
 			.and()
 			.sessionManagement()
 			.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-	}
-
-
-	@Autowired
-	fun configureGlobal(auth: AuthenticationManagerBuilder) {
-		auth.inMemoryAuthentication()
-			.withUser(config.config.innsendingUsername)
-			.password("{noop}${config.config.innsendingPassword}")
-			.roles("USER", "ADMIN")
-			.and()
-			.withUser(config.config.adminUser)
-			.password("{noop}${config.config.adminUserPassword}")
-			.roles("USER", "ADMIN")
 	}
 
 	@Bean

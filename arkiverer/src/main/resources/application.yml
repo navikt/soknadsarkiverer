@@ -54,40 +54,18 @@ joark:
   host: ${JOARK_HOST}
   journal-post: /rest/journalpostapi/v1/journalpost
   joark-is-alive: /isAlive
+filestorage:
+  host: ${FILESTORAGE_HOST}
+  files: /files
+  username: ${INNSENDING_USERNAME}
+  password: ${INNSENDING_PASSWORD}
+
 
 ---
 spring:
   config:
     activate:
-      on-profile: test
-
-no.nav.security.jwt:
-  issuer:
-    someshortname:
-      discoveryurl: http://metadata
-      accepted_audience: aud-localhost
-      cookie_name: localhost-idtoken
-    azuread:
-      discoveryurl: http://metadata
-      accepted_audience: aud-localhost
-      cookie_name: localhost-idtoken
-
-  client:
-    registration:
-      soknadsarkiverer:
-        token-endpoint-url: http://localhost:8181/oauth2/v2.0/token
-        grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
-        scope: scope1
-        authentication:
-          client-id: testclient
-          client-secret: testsecret
-          client-auth-method: client_secret_basic
-
----
-spring:
-  config:
-    activate:
-      on-profile: spring | default | dev | prod
+      on-profile: default | dev | prod
 
 no.nav.security.jwt:
   issuer.azuread:

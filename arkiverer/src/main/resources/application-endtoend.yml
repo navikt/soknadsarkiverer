@@ -1,0 +1,34 @@
+kafka:
+  bootstrappingTimeout: 60
+  security:
+    enabled: FALSE
+  topics:
+    mainTopic: privat-soknadinnsending-v1-dev
+    processingTopic: privat-soknadinnsending-processingeventlog-v1-dev
+    messageTopic: privat-soknadinnsending-messages-v1-dev
+    metricsTopic: privat-soknadinnsending-metrics-v1-dev
+services:
+  tasklist:
+    scheduling:
+      startUpSeconds: 8
+      secondsBetweenRetries: [0, 1, 1, 1, 1, 1]
+no.nav.security.jwt:
+  issuer:
+    someshortname:
+      discoveryurl: http://metadata
+      accepted_audience: aud-localhost
+      cookie_name: localhost-idtoken
+    azuread:
+      discoveryurl: http://metadata
+      accepted_audience: aud-localhost
+      cookie_name: localhost-idtoken
+  client:
+    registration:
+      soknadsarkiverer:
+        token-endpoint-url: http://localhost:8181/oauth2/v2.0/token
+        grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
+        scope: scope1
+        authentication:
+          client-id: testclient
+          client-secret: testsecret
+          client-auth-method: client_secret_basic

@@ -39,7 +39,7 @@ import java.util.concurrent.TimeUnit
 @ExtendWith(SpringExtension::class)
 @ContextConfiguration(initializers = [ConfigDataApplicationContextInitializer::class])
 @ActiveProfiles("test")
-@Import(*[TaskListConfig::class,AppConfiguration::class,MetricsTestConfig::class])
+@Import(value = [TaskListConfig::class,AppConfiguration::class,MetricsTestConfig::class])
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class TaskListServiceTests {
 
