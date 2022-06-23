@@ -3,62 +3,50 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service
 import com.nhaarman.mockitokotlin2.*
 import io.prometheus.client.CollectorRegistry
 import no.nav.soknad.arkivering.avroschemas.EventTypes
+import no.nav.soknad.arkivering.avroschemas.EventTypes.FINISHED
+import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
-import no.nav.soknad.arkivering.soknadsarkiverer.config.startUpSecondsForTest
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.ArgumentCaptor
-import org.mockito.Mock
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.context.properties.ConfigurationProperties
-import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
-import org.springframework.context.annotation.PropertySource
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.ContextConfiguration
-import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 @ExtendWith(SpringExtension::class)
 @ContextConfiguration(initializers = [ConfigDataApplicationContextInitializer::class])
 @ActiveProfiles("test")
-@Import(value = [TaskListConfig::class,AppConfiguration::class,MetricsTestConfig::class])
+@Import(value = [TaskListConfig::class, AppConfiguration::class, MetricsTestConfig::class])
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class TaskListServiceTests {
 
-
-
-  @MockBean
-	private lateinit var archiverService : ArchiverService
 	@MockBean
-	private lateinit var scheduler : Scheduler
+	private lateinit var archiverService: ArchiverService
 	@MockBean
-	private lateinit var kafkaPublisher : KafkaPublisher
-  @Autowired
-  private lateinit var metrics : ArchivingMetrics
+	private lateinit var scheduler: Scheduler
+	@MockBean
+	private lateinit var kafkaPublisher: KafkaPublisher
 	@Autowired
-	private lateinit var  taskListService : TaskListService
+	private lateinit var metrics: ArchivingMetrics
+	@Autowired
+	private lateinit var taskListService: TaskListService
 
-	private  val soknadarkivschema = createSoknadarkivschema()
-
-
+	private val soknadarkivschema = createSoknadarkivschema()
 
 	@AfterEach
 	fun teardown() {
@@ -132,11 +120,11 @@ class TaskListServiceTests {
 		runScheduledTaskOnScheduling()
 
 		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.RECEIVED)
-		TimeUnit.SECONDS.sleep(startUpSecondsForTest + 2)
 
 		verify(archiverService, timeout(10_000).times(1)).archive(eq(key), any(), any())
 		verify(archiverService, timeout(10_000).times(1)).deleteFiles(eq(key), any())
 		verify(scheduler, timeout(10_000).times(1)).schedule(any(), any())
+		verify(kafkaPublisher, timeout(10_000).times(1)).putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(FINISHED)), any())
 		loopAndVerify(0, { taskListService.listTasks().size })
 	}
 
@@ -181,8 +169,6 @@ class TaskListServiceTests {
 
 @TestConfiguration
 class MetricsTestConfig {
-
 	@Bean
-	fun metricsCinfig() =  ArchivingMetrics(CollectorRegistry.defaultRegistry)
-
+	fun metricsConfig() = ArchivingMetrics(CollectorRegistry.defaultRegistry)
 }

@@ -3,8 +3,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.config
 import com.natpryce.konfig.*
 import com.natpryce.konfig.ConfigurationProperties.Companion.systemProperties
 import org.springframework.context.annotation.Bean
-import org.springframework.core.env.ConfigurableEnvironment
-import java.io.File
 import javax.annotation.Priority
 
 private val defaultProperties = ConfigurationMap(mapOf(
@@ -21,8 +19,6 @@ private val defaultProperties = ConfigurationMap(mapOf(
 	"ADMIN_USER_PASSWORD" to "password",
 ))
 
-const val startUpSecondsForTest: Long = 8 // 8 seconds before starting processing incoming
-
 
 private val appConfig =
 	EnvironmentVariables() overriding
@@ -35,7 +31,6 @@ private fun String.configProperty(): String = appConfig[Key(this, stringType)]
 
 
 data class AppConfiguration(val config: Config = Config(), val state: State = State()) {
-
 
 	data class Config(
 	//	val joarkHost: String = "JOARK_HOST".configProperty(),
@@ -59,7 +54,7 @@ data class AppConfiguration(val config: Config = Config(), val state: State = St
 
 @org.springframework.context.annotation.Configuration
 @Priority(-1)
-class ConfigConfig() {
+class ConfigConfig {
 
 	@Bean
 	fun appConfiguration() = AppConfiguration()
