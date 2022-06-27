@@ -1,6 +1,5 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.ConsumerRecord.NULL_CHECKSUM

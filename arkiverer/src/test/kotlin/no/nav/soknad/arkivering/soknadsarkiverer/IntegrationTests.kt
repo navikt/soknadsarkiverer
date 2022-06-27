@@ -5,9 +5,9 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileStorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -48,7 +48,7 @@ class IntegrationTests : ContainerizedKafka() {
 	private lateinit var collectorRegistry: CollectorRegistry
 
 	@Autowired
-	private lateinit var appConfiguration: AppConfiguration
+	private lateinit var fileStorageProperties: FileStorageProperties
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
 	@Value("\${joark.journal-post}")
@@ -61,7 +61,7 @@ class IntegrationTests : ContainerizedKafka() {
 
 	@BeforeEach
 	fun setup() {
-		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, appConfiguration.config.filestorageUrl)
+		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, fileStorageProperties.files)
 
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
@@ -111,7 +111,7 @@ class IntegrationTests : ContainerizedKafka() {
 
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
-		val url = appConfiguration.config.filestorageUrl + ".*"
+		val url = fileStorageProperties.files + ".*"
 		verifyMockedDeleteRequests(expectedCount, url)
 	}
 

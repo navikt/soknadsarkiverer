@@ -3,9 +3,9 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service
 import com.nhaarman.mockitokotlin2.*
 import io.prometheus.client.CollectorRegistry
 import no.nav.soknad.arkivering.avroschemas.EventTypes
-import no.nav.soknad.arkivering.avroschemas.EventTypes.FINISHED
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppStateConfig
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
@@ -31,22 +31,27 @@ import java.util.*
 @ExtendWith(SpringExtension::class)
 @ContextConfiguration(initializers = [ConfigDataApplicationContextInitializer::class])
 @ActiveProfiles("test")
-@Import(value = [TaskListConfig::class, AppConfiguration::class, MetricsTestConfig::class])
+@Import(*[TaskListConfig::class,AppStateConfig::class,MetricsTestConfig::class])
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class TaskListServiceTests {
 
-	@MockBean
-	private lateinit var archiverService: ArchiverService
-	@MockBean
-	private lateinit var scheduler: Scheduler
-	@MockBean
-	private lateinit var kafkaPublisher: KafkaPublisher
-	@Autowired
-	private lateinit var metrics: ArchivingMetrics
-	@Autowired
-	private lateinit var taskListService: TaskListService
 
-	private val soknadarkivschema = createSoknadarkivschema()
+
+  @MockBean
+	private lateinit var archiverService : ArchiverService  //= mock<ArchiverService>()
+	@MockBean
+	private lateinit var scheduler : Scheduler // = mock<Scheduler>()
+	@MockBean
+	private lateinit var kafkaPublisher : KafkaPublisher // = mock<KafkaPublisher>()
+  @Autowired
+  private lateinit var metrics : ArchivingMetrics//= ArchivingMetrics(CollectorRegistry.defaultRegistry)
+
+
+	@Autowired
+	private lateinit var  taskListService : TaskListService
+	private  val soknadarkivschema = createSoknadarkivschema()
+
+
 
 	@AfterEach
 	fun teardown() {
@@ -124,7 +129,7 @@ class TaskListServiceTests {
 		verify(archiverService, timeout(10_000).times(1)).archive(eq(key), any(), any())
 		verify(archiverService, timeout(10_000).times(1)).deleteFiles(eq(key), any())
 		verify(scheduler, timeout(10_000).times(1)).schedule(any(), any())
-		verify(kafkaPublisher, timeout(10_000).times(1)).putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(FINISHED)), any())
+		verify(kafkaPublisher, timeout(10_000).times(1)).putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.FINISHED)), any())
 		loopAndVerify(0, { taskListService.listTasks().size })
 	}
 
@@ -169,6 +174,8 @@ class TaskListServiceTests {
 
 @TestConfiguration
 class MetricsTestConfig {
+
 	@Bean
-	fun metricsConfig() = ArchivingMetrics(CollectorRegistry.defaultRegistry)
+	fun metricsCinfig() =  ArchivingMetrics(CollectorRegistry.defaultRegistry)
+
 }

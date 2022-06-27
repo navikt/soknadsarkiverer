@@ -12,23 +12,27 @@ services:
     scheduling:
       startUpSeconds: 8
       secondsBetweenRetries: [0, 1, 1, 1, 1, 1]
-no.nav.security.jwt:
-  issuer:
-    someshortname:
-      discoveryurl: http://metadata
-      accepted_audience: aud-localhost
-      cookie_name: localhost-idtoken
-    azuread:
-      discoveryurl: http://metadata
-      accepted_audience: aud-localhost
-      cookie_name: localhost-idtoken
-  client:
-    registration:
-      soknadsarkiverer:
-        token-endpoint-url: http://localhost:8181/oauth2/v2.0/token
-        grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
-        scope: scope1
-        authentication:
-          client-id: testclient
-          client-secret: testsecret
-          client-auth-method: client_secret_basic
+no.nav.security:
+  basic:
+    username: ${ADMIN_USER}
+    password: ${ADMIN_USER_PASSWORD}
+  jwt:
+    issuer:
+      someshortname:
+        discoveryurl: http://metadata
+        accepted_audience: aud-localhost
+        cookie_name: localhost-idtoken
+      azuread:
+        discoveryurl: http://metadata
+        accepted_audience: aud-localhost
+        cookie_name: localhost-idtoken
+    client:
+      registration:
+        soknadsarkiverer:
+          token-endpoint-url: http://localhost:8181/oauth2/v2.0/token
+          grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
+          scope: scope1
+          authentication:
+            client-id: testclient
+            client-secret: testsecret
+            client-auth-method: client_secret_basic

@@ -5,11 +5,11 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileStorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -52,7 +52,7 @@ class AdminInterfaceTests : ContainerizedKafka() {
 	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 
 	@Autowired
-	private lateinit var appConfiguration: AppConfiguration
+	private lateinit var fileStorageProperties: FileStorageProperties
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
 	@Autowired
@@ -70,7 +70,7 @@ class AdminInterfaceTests : ContainerizedKafka() {
 
 	@BeforeEach
 	fun setup() {
-		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, appConfiguration.config.filestorageUrl)
+		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, fileStorageProperties.files)
 
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 
@@ -115,7 +115,7 @@ class AdminInterfaceTests : ContainerizedKafka() {
 
 		putDataOnTopic(key, soknadarkivschema)
 		loopAndVerify(0, { taskListService.listTasks(key).size })
-		verifyMockedDeleteRequests(1, appConfiguration.config.filestorageUrl + ".*")
+		verifyMockedDeleteRequests(1, fileStorageProperties.files + ".*")
 		TimeUnit.SECONDS.sleep(2) // Give the system 2 seconds to finish the task after the deletion occurred.
 
 		adminInterface.rerun(key)

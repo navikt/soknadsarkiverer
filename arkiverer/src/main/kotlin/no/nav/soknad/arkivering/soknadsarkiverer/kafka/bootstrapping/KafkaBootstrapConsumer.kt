@@ -3,7 +3,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.kafka.bootstrapping
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.*
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import org.apache.kafka.clients.consumer.ConsumerRecord

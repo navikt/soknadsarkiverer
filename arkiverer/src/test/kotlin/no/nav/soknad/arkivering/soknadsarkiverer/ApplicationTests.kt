@@ -10,11 +10,12 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileStorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -61,7 +62,7 @@ class ApplicationTests : ContainerizedKafka() {
 	@MockBean
 	private lateinit var collectorRegistry: CollectorRegistry
 	@Autowired
-	private lateinit var appConfiguration: AppConfiguration
+	private lateinit var fileStorageProperties: FileStorageProperties
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
 	@Autowired
@@ -98,7 +99,7 @@ class ApplicationTests : ContainerizedKafka() {
 		setupMockedNetworkServices(
 			portToExternalServices!!,
 			joarnalPostUrl,
-			appConfiguration.config.filestorageUrl
+			fileStorageProperties.files
 		)
 
 		maxNumberOfAttempts = tasklistProperties.secondsBetweenRetries.size
@@ -484,7 +485,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
-		verifyMockedDeleteRequests(expectedCount, appConfiguration.config.filestorageUrl + ".*")
+		verifyMockedDeleteRequests(expectedCount, fileStorageProperties.files + ".*")
 	}
 
 	private fun createSoknadarkivschema() = createSoknadarkivschema(fileUuid)

@@ -36,13 +36,17 @@ services:
     scheduling:
       startUpSeconds: 8
       secondsBetweenRetries: [0,1,1,1,1,1]
+no.nav.security:
+  basic:
+    username: admin
+    password: password
 joark:
   host: http://localhost:2908
   journal-post: /rest/journalpostapi/v1/journalpost
   joark-is-alive: /isAlive
 filestorage:
   host: http://localhost:2908
-  files: /files
+  files: /files/
   username: sender
   password: password
 

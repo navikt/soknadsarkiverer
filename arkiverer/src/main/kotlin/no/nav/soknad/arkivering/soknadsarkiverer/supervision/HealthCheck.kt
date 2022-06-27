@@ -3,7 +3,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 import io.swagger.v3.oas.annotations.Hidden
 import kotlinx.coroutines.*
 import no.nav.security.token.support.core.api.Unprotected
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.isBusy
 import no.nav.soknad.arkivering.soknadsarkiverer.config.stop
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping(value = ["/internal"])
 @Unprotected
 class HealthCheck(
-	private val appConfiguration: AppConfiguration,
+	private val applicationState: ApplicationState,
 	private val fileService: FileserviceInterface,
 	private val joarkService: JournalpostClientInterface,
 	private val metrics: ArchivingMetrics
@@ -74,13 +74,13 @@ class HealthCheck(
 	@GetMapping("/stop")
 	fun stop() = runBlocking {
 		launch {
-			while (isBusy(appConfiguration)) {
+			while (isBusy(applicationState)) {
 				logger.info("Waiting for shutdown")
 				delay(2000L)
 			}
 			logger.info("Pod is now ready for shutdown")
 		}
-		stop(appConfiguration)
+		stop(applicationState)
 		logger.info("Pod is getting ready for shutdown")
 	}
 
@@ -92,7 +92,7 @@ class HealthCheck(
 		)
 		throwExceptionIfDependenciesAreDown(dependencies)
 
-		return appConfiguration.state.ready && !appConfiguration.state.stopping
+		return applicationState.ready && !applicationState.stopping
 	}
 
 	/**
@@ -107,7 +107,7 @@ class HealthCheck(
 		}
 	}
 
-	private fun applicationIsAlive() = appConfiguration.state.alive
+	private fun applicationIsAlive() = applicationState.alive
 
 
 	private data class Dependency(

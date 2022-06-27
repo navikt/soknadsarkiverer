@@ -9,7 +9,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 @Configuration
-class SelfDestructConfig(private val scheduler: Scheduler, private val appConfiguration: AppConfiguration) {
+class SelfDestructConfig(private val scheduler: Scheduler, private val appState: ApplicationState) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	/**
@@ -83,6 +83,6 @@ class SelfDestructConfig(private val scheduler: Scheduler, private val appConfig
 
 	private fun selfDestruct() {
 		logger.info("Initialising self-destruction sequence")
-		appConfiguration.state.alive = false
+		appState.alive = false
 	}
 }
