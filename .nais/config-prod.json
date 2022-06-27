@@ -3,7 +3,7 @@
 	"profile": "prod",
 	"replicas-min": "2",
 	"replicas-max": "4",
-	"ingress": "https://soknadsarkiverer.intern.nav.no",
+	"ingress": "https://soknadsarkiverer-gcp.intern.nav.no",
 	"outbound": [
 		"soknadsfillager"
 	],

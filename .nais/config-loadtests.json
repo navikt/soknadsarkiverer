@@ -14,6 +14,6 @@
 	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v1-loadtests",
 	"filestorage-host": "https://soknadsfillager-gcp-loadtests.dev.intern.nav.no",
 	"joark-host": "https://arkiv-mock-gcp.dev.intern.nav.no",
-	"dokarkiv-scope": "api://dev-gcp:team-soknad:soknadsarkiverer-loadtests/.default",
+	"dokarkiv-scope": "api://dev-gcp.team-soknad.arkiv-mock/.default",
 	"kafka-pool": "nav-dev"
 }
