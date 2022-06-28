@@ -31,7 +31,7 @@ class WebClientConfig(private val maxMessageSize: Int = 1024 * 1024 * 300) {
 	@Bean
 	@Profile("test | docker | default")
 	@Qualifier("archiveWebClient")
-	fun archiveTestWebClient() = WebClient.builder().build()
+	fun archiveTestWebClient(): WebClient = WebClient.builder().build()
 
 
 	@Bean
