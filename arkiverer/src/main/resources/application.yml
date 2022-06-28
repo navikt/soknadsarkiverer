@@ -44,7 +44,7 @@ services:
   tasklist:
     scheduling:
       startUpSeconds: 90
-      secondsBetweenRetries: [1, 60, 120, 600, 1200, 3600]
+      secondsBetweenRetries: [1, 30, 60, 300, 1200, 3600]
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
