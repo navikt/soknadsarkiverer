@@ -18,7 +18,7 @@
 		<okhttp.version>4.9.3</okhttp.version>
 
 		<openapi-generator-maven-plugin.version>5.4.0</openapi-generator-maven-plugin.version>
-		<remote-comparer-maven-plugin.version>1.0.3</remote-comparer-maven-plugin.version>
+		<remote-comparer-maven-plugin.version>1.0.5</remote-comparer-maven-plugin.version>
 
 		<kotlin.version>1.6.10</kotlin.version>
 		<java.version>17</java.version>
