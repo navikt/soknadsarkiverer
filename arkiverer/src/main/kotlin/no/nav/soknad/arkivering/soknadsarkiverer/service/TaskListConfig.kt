@@ -5,13 +5,11 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.ConstructorBinding
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.stereotype.Component
-import java.awt.FontMetrics
 
 @Configuration
 @EnableConfigurationProperties(TaskListProperties::class)
@@ -34,9 +32,26 @@ class TaskListConfig {
 
 }
 @ConfigurationProperties("services.tasklist.scheduling")
-class TaskListProperties {
+@ConstructorBinding
+data class TaskListProperties(
+	val startUpSeconds: Long,
+	val  secondsBetweenRetries : Array<Long>
+) {
+	override fun equals(other: Any?): Boolean {
+		if (this === other) return true
+		if (javaClass != other?.javaClass) return false
 
-	lateinit var startUpSeconds: String
+		other as TaskListProperties
 
-	lateinit var secondsBetweenRetries :Array<Int>
+		if (startUpSeconds != other.startUpSeconds) return false
+		if (!secondsBetweenRetries.contentEquals(other.secondsBetweenRetries)) return false
+
+		return true
+	}
+
+	override fun hashCode(): Int {
+		var result = startUpSeconds.hashCode()
+		result = 31 * result + secondsBetweenRetries.contentHashCode()
+		return result
+	}
 }

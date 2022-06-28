@@ -5,7 +5,6 @@ import io.prometheus.client.CollectorRegistry
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.config.AppStateConfig
-import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
@@ -31,7 +30,7 @@ import java.util.*
 @ExtendWith(SpringExtension::class)
 @ContextConfiguration(initializers = [ConfigDataApplicationContextInitializer::class])
 @ActiveProfiles("test")
-@Import(*[TaskListConfig::class,AppStateConfig::class,MetricsTestConfig::class])
+@Import(value = [TaskListConfig::class,AppStateConfig::class,MetricsTestConfig::class])
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class TaskListServiceTests {
 
@@ -176,6 +175,6 @@ class TaskListServiceTests {
 class MetricsTestConfig {
 
 	@Bean
-	fun metricsCinfig() =  ArchivingMetrics(CollectorRegistry.defaultRegistry)
+	fun metricsConfig() =  ArchivingMetrics(CollectorRegistry.defaultRegistry)
 
 }

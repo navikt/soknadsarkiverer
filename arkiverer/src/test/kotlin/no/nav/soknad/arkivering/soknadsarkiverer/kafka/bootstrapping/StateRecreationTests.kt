@@ -33,7 +33,6 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.context.annotation.Import
 import org.springframework.test.annotation.DirtiesContext
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -43,7 +42,6 @@ import java.util.concurrent.TimeUnit
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class,KafkaConfig::class)
-//@Import(ContainerizedKafka::class)
 class StateRecreationTests : ContainerizedKafka() {
 
 	@Suppress("unused")

@@ -20,8 +20,8 @@ import java.util.concurrent.Semaphore
 
 open class TaskListService(
 	private val archiverService: ArchiverService,
-	private val startUpSeconds: String,
-	private val secondsBetweenRetries :Array<Int>,
+	private val startUpSeconds: Long,
+	private val secondsBetweenRetries :Array<Long>,
 	private val applicationState: ApplicationState,
 	private val scheduler: Scheduler,
 	private val metrics: ArchivingMetrics,
@@ -36,7 +36,7 @@ open class TaskListService(
 
 	private val processRun: Boolean = false // Hvis true så vil all behandling av ulike states på søknader initieres fra topology. Pt vil testene feilene hvis = true
 
-	private val startUpEndTime = Instant.now().plusSeconds(startUpSeconds.toLong())
+	private val startUpEndTime = Instant.now().plusSeconds(startUpSeconds)
 
 	init {
 		logger.info("startUpEndTime=$startUpEndTime")
