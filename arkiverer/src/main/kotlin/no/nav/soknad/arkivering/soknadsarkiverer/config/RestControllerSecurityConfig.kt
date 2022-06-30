@@ -17,7 +17,7 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationEn
 @Configuration
 @EnableGlobalMethodSecurity(securedEnabled = true, prePostEnabled = true)
 class RestControllerSecurityConfig(@Value("\${no.nav.security.basic.username}") private val adminUsername : String,
-																	 @Value("\${no.nav.security.basic.username}") private val adminPassword: String ) : WebSecurityConfigurerAdapter() {
+																	 @Value("\${no.nav.security.basic.password}") private val adminPassword: String ) : WebSecurityConfigurerAdapter() {
 
 
 

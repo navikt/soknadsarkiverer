@@ -14,8 +14,8 @@ services:
       secondsBetweenRetries: [0, 1, 1, 1, 1, 1]
 no.nav.security:
   basic:
-    username: ${ADMIN_USER}
-    password: ${ADMIN_USER_PASSWORD}
+    username: admin
+    password: password
   jwt:
     issuer:
       someshortname:

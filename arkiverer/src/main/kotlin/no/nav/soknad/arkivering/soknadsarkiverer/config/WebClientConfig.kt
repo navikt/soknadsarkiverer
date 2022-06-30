@@ -29,7 +29,7 @@ class WebClientConfig(private val maxMessageSize: Int = 1024 * 1024 * 300) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Bean
-	@Profile("test | docker | default")
+	@Profile("test | docker | default | endtoend")
 	@Qualifier("archiveWebClient")
 	fun archiveTestWebClient(): WebClient = WebClient.builder().build()
 

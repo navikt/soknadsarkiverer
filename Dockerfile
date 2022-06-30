@@ -5,4 +5,3 @@ ENV JAVA_OPTS="-Dhttps.protocols=TLSv1,TLSv1.1,TLSv1.2 -XX:+ExitOnOutOfMemoryErr
 COPY arkiverer/target/*.jar app.jar
 
 CMD java -jar app.jar
-COPY init-scripts /init-scripts
