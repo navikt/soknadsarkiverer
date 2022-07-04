@@ -2,7 +2,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
 import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
@@ -39,7 +38,9 @@ class FilestorageServiceTests {
 	private lateinit var collectorRegistry: CollectorRegistry
 
 	@Autowired
-	private lateinit var appConfiguration: AppConfiguration
+	private lateinit var fileStorageProperties: FileStorageProperties
+	@Value("\${joark.journal-post}")
+	private lateinit var joarnalPostUrl: String
 
 	@Autowired
 	private lateinit var filestorageService: FilestorageService
@@ -49,7 +50,7 @@ class FilestorageServiceTests {
 
 	@BeforeAll
 	fun beforeAll() {
-		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
+		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, fileStorageProperties.files)
 	}
 
 	@BeforeEach
@@ -207,7 +208,7 @@ class FilestorageServiceTests {
 	}
 
 	private fun makeUrl(fileIdsAndResponses: List<Pair<String, String>>) =
-		appConfiguration.config.filestorageUrl + fileIdsAndResponses.joinToString(",") { it.first }
+		fileStorageProperties.files + fileIdsAndResponses.joinToString(",") { it.first }
 
 	private fun mockNumberOfFilesAndPerformRequest(numberOfFiles: Int): List<FileData> {
 		mockFilestorageIsWorking(fileIdsAndResponses.take(numberOfFiles))

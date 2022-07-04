@@ -2,8 +2,9 @@ package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
 import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileStorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
@@ -40,6 +41,9 @@ class HealthCheckTests  {
 	private lateinit var collectorRegistry: CollectorRegistry
 
 	@Autowired
+	private  lateinit var fileStorageProperties: FileStorageProperties
+
+	@Autowired
 	private lateinit var filestorage: FileserviceInterface
 
 	@Autowired
@@ -47,19 +51,21 @@ class HealthCheckTests  {
 
 	@Autowired
 	private lateinit var metrics: ArchivingMetrics
+	@Value("\${joark.journal-post}")
+	private lateinit var joarnalPostUrl: String
 
-	private val appConfiguration = AppConfiguration()
+	private val applicationState = ApplicationState()
 	private lateinit var healthCheck: HealthCheck
 
 	@BeforeEach
 	fun setup() {
-		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
+		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, fileStorageProperties.files)
 
 		mockFilestoragePingIsWorking()
 		mockFilestorageIsReadyIsWorking()
 		mockJoarkIsAliveIsWorking()
 
-		healthCheck = HealthCheck(appConfiguration, filestorage, journalpostClient, metrics)
+		healthCheck = HealthCheck(applicationState, filestorage, journalpostClient, metrics)
 	}
 
 	@AfterEach
@@ -70,7 +76,7 @@ class HealthCheckTests  {
 
 	@Test
 	fun `isAlive returns Ok when application is well`() {
-		appConfiguration.state.alive = true
+		applicationState.alive = true
 
 		val response = healthCheck.isAlive()
 
@@ -79,7 +85,7 @@ class HealthCheckTests  {
 
 	@Test
 	fun `isAlive returns Status 500 when application is unwell`() {
-		appConfiguration.state.alive = false
+		applicationState.alive = false
 
 		val response = healthCheck.isAlive()
 
@@ -89,7 +95,7 @@ class HealthCheckTests  {
 
 	@Test
 	fun `isReady returns Ok when application and dependencies are well`() {
-		appConfiguration.state.ready = true
+		applicationState.ready = true
 
 		val response = healthCheck.isReady()
 
@@ -98,7 +104,7 @@ class HealthCheckTests  {
 
 	@Test
 	fun `isReady returns Status 500 when application is unwell`() {
-		appConfiguration.state.ready = false
+		applicationState.ready = false
 
 		val response = healthCheck.isReady()
 

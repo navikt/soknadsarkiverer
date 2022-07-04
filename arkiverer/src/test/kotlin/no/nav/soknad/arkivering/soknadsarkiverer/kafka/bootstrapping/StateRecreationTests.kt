@@ -9,7 +9,6 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
@@ -28,12 +27,12 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.context.annotation.Import
 import org.springframework.test.annotation.DirtiesContext
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -43,7 +42,6 @@ import java.util.concurrent.TimeUnit
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class,KafkaConfig::class)
-//@Import(ContainerizedKafka::class)
 class StateRecreationTests : ContainerizedKafka() {
 
 	@Suppress("unused")
@@ -59,19 +57,20 @@ class StateRecreationTests : ContainerizedKafka() {
 	private lateinit var kafkaStreams: KafkaStreams // Mock this so that the real chain isn't run by the tests
 
 	@Autowired
-	private lateinit var appConfiguration: AppConfiguration
-	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
 	private lateinit var kafkaMainTopicProducer: KafkaProducer<String, Soknadarkivschema>
 	private lateinit var kafkaProcessingEventProducer: KafkaProducer<String, ProcessingEvent>
 	private lateinit var kafkaBootstrapConsumer: KafkaBootstrapConsumer
 
-	private val taskListService = mock<TaskListService>()
+
+	private var taskListService = mock<TaskListService>()
 
 	private val soknadarkivschema = createSoknadarkivschema()
 
 	@BeforeAll
 	fun setup() {
+
+	  Mockito.doNothing().`when`(taskListService).addOrUpdateTask(any(),any(),any(),any())
 		kafkaMainTopicProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProcessingEventProducer = KafkaProducer(kafkaConfigMap())
 		kafkaBootstrapConsumer = KafkaBootstrapConsumer(taskListService,kafkaConfig)

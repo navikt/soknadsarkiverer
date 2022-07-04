@@ -9,6 +9,7 @@ import no.nav.security.token.support.client.core.oauth2.OAuth2AccessTokenService
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.*
 import org.springframework.http.client.reactive.ReactorClientHttpConnector
@@ -23,22 +24,19 @@ import reactor.netty.tcp.TcpClient
 
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 @Configuration
-class WebClientConfig(private val appConfiguration: AppConfiguration) {
+class WebClientConfig(private val maxMessageSize: Int = 1024 * 1024 * 300) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Bean
-	@Profile("spring | test | docker | default")
+	@Profile("test | docker | default | endtoend")
 	@Qualifier("archiveWebClient")
-	@Scope("prototype")
-	@Lazy
-	fun archiveTestWebClient() = WebClient.builder().defaultHeader("testHeader", "test_value").build()
+	fun archiveTestWebClient(): WebClient = WebClient.builder().build()
 
 
 	@Bean
 	@Profile("prod | dev")
 	@Qualifier("archiveWebClient")
-	@Scope("prototype")
 	fun archiveWebClient(
 		oAuth2AccessTokenService: OAuth2AccessTokenService,
 		clientConfigurationProperties: ClientConfigurationProperties
@@ -60,7 +58,7 @@ class WebClientConfig(private val appConfiguration: AppConfiguration) {
 			.codecs { configurer: ClientCodecConfigurer ->
 				configurer
 					.defaultCodecs()
-					.maxInMemorySize(appConfiguration.config.maxMessageSize) }
+					.maxInMemorySize(maxMessageSize) }
 			.build()
 
 		return WebClient.builder()

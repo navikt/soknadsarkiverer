@@ -67,7 +67,7 @@ spec:
     - name: BOOTSTRAPPING_TIMEOUT
       value: "0"
     - name: KAFKA_SECURITY
-      value: 'TRUE'
+      value: "TRUE"
     - name: KAFKA_MAIN_TOPIC
       value: {{kafka-main-topic}}
     - name: KAFKA_PROCESSING_TOPIC

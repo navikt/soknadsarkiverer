@@ -21,8 +21,8 @@ management:
 kafka:
   applicationId: ${KAFKA_STREAMS_APPLICATION_ID}
   brokers: ${KAFKA_BROKERS}
-  bootstrappingTimeout: ${BOOTSTRAPPING_TIMEOUT}
-  delayBeforeKafkaInitialization: ${DELAY_BEFORE_KAFKA_INITIALIZATION}
+  bootstrappingTimeout: 120
+  delayBeforeKafkaInitialization: 5
   security:
     enabled: ${KAFKA_SECURITY}
     protocol: SSL
@@ -40,59 +40,49 @@ kafka:
     url: ${KAFKA_SCHEMA_REGISTRY}
     username: ${KAFKA_SCHEMA_REGISTRY_USER}
     password: ${KAFKA_SCHEMA_REGISTRY_PASSWORD}
-
+services:
+  tasklist:
+    scheduling:
+      startUpSeconds: 90
+      secondsBetweenRetries: [1, 30, 60, 300, 1200, 3600]
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
     tags-sorter: alpha
     operations-sorter: alpha
+joark:
+  host: ${JOARK_HOST}
+  journal-post: /rest/journalpostapi/v1/journalpost
+  joark-is-alive: /isAlive
+filestorage:
+  host: ${FILESTORAGE_HOST}
+  files: /files
+  username: ${INNSENDING_USERNAME}
+  password: ${INNSENDING_PASSWORD}
+
 
 ---
 spring:
   config:
     activate:
-      on-profile: test
+      on-profile: default | dev | prod
 
-no.nav.security.jwt:
-  issuer:
-    someshortname:
-      discoveryurl: http://metadata
-      accepted_audience: aud-localhost
-      cookie_name: localhost-idtoken
-    azuread:
-      discoveryurl: http://metadata
-      accepted_audience: aud-localhost
-      cookie_name: localhost-idtoken
-
-  client:
-    registration:
-      soknadsarkiverer:
-        token-endpoint-url: http://localhost:8181/oauth2/v2.0/token
-        grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
-        scope: scope1
-        authentication:
-          client-id: testclient
-          client-secret: testsecret
-          client-auth-method: client_secret_basic
-
----
-spring:
-  config:
-    activate:
-      on-profile: spring | default | dev | prod
-
-no.nav.security.jwt:
-  issuer.azuread:
-      discoveryurl: ${AZURE_APP_WELL_KNOWN_URL}
-      accepted_audience: ${AZURE_APP_CLIENT_ID}
-      cookie_name: azure_token
-  client:
-    registration:
-      soknadsarkiverer:
-        token-endpoint-url: ${AZURE_OPENID_CONFIG_TOKEN_ENDPOINT}
-        grant-type: client_credentials
-        scope: ${DOKARKIV_SCOPE}
-        authentication:
-          client-id: ${AZURE_APP_CLIENT_ID}
-          client-secret: ${AZURE_APP_CLIENT_SECRET}
-          client-auth-method: client_secret_basic
+no.nav.security:
+  basic:
+    username: ${ADMIN_USER}
+    password: ${ADMIN_USER_PASSWORD}
+  jwt:
+    issuer.azuread:
+        discoveryurl: ${AZURE_APP_WELL_KNOWN_URL}
+        accepted_audience: ${AZURE_APP_CLIENT_ID}
+        cookie_name: azure_token
+    client:
+      registration:
+        soknadsarkiverer:
+          token-endpoint-url: ${AZURE_OPENID_CONFIG_TOKEN_ENDPOINT}
+          grant-type: client_credentials
+          scope: ${DOKARKIV_SCOPE}
+          authentication:
+            client-id: ${AZURE_APP_CLIENT_ID}
+            client-secret: ${AZURE_APP_CLIENT_SECRET}
+            client-auth-method: client_secret_basic

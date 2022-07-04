@@ -2,7 +2,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsfillager.api.FilesApi
@@ -17,7 +16,7 @@ import org.springframework.stereotype.Service
 
 @Service
 class FilestorageService(
-	appConfiguration: AppConfiguration,
+	fileStorageProperties: FileStorageProperties,
 	private val metrics: ArchivingMetrics
 ) : FileserviceInterface {
 
@@ -28,10 +27,10 @@ class FilestorageService(
 
 	init {
 		jacksonObjectMapper.registerModule(JavaTimeModule())
-		ApiClient.username = appConfiguration.config.innsendingUsername
-		ApiClient.password = appConfiguration.config.innsendingPassword
-		filesApi = FilesApi(appConfiguration.config.filestorageHost)
-		healthApi = HealthApi(appConfiguration.config.filestorageHost)
+		ApiClient.username = fileStorageProperties.username
+		ApiClient.password = fileStorageProperties.password
+		filesApi = FilesApi(fileStorageProperties.host)
+		healthApi = HealthApi(fileStorageProperties.host)
 	}
 
 	override fun ping(): String {

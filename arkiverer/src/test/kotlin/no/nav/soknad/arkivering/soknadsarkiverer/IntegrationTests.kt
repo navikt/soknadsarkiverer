@@ -5,9 +5,9 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileStorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -48,9 +48,11 @@ class IntegrationTests : ContainerizedKafka() {
 	private lateinit var collectorRegistry: CollectorRegistry
 
 	@Autowired
-	private lateinit var appConfiguration: AppConfiguration
+	private lateinit var fileStorageProperties: FileStorageProperties
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
+	@Value("\${joark.journal-post}")
+	private lateinit var joarnalPostUrl: String
 	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 	private lateinit var kafkaProducerForBadData: KafkaProducer<String, String>
 
@@ -59,7 +61,7 @@ class IntegrationTests : ContainerizedKafka() {
 
 	@BeforeEach
 	fun setup() {
-		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
+		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, fileStorageProperties.files)
 
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
@@ -79,7 +81,7 @@ class IntegrationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic(createSoknadarkivschema())
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
+		verifyMockedPostRequests(2, joarnalPostUrl)
 		verifyDeleteRequestsToFilestorage(2)
 	}
 
@@ -91,7 +93,7 @@ class IntegrationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic("this string is not deserializable")
 
 		TimeUnit.SECONDS.sleep(1)
-		verifyMockedPostRequests(0, appConfiguration.config.joarkUrl)
+		verifyMockedPostRequests(0, joarnalPostUrl)
 		verifyDeleteRequestsToFilestorage(0)
 	}
 
@@ -103,13 +105,13 @@ class IntegrationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic("this is not deserializable")
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
+		verifyMockedPostRequests(1, joarnalPostUrl)
 		verifyDeleteRequestsToFilestorage(1)
 	}
 
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
-		val url = appConfiguration.config.filestorageUrl + ".*"
+		val url = fileStorageProperties.files + ".*"
 		verifyMockedDeleteRequests(expectedCount, url)
 	}
 

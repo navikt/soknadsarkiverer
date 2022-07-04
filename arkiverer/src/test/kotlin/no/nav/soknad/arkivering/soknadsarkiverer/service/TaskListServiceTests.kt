@@ -3,9 +3,9 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service
 import com.nhaarman.mockitokotlin2.*
 import io.prometheus.client.CollectorRegistry
 import no.nav.soknad.arkivering.avroschemas.EventTypes
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
+import no.nav.soknad.arkivering.soknadsarkiverer.config.AppStateConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
-import no.nav.soknad.arkivering.soknadsarkiverer.config.startUpSecondsForTest
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
@@ -13,20 +13,44 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.ArgumentCaptor
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Import
+import org.springframework.test.annotation.DirtiesContext
+import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.ContextConfiguration
+import org.springframework.test.context.junit.jupiter.SpringExtension
 import java.util.*
-import java.util.concurrent.TimeUnit
 
+@ExtendWith(SpringExtension::class)
+@ContextConfiguration(initializers = [ConfigDataApplicationContextInitializer::class])
+@ActiveProfiles("test")
+@Import(value = [TaskListConfig::class,AppStateConfig::class,MetricsTestConfig::class])
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class TaskListServiceTests {
 
-	private val archiverService = mock<ArchiverService>()
-	private val scheduler = mock<Scheduler>()
-	private val kafkaPublisher = mock<KafkaPublisher>()
-	private val metrics = ArchivingMetrics(CollectorRegistry.defaultRegistry)
 
-	private val taskListService = TaskListService(archiverService, AppConfiguration(), scheduler, metrics, kafkaPublisher)
 
-	private val soknadarkivschema = createSoknadarkivschema()
+  @MockBean
+	private lateinit var archiverService : ArchiverService  //= mock<ArchiverService>()
+	@MockBean
+	private lateinit var scheduler : Scheduler // = mock<Scheduler>()
+	@MockBean
+	private lateinit var kafkaPublisher : KafkaPublisher // = mock<KafkaPublisher>()
+  @Autowired
+  private lateinit var metrics : ArchivingMetrics//= ArchivingMetrics(CollectorRegistry.defaultRegistry)
+
+
+	@Autowired
+	private lateinit var  taskListService : TaskListService
+	private  val soknadarkivschema = createSoknadarkivschema()
+
+
 
 	@AfterEach
 	fun teardown() {
@@ -100,11 +124,11 @@ class TaskListServiceTests {
 		runScheduledTaskOnScheduling()
 
 		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.RECEIVED)
-		TimeUnit.SECONDS.sleep(startUpSecondsForTest + 2)
 
 		verify(archiverService, timeout(10_000).times(1)).archive(eq(key), any(), any())
 		verify(archiverService, timeout(10_000).times(1)).deleteFiles(eq(key), any())
 		verify(scheduler, timeout(10_000).times(1)).schedule(any(), any())
+		verify(kafkaPublisher, timeout(10_000).times(1)).putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.FINISHED)), any())
 		loopAndVerify(0, { taskListService.listTasks().size })
 	}
 
@@ -145,4 +169,12 @@ class TaskListServiceTests {
 	private fun getTaskListPair (key: String) = taskListService.listTasks()[key] ?: error("Expected to find $key in map")
 
 	private inline fun <reified T> argumentCaptor(): ArgumentCaptor<T> = ArgumentCaptor.forClass(T::class.java)
+}
+
+@TestConfiguration
+class MetricsTestConfig {
+
+	@Bean
+	fun metricsConfig() =  ArchivingMetrics(CollectorRegistry.defaultRegistry)
+
 }

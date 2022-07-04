@@ -6,7 +6,7 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory
 import java.util.*
 
 class KafkaStreamsSetup(
-	private val appConfiguration: AppConfiguration,
+	private val applicationState: ApplicationState,
 	private val taskListService: TaskListService,
 	private val kafkaPublisher: KafkaPublisher,
 	private val kafkaConfig: KafkaConfig
@@ -151,7 +151,7 @@ class KafkaStreamsSetup(
 		it.configure(
 			kafkaConfig("soknadsarkiverer-exception")
 				.also { config ->
-					config[APP_CONFIGURATION] = appConfiguration
+					config[APP_STATE] = applicationState
 					config[StreamsConfig.APPLICATION_ID_CONFIG] = "soknadsarkiverer-exception"
 				}
 				.map { (k, v) -> k.toString() to v }.toMap()
@@ -171,6 +171,6 @@ class KafkaStreamsSetup(
 	}
 }
 
-const val APP_CONFIGURATION = "app_configuration"
+const val APP_STATE = "app_state"
 const val KAFKA_PUBLISHER = "kafka.publisher"
 const val MESSAGE_ID = "MESSAGE_ID"
