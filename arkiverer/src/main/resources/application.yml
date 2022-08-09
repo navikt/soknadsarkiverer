@@ -19,7 +19,7 @@ management:
           autotime:
             enabled: true
 kafka:
-  applicationId: ${KAFKA_STREAMS_APPLICATION_ID}
+  applicationId: soknadsarkiverer-group-defaultid
   brokers: ${KAFKA_BROKERS}
   bootstrappingTimeout: 120
   delayBeforeKafkaInitialization: 5
@@ -56,7 +56,7 @@ joark:
   joark-is-alive: /isAlive
 filestorage:
   host: ${FILESTORAGE_HOST}
-  files: /files
+  files: /files/
   username: ${INNSENDING_USERNAME}
   password: ${INNSENDING_PASSWORD}
 
