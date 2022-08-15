@@ -177,7 +177,10 @@ open class TaskListService(
 				EventTypes.ARCHIVED -> deleteFilesState(key, soknadarkivschema, attempt)
 				EventTypes.FAILURE  -> failTask(key)
 				EventTypes.FINISHED -> finishTask(key)
-				else -> logger.error("$key: - Unexpected state ${loggedTaskStates[key]}")
+				else -> {
+					logger.error("$key: - Unexpected state ${currentTaskStates[key]} - Will assume it was ${EventTypes.RECEIVED}")
+					receivedState(key, soknadarkivschema, attempt)
+				}
 			}
 		}
 	}
