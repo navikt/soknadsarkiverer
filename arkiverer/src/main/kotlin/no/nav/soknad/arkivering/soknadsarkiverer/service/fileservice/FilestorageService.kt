@@ -111,7 +111,7 @@ class FilestorageService(
 
 	private fun performGetCall(key: String, fileIds: List<String>): List<FileData> {
 		return try {
-			filesApi.findFilesByIds(fileIds, key)
+			filesApi.findFilesByIds(ids =  fileIds, xInnsendingId =  key, metadataOnly = false)
 
 		} catch (e: ClientException) {
 			val errorMsg = "$key: Got status ${e.statusCode} when requesting files '$fileIds' - response: '${e.response}'"

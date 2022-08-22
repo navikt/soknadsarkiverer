@@ -16,6 +16,73 @@ tags:
     description: Application health endpoint
 
 paths:
+  /files-test:
+    post:
+      summary: Test endpoint that does nothing
+      description: Endpoint used for testing that does nothing.
+      operationId: addFilesTest
+
+      requestBody:
+        description: Files that will be added to the storage.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/FileData"
+        required: true
+
+      parameters:
+        - in: header
+          name: X-innsendingId
+          description: Tracing id that will be used in logging statements.
+          example: 92ee15dd-dc49-4c95-b9b6-6224bae088a0
+          required: false
+          schema:
+            type: string
+
+      responses:
+        200:
+          description: Successful operation
+      tags:
+        - files
+
+  /files-test/{ids}:
+    head:
+      summary: Test endpoint to see if the files with given ids have been seen.
+      description: Endpoint used for testing that does nothing.
+      operationId: checkFilesByIdsTest
+
+      parameters:
+        - name: ids
+          in: path
+          description: A list of ids of files to be checked whether they exist in the file storage.
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+          style: simple
+
+        - in: header
+          name: X-innsendingId
+          description: Tracing id that will be used in logging statements.
+          example: 92ee15dd-dc49-4c95-b9b6-6224bae088a0
+          required: false
+          schema:
+            type: string
+
+      responses:
+        200:
+          description: Successful operation, **ALL** of the requested files were found.
+        404:
+          description: File Not Found, **NONE** of the requested files have ever been seen in the file storage.
+        409:
+          description: Conflict, **AT LEAST ONE** of the requested files were seen, but others were not.
+      tags:
+        - files
+
+
   /files:
     post:
       summary: Add new files to the file storage.
@@ -99,7 +166,12 @@ paths:
             items:
               type: string
           style: simple
-
+        - name: metadataOnly
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Fetches only metadata of the File
         - in: header
           name: X-innsendingId
           description: Tracing id that will be used in logging statements.
@@ -163,6 +235,7 @@ paths:
       description: Pings the application to see if it responds
       operationId: ping
 
+      security: []   # No security
       responses:
         '200':
           description: Successful operation; application is responding
@@ -175,6 +248,7 @@ paths:
       description: Checks if the application and its dependencies are up and running.
       operationId: isAlive
 
+      security: []   # No security
       responses:
         '200':
           description: Successful operation; application is alive
@@ -189,6 +263,7 @@ paths:
       description: Checks if the application is ready to accept traffic.
       operationId: isReady
 
+      security: []   # No security
       responses:
         '200':
           description: Successful operation; application is ready
@@ -204,8 +279,6 @@ components:
       type: object
       required:
         - id
-        - content
-        - createdAt
       properties:
         id:
           type: string
@@ -220,8 +293,12 @@ components:
         createdAt:
           type: string
           format: date-time
+          nullable: true
           description: Creation date and time in UTC
           example: 2021-12-03T14:10:00Z
+        status:
+          type: string
+          description: current state of the file DELETED,NOT_FOUND,OK
   securitySchemes:
     basicAuth:
       type: http
