@@ -72,7 +72,7 @@ class FilestorageServiceTests {
 
 		assertEquals(numberOfFiles, files.size)
 		assertFileContentIsCorrect(files)
-		verifyMockedGetRequests(0, makeUrl(fileIdsAndResponses.take(numberOfFiles)))
+		verifyMockedGetRequests(0, makeGetUrl(fileIdsAndResponses.take(numberOfFiles)))
 	}
 
 	@Test
@@ -83,7 +83,7 @@ class FilestorageServiceTests {
 
 		assertEquals(numberOfFiles, files.size)
 		assertFileContentIsCorrect(files)
-		verifyMockedGetRequests(1, makeUrl(fileIdsAndResponses.take(numberOfFiles)))
+		verifyMockedGetRequests(1, makeGetUrl(fileIdsAndResponses.take(numberOfFiles)))
 	}
 
 	@Test
@@ -98,8 +98,8 @@ class FilestorageServiceTests {
 
 		assertEquals(numberOfFiles, files.size)
 		assertFileContentIsCorrect(files)
-		verifyMockedGetRequests(1, makeUrl(fileIdsAndResponses.take(filesInOneRequestToFilestorage)))
-		verifyMockedGetRequests(1, makeUrl(fileIdsAndResponses.drop(filesInOneRequestToFilestorage).take(1)))
+		verifyMockedGetRequests(1, makeGetUrl(fileIdsAndResponses.take(filesInOneRequestToFilestorage)))
+		verifyMockedGetRequests(1, makeGetUrl(fileIdsAndResponses.drop(filesInOneRequestToFilestorage).take(1)))
 	}
 
 	@Test
@@ -115,9 +115,9 @@ class FilestorageServiceTests {
 
 		assertEquals(numberOfFiles, files.size)
 		assertFileContentIsCorrect(files)
-		verifyMockedGetRequests(1, makeUrl(fileIdsAndResponses.take(filesInOneRequestToFilestorage)))
-		verifyMockedGetRequests(1, makeUrl(fileIdsAndResponses.drop(filesInOneRequestToFilestorage).take(filesInOneRequestToFilestorage)))
-		verifyMockedGetRequests(1, makeUrl(fileIdsAndResponses.drop(filesInOneRequestToFilestorage * 2).take(1)))
+		verifyMockedGetRequests(1, makeGetUrl(fileIdsAndResponses.take(filesInOneRequestToFilestorage)))
+		verifyMockedGetRequests(1, makeGetUrl(fileIdsAndResponses.drop(filesInOneRequestToFilestorage).take(filesInOneRequestToFilestorage)))
+		verifyMockedGetRequests(1, makeGetUrl(fileIdsAndResponses.drop(filesInOneRequestToFilestorage * 2).take(1)))
 	}
 
 	@Test
@@ -206,6 +206,9 @@ class FilestorageServiceTests {
 				assertEquals(fileIdsAndResponses.first { it.first == result.id }.second, result.content?.map { it.toInt().toChar() }?.joinToString(""))
 			} })
 	}
+
+	private fun makeGetUrl(fileIdsAndResponses: List<Pair<String, String>>) =
+		makeUrl(fileIdsAndResponses) + "\\?metadataOnly=false"
 
 	private fun makeUrl(fileIdsAndResponses: List<Pair<String, String>>) =
 		fileStorageProperties.files + fileIdsAndResponses.joinToString(",") { it.first }
