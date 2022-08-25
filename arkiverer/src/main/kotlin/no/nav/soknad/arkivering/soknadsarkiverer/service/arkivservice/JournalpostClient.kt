@@ -20,6 +20,7 @@ import org.springframework.web.reactive.function.client.WebClient
 
 @Service
 class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
+												@Value("\${joark.sendToJoark}") private val sendToJoark: Boolean,
 												@Value("\${joark.journal-post}") private val journalPostUrl: String,
 												@Value("\${joark.joark-is-alive}") private val joarkIsAlive: String,
 												@Qualifier("archiveWebClient") private val webClient: WebClient,
@@ -45,7 +46,7 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 			val request: OpprettJournalpostRequest = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)
 
 			val client = if (soknadarkivschema.arkivtema == "BID") bidClient else webClient
-			val response = sendDataToJoark(client, request, joarkHost + journalPostUrl)
+			val response = sendDataToJoark(key, client, request, joarkHost + journalPostUrl)
 			val journalpostId = response?.journalpostId ?: "-1"
 
 			logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.behandlingsid}', " +
@@ -65,8 +66,13 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 		}
 	}
 
-	private fun sendDataToJoark(client: WebClient, data: OpprettJournalpostRequest, uri: String):
+	private fun sendDataToJoark(key: String, client: WebClient, data: OpprettJournalpostRequest, uri: String):
 		OpprettJournalpostResponse? {
+
+		if (!sendToJoark) {
+			logger.info("$key: Feature flag is disabled - not sending to Joark.")
+			return null
+		}
 
 		val method = HttpMethod.POST
 		return client

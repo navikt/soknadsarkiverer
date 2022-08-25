@@ -82,3 +82,5 @@ spec:
       value: {{joark-host}}
     - name: DOKARKIV_SCOPE
       value: {{dokarkiv-scope}}
+    - name: SEND_TO_JOARK
+      value: {{send-to-joark}}

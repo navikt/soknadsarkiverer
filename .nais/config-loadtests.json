@@ -15,5 +15,6 @@
 	"filestorage-host": "https://soknadsfillager-gcp-loadtests.dev.intern.nav.no",
 	"joark-host": "https://arkiv-mock-gcp.dev.intern.nav.no",
 	"dokarkiv-scope": "api://dev-gcp.team-soknad.arkiv-mock/.default",
+	"send-to-joark": "true",
 	"kafka-pool": "nav-dev"
 }

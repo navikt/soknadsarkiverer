@@ -14,5 +14,6 @@
 	"filestorage-host": "https://soknadsfillager-gcp.dev.intern.nav.no",
 	"joark-host": "https://dokarkiv.dev-fss-pub.nais.io",
 	"dokarkiv-scope": "api://dev-fss.teamdokumenthandtering.dokarkiv-q1/.default",
+	"send-to-joark": "true",
 	"kafka-pool": "nav-dev"
 }
