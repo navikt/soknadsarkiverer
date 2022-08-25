@@ -9,9 +9,10 @@ import no.nav.security.token.support.client.core.oauth2.OAuth2AccessTokenService
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.EnableConfigurationProperties
-import org.springframework.context.annotation.*
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Profile
 import org.springframework.http.client.reactive.ReactorClientHttpConnector
 import org.springframework.http.codec.ClientCodecConfigurer
 import org.springframework.web.reactive.function.client.ClientRequest
@@ -44,7 +45,7 @@ class WebClientConfig(private val maxMessageSize: Int = 1024 * 1024 * 300) {
 
 		logger.info("Initializing archiveWebClient")
 		val properties: ClientProperties = clientConfigurationProperties.registration
-			?. get("soknadsarkiverer")
+			?.get("soknadsarkiverer")
 			?: throw RuntimeException("Could not find oauth2 client config for archiveWebClient")
 
 		logClientProperties(properties)
@@ -58,7 +59,8 @@ class WebClientConfig(private val maxMessageSize: Int = 1024 * 1024 * 300) {
 			.codecs { configurer: ClientCodecConfigurer ->
 				configurer
 					.defaultCodecs()
-					.maxInMemorySize(maxMessageSize) }
+					.maxInMemorySize(maxMessageSize)
+			}
 			.build()
 
 		return WebClient.builder()
@@ -68,7 +70,10 @@ class WebClientConfig(private val maxMessageSize: Int = 1024 * 1024 * 300) {
 			.build()
 	}
 
-	private fun bearerTokenFilter(clientProperties: ClientProperties, oAuth2AccessTokenService: OAuth2AccessTokenService) =
+	private fun bearerTokenFilter(
+		clientProperties: ClientProperties,
+		oAuth2AccessTokenService: OAuth2AccessTokenService
+	) =
 		{ request: ClientRequest, next: ExchangeFunction ->
 			val response: OAuth2AccessTokenResponse = oAuth2AccessTokenService.getAccessToken(clientProperties)
 

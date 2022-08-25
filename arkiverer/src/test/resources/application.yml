@@ -42,6 +42,7 @@ no.nav.security:
     password: password
 joark:
   host: http://localhost:2908
+  sendToJoark: true
   journal-post: /rest/journalpostapi/v1/journalpost
   joark-is-alive: /isAlive
 filestorage:

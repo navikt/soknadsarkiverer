@@ -1,4 +1,5 @@
 kafka:
+  applicationId: end-to-end
   bootstrappingTimeout: 60
   security:
     enabled: FALSE
@@ -37,6 +38,5 @@ no.nav.security:
             client-secret: testsecret
             client-auth-method: client_secret_basic
 filestorage:
-  files: /files/
   username: innsending
   password: password

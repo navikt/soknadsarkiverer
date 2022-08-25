@@ -113,7 +113,7 @@ fun mockFilestorageRespondsConflict() {
 }
 
 fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>, idsForUrl: String) {
-	val urlPattern = urlMatching(filestorageUrl + idsForUrl)
+	val urlPattern = urlMatching("$filestorageUrl$idsForUrl\\?metadataOnly=false")
 
 	wiremockServer.stubFor(
 		get(urlPattern)
