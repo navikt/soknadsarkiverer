@@ -37,7 +37,6 @@ no.nav.security:
             client-id: testclient
             client-secret: testsecret
             client-auth-method: client_secret_basic
-
 filestorage:
   username: innsending
   password: password
