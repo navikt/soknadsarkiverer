@@ -29,9 +29,6 @@ class FilestorageService(
 		jacksonObjectMapper.registerModule(JavaTimeModule())
 		ApiClient.username = fileStorageProperties.username
 		ApiClient.password = fileStorageProperties.password
-		logger.info("my username is: " + ApiClient.username)
-		logger.info("my password is: " + ApiClient.password)
-		logger.info("mu host is: " + fileStorageProperties.host )
 		filesApi = FilesApi(fileStorageProperties.host)
 		healthApi = HealthApi(fileStorageProperties.host)
 	}
