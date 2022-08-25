@@ -19,7 +19,7 @@ management:
           autotime:
             enabled: true
 kafka:
-  applicationId: soknadsarkiverer-group-defaultid
+  applicationId: ${KAFKA_STREAMS_APPLICATION_ID}
   brokers: ${KAFKA_BROKERS}
   bootstrappingTimeout: 120
   delayBeforeKafkaInitialization: 5
