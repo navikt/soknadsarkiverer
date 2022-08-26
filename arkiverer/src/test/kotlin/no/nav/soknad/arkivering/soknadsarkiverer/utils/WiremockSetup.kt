@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import java.util.*
 
 
 const val filestorageContent = "filestoragecontent"
@@ -99,30 +100,43 @@ private fun mockJoark(statusCode: Int, responseBody: String, delay: Int) {
 
 fun mockFilestorageIsWorking(uuid: String) = mockFilestorageIsWorking(listOf(uuid to filestorageContent))
 
-fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>) {
-	val ids = uuidsAndResponses.joinToString(",") { it.first }
-	mockFilestorageIsWorking(uuidsAndResponses, ids)
+fun mockFilestorageIsWorking(idsAndResponses: List<Pair<String, String?>>) {
+
+	val ids = idsAndResponses.joinToString(",") { it.first }
+	val urlPattern = "$filestorageUrl$ids\\?metadataOnly=false"
+
+	val response = createFilestorageResponse(idsAndResponses.map { (id, content) -> Triple(id, content, "ok") })
+	mockFilestorageGetRequest(urlPattern, response)
+
+	mockFilestorageDeletionIsWorking(idsAndResponses.map { it.first })
 }
 
-fun mockFilestorageRespondsConflict() {
-	wiremockServer.stubFor(
-		get(urlMatching("$filestorageUrl.*"))
-			.willReturn(aResponse()
-				.withBody("Mocked exception for get - 409 Conflict")
-				.withStatus(HttpStatus.CONFLICT.value())))
+fun mockFilestorageRespondsDifferentStatuses() {
+	val response = createFilestorageResponse(listOf(
+		Triple(UUID.randomUUID().toString(), filestorageContent, "ok"),
+		Triple(UUID.randomUUID().toString(), null, "not-found"),
+		Triple(UUID.randomUUID().toString(), null, "deleted"),
+	))
+	mockFilestorageGetRequest("$filestorageUrl.*", response)
 }
 
-fun mockFilestorageIsWorking(uuidsAndResponses: List<Pair<String, String?>>, idsForUrl: String) {
-	val urlPattern = urlMatching("$filestorageUrl$idsForUrl\\?metadataOnly=false")
+fun mockRequestedFileIsGone() {
+	val response = createFilestorageResponse(listOf(
+		Triple(UUID.randomUUID().toString(), null, "deleted")
+	))
+	mockFilestorageGetRequest("$filestorageUrl.*", response)
+}
 
+private fun mockFilestorageGetRequest(url: String, response: String) {
 	wiremockServer.stubFor(
-		get(urlPattern)
-			.willReturn(aResponse()
-				.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-				.withBody(createFilestorageResponse(uuidsAndResponses))
-				.withStatus(HttpStatus.OK.value())))
-
-	mockFilestorageDeletionIsWorking(uuidsAndResponses.map { it.first })
+		get(urlMatching(url))
+			.willReturn(
+				aResponse()
+					.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+					.withBody(response)
+					.withStatus(HttpStatus.OK.value())
+			)
+	)
 }
 
 fun mockFilestorageDeletionIsWorking(uuids: List<String>) {
@@ -149,14 +163,6 @@ fun mockFilestorageIsDown() {
 			.willReturn(aResponse()
 				.withBody("Mocked exception for filestorage")
 				.withStatus(HttpStatus.SERVICE_UNAVAILABLE.value())))
-}
-
-fun mockRequestedFileIsGone() {
-	wiremockServer.stubFor(
-		get(urlMatching("$filestorageUrl.*"))
-			.willReturn(aResponse()
-				.withBody("Mocked exception for filestorage")
-				.withStatus(HttpStatus.GONE.value())))
 }
 
 fun mockFilestoragePingIsWorking() {
@@ -206,12 +212,12 @@ fun mockJoarkIsAliveIsNotWorking() {
 }
 
 
-private fun createFilestorageResponse(uuidsAndResponses: List<Pair<String, String?>>): String {
+private fun createFilestorageResponse(idsAndResponsesAndStatuses: List<Triple<String, String?, String>>): String {
 	val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
 	return ObjectMapper()
 		.registerModule(JavaTimeModule())
 		.writeValueAsString(
-			uuidsAndResponses.map { (uuid, response) -> FileData(uuid, response?.toByteArray(), createdAt) }
+			idsAndResponsesAndStatuses.map { (id, response, statues) -> FileData(id, response?.toByteArray(), createdAt, statues) }
 		)
 }
 
