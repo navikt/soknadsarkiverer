@@ -7,11 +7,9 @@ import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsfillager.api.FilesApi
 import no.nav.soknad.arkivering.soknadsfillager.api.HealthApi
 import no.nav.soknad.arkivering.soknadsfillager.infrastructure.ApiClient
-import no.nav.soknad.arkivering.soknadsfillager.infrastructure.ClientException
 import no.nav.soknad.arkivering.soknadsfillager.infrastructure.Serializer.jacksonObjectMapper
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 
 @Service
@@ -37,6 +35,7 @@ class FilestorageService(
 		healthApi.ping()
 		return "pong"
 	}
+
 	override fun isReady(): String {
 		healthApi.isReady()
 		return "ok"
@@ -83,8 +82,10 @@ class FilestorageService(
 			metrics.incDelFilestorageSuccesses()
 		} catch (e: Exception) {
 			metrics.incDelFilestorageErrors()
-			logger.warn("$key: Failed to delete files from file storage. Everything is saved to Joark correctly, " +
-				"so this error will be ignored. Affected file ids: '$fileIds'", e)
+			logger.warn(
+				"$key: Failed to delete files from file storage. Everything is saved to Joark correctly, " +
+					"so this error will be ignored. Affected file ids: '$fileIds'", e
+			)
 
 		} finally {
 			metrics.endTimer(timer)
@@ -107,21 +108,19 @@ class FilestorageService(
 	}
 
 	private fun performGetCall(key: String, fileIds: List<String>): List<FileData> {
-		return try {
-
-			filesApi.findFilesByIds(ids =  fileIds, xInnsendingId =  key, metadataOnly = false)
-
-
-		} catch (e: ClientException) {
-			val errorMsg = "$key: Got status ${e.statusCode} when requesting files '$fileIds' - response: '${e.response}'"
-
-			if (e.statusCode == HttpStatus.GONE.value())
-				throw Exception(FilesAlreadyDeletedException(errorMsg))
-			else {
-				logger.error(errorMsg, e)
-				throw e
-			}
+		val files = try {
+			filesApi.findFilesByIds(ids = fileIds, xInnsendingId = key, metadataOnly = false)
+		} catch (e: Exception) {
+			logger.error("$key: Exception when fetching files '$fileIds'", e)
+			throw e
 		}
+
+		if (files.all { it.status == "deleted" })
+			throw Exception(FilesAlreadyDeletedException("$key: All the files are deleted: $fileIds"))
+		if (files.any { it.status != "ok" })
+			throw Exception("$key: Files had different statuses: ${files.map { "${it.id} - ${it.status}" }}")
+
+		return files
 	}
 
 

@@ -121,8 +121,8 @@ class FilestorageServiceTests {
 	}
 
 	@Test
-	fun `getFilesFromFilestorage - Filestorage responds with 409 Conflict - will throw exception`() {
-		mockFilestorageRespondsConflict()
+	fun `getFilesFromFilestorage - Filestorage responds with different statuses - will throw exception`() {
+		mockFilestorageRespondsDifferentStatuses()
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(3).map { it.first })
 
 		assertThrows<ArchivingException> {
@@ -143,8 +143,8 @@ class FilestorageServiceTests {
 	}
 
 	@Test
-	fun `getFilesFromFilestorage - Asking for 3 files - One of the files have been deleted - will throw FilesAlreadyDeletedException`() {
-		val numberOfFiles = 3
+	fun `getFilesFromFilestorage - Asking for 1 file - the files has been deleted - will throw FilesAlreadyDeletedException`() {
+		val numberOfFiles = 1
 		mockRequestedFileIsGone()
 		mockFilestorageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
