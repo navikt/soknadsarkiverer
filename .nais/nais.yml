@@ -85,4 +85,4 @@ spec:
     - name: SOKNADSFILLAGER_SCOPE
       value: {{soknadsfillager-scope}}
     - name: SEND_TO_JOARK
-      value: {{send-to-joark}}
+      value: "{{send-to-joark}}"
