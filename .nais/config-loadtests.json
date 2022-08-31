@@ -5,7 +5,7 @@
 	"replicas-max": "1",
 	"ingress": "https://soknadsarkiverer-loadtests.dev.intern.nav.no",
 	"outbound": [
-		"soknadsfillager",
+		"soknadsfillager-loadtests",
 		"arkiv-mock"
 	],
 	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v1-loadtests",
