@@ -31,7 +31,7 @@ class FilestorageService(
 		ApiClient.password = fileStorageProperties.password
 
 		filesApi = FilesApi(fileStorageProperties.host, filestorageClient)
-		healthApi = HealthApi(fileStorageProperties.host, filestorageClient)
+		healthApi = HealthApi(fileStorageProperties.host)
 	}
 
 	override fun ping(): String {
