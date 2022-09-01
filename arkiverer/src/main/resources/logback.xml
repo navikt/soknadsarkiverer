@@ -14,6 +14,7 @@
 	<logger name="com" level="INFO"/>
 	<logger name="no.nav" level="INFO"/>
 	<logger name="no.nav.soknad.arkivering" level="DEBUG"/>
+	<logger name="no.nav.security" level="DEBUG"/>
 
 	<root level="INFO">
 		<appender-ref ref="STDOUT_JSON"/>

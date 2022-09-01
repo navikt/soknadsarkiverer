@@ -9,13 +9,15 @@ import no.nav.soknad.arkivering.soknadsfillager.api.HealthApi
 import no.nav.soknad.arkivering.soknadsfillager.infrastructure.ApiClient
 import no.nav.soknad.arkivering.soknadsfillager.infrastructure.Serializer.jacksonObjectMapper
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
+import okhttp3.OkHttpClient
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
 @Service
 class FilestorageService(
 	fileStorageProperties: FileStorageProperties,
-	private val metrics: ArchivingMetrics
+	private val metrics: ArchivingMetrics,
+	filestorageClient: OkHttpClient
 ) : FileserviceInterface {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
@@ -27,8 +29,9 @@ class FilestorageService(
 		jacksonObjectMapper.registerModule(JavaTimeModule())
 		ApiClient.username = fileStorageProperties.username
 		ApiClient.password = fileStorageProperties.password
-		filesApi = FilesApi(fileStorageProperties.host)
-		healthApi = HealthApi(fileStorageProperties.host)
+
+		filesApi = FilesApi(fileStorageProperties.host, filestorageClient)
+		healthApi = HealthApi(fileStorageProperties.host, filestorageClient)
 	}
 
 	override fun ping(): String {
