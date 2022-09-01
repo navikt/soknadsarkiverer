@@ -7,12 +7,14 @@ import okhttp3.OkHttpClient
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
 import org.springframework.context.annotation.Profile
 
 @Configuration
 class FilestorageClient {
 
 	@Bean
+	@Primary
 	@Profile("prod | dev")
 	@Qualifier("filestorageClient")
 	fun filestorageClient(clientProperties: ClientProperties, oAuth2AccessTokenService: OAuth2AccessTokenService): OkHttpClient {
