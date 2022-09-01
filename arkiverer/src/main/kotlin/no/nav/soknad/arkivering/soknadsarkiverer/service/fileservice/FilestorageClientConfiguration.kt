@@ -18,7 +18,7 @@ class FilestorageClientConfiguration {
 	@Profile("prod | dev")
 	@Qualifier("filestorageClient")
 	fun filestorageClient(clientConfigProperties: ClientConfigurationProperties, oAuth2AccessTokenService: OAuth2AccessTokenService): OkHttpClient {
-		val clientProperties = clientConfigProperties.registration["soknadsarkiverer"]
+		val clientProperties = clientConfigProperties.registration["soknadsfillager"]
 		val tokenService = TokenService(clientProperties!!, oAuth2AccessTokenService)
 
 		return OkHttpClient().newBuilder().addInterceptor {

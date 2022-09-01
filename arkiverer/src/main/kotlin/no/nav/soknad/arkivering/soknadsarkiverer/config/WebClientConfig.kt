@@ -45,7 +45,7 @@ class WebClientConfig(private val maxMessageSize: Int = 1024 * 1024 * 300) {
 
 		logger.info("Initializing archiveWebClient")
 		val properties: ClientProperties = clientConfigurationProperties.registration
-			?.get("soknadsarkiverer")
+			?.get("arkiv")
 			?: throw RuntimeException("Could not find oauth2 client config for archiveWebClient")
 
 		logClientProperties(properties)
