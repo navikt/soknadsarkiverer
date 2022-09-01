@@ -1,10 +1,8 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import no.nav.security.token.support.client.core.context.JwtBearerTokenResolver
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
-import no.nav.soknad.arkivering.soknadsarkiverer.service.tokensupport.TokenService
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsfillager.api.FilesApi
 import no.nav.soknad.arkivering.soknadsfillager.api.HealthApi
@@ -19,7 +17,7 @@ import org.springframework.stereotype.Service
 class FilestorageService(
 	fileStorageProperties: FileStorageProperties,
 	private val metrics: ArchivingMetrics,
-	tokenSevice: TokenService
+	filestorageClient: OkHttpClient
 ) : FileserviceInterface {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
@@ -32,19 +30,8 @@ class FilestorageService(
 		ApiClient.username = fileStorageProperties.username
 		ApiClient.password = fileStorageProperties.password
 
-		val okHttpClient = OkHttpClient().newBuilder().addInterceptor {
-			val token = tokenSevice.getToken()
-			if (token.accessToken == null)
-				logger.error("Found no token")
-
-			val bearerRequest = it.request().newBuilder().headers(it.request().headers)
-				.header("Authorization", "Bearer ${token.accessToken}").build()
-
-			it.proceed(bearerRequest)
-		}.build()
-
-		filesApi = FilesApi(fileStorageProperties.host, okHttpClient)
-		healthApi = HealthApi(fileStorageProperties.host, okHttpClient)
+		filesApi = FilesApi(fileStorageProperties.host, filestorageClient)
+		healthApi = HealthApi(fileStorageProperties.host, filestorageClient)
 	}
 
 	override fun ping(): String {
