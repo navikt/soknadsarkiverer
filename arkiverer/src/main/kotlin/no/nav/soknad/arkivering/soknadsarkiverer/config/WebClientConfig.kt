@@ -25,7 +25,7 @@ import reactor.netty.tcp.TcpClient
 
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 @Configuration
-class WebClientConfig(private val maxMessageSize: Int = 1024 * 1024 * 300) {
+class WebClientConfig(private val maxMessageSize: Int = 1024 * 1024 * 325) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -44,8 +44,7 @@ class WebClientConfig(private val maxMessageSize: Int = 1024 * 1024 * 300) {
 	): WebClient {
 
 		logger.info("Initializing archiveWebClient")
-		val properties: ClientProperties = clientConfigurationProperties.registration
-			?.get("arkiv")
+		val properties: ClientProperties = clientConfigurationProperties.registration["arkiv"]
 			?: throw RuntimeException("Could not find oauth2 client config for archiveWebClient")
 
 		logClientProperties(properties)
