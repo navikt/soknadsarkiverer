@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
+import java.util.concurrent.TimeUnit
 
 @Configuration
 class FilestorageClientConfiguration {
@@ -23,14 +24,16 @@ class FilestorageClientConfiguration {
 		val clientProperties = clientConfigProperties.registration["soknadsfillager"]
 		val tokenService = TokenService(clientProperties!!, oAuth2AccessTokenService)
 
-		return OkHttpClient().newBuilder().addInterceptor {
-			val token = tokenService.getToken()
+		return OkHttpClient().newBuilder()
+			.callTimeout(5, TimeUnit.MINUTES)
+			.addInterceptor {
+				val token = tokenService.getToken()
 
-			val bearerRequest = it.request().newBuilder().headers(it.request().headers)
-				.header("Authorization", "Bearer $token").build()
+				val bearerRequest = it.request().newBuilder().headers(it.request().headers)
+					.header("Authorization", "Bearer $token").build()
 
-			it.proceed(bearerRequest)
-		}.build()
+				it.proceed(bearerRequest)
+			}.build()
 	}
 
 	@Bean
