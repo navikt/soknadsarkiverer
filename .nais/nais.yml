@@ -1,12 +1,14 @@
 apiVersion: "nais.io/v1alpha1"
 kind: "Application"
 metadata:
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "320M"
   name: {{appname}}
   namespace: team-soknad
   labels:
     team: team-soknad
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "320M"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
 spec:
   image: {{image}}
   port: 8091
