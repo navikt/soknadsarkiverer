@@ -91,7 +91,6 @@ class FilestorageServiceTests {
 		val numberOfFiles = 6
 		mockFilestorageIsWorking(fileIdsAndResponses.take(filesInOneRequestToFilestorage))
 		mockFilestorageIsWorking(fileIdsAndResponses.drop(filesInOneRequestToFilestorage).take(1))
-		mockFilestorageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 
 		val files = filestorageService.getFilesFromFilestorage(key, soknadarkivschema)
@@ -108,7 +107,6 @@ class FilestorageServiceTests {
 		mockFilestorageIsWorking(fileIdsAndResponses.take(filesInOneRequestToFilestorage))
 		mockFilestorageIsWorking(fileIdsAndResponses.drop(filesInOneRequestToFilestorage).take(filesInOneRequestToFilestorage))
 		mockFilestorageIsWorking(fileIdsAndResponses.drop(filesInOneRequestToFilestorage * 2).take(1))
-		mockFilestorageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 
 		val files = filestorageService.getFilesFromFilestorage(key, soknadarkivschema)
@@ -134,7 +132,6 @@ class FilestorageServiceTests {
 	fun `getFilesFromFilestorage - Asking for 3 files - Filestorage is down - will throw exception`() {
 		val numberOfFiles = 3
 		mockFilestorageIsDown()
-		mockFilestorageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 
 		assertThrows<ArchivingException> {
@@ -146,7 +143,6 @@ class FilestorageServiceTests {
 	fun `getFilesFromFilestorage - Asking for 1 file - the files has been deleted - will throw FilesAlreadyDeletedException`() {
 		val numberOfFiles = 1
 		mockRequestedFileIsGone()
-		mockFilestorageDeletionIsWorking(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 
 		val e = assertThrows<Exception> {
@@ -154,6 +150,26 @@ class FilestorageServiceTests {
 		}
 		assertTrue(e.cause is FilesAlreadyDeletedException)
 	}
+
+	@Test
+	fun `getFilesFromFilestorage - Asking for 3 file - Error on request - will request files one by one`() {
+		val numberOfFiles = 3
+		mockFilestorageIsDown(fileIdsAndResponses.take(numberOfFiles).map { it.first })
+		mockFilestorageIsWorking(listOf(fileIdsAndResponses[0]))
+		mockFilestorageIsWorking(listOf(fileIdsAndResponses[1]))
+		mockFilestorageIsWorking(listOf(fileIdsAndResponses[2]))
+		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
+
+		val files = filestorageService.getFilesFromFilestorage(key, soknadarkivschema)
+
+		assertEquals(numberOfFiles, files.size)
+		assertFileContentIsCorrect(files)
+		verifyMockedGetRequests(1, makeGetUrl(fileIdsAndResponses.take(numberOfFiles)))
+		verifyMockedGetRequests(1, makeGetUrl(listOf(fileIdsAndResponses[0])))
+		verifyMockedGetRequests(1, makeGetUrl(listOf(fileIdsAndResponses[1])))
+		verifyMockedGetRequests(1, makeGetUrl(listOf(fileIdsAndResponses[2])))
+	}
+
 
 	@Test
 	fun `deleteFilesFromFilestorage - Deleting 0 files - Makes one request`() {

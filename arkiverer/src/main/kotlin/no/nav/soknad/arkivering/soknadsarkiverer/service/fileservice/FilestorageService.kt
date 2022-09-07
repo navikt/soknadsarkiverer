@@ -97,9 +97,19 @@ class FilestorageService(
 
 
 	private fun getFiles(key: String, fileIds: List<String>): List<FileData> {
+		return try {
+			getFiles(key, fileIds, filesInOneRequestToFilestorage)
+
+		} catch (e: FetchingException) {
+			logger.warn("$key: Failed to get ${fileIds.size} files; will try to fetch them one by one.")
+			fileIds.map { getFiles(key, listOf(it), 1) }.flatten()
+		}
+	}
+
+	private fun getFiles(key: String, fileIds: List<String>, filesInRequest: Int): List<FileData> {
 
 		val idChunks = fileIds
-			.chunked(filesInOneRequestToFilestorage)
+			.chunked(filesInRequest)
 
 		return idChunks
 			.map { performGetCall(key, it) }
@@ -115,7 +125,7 @@ class FilestorageService(
 			filesApi.findFilesByIds(ids = fileIds, xInnsendingId = key, metadataOnly = false)
 		} catch (e: Exception) {
 			logger.error("$key: Exception when fetching files '$fileIds'", e)
-			throw e
+			throw FetchingException(e)
 		}
 
 		if (files.all { it.status == "deleted" })

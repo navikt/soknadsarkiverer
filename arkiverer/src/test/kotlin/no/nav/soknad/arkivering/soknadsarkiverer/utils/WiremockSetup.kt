@@ -158,8 +158,16 @@ fun mockFilestorageDeletionIsNotWorking() {
 }
 
 fun mockFilestorageIsDown() {
+	mockFilestorageIsDown("$filestorageUrl.*")
+}
+
+fun mockFilestorageIsDown(uuids: List<String>) {
+	mockFilestorageIsDown(filestorageUrl + uuids.joinToString(","))
+}
+
+private fun mockFilestorageIsDown(url: String) {
 	wiremockServer.stubFor(
-		get(urlMatching("$filestorageUrl.*"))
+		get(urlMatching(url))
 			.willReturn(aResponse()
 				.withBody("Mocked exception for filestorage")
 				.withStatus(HttpStatus.SERVICE_UNAVAILABLE.value())))
