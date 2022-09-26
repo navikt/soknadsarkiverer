@@ -98,32 +98,22 @@ private fun mockJoark(statusCode: Int, responseBody: String, delay: Int) {
 				.withFixedDelay(delay)))
 }
 
-fun mockFilestorageIsWorking(uuid: String) = mockFilestorageIsWorking(listOf(uuid to filestorageContent))
+fun mockFilestorageIsWorking(id: String) = mockFilestorageIsWorking(listOf(id to filestorageContent))
 
 fun mockFilestorageIsWorking(idsAndResponses: List<Pair<String, String?>>) {
 
-	val ids = idsAndResponses.joinToString(",") { it.first }
-	val urlPattern = "$filestorageUrl$ids\\?metadataOnly=false"
+	idsAndResponses.forEach { (id, content) ->
+		val urlPattern = "$filestorageUrl$id\\?metadataOnly=false"
 
-	val response = createFilestorageResponse(idsAndResponses.map { (id, content) -> Triple(id, content, "ok") })
-	mockFilestorageGetRequest(urlPattern, response)
+		val response = createFilestorageResponse(Triple(id, content, "ok"))
+		mockFilestorageGetRequest(urlPattern, response)
+	}
 
 	mockFilestorageDeletionIsWorking(idsAndResponses.map { it.first })
 }
 
-fun mockFilestorageRespondsDifferentStatuses() {
-	val response = createFilestorageResponse(listOf(
-		Triple(UUID.randomUUID().toString(), filestorageContent, "ok"),
-		Triple(UUID.randomUUID().toString(), null, "not-found"),
-		Triple(UUID.randomUUID().toString(), null, "deleted"),
-	))
-	mockFilestorageGetRequest("$filestorageUrl.*", response)
-}
-
 fun mockRequestedFileIsGone() {
-	val response = createFilestorageResponse(listOf(
-		Triple(UUID.randomUUID().toString(), null, "deleted")
-	))
+	val response = createFilestorageResponse(Triple(UUID.randomUUID().toString(), null, "deleted"))
 	mockFilestorageGetRequest("$filestorageUrl.*", response)
 }
 
@@ -212,13 +202,12 @@ fun mockJoarkIsAliveIsNotWorking() {
 }
 
 
-private fun createFilestorageResponse(idsAndResponsesAndStatuses: List<Triple<String, String?, String>>): String {
+private fun createFilestorageResponse(idAndResponseAndStatus: Triple<String, String?, String>): String {
+	val (id, response, statues) = idAndResponseAndStatus
 	val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
 	return ObjectMapper()
 		.registerModule(JavaTimeModule())
-		.writeValueAsString(
-			idsAndResponsesAndStatuses.map { (id, response, statues) -> FileData(id, response?.toByteArray(), createdAt, statues) }
-		)
+		.writeValueAsString(listOf(FileData(id, response?.toByteArray(), createdAt, statues)))
 }
 
 private fun createJoarkResponse(): String = ObjectMapper().writeValueAsString(

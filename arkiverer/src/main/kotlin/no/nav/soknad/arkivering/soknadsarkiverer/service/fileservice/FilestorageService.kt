@@ -1,38 +1,23 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsfillager.api.FilesApi
 import no.nav.soknad.arkivering.soknadsfillager.api.HealthApi
-import no.nav.soknad.arkivering.soknadsfillager.infrastructure.ApiClient
-import no.nav.soknad.arkivering.soknadsfillager.infrastructure.Serializer.jacksonObjectMapper
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
-import okhttp3.OkHttpClient
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
 @Service
 class FilestorageService(
-	filestorageProperties: FilestorageProperties,
-	private val metrics: ArchivingMetrics,
-	filestorageClient: OkHttpClient
+	private val filesApi: FilesApi,
+	private val healthApi: HealthApi,
+	private val metrics: ArchivingMetrics
 ) : FileserviceInterface {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	private val filesApi: FilesApi
-	private val healthApi: HealthApi
-
-	init {
-		jacksonObjectMapper.registerModule(JavaTimeModule())
-		ApiClient.username = filestorageProperties.username
-		ApiClient.password = filestorageProperties.password
-
-		filesApi = FilesApi(filestorageProperties.host, filestorageClient)
-		healthApi = HealthApi(filestorageProperties.host)
-	}
 
 	override fun ping(): String {
 		healthApi.ping()
@@ -96,15 +81,7 @@ class FilestorageService(
 	}
 
 
-	private fun getFiles(key: String, fileIds: List<String>): List<FileData> {
-
-		val idChunks = fileIds
-			.chunked(filesInOneRequestToFilestorage)
-
-		return idChunks
-			.map { performGetCall(key, it) }
-			.flatten()
-	}
+	private fun getFiles(key: String, fileIds: List<String>) = fileIds.map { performGetCall(key, listOf(it)) }.flatten()
 
 	private fun deleteFiles(key: String, fileIds: List<String>) {
 		filesApi.deleteFiles(fileIds, key)
@@ -131,5 +108,3 @@ class FilestorageService(
 		data.mottatteDokumenter
 			.flatMap { it.mottatteVarianter.map { variant -> variant.uuid } }
 }
-
-const val filesInOneRequestToFilestorage = 5
