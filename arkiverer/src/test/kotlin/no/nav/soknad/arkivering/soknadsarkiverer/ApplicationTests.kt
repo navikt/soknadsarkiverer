@@ -9,13 +9,12 @@ import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
-import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileStorageProperties
+import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -29,13 +28,9 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan
-import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.context.annotation.Import
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.time.Instant
@@ -62,7 +57,7 @@ class ApplicationTests : ContainerizedKafka() {
 	@MockBean
 	private lateinit var collectorRegistry: CollectorRegistry
 	@Autowired
-	private lateinit var fileStorageProperties: FileStorageProperties
+	private lateinit var filestorageProperties: FilestorageProperties
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
 	@Autowired
@@ -99,7 +94,7 @@ class ApplicationTests : ContainerizedKafka() {
 		setupMockedNetworkServices(
 			portToExternalServices!!,
 			joarnalPostUrl,
-			fileStorageProperties.files
+			filestorageProperties.files
 		)
 
 		maxNumberOfAttempts = tasklistProperties.secondsBetweenRetries.size
@@ -485,7 +480,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
-		verifyMockedDeleteRequests(expectedCount, fileStorageProperties.files + ".*")
+		verifyMockedDeleteRequests(expectedCount, filestorageProperties.files + ".*")
 	}
 
 	private fun createSoknadarkivschema() = createSoknadarkivschema(fileUuid)

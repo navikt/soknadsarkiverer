@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConstructorBinding
 
 @ConfigurationProperties(prefix = "filestorage")
 @ConstructorBinding
-data class FileStorageProperties(
+data class FilestorageProperties(
 	val host : String,
 	val files : String,
 	val username : String,

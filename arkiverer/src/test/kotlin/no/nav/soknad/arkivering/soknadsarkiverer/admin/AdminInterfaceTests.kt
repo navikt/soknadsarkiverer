@@ -9,7 +9,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileStorageProperties
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -26,7 +26,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.context.annotation.Import
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.util.*
@@ -52,7 +51,7 @@ class AdminInterfaceTests : ContainerizedKafka() {
 	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 
 	@Autowired
-	private lateinit var fileStorageProperties: FileStorageProperties
+	private lateinit var filestorageProperties: FilestorageProperties
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
 	@Autowired
@@ -70,7 +69,7 @@ class AdminInterfaceTests : ContainerizedKafka() {
 
 	@BeforeEach
 	fun setup() {
-		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, fileStorageProperties.files)
+		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, filestorageProperties.files)
 
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 
@@ -115,7 +114,7 @@ class AdminInterfaceTests : ContainerizedKafka() {
 
 		putDataOnTopic(key, soknadarkivschema)
 		loopAndVerify(0, { taskListService.listTasks(key).size })
-		verifyMockedDeleteRequests(1, fileStorageProperties.files + ".*")
+		verifyMockedDeleteRequests(1, filestorageProperties.files + ".*")
 		TimeUnit.SECONDS.sleep(2) // Give the system 2 seconds to finish the task after the deletion occurred.
 
 		adminInterface.rerun(key)

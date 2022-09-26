@@ -7,7 +7,7 @@ import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileStorageProperties
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -21,11 +21,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan
-import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.context.annotation.Import
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.util.*
@@ -48,7 +45,7 @@ class IntegrationTests : ContainerizedKafka() {
 	private lateinit var collectorRegistry: CollectorRegistry
 
 	@Autowired
-	private lateinit var fileStorageProperties: FileStorageProperties
+	private lateinit var filestorageProperties: FilestorageProperties
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
 	@Value("\${joark.journal-post}")
@@ -61,7 +58,7 @@ class IntegrationTests : ContainerizedKafka() {
 
 	@BeforeEach
 	fun setup() {
-		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, fileStorageProperties.files)
+		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, filestorageProperties.files)
 
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
@@ -111,7 +108,7 @@ class IntegrationTests : ContainerizedKafka() {
 
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
-		val url = fileStorageProperties.files + ".*"
+		val url = filestorageProperties.files + ".*"
 		verifyMockedDeleteRequests(expectedCount, url)
 	}
 

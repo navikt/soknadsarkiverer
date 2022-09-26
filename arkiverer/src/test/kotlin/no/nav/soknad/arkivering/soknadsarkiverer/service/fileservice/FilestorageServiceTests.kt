@@ -38,7 +38,7 @@ class FilestorageServiceTests {
 	private lateinit var collectorRegistry: CollectorRegistry
 
 	@Autowired
-	private lateinit var fileStorageProperties: FileStorageProperties
+	private lateinit var filestorageProperties: FilestorageProperties
 	@Value("\${joark.journal-post}")
 	private lateinit var joarnalPostUrl: String
 
@@ -50,7 +50,7 @@ class FilestorageServiceTests {
 
 	@BeforeAll
 	fun beforeAll() {
-		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, fileStorageProperties.files)
+		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, filestorageProperties.files)
 	}
 
 	@BeforeEach
@@ -211,7 +211,7 @@ class FilestorageServiceTests {
 		makeUrl(fileIdsAndResponses) + "\\?metadataOnly=false"
 
 	private fun makeUrl(fileIdsAndResponses: List<Pair<String, String>>) =
-		fileStorageProperties.files + fileIdsAndResponses.joinToString(",") { it.first }
+		filestorageProperties.files + fileIdsAndResponses.joinToString(",") { it.first }
 
 	private fun mockNumberOfFilesAndPerformRequest(numberOfFiles: Int): List<FileData> {
 		mockFilestorageIsWorking(fileIdsAndResponses.take(numberOfFiles))

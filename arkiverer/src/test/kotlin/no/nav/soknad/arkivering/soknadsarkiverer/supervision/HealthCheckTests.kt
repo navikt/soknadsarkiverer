@@ -4,8 +4,8 @@ import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileStorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -41,7 +41,7 @@ class HealthCheckTests  {
 	private lateinit var collectorRegistry: CollectorRegistry
 
 	@Autowired
-	private  lateinit var fileStorageProperties: FileStorageProperties
+	private  lateinit var filestorageProperties: FilestorageProperties
 
 	@Autowired
 	private lateinit var filestorage: FileserviceInterface
@@ -59,7 +59,7 @@ class HealthCheckTests  {
 
 	@BeforeEach
 	fun setup() {
-		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, fileStorageProperties.files)
+		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, filestorageProperties.files)
 
 		mockFilestoragePingIsWorking()
 		mockFilestorageIsReadyIsWorking()

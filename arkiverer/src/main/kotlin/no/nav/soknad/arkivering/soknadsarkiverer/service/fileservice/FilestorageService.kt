@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service
 
 @Service
 class FilestorageService(
-	fileStorageProperties: FileStorageProperties,
+	filestorageProperties: FilestorageProperties,
 	private val metrics: ArchivingMetrics,
 	filestorageClient: OkHttpClient
 ) : FileserviceInterface {
@@ -27,11 +27,11 @@ class FilestorageService(
 
 	init {
 		jacksonObjectMapper.registerModule(JavaTimeModule())
-		ApiClient.username = fileStorageProperties.username
-		ApiClient.password = fileStorageProperties.password
+		ApiClient.username = filestorageProperties.username
+		ApiClient.password = filestorageProperties.password
 
-		filesApi = FilesApi(fileStorageProperties.host, filestorageClient)
-		healthApi = HealthApi(fileStorageProperties.host)
+		filesApi = FilesApi(filestorageProperties.host, filestorageClient)
+		healthApi = HealthApi(filestorageProperties.host)
 	}
 
 	override fun ping(): String {
