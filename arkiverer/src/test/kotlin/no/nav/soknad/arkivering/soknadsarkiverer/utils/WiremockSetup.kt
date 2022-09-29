@@ -185,19 +185,19 @@ fun mockFilestorageIsReadyIsNotWorking() {
 				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
 }
 
-fun mockJoarkIsAliveIsWorking() {
+fun mockJoarkIsReadyIsWorking() {
 	wiremockServer.stubFor(
-		get("/isAlive")
+		get("/actuator/health/readiness")
 			.willReturn(aResponse()
-				.withBody("Application is alive!")
+				.withBody("{\"status\":\"UP\"}")
 				.withStatus(HttpStatus.OK.value())))
 }
 
-fun mockJoarkIsAliveIsNotWorking() {
+fun mockJoarkIsReadyIsNotWorking() {
 	wiremockServer.stubFor(
-		get("/isAlive")
+		get("/actuator/health/readiness")
 			.willReturn(aResponse()
-				.withBody("Mocked isAlive error response for filestorage")
+				.withBody("Mocked isReady error response for Joark")
 				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
 }
 

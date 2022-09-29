@@ -44,7 +44,7 @@ joark:
   host: http://localhost:2908
   sendToJoark: true
   journal-post: /rest/journalpostapi/v1/journalpost
-  joark-is-alive: /isAlive
+  joark-is-ready: /actuator/health/readiness
 filestorage:
   host: http://localhost:2908
   files: /files/

@@ -63,7 +63,7 @@ class HealthCheckTests  {
 
 		mockFilestoragePingIsWorking()
 		mockFilestorageIsReadyIsWorking()
-		mockJoarkIsAliveIsWorking()
+		mockJoarkIsReadyIsWorking()
 
 		healthCheck = HealthCheck(applicationState, filestorage, journalpostClient, metrics)
 	}
@@ -135,12 +135,12 @@ class HealthCheckTests  {
 
 	@Test
 	fun `isReady returns Status 500 when Joark is unwell`() {
-		mockJoarkIsAliveIsNotWorking()
+		mockJoarkIsReadyIsNotWorking()
 
 		val response = healthCheck.isReady()
 
 		val expected = ResponseEntity(
-			"Application is not ready: 500 Internal Server Error from GET http://localhost:2908/isAlive",
+			"Application is not ready: 500 Internal Server Error from GET http://localhost:2908/actuator/health/readiness",
 			HttpStatus.INTERNAL_SERVER_ERROR
 		)
 		assertEquals(expected, response)
@@ -167,12 +167,12 @@ class HealthCheckTests  {
 
 	@Test
 	fun `ping returns Status 500 when Joark is unwell`() {
-		mockJoarkIsAliveIsNotWorking()
+		mockJoarkIsReadyIsNotWorking()
 
 		val response = healthCheck.ping()
 
 		val expected = ResponseEntity(
-			"Ping failed: 500 Internal Server Error from GET http://localhost:2908/isAlive",
+			"Ping failed: 500 Internal Server Error from GET http://localhost:2908/actuator/health/readiness",
 			HttpStatus.INTERNAL_SERVER_ERROR
 		)
 		assertEquals(expected, response)

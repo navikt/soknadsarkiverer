@@ -22,7 +22,7 @@ import org.springframework.web.reactive.function.client.WebClient
 class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 												@Value("\${joark.sendToJoark}") private val sendToJoark: Boolean,
 												@Value("\${joark.journal-post}") private val journalPostUrl: String,
-												@Value("\${joark.joark-is-alive}") private val joarkIsAlive: String,
+												@Value("\${joark.joark-is-ready}") private val joarkIsReady: String,
 												@Qualifier("archiveWebClient") private val webClient: WebClient,
 												private val metrics: ArchivingMetrics): JournalpostClientInterface {
 
@@ -30,10 +30,10 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 
 	val bidClient: WebClient = webClient.mutate().defaultHeader("Nav-Consumer-Id", "dialogstyring-bidrag" ).build()
 
-	override fun isAlive(): String {
+	override fun isReady(): String {
 		return webClient
 			.get()
-			.uri(joarkHost + joarkIsAlive)
+			.uri(joarkHost + joarkIsReady)
 			.retrieve()
 			.bodyToMono(String::class.java)
 			.block()!!

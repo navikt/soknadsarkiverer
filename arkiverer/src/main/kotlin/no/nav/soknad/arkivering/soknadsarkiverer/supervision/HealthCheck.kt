@@ -57,7 +57,7 @@ class HealthCheck(
 	fun ping(): ResponseEntity<String> {
 		val dependencies = listOf(
 			Dependency({ fileService.ping() }, "pong", "FileStorage"),
-			Dependency({ joarkService.isAlive() }, "Application is alive!", "Joark")
+			Dependency({ joarkService.isReady() }, "{\"status\":\"UP\"}", "Joark")
 		)
 		metrics.setUpOrDown(0.0)
 		try {
@@ -88,7 +88,7 @@ class HealthCheck(
 	private fun applicationIsReady(): Boolean {
 		val dependencies = listOf(
 			Dependency({ fileService.isReady() }, "ok", "FileStorage"),
-//			Dependency({ joarkService.isAlive() }, "Application is alive!", "Joark")
+			Dependency({ joarkService.isReady() }, "{\"status\":\"UP\"}", "Joark")
 		)
 		throwExceptionIfDependenciesAreDown(dependencies)
 
@@ -103,7 +103,13 @@ class HealthCheck(
 		runBlocking {
 			applications
 				.map { Triple(GlobalScope.async { it.dependencyEndpoint.invoke() }, it.expectedResponse, it.dependencyName) }
-				.forEach { if (it.first.await() != it.second) throw Exception("${it.third} does not seem to be up") }
+				.forEach {
+					val response = it.first.await()
+					if (response != it.second) {
+						logger.error("${it.third} does not seem to be up, gave unexpected response '$response'")
+						throw Exception("${it.third} does not seem to be up, gave unexpected response '$response'")
+					}
+				}
 		}
 	}
 

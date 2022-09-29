@@ -26,7 +26,7 @@ class AdminService(private val kafkaAdminConsumer: KafkaAdminConsumer,
 		taskListService.startPaNytt(key)
 	}
 
-	override fun pingJoark() = joarkService.isAlive()
+	override fun pingJoark() = joarkService.isReady()
 
 	override fun pingFilestorage() = fileService.ping()
 
