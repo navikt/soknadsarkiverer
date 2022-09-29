@@ -9,6 +9,4 @@ interface FileserviceInterface {
 	fun deleteFilesFromFilestorage(key: String, data: Soknadarkivschema)
 
 	fun ping(): String
-
-	fun isReady(): String
 }

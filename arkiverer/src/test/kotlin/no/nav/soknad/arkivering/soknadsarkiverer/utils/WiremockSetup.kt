@@ -166,45 +166,6 @@ fun mockFilestoragePingIsWorking() {
 				.withStatus(HttpStatus.OK.value())))
 }
 
-fun mockFilestoragePingIsNotWorking() {
-	wiremockServer.stubFor(
-		get("/health/ping")
-			.willReturn(aResponse()
-				.withBody("Mocked ping error response for filestorage")
-				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
-}
-
-fun mockFilestorageIsReadyIsWorking() {
-	wiremockServer.stubFor(
-		get("/health/isReady")
-			.willReturn(aResponse()
-				.withStatus(HttpStatus.OK.value())))
-}
-
-fun mockFilestorageIsReadyIsNotWorking() {
-	wiremockServer.stubFor(
-		get("/health/isReady")
-			.willReturn(aResponse()
-				.withBody("Mocked isReady error response for filestorage")
-				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
-}
-
-fun mockJoarkIsAliveIsWorking() {
-	wiremockServer.stubFor(
-		get("/isAlive")
-			.willReturn(aResponse()
-				.withBody("Application is alive!")
-				.withStatus(HttpStatus.OK.value())))
-}
-
-fun mockJoarkIsAliveIsNotWorking() {
-	wiremockServer.stubFor(
-		get("/isAlive")
-			.willReturn(aResponse()
-				.withBody("Mocked isAlive error response for filestorage")
-				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
-}
-
 
 private fun createFilestorageResponse(uuidsAndResponses: List<Pair<String, String?>>): String {
 	val createdAt = OffsetDateTime.now(ZoneOffset.UTC)

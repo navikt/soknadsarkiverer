@@ -27,15 +27,6 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 
 	val bidClient: WebClient = webClient.mutate().defaultHeader("Nav-Consumer-Id", "dialogstyring-bidrag" ).build()
 
-	override fun isAlive(): String {
-		return webClient
-			.get()
-			.uri(appConfiguration.config.joarkHost + "/isAlive")
-			.retrieve()
-			.bodyToMono(String::class.java)
-			.block()!!
-	}
-
 	override fun opprettJournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FileData>): String {
 		val timer = metrics.joarkLatencyStart()
 		try {
