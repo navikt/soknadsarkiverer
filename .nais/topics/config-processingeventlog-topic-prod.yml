@@ -18,6 +18,3 @@ spec:
     - team: team-soknad
       application: soknadsarkiverer
       access: readwrite
-    - team: team-soknad
-      application: innsending-system-tests
-      access: read
