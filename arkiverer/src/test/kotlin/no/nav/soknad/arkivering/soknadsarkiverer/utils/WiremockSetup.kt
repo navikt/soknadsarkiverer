@@ -162,46 +162,6 @@ fun mockFilestoragePingIsWorking() {
 				.withStatus(HttpStatus.OK.value())))
 }
 
-fun mockFilestoragePingIsNotWorking() {
-	wiremockServer.stubFor(
-		get("/health/ping")
-			.willReturn(aResponse()
-				.withBody("Mocked ping error response for filestorage")
-				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
-}
-
-fun mockFilestorageIsReadyIsWorking() {
-	wiremockServer.stubFor(
-		get("/health/isReady")
-			.willReturn(aResponse()
-				.withStatus(HttpStatus.OK.value())))
-}
-
-fun mockFilestorageIsReadyIsNotWorking() {
-	wiremockServer.stubFor(
-		get("/health/isReady")
-			.willReturn(aResponse()
-				.withBody("Mocked isReady error response for filestorage")
-				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
-}
-
-fun mockJoarkIsReadyIsWorking() {
-	wiremockServer.stubFor(
-		get("/actuator/health/readiness")
-			.willReturn(aResponse()
-				.withBody("{\"status\":\"UP\"}")
-				.withStatus(HttpStatus.OK.value())))
-}
-
-fun mockJoarkIsReadyIsNotWorking() {
-	wiremockServer.stubFor(
-		get("/actuator/health/readiness")
-			.willReturn(aResponse()
-				.withBody("Mocked isReady error response for Joark")
-				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
-}
-
-
 private fun createFilestorageResponse(idAndResponseAndStatus: Triple<String, String?, String>): String {
 	val (id, response, statues) = idAndResponseAndStatus
 	val createdAt = OffsetDateTime.now(ZoneOffset.UTC)

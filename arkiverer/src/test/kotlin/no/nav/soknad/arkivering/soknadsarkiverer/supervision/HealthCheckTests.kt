@@ -3,10 +3,9 @@ package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
-import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageProperties
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.setupMockedNetworkServices
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.stopMockedNetworkServices
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -44,12 +43,6 @@ class HealthCheckTests  {
 	private  lateinit var filestorageProperties: FilestorageProperties
 
 	@Autowired
-	private lateinit var filestorage: FileserviceInterface
-
-	@Autowired
-	private lateinit var journalpostClient: JournalpostClientInterface
-
-	@Autowired
 	private lateinit var metrics: ArchivingMetrics
 	@Value("\${joark.journal-post}")
 	private lateinit var joarnalPostUrl: String
@@ -61,11 +54,7 @@ class HealthCheckTests  {
 	fun setup() {
 		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, filestorageProperties.files)
 
-		mockFilestoragePingIsWorking()
-		mockFilestorageIsReadyIsWorking()
-		mockJoarkIsReadyIsWorking()
-
-		healthCheck = HealthCheck(applicationState, filestorage, journalpostClient, metrics)
+		healthCheck = HealthCheck(applicationState, metrics)
 	}
 
 	@AfterEach
@@ -94,7 +83,7 @@ class HealthCheckTests  {
 
 
 	@Test
-	fun `isReady returns Ok when application and dependencies are well`() {
+	fun `isReady returns Ok when application is well`() {
 		applicationState.ready = true
 
 		val response = healthCheck.isReady()
@@ -118,63 +107,5 @@ class HealthCheckTests  {
 		val response = healthCheck.isReady()
 
 		assertEquals(ResponseEntity("Application is not ready", HttpStatus.INTERNAL_SERVER_ERROR), response)
-	}
-
-	@Test
-	fun `isReady returns Status 500 when Filestorage is unwell`() {
-		mockFilestorageIsReadyIsNotWorking()
-
-		val response = healthCheck.isReady()
-
-		val expected = ResponseEntity(
-			"Application is not ready: Server error : 500 Server Error",
-			HttpStatus.INTERNAL_SERVER_ERROR
-		)
-		assertEquals(expected, response)
-	}
-
-	@Test
-	fun `isReady returns Status 500 when Joark is unwell`() {
-		mockJoarkIsReadyIsNotWorking()
-
-		val response = healthCheck.isReady()
-
-		val expected = ResponseEntity(
-			"Application is not ready: 500 Internal Server Error from GET http://localhost:2908/actuator/health/readiness",
-			HttpStatus.INTERNAL_SERVER_ERROR
-		)
-		assertEquals(expected, response)
-	}
-
-
-	@Test
-	fun `ping returns Pong when dependencies are well`() {
-		assertEquals(ResponseEntity("pong", HttpStatus.OK), healthCheck.ping())
-	}
-
-	@Test
-	fun `ping returns Status 500 when Filestorage is unwell`() {
-		mockFilestoragePingIsNotWorking()
-
-		val response = healthCheck.ping()
-
-		val expected = ResponseEntity(
-			"Ping failed: Server error : 500 Server Error",
-			HttpStatus.INTERNAL_SERVER_ERROR
-		)
-		assertEquals(expected, response)
-	}
-
-	@Test
-	fun `ping returns Status 500 when Joark is unwell`() {
-		mockJoarkIsReadyIsNotWorking()
-
-		val response = healthCheck.ping()
-
-		val expected = ResponseEntity(
-			"Ping failed: 500 Internal Server Error from GET http://localhost:2908/actuator/health/readiness",
-			HttpStatus.INTERNAL_SERVER_ERROR
-		)
-		assertEquals(expected, response)
 	}
 }

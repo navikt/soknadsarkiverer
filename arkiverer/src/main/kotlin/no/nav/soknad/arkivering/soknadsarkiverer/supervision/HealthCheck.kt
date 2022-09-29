@@ -1,13 +1,13 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
 import io.swagger.v3.oas.annotations.Hidden
-import kotlinx.coroutines.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import no.nav.security.token.support.core.api.Unprotected
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.isBusy
 import no.nav.soknad.arkivering.soknadsarkiverer.config.stop
-import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -18,12 +18,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping(value = ["/internal"])
 @Unprotected
-class HealthCheck(
-	private val applicationState: ApplicationState,
-	private val fileService: FileserviceInterface,
-	private val joarkService: JournalpostClientInterface,
-	private val metrics: ArchivingMetrics
-) {
+class HealthCheck(private val applicationState: ApplicationState, private val metrics: ArchivingMetrics) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Hidden
@@ -55,18 +50,7 @@ class HealthCheck(
 	@Hidden
 	@GetMapping("/ping")
 	fun ping(): ResponseEntity<String> {
-		val dependencies = listOf(
-			Dependency({ fileService.ping() }, "pong", "FileStorage"),
-			Dependency({ joarkService.isReady() }, "{\"status\":\"UP\"}", "Joark")
-		)
 		metrics.setUpOrDown(0.0)
-		try {
-			throwExceptionIfDependenciesAreDown(dependencies)
-		} catch (e: Exception) {
-			return ResponseEntity("Ping failed: ${e.message}", HttpStatus.INTERNAL_SERVER_ERROR)
-		}
-
-		logger.info("/ping called")
 		return ResponseEntity("pong", HttpStatus.OK)
 	}
 
@@ -85,40 +69,7 @@ class HealthCheck(
 	}
 
 
-	private fun applicationIsReady(): Boolean {
-		val dependencies = listOf(
-			Dependency({ fileService.isReady() }, "ok", "FileStorage"),
-			Dependency({ joarkService.isReady() }, "{\"status\":\"UP\"}", "Joark")
-		)
-		throwExceptionIfDependenciesAreDown(dependencies)
-
-		return applicationState.ready && !applicationState.stopping
-	}
-
-	/**
-	 * Will throw exception if any of the dependencies are not returning the expected value.
-	 * If all is well, the function will silently exit.
-	 */
-	private fun throwExceptionIfDependenciesAreDown(applications: List<Dependency>) {
-		runBlocking {
-			applications
-				.map { Triple(GlobalScope.async { it.dependencyEndpoint.invoke() }, it.expectedResponse, it.dependencyName) }
-				.forEach {
-					val response = it.first.await()
-					if (response != it.second) {
-						logger.error("${it.third} does not seem to be up, gave unexpected response '$response'")
-						throw Exception("${it.third} does not seem to be up, gave unexpected response '$response'")
-					}
-				}
-		}
-	}
+	private fun applicationIsReady() = applicationState.ready && !applicationState.stopping
 
 	private fun applicationIsAlive() = applicationState.alive
-
-
-	private data class Dependency(
-		val dependencyEndpoint: () -> String,
-		val expectedResponse: String,
-		val dependencyName: String
-	)
 }

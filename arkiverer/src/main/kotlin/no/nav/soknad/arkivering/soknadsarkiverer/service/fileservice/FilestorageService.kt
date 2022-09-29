@@ -24,11 +24,6 @@ class FilestorageService(
 		return "pong"
 	}
 
-	override fun isReady(): String {
-		healthApi.isReady()
-		return "ok"
-	}
-
 
 	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): List<FileData> {
 		val timer = metrics.filestorageGetLatencyStart()

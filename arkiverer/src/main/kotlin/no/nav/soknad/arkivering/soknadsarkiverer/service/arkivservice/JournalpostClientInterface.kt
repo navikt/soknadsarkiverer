@@ -4,8 +4,5 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 
 interface JournalpostClientInterface {
-
-	fun isReady(): String
-
 	fun opprettJournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FileData>): String
 }
