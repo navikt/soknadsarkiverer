@@ -70,6 +70,7 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 			.uri(uri)
 			.contentType(APPLICATION_JSON)
 			.accept(APPLICATION_JSON)
+			.header("Nav-Callid", key)
 			.body(BodyInserters.fromValue(data))
 			.retrieve()
 			.onStatus(
