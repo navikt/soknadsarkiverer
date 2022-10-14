@@ -159,7 +159,7 @@ open class TaskListService(
 
 	fun getSoknadarkivschema(key: String) = tasks[key]?.value
 
-	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int? = 0) {
+	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
 
 		if (tasks[key] == null || loggedTaskStates[key] == EventTypes.FAILURE || loggedTaskStates[key] == EventTypes.FINISHED) {
 			logger.warn("$key: Too many attempts ($attempt) or loggedstate ${loggedTaskStates[key]}, will not try again")
@@ -181,13 +181,13 @@ open class TaskListService(
 		}
 	}
 
-	private fun receivedState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int? = 0) {
+	private fun receivedState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
 		logger.info("$key: state = RECEIVED. Ready for next state STARTED")
-		setStateChange(key, EventTypes.STARTED, soknadarkivschema, attempt!!)
+		setStateChange(key, EventTypes.STARTED, soknadarkivschema, attempt)
 	}
 
-	private fun archiveState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int? = 0) {
-		val secondsToWait = getSecondsToWait(attempt!!)
+	private fun archiveState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
+		val secondsToWait = getSecondsToWait(attempt)
 		val scheduledTime = Instant.now().plusSeconds(secondsToWait)
 		val task = { tryToArchive(key, soknadarkivschema) }
 		logger.info("$key: state = STARTED. About to schedule attempt $attempt at job in $secondsToWait seconds")
@@ -198,7 +198,7 @@ open class TaskListService(
 			scheduler.schedule(task, scheduledTime)
 	}
 
-	private fun deleteFilesState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int? = 0) {
+	private fun deleteFilesState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
 		logger.info("$key: state = ARCHIVED. About to delete files in attempt $attempt")
 		tryToDeleteFiles(key, soknadarkivschema)
 	}

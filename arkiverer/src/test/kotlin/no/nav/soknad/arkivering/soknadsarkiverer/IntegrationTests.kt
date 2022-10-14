@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
+import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.client.CollectorRegistry
@@ -22,7 +23,6 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.util.*
@@ -37,11 +37,11 @@ class IntegrationTests : ContainerizedKafka() {
 	private val portToExternalServices: Int? = null
 
 	@Suppress("unused")
-	@MockBean
+	@MockkBean(relaxed = true)
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
 
 	@Suppress("unused")
-	@MockBean
+	@MockkBean(relaxed = true)
 	private lateinit var collectorRegistry: CollectorRegistry
 
 	@Autowired

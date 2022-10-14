@@ -1,8 +1,9 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka.bootstrapping
 
-import com.nhaarman.mockitokotlin2.*
+import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
+import io.mockk.*
 import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
@@ -14,7 +15,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.ContainerizedKafka
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -23,16 +23,13 @@ import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.apache.kafka.streams.KafkaStreams
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.annotation.DirtiesContext
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -41,19 +38,19 @@ import java.util.concurrent.TimeUnit
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
-@EnableConfigurationProperties(ClientConfigurationProperties::class,KafkaConfig::class)
+@EnableConfigurationProperties(ClientConfigurationProperties::class, KafkaConfig::class)
 class StateRecreationTests : ContainerizedKafka() {
 
 	@Suppress("unused")
-	@MockBean
+	@MockkBean(relaxed = true)
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
 
 	@Suppress("unused")
-	@MockBean
+	@MockkBean(relaxed = true)
 	private lateinit var collectorRegistry: CollectorRegistry
 
 	@Suppress("unused")
-	@MockBean
+	@MockkBean(relaxed = true)
 	private lateinit var kafkaStreams: KafkaStreams // Mock this so that the real chain isn't run by the tests
 
 	@Autowired
@@ -63,25 +60,19 @@ class StateRecreationTests : ContainerizedKafka() {
 	private lateinit var kafkaBootstrapConsumer: KafkaBootstrapConsumer
 
 
-	private var taskListService = mock<TaskListService>()
+	private val taskListService = mockk<TaskListService>().also {
+		every { it.addOrUpdateTask(any(), any(), any(), any()) } just Runs
+	}
 
 	private val soknadarkivschema = createSoknadarkivschema()
 
 	@BeforeAll
 	fun setup() {
-
-	  Mockito.doNothing().`when`(taskListService).addOrUpdateTask(any(),any(),any(),any())
 		kafkaMainTopicProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProcessingEventProducer = KafkaProducer(kafkaConfigMap())
-		kafkaBootstrapConsumer = KafkaBootstrapConsumer(taskListService,kafkaConfig)
+		kafkaBootstrapConsumer = KafkaBootstrapConsumer(taskListService, kafkaConfig)
 
 		kafkaBootstrapConsumer.recreateState() // Other test classes could have left Kafka events on the topics. Consume them before running the tests in this class.
-	}
-
-	@AfterEach
-	fun teardown() {
-		reset(taskListService)
-		clearInvocations(taskListService)
 	}
 
 
@@ -380,19 +371,12 @@ class StateRecreationTests : ContainerizedKafka() {
 		}
 
 		private fun verify() {
-			val value = if (timesCalled > 0) soknadarkivschema else null
+			val key = this.key
 
-			val getInvocations = {
-				mockingDetails(taskListService)
-					.invocations.stream()
-					.filter { if (key == null) true else it.arguments[0] == key }
-					.filter { if (value == null) true else it.arguments[1] == value }
-					.count().toInt()
-			}
-
-			loopAndVerify(timesCalled, getInvocations)
-
-			verify(taskListService, atLeast(timesCalled)).addOrUpdateTask(any(), any(), any(), any())
+			if (key == null || timesCalled == 0)
+				verify(atLeast = timesCalled) { taskListService.addOrUpdateTask(any(), any(), any(), any()) }
+			else
+				verify(atLeast = timesCalled) { taskListService.addOrUpdateTask(eq(key), eq(soknadarkivschema), any(), any()) }
 		}
 	}
 

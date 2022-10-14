@@ -25,9 +25,9 @@
 		<coroutines.version>1.6.0</coroutines.version>
 		<springdoc.version>1.6.11</springdoc.version>
 		<wiremock.version>2.27.2</wiremock.version>
-		<mockito-kotlin.version>2.2.0</mockito-kotlin.version>
 		<testcontainers.version>1.17.2</testcontainers.version>
-		<mockk.version>1.12.4</mockk.version>
+		<mockk.version>1.13.2</mockk.version>
+		<springmockk.version>3.1.1</springmockk.version>
 
 		<java.version>17</java.version>
 	</properties>
@@ -195,12 +195,6 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>com.nhaarman.mockitokotlin2</groupId>
-			<artifactId>mockito-kotlin</artifactId>
-			<version>${mockito-kotlin.version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>com.github.tomakehurst</groupId>
 			<artifactId>wiremock-standalone</artifactId>
 			<version>${wiremock.version}</version>
@@ -213,14 +207,14 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>io.mockk</groupId>
-			<artifactId>mockk</artifactId>
-			<version>${mockk.version}</version>
+			<groupId>com.ninja-squad</groupId>
+			<artifactId>springmockk</artifactId>
+			<version>${springmockk.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>io.mockk</groupId>
-			<artifactId>mockk-dsl-jvm</artifactId>
+			<artifactId>mockk-jvm</artifactId>
 			<version>${mockk.version}</version>
 			<scope>test</scope>
 		</dependency>
