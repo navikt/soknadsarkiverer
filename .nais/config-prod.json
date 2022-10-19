@@ -15,6 +15,6 @@
 	"joark-host": "https://dokarkiv.prod-fss-pub.nais.io",
 	"dokarkiv-scope": "api://dev-fss.teamdokumenthandtering.dokarkiv/.default",
 	"soknadsfillager-scope": "api://prod-gcp.team-soknad.soknadsfillager/.default",
-	"send-to-joark": "false",
+	"send-to-joark": "true",
 	"kafka-pool": "nav-prod"
 }
