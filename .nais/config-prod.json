@@ -13,7 +13,7 @@
 	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v1",
 	"filestorage-host": "https://soknadsfillager-gcp.intern.nav.no",
 	"joark-host": "https://dokarkiv.prod-fss-pub.nais.io",
-	"dokarkiv-scope": "api://dev-fss.teamdokumenthandtering.dokarkiv/.default",
+	"dokarkiv-scope": "api://prod-fss.teamdokumenthandtering.dokarkiv/.default",
 	"soknadsfillager-scope": "api://prod-gcp.team-soknad.soknadsfillager/.default",
 	"send-to-joark": "true",
 	"kafka-pool": "nav-prod"
