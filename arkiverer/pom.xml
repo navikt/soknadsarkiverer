@@ -14,7 +14,7 @@
 
 	<properties>
 		<arkivering-schemas.version>f52ace8dcc</arkivering-schemas.version>
-		<token-support.version>2.1.4</token-support.version>
+		<token-support.version>2.1.7</token-support.version>
 
 		<kafka.version>3.3.1</kafka.version>
 		<kafka-streams-avro-serde.version>7.2.2</kafka-streams-avro-serde.version>
