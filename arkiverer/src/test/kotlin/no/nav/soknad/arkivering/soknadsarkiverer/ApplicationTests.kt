@@ -490,7 +490,7 @@ class ApplicationTests : ContainerizedKafka() {
 		val expected = OpprettJournalpostRequest(
 			AvsenderMottaker(soknadsarkivschema.fodselsnummer, "FNR"),
 			Bruker(soknadsarkivschema.fodselsnummer, "FNR"),
-			DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(soknadsarkivschema.innsendtDato), ZoneOffset.UTC)),
+			DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(soknadsarkivschema.innsendtDato), ZoneOffset.UTC)),
 			listOf(
 				Dokument(
 					soknadsarkivschema.mottatteDokumenter[0].tittel,

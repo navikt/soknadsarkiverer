@@ -11,8 +11,9 @@ import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.time.*
-import java.time.format.DateTimeFormatter
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.*
 
 class MessageConverterTests {
@@ -79,8 +80,7 @@ class MessageConverterTests {
 
 	@Test
 	fun `Happy case - Large example - should convert correctly`() {
-		val innsendtDate = LocalDate.of(2020, 3, 17)
-		val innsendtDateTime = LocalDateTime.of(innsendtDate, LocalTime.now())
+		val innsendtDateTime = LocalDateTime.of(2020, 3, 17, 12, 37, 17)
 
 		val uuid0 = UUID.randomUUID().toString()
 		val uuid1 = UUID.randomUUID().toString()
@@ -150,7 +150,7 @@ class MessageConverterTests {
 		assertEquals("NAV_NO", joarkData.kanal)
 		assertEquals("FNR", joarkData.bruker.idType)
 		assertEquals(schema.fodselsnummer, joarkData.bruker.id)
-		assertEquals(innsendtDate.format(DateTimeFormatter.ISO_DATE), joarkData.datoMottatt)
+		assertEquals("2020-03-17T12:37:17", joarkData.datoMottatt)
 		assertEquals(schema.behandlingsid, joarkData.eksternReferanseId)
 		assertEquals(schema.arkivtema, joarkData.tema)
 		assertEquals(joarkData.tittel, joarkData.dokumenter[0].tittel)

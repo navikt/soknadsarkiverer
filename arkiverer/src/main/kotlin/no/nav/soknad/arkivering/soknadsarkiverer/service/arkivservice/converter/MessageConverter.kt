@@ -9,11 +9,10 @@ import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
 
 fun createOpprettJournalpostRequest(o: Soknadarkivschema, attachedFiles: List<FileData>): OpprettJournalpostRequest {
-	val date = DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(o.innsendtDato), ZoneOffset.UTC))
+	val date = LocalDateTime.ofInstant(Instant.ofEpochSecond(o.innsendtDato), ZoneOffset.UTC).toString()
 
 	val documents = createDocuments(o.mottatteDokumenter, attachedFiles, o.soknadstype)
 	val tittel = getTitleFromMainDocument(documents)
