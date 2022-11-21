@@ -13,11 +13,10 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.util.concurrent.Semaphore
 
-
 open class TaskListService(
 	private val archiverService: ArchiverService,
 	private val startUpSeconds: Long,
-	private val secondsBetweenRetries :Array<Long>,
+	private val secondsBetweenRetries: List<Long>,
 	private val applicationState: ApplicationState,
 	private val scheduler: Scheduler,
 	private val metrics: ArchivingMetrics,
@@ -189,7 +188,7 @@ open class TaskListService(
 	private fun archiveState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
 		val secondsToWait = getSecondsToWait(attempt)
 		val scheduledTime = Instant.now().plusSeconds(secondsToWait)
-		val task = { tryToArchive(key, soknadarkivschema) }
+		val task = { tryToArchive(key, soknadarkivschema, attempt) }
 		logger.info("$key: state = STARTED. About to schedule attempt $attempt at job in $secondsToWait seconds")
 
 		if (tasks[key]?.isBootstrappingTask == true)
@@ -253,7 +252,7 @@ open class TaskListService(
 		return secondsBetweenRetries[index]
 	}
 
-	private fun tryToArchive(key: String, soknadarkivschema: Soknadarkivschema) {
+	private fun tryToArchive(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int) {
 		var nextState: EventTypes? = null
 		val timer = metrics.archivingLatencyStart()
 		val histogram = metrics.archivingLatencyHistogramStart(soknadarkivschema.arkivtema)
@@ -273,7 +272,10 @@ open class TaskListService(
 			nextState = EventTypes.ARCHIVED
 
 		} catch (e: ArchivingException) {
-			// Log nothing, the Exceptions of this type are supposed to already have been logged
+			if (attempt >= 3 || attempt >= secondsBetweenRetries.size - 1) {
+				// Logging as Error will trigger alerts. Only log as Error after there has been a few failures.
+				logger.error(e.message, e)
+			}
 			nextState = retry(key)
 
 		} catch (e: Exception) {

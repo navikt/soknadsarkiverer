@@ -49,8 +49,9 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 			throw e
 		} catch (e: Exception) {
 			metrics.incJoarkErrors()
-			logger.error("$key: Error sending to Joark", e)
-			throw ArchivingException(e)
+			val message = "$key: Error sending to Joark"
+			logger.warn(message, e)
+			throw ArchivingException(message, e)
 		} finally {
 			metrics.endTimer(timer)
 		}

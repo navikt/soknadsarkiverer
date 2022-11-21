@@ -16,42 +16,26 @@ import org.springframework.context.annotation.Configuration
 class TaskListConfig {
 
 	@Autowired
-  private lateinit var taskListProperties: TaskListProperties
+	private lateinit var taskListProperties: TaskListProperties
 
 	@Bean
-	fun taskListService(archiverService: ArchiverService,
-											applicationState: ApplicationState,
-											scheduler: Scheduler,
-											metrics: ArchivingMetrics,
-											kafkaPublisher: KafkaPublisher) = TaskListService(archiverService,
-																																					startUpSeconds = taskListProperties.startUpSeconds,
-																																					secondsBetweenRetries = taskListProperties.secondsBetweenRetries,
-																																					applicationState,
-																																					scheduler,metrics
-																																					,kafkaPublisher)
-
+	fun taskListService(
+		archiverService: ArchiverService,
+		applicationState: ApplicationState,
+		scheduler: Scheduler,
+		metrics: ArchivingMetrics,
+		kafkaPublisher: KafkaPublisher
+	) = TaskListService(
+		archiverService,
+		taskListProperties.startUpSeconds,
+		taskListProperties.secondsBetweenRetries,
+		applicationState, scheduler, metrics, kafkaPublisher
+	)
 }
+
 @ConfigurationProperties("services.tasklist.scheduling")
 @ConstructorBinding
 data class TaskListProperties(
 	val startUpSeconds: Long,
-	val  secondsBetweenRetries : Array<Long>
-) {
-	override fun equals(other: Any?): Boolean {
-		if (this === other) return true
-		if (javaClass != other?.javaClass) return false
-
-		other as TaskListProperties
-
-		if (startUpSeconds != other.startUpSeconds) return false
-		if (!secondsBetweenRetries.contentEquals(other.secondsBetweenRetries)) return false
-
-		return true
-	}
-
-	override fun hashCode(): Int {
-		var result = startUpSeconds.hashCode()
-		result = 31 * result + secondsBetweenRetries.contentHashCode()
-		return result
-	}
-}
+	val secondsBetweenRetries: List<Long>
+)

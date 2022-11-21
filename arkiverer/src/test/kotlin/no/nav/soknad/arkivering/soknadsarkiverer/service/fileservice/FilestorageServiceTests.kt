@@ -80,7 +80,7 @@ class FilestorageServiceTests {
 	@Test
 	fun `getFilesFromFilestorage - Asking for 3 files - Filestorage is down - will throw exception`() {
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(3).map { it.first })
-		every { filesApi.findFilesByIds(any(), any(), any()) } throws ArchivingException(RuntimeException("mocked exception"))
+		every { filesApi.findFilesByIds(any(), any(), any()) } throws ArchivingException("Mocked exception", RuntimeException("mocked exception"))
 
 		assertThrows<ArchivingException> {
 			filestorageService.getFilesFromFilestorage(key, soknadarkivschema)

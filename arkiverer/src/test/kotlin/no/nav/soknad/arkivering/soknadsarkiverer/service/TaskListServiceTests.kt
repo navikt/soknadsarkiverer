@@ -33,7 +33,7 @@ class TaskListServiceTests {
 	private val taskListService = TaskListService(
 		archiverService,
 		0,
-		arrayOf(0, 0, 0, 0, 0, 0),
+		listOf(0, 0, 0, 0, 0, 0),
 		ApplicationState(),
 		scheduler,
 		metrics,

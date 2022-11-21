@@ -43,8 +43,9 @@ class FilestorageService(
 				logger.warn("$key: File(s) were deleted in the file storage when trying to fetch them: ${e.message}")
 				throw e
 			} else {
-				logger.error("$key: Error retrieving files from the file storage", e)
-				throw ArchivingException(e)
+				val message = "$key: Error retrieving files from the file storage"
+				logger.warn(message, e)
+				throw ArchivingException(message, e)
 			}
 
 		} finally {
