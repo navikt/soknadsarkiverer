@@ -35,7 +35,7 @@ import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneOffset
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -490,7 +490,7 @@ class ApplicationTests : ContainerizedKafka() {
 		val expected = OpprettJournalpostRequest(
 			AvsenderMottaker(soknadsarkivschema.fodselsnummer, "FNR"),
 			Bruker(soknadsarkivschema.fodselsnummer, "FNR"),
-			DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(soknadsarkivschema.innsendtDato), ZoneOffset.UTC)),
+			DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(soknadsarkivschema.innsendtDato), ZoneId.of("Europe/Oslo"))),
 			listOf(
 				Dokument(
 					soknadsarkivschema.mottatteDokumenter[0].tittel,

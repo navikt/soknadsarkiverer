@@ -8,17 +8,17 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneOffset
+import java.time.ZoneId
 
 
 fun createOpprettJournalpostRequest(o: Soknadarkivschema, attachedFiles: List<FileData>): OpprettJournalpostRequest {
-	val date = LocalDateTime.ofInstant(Instant.ofEpochSecond(o.innsendtDato), ZoneOffset.UTC).toString()
+	val timestamp = LocalDateTime.ofInstant(Instant.ofEpochSecond(o.innsendtDato), ZoneId.of("Europe/Oslo")).toString()
 
 	val documents = createDocuments(o.mottatteDokumenter, attachedFiles, o.soknadstype)
 	val tittel = getTitleFromMainDocument(documents)
 
 	return OpprettJournalpostRequest(AvsenderMottaker(o.fodselsnummer, "FNR"), Bruker(o.fodselsnummer, "FNR"),
-		date, documents, o.behandlingsid, "INNGAAENDE", "NAV_NO", o.arkivtema, tittel)
+		timestamp, documents, o.behandlingsid, "INNGAAENDE", "NAV_NO", o.arkivtema, tittel)
 }
 
 private fun getTitleFromMainDocument(documents: List<Dokument>): String {
