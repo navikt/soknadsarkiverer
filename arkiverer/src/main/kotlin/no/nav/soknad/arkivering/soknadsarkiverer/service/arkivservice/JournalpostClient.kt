@@ -34,7 +34,6 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 		try {
 			logger.info("$key: About to create journalpost for behandlingsId: '${soknadarkivschema.behandlingsid}'")
 			val request = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)
-			logger.info("$key: datoMottatt: ${request.datoMottatt}")
 
 			val client = if (soknadarkivschema.arkivtema == "BID") bidClient else webClient
 			val response = sendDataToJoark(key, request, client, joarkHost + journalPostUrl)
