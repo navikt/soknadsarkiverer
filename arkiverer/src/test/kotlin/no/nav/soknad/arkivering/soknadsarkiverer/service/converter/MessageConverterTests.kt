@@ -150,7 +150,7 @@ class MessageConverterTests {
 		assertEquals("NAV_NO", arkivData.kanal)
 		assertEquals("FNR", arkivData.bruker.idType)
 		assertEquals(schema.fodselsnummer, arkivData.bruker.id)
-		assertEquals("2020-03-17T13:37:17", arkivData.datoMottatt)
+		assertEquals("2020-03-17T13:37:17+01:00", arkivData.datoMottatt)
 		assertEquals(schema.behandlingsid, arkivData.eksternReferanseId)
 		assertEquals(schema.arkivtema, arkivData.tema)
 		assertEquals(arkivData.tittel, arkivData.dokumenter[0].tittel)

@@ -27,16 +27,17 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	val bidClient: WebClient = webClient.mutate().defaultHeader("Nav-Consumer-Id", "dialogstyring-bidrag" ).build()
+	val bidClient: WebClient = webClient.mutate().defaultHeader("Nav-Consumer-Id", "dialogstyring-bidrag").build()
 
 	override fun opprettJournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FileData>): String {
 		val timer = metrics.joarkLatencyStart()
 		try {
 			logger.info("$key: About to create journalpost for behandlingsId: '${soknadarkivschema.behandlingsid}'")
-			val request: OpprettJournalpostRequest = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)
+			val request = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)
+			logger.info("$key: datoMottatt: ${request.datoMottatt}")
 
 			val client = if (soknadarkivschema.arkivtema == "BID") bidClient else webClient
-			val response = sendDataToJoark(key, client, request, joarkHost + journalPostUrl)
+			val response = sendDataToJoark(key, request, client, joarkHost + journalPostUrl)
 			val journalpostId = response?.journalpostId ?: "-1"
 
 			logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.behandlingsid}', " +
@@ -57,7 +58,7 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 		}
 	}
 
-	private fun sendDataToJoark(key: String, client: WebClient, data: OpprettJournalpostRequest, uri: String):
+	private fun sendDataToJoark(key: String, data: OpprettJournalpostRequest, client: WebClient, uri: String):
 		OpprettJournalpostResponse? {
 
 		if (!sendToJoark) {

@@ -7,12 +7,12 @@ import no.nav.soknad.arkivering.avroschemas.Soknadstyper
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import java.time.Instant
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.time.ZoneId
 
 
 fun createOpprettJournalpostRequest(o: Soknadarkivschema, attachedFiles: List<FileData>): OpprettJournalpostRequest {
-	val timestamp = LocalDateTime.ofInstant(Instant.ofEpochSecond(o.innsendtDato), ZoneId.of("Europe/Oslo")).toString()
+	val timestamp = OffsetDateTime.ofInstant(Instant.ofEpochSecond(o.innsendtDato), ZoneId.of("Europe/Oslo")).toString()
 
 	val documents = createDocuments(o.mottatteDokumenter, attachedFiles, o.soknadstype)
 	val tittel = getTitleFromMainDocument(documents)
