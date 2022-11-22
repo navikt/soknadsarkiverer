@@ -40,12 +40,12 @@ class MessageConverterTests {
 			)
 			.build()
 
-		val joarkData = createOpprettJournalpostRequest(schema, files)
+		val arkivData = createOpprettJournalpostRequest(schema, files)
 
-		assertEquals(tittel, joarkData.tittel)
-		assertEquals(1, joarkData.dokumenter.size)
-		assertEquals(joarkData.tittel, joarkData.dokumenter[0].tittel)
-		assertEquals(skjemanummer, joarkData.dokumenter[0].brevkode)
+		assertEquals(tittel, arkivData.tittel)
+		assertEquals(1, arkivData.dokumenter.size)
+		assertEquals(arkivData.tittel, arkivData.dokumenter[0].tittel)
+		assertEquals(skjemanummer, arkivData.dokumenter[0].brevkode)
 	}
 
 	@Test
@@ -70,12 +70,12 @@ class MessageConverterTests {
 			)
 			.build()
 
-		val joarkData = createOpprettJournalpostRequest(schema, files)
+		val arkivData = createOpprettJournalpostRequest(schema, files)
 
-		assertEquals("Ettersendelse til apa bepa", joarkData.tittel)
-		assertEquals(1, joarkData.dokumenter.size)
-		assertEquals(joarkData.tittel, joarkData.dokumenter[0].tittel)
-		assertEquals("NAVe 11-13.06", joarkData.dokumenter[0].brevkode)
+		assertEquals("Ettersendelse til apa bepa", arkivData.tittel)
+		assertEquals(1, arkivData.dokumenter.size)
+		assertEquals(arkivData.tittel, arkivData.dokumenter[0].tittel)
+		assertEquals("NAVe 11-13.06", arkivData.dokumenter[0].brevkode)
 	}
 
 	@Test
@@ -144,54 +144,54 @@ class MessageConverterTests {
 			)
 			.build()
 
-		val joarkData = createOpprettJournalpostRequest(schema, files)
+		val arkivData = createOpprettJournalpostRequest(schema, files)
 
-		assertEquals("INNGAAENDE", joarkData.journalpostType)
-		assertEquals("NAV_NO", joarkData.kanal)
-		assertEquals("FNR", joarkData.bruker.idType)
-		assertEquals(schema.fodselsnummer, joarkData.bruker.id)
-		assertEquals("2020-03-17T13:37:17", joarkData.datoMottatt)
-		assertEquals(schema.behandlingsid, joarkData.eksternReferanseId)
-		assertEquals(schema.arkivtema, joarkData.tema)
-		assertEquals(joarkData.tittel, joarkData.dokumenter[0].tittel)
+		assertEquals("INNGAAENDE", arkivData.journalpostType)
+		assertEquals("NAV_NO", arkivData.kanal)
+		assertEquals("FNR", arkivData.bruker.idType)
+		assertEquals(schema.fodselsnummer, arkivData.bruker.id)
+		assertEquals("2020-03-17T13:37:17", arkivData.datoMottatt)
+		assertEquals(schema.behandlingsid, arkivData.eksternReferanseId)
+		assertEquals(schema.arkivtema, arkivData.tema)
+		assertEquals(arkivData.tittel, arkivData.dokumenter[0].tittel)
 
-		assertEquals(3, joarkData.dokumenter.size)
-		assertEquals(schema.mottatteDokumenter[0].tittel, joarkData.dokumenter[0].tittel)
-		assertEquals(schema.mottatteDokumenter[0].skjemanummer, joarkData.dokumenter[0].brevkode)
-		assertEquals("SOK", joarkData.dokumenter[0].dokumentKategori)
+		assertEquals(3, arkivData.dokumenter.size)
+		assertEquals(schema.mottatteDokumenter[0].tittel, arkivData.dokumenter[0].tittel)
+		assertEquals(schema.mottatteDokumenter[0].skjemanummer, arkivData.dokumenter[0].brevkode)
+		assertEquals("SOK", arkivData.dokumenter[0].dokumentKategori)
 
-		assertEquals(1, joarkData.dokumenter[0].dokumentvarianter.size)
-		assertEquals(schema.mottatteDokumenter[0].mottatteVarianter[0].filnavn, joarkData.dokumenter[0].dokumentvarianter[0].filnavn)
-		assertEquals(schema.mottatteDokumenter[0].mottatteVarianter[0].filtype, joarkData.dokumenter[0].dokumentvarianter[0].filtype)
-		assertEquals(schema.mottatteDokumenter[0].mottatteVarianter[0].variantformat, joarkData.dokumenter[0].dokumentvarianter[0].variantformat)
-		assertEquals(files[0].content, joarkData.dokumenter[0].dokumentvarianter[0].fysiskDokument)
-
-
-		assertEquals(schema.mottatteDokumenter[1].tittel, joarkData.dokumenter[1].tittel)
-		assertEquals(schema.mottatteDokumenter[1].skjemanummer, joarkData.dokumenter[1].brevkode)
-		assertEquals("SOK", joarkData.dokumenter[1].dokumentKategori)
-
-		assertEquals(2, joarkData.dokumenter[1].dokumentvarianter.size)
-		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[0].filnavn, joarkData.dokumenter[1].dokumentvarianter[0].filnavn)
-		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[0].filtype.uppercase(), joarkData.dokumenter[1].dokumentvarianter[0].filtype)
-		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[0].variantformat, joarkData.dokumenter[1].dokumentvarianter[0].variantformat)
-		assertEquals(files[1].content, joarkData.dokumenter[1].dokumentvarianter[0].fysiskDokument)
-
-		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[1].filnavn, joarkData.dokumenter[1].dokumentvarianter[1].filnavn)
-		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[1].filtype, joarkData.dokumenter[1].dokumentvarianter[1].filtype)
-		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[1].variantformat, joarkData.dokumenter[1].dokumentvarianter[1].variantformat)
-		assertEquals(files[2].content, joarkData.dokumenter[1].dokumentvarianter[1].fysiskDokument)
+		assertEquals(1, arkivData.dokumenter[0].dokumentvarianter.size)
+		assertEquals(schema.mottatteDokumenter[0].mottatteVarianter[0].filnavn, arkivData.dokumenter[0].dokumentvarianter[0].filnavn)
+		assertEquals(schema.mottatteDokumenter[0].mottatteVarianter[0].filtype, arkivData.dokumenter[0].dokumentvarianter[0].filtype)
+		assertEquals(schema.mottatteDokumenter[0].mottatteVarianter[0].variantformat, arkivData.dokumenter[0].dokumentvarianter[0].variantformat)
+		assertEquals(files[0].content, arkivData.dokumenter[0].dokumentvarianter[0].fysiskDokument)
 
 
-		assertEquals(schema.mottatteDokumenter[2].tittel, joarkData.dokumenter[2].tittel)
-		assertEquals(schema.mottatteDokumenter[2].skjemanummer, joarkData.dokumenter[2].brevkode)
-		assertEquals("SOK", joarkData.dokumenter[2].dokumentKategori)
+		assertEquals(schema.mottatteDokumenter[1].tittel, arkivData.dokumenter[1].tittel)
+		assertEquals(schema.mottatteDokumenter[1].skjemanummer, arkivData.dokumenter[1].brevkode)
+		assertEquals("SOK", arkivData.dokumenter[1].dokumentKategori)
 
-		assertEquals(1, joarkData.dokumenter[2].dokumentvarianter.size)
-		assertEquals(schema.mottatteDokumenter[2].mottatteVarianter[0].filnavn, joarkData.dokumenter[2].dokumentvarianter[0].filnavn)
-		assertEquals(schema.mottatteDokumenter[2].mottatteVarianter[0].filtype, joarkData.dokumenter[2].dokumentvarianter[0].filtype)
-		assertEquals(schema.mottatteDokumenter[2].mottatteVarianter[0].variantformat, joarkData.dokumenter[2].dokumentvarianter[0].variantformat)
-		assertEquals(files[3].content, joarkData.dokumenter[2].dokumentvarianter[0].fysiskDokument)
+		assertEquals(2, arkivData.dokumenter[1].dokumentvarianter.size)
+		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[0].filnavn, arkivData.dokumenter[1].dokumentvarianter[0].filnavn)
+		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[0].filtype.uppercase(), arkivData.dokumenter[1].dokumentvarianter[0].filtype)
+		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[0].variantformat, arkivData.dokumenter[1].dokumentvarianter[0].variantformat)
+		assertEquals(files[1].content, arkivData.dokumenter[1].dokumentvarianter[0].fysiskDokument)
+
+		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[1].filnavn, arkivData.dokumenter[1].dokumentvarianter[1].filnavn)
+		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[1].filtype, arkivData.dokumenter[1].dokumentvarianter[1].filtype)
+		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[1].variantformat, arkivData.dokumenter[1].dokumentvarianter[1].variantformat)
+		assertEquals(files[2].content, arkivData.dokumenter[1].dokumentvarianter[1].fysiskDokument)
+
+
+		assertEquals(schema.mottatteDokumenter[2].tittel, arkivData.dokumenter[2].tittel)
+		assertEquals(schema.mottatteDokumenter[2].skjemanummer, arkivData.dokumenter[2].brevkode)
+		assertEquals("SOK", arkivData.dokumenter[2].dokumentKategori)
+
+		assertEquals(1, arkivData.dokumenter[2].dokumentvarianter.size)
+		assertEquals(schema.mottatteDokumenter[2].mottatteVarianter[0].filnavn, arkivData.dokumenter[2].dokumentvarianter[0].filnavn)
+		assertEquals(schema.mottatteDokumenter[2].mottatteVarianter[0].filtype, arkivData.dokumenter[2].dokumentvarianter[0].filtype)
+		assertEquals(schema.mottatteDokumenter[2].mottatteVarianter[0].variantformat, arkivData.dokumenter[2].dokumentvarianter[0].variantformat)
+		assertEquals(files[3].content, arkivData.dokumenter[2].dokumentvarianter[0].fysiskDokument)
 	}
 
 
@@ -337,6 +337,29 @@ class MessageConverterTests {
 		}
 	}
 
+	@Test
+	fun `Real case - Ettersending - should convert correctly`() {
+		val expected = "NAVe 10-07.40"
+		val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
+		val files = listOf(
+			FileData("43121902-305c-4b31-b9ab-581f89f8da2c", "apa".toByteArray(), createdAt),
+			FileData("6e8db379-91c0-4395-ad95-c72dabea421c", "apa".toByteArray(), createdAt),
+			FileData("31115802-706f-4cde-8392-cd19b0edc777", "apa".toByteArray(), createdAt),
+			FileData("7311e586-c424-4898-a6b1-a2085ecf461d", "apa".toByteArray(), createdAt)
+		)
+
+		val schema = convertJsonTilInnsendtSoknad()
+
+		val arkivData = createOpprettJournalpostRequest(schema, files)
+
+		assertEquals(4, arkivData.dokumenter.size)
+		assertEquals(expected, arkivData.dokumenter[0].brevkode)
+		assertEquals(arkivData.dokumenter[0].tittel, arkivData.tittel)
+		assertEquals("Ettersendelse til søknad om stønad til anskaffelse av motorkjøretøy", arkivData.tittel)
+		assertEquals(arkivData.dokumenter[1].tittel, "Legeerklæring")
+		assertEquals(arkivData.dokumenter[2].tittel, "Beskrivelse av funksjonsnedsettelse")
+	}
+
 
 	private fun convertJsonTilInnsendtSoknad(): Soknadarkivschema {
 		val innsendtSoknadJson = "{" +
@@ -385,28 +408,5 @@ class MessageConverterTests {
 		val gson = Gson()
 
 		return gson.fromJson(innsendtSoknadJson, Soknadarkivschema::class.java)
-	}
-
-	@Test
-	fun `Real case - Ettersending - should convert correctly`() {
-		val excpeted = "NAVe 10-07.40"
-		val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
-		val files = listOf(
-			FileData("43121902-305c-4b31-b9ab-581f89f8da2c", "apa".toByteArray(), createdAt),
-			FileData("6e8db379-91c0-4395-ad95-c72dabea421c", "apa".toByteArray(), createdAt),
-			FileData("31115802-706f-4cde-8392-cd19b0edc777", "apa".toByteArray(), createdAt),
-			FileData("7311e586-c424-4898-a6b1-a2085ecf461d", "apa".toByteArray(), createdAt)
-		)
-
-		val schema = convertJsonTilInnsendtSoknad()
-
-		val joarkData = createOpprettJournalpostRequest(schema, files)
-
-		assertEquals(4, joarkData.dokumenter.size)
-		assertEquals(excpeted, joarkData.dokumenter[0].brevkode)
-		assertEquals(joarkData.dokumenter[0].tittel, joarkData.tittel)
-		assertEquals("Ettersendelse til søknad om stønad til anskaffelse av motorkjøretøy", joarkData.tittel)
-		assertEquals(joarkData.dokumenter[1].tittel, "Legeerklæring")
-		assertEquals(joarkData.dokumenter[2].tittel, "Beskrivelse av funksjonsnedsettelse")
 	}
 }
