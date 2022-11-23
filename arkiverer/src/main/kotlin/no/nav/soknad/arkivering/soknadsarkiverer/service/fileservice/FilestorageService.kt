@@ -84,12 +84,7 @@ class FilestorageService(
 	}
 
 	private fun performGetCall(key: String, fileIds: List<String>): List<FileData> {
-		val files = try {
-			filesApi.findFilesByIds(ids = fileIds, xInnsendingId = key, metadataOnly = false)
-		} catch (e: Exception) {
-			logger.error("$key: Exception when fetching files '$fileIds'", e)
-			throw e
-		}
+		val files = filesApi.findFilesByIds(ids = fileIds, xInnsendingId = key, metadataOnly = false)
 
 		if (files.all { it.status == "deleted" })
 			throw Exception(FilesAlreadyDeletedException("$key: All the files are deleted: $fileIds"))
