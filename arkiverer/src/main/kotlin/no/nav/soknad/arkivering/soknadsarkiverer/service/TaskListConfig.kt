@@ -6,7 +6,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.ConfigurationProperties
-import org.springframework.boot.context.properties.ConstructorBinding
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -34,7 +33,6 @@ class TaskListConfig {
 }
 
 @ConfigurationProperties("services.tasklist.scheduling")
-@ConstructorBinding
 data class TaskListProperties(
 	val startUpSeconds: Long,
 	val secondsBetweenRetries: List<Long>

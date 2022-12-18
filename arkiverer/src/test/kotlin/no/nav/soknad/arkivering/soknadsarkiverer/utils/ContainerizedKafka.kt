@@ -14,12 +14,13 @@ import org.testcontainers.containers.KafkaContainer
 import org.testcontainers.utility.DockerImageName
 import java.util.*
 
-
 open class ContainerizedKafka {
-
 
 	companion object {
 		private val kafkaConfig: KafkaConfig
+
+		private val kafkaContainer: KafkaContainer = KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka"))
+			.withNetworkAliases("kafka-broker")
 
 		init {
 			val factoryBean = YamlPropertiesFactoryBean()
@@ -32,11 +33,6 @@ open class ContainerizedKafka {
 
 			kafkaConfig = binder.bind("kafka", KafkaConfig::class.java).get()
 		}
-
-
-		// @Container
-		val kafkaContainer: KafkaContainer = KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka"))
-			.withNetworkAliases("kafka-broker")
 
 		@JvmStatic
 		@DynamicPropertySource
@@ -83,6 +79,4 @@ open class ContainerizedKafka {
 			}
 		}
 	}
-
 }
-

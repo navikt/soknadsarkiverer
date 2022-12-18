@@ -1,15 +1,18 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
+import jakarta.servlet.Filter
+import jakarta.servlet.FilterChain
+import jakarta.servlet.ServletRequest
+import jakarta.servlet.ServletResponse
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.io.IOException
-import javax.servlet.*
-import javax.servlet.http.HttpServletRequest
-import javax.servlet.http.HttpServletResponse
 
 @Component
 class CORSFilter : Filter {
-	override fun init(filterChain: FilterConfig) {
-	}
+	private val logger = LoggerFactory.getLogger(javaClass)
 
 	override fun doFilter(servletRequest: ServletRequest, servletResponse: ServletResponse, filterChain: FilterChain) {
 		val httpServletResponse: HttpServletResponse = servletResponse as HttpServletResponse
@@ -25,12 +28,9 @@ class CORSFilter : Filter {
 				httpServletResponse.writer.print("OK")
 				httpServletResponse.writer.flush()
 			} catch (e: IOException) {
-
+				logger.error("Filter error: ${e.message}", e)
 			}
 		else
 			filterChain.doFilter(servletRequest, servletResponse)
-	}
-
-	override fun destroy() {
 	}
 }

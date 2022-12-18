@@ -14,22 +14,22 @@
 
 	<properties>
 		<arkivering-schemas.version>f52ace8dcc</arkivering-schemas.version>
-		<token-support.version>2.1.7</token-support.version>
+		<token-support.version>3.0.0</token-support.version>
 
 		<kafka.version>3.3.1</kafka.version>
-		<kafka-streams-avro-serde.version>7.2.2</kafka-streams-avro-serde.version>
-		<jackson-module-kotlin.version>2.13.4</jackson-module-kotlin.version>
+		<kafka-streams-avro-serde.version>7.3.0</kafka-streams-avro-serde.version>
+		<jackson-module-kotlin.version>2.14.1</jackson-module-kotlin.version>
 		<okhttp3.version>4.10.0</okhttp3.version>
 		<prometheus.client.version>0.16.0</prometheus.client.version>
 		<logstash.version>7.2</logstash.version>
 		<coroutines.version>1.6.4</coroutines.version>
-		<springdoc.version>1.6.12</springdoc.version>
+		<springdoc.version>1.6.14</springdoc.version>
 		<wiremock.version>2.27.2</wiremock.version>
-		<testcontainers.version>1.17.5</testcontainers.version>
-		<mockk.version>1.13.2</mockk.version>
-		<springmockk.version>3.1.1</springmockk.version>
+		<testcontainers.version>1.17.6</testcontainers.version>
+		<mockk.version>1.13.3</mockk.version>
+		<springmockk.version>4.0.0</springmockk.version>
 
-		<kotlin.version>1.7.20</kotlin.version>
+		<kotlin.version>1.7.22</kotlin.version>
 		<java.version>17</java.version>
 	</properties>
 

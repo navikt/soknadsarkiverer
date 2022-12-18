@@ -36,10 +36,6 @@ services:
     scheduling:
       startUpSeconds: 8
       secondsBetweenRetries: [0,1,1,1,1,1]
-no.nav.security:
-  basic:
-    username: admin
-    password: password
 joark:
   host: http://localhost:2908
   sendToJoark: true

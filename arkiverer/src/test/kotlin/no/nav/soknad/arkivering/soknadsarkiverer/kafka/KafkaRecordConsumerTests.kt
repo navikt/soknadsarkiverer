@@ -2,11 +2,11 @@ package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.clients.consumer.ConsumerRecord.NULL_CHECKSUM
 import org.apache.kafka.clients.consumer.ConsumerRecord.NULL_SIZE
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.TopicPartition
+import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.record.TimestampType
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.junit.jupiter.api.AfterEach
@@ -41,7 +41,7 @@ class KafkaRecordConsumerTests {
 			.buildAndGetKafkaRecords()
 
 		assertTrue(result.isEmpty())
-		val actualTimeTaken = clock.getDurationSinceStart() - mockedTimeInMsForPolling
+		val actualTimeTaken = clock.getDurationSinceStart() - MOCKED_TIME_IN_MS_FOR_POLLING
 		assertEquals(timeoutWhenNotFindingRecords, actualTimeTaken.toInt(),
 			"Should read for $timeoutWhenNotFindingRecords ms and then time out")
 	}
@@ -66,10 +66,10 @@ class KafkaRecordConsumerTests {
 
 		assertEquals(numberOfRecordsReturnedInEachPolling.sum(), result.size)
 		val timestampOfLastRead =
-			mockedTimeInMsForPolling + sleepInMsBetweenFetches + // First poll returns 0 records => sleep
-				mockedTimeInMsForPolling + // Second poll returns 500 records
-				mockedTimeInMsForPolling  // Third poll returns 71 records
-		val actualTimeTaken = clock.getDurationSinceStart() - timestampOfLastRead - mockedTimeInMsForPolling
+			MOCKED_TIME_IN_MS_FOR_POLLING + sleepInMsBetweenFetches + // First poll returns 0 records => sleep
+				MOCKED_TIME_IN_MS_FOR_POLLING + // Second poll returns 500 records
+				MOCKED_TIME_IN_MS_FOR_POLLING  // Third poll returns 71 records
+		val actualTimeTaken = clock.getDurationSinceStart() - timestampOfLastRead - MOCKED_TIME_IN_MS_FOR_POLLING
 		assertEquals(timeoutWhenNotFindingNewRecords, actualTimeTaken.toInt(),
 			"Should read for $timeoutWhenNotFindingNewRecords ms and then time out")
 	}
@@ -216,7 +216,7 @@ private class MockKafkaConsumer(private val clock: TestClock) : KafkaConsumer<Ke
 
 
 	override fun poll(duration: Duration): ConsumerRecords<Key, String> {
-		clock.stepForwardInTime(mockedTimeInMsForPolling)
+		clock.stepForwardInTime(MOCKED_TIME_IN_MS_FOR_POLLING)
 		if (throwException)
 			throw Exception("Mocked exception")
 
@@ -252,8 +252,8 @@ private class MockKafkaConsumer(private val clock: TestClock) : KafkaConsumer<Ke
 		}
 
 		return ConsumerRecord(
-			topic, 0, offset, timestamp, TimestampType.CREATE_TIME, NULL_CHECKSUM.toLong(),
-			NULL_SIZE, NULL_SIZE, key, value
+			TOPIC, 0, offset, timestamp, TimestampType.CREATE_TIME, NULL_SIZE, NULL_SIZE,
+			key, value, RecordHeaders(), Optional.empty()
 		)
 	}
 
@@ -261,7 +261,7 @@ private class MockKafkaConsumer(private val clock: TestClock) : KafkaConsumer<Ke
 	 * Boilerplate.
 	 */
 	private fun createConsumerRecords(recordsToReturn: List<ConsumerRecord<String, String>>) =
-		ConsumerRecords(mapOf(TopicPartition(topic, 0) to recordsToReturn))
+		ConsumerRecords(mapOf(TopicPartition(TOPIC, 0) to recordsToReturn))
 }
 
 /**
@@ -274,7 +274,7 @@ private class TestConsumer(
 	kafkaConfig(),
 	"testId",
 	StringDeserializer(),
-	topic,
+	TOPIC,
 	testClock
 ) {
 	private val recordsConsumed = mutableListOf<ConsumerRecord<Key, String>>()
@@ -341,10 +341,10 @@ private fun kafkaConfig() = KafkaConfig(
 	delayBeforeKafkaInitialization = "0",
 	schemaRegistry = SchemaRegistry(url = "localhost:16868","dummy","dummy"),
 	security = SecurityConfig("FALSE","dummy","dummy","dummy","dummy","dummy","dummy"),
-	topics = Topics(topic,"processingTopic", messageTopic = "messageTopic",metricsTopic = "metricsTopic")
+	topics = Topics(TOPIC,"processingTopic", messageTopic = "messageTopic",metricsTopic = "metricsTopic")
 )
 
 private typealias Time = Long
 
-private const val topic = "testTopic"
-private const val mockedTimeInMsForPolling = 500L
+private const val TOPIC = "testTopic"
+private const val MOCKED_TIME_IN_MS_FOR_POLLING = 500L

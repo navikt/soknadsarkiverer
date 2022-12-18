@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
+import jakarta.annotation.PostConstruct
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.bootstrapping.KafkaBootstrapConsumer
@@ -10,7 +11,6 @@ import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Service
 import java.time.Instant
 import java.util.*
-import javax.annotation.PostConstruct
 
 @Service
 @Profile("!test")
@@ -55,7 +55,7 @@ class KafkaSetupTest(
 	private val taskListService: TaskListService,
 	private val kafkaPublisher: KafkaPublisher,
 	private val metrics: ArchivingMetrics,
-	private val kafkaConfig : KafkaConfig
+	private val kafkaConfig: KafkaConfig
 ) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -75,13 +75,13 @@ private fun setupKafkaStreams(
 	taskListService: TaskListService,
 	kafkaPublisher: KafkaPublisher,
 	groupId: String? = null,
-	kafkaConfig : KafkaConfig
+	kafkaConfig: KafkaConfig
 ) {
 	val id = groupId ?: kafkaConfig.applicationId
 	KafkaStreamsSetup(applicationState, taskListService, kafkaPublisher,kafkaConfig).setupKafkaStreams(id)
 }
 
-private fun setupMetricsAndHealth( metrics: ArchivingMetrics, applicationState: ApplicationState ) {
+private fun setupMetricsAndHealth(metrics: ArchivingMetrics, applicationState: ApplicationState) {
 	metrics.setUpOrDown(1.0)
 	applicationState.alive = true
 	applicationState.ready = true

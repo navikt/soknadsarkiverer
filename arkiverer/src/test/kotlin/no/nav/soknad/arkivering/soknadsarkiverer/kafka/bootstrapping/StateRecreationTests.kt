@@ -27,18 +27,16 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan
-import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.annotation.DirtiesContext
+import org.springframework.test.context.ActiveProfiles
 import java.util.*
 import java.util.concurrent.TimeUnit
 
+@ActiveProfiles("test")
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
-@EnableConfigurationProperties(ClientConfigurationProperties::class, KafkaConfig::class)
 class StateRecreationTests : ContainerizedKafka() {
 
 	@Suppress("unused")
