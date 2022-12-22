@@ -414,7 +414,7 @@ class ApplicationTests : ContainerizedKafka() {
 	}
 
 	@Test
-	fun `Files deleted from Filestorage will cause finishing archiving`() {
+	fun `All files deleted from Filestorage will cause finishing archiving`() {
 		val key = UUID.randomUUID().toString()
 		val tasksBefore = metrics.getTasks()
 		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
@@ -430,15 +430,17 @@ class ApplicationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic(key, createSoknadarkivschema())
 
 		verifyProcessingEvents(key, mapOf(
-			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
+			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 0, FINISHED hasCount 1, FAILURE hasCount 0
 		))
-		verifyDeleteRequestsToFilestorage(1)
-		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount 1))
+		verifyDeleteRequestsToFilestorage(0)
+		verifyMessageStartsWith(key, mapOf("ok" hasCount 0, "Exception" hasCount 1))
+/*
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount 0,
 			"send files to archive" hasCount 0,
 			"delete files from filestorage" hasCount 1
 		))
+*/
 
 		verifyArchivingMetrics(getFilestorageErrorsBefore + 1, { metrics.getGetFilestorageErrors() })
 		verifyArchivingMetrics(getFilestorageSuccessesBefore + 0, { metrics.getGetFilestorageSuccesses() })
@@ -449,6 +451,44 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyArchivingMetrics(tasksGivenUpOnBefore, { metrics.getTasksGivenUpOn() })
 	}
 
+
+	@Test
+	fun `Not all files fetched from Filestorage will cause failure`() {
+		val key = UUID.randomUUID().toString()
+		val tasksBefore = metrics.getTasks()
+		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
+		val getFilestorageErrorsBefore = metrics.getGetFilestorageErrors()
+		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
+		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
+		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
+		val joarkErrorsBefore = metrics.getJoarkErrors()
+
+		mockRequestedFileIsNotFound()
+		mockJoarkIsWorking()
+
+		putDataOnKafkaTopic(key, createSoknadarkivschema())
+
+		verifyProcessingEvents(key, mapOf(
+			RECEIVED hasCount 1, STARTED hasCount tasksBefore.toInt() + 1, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
+		))
+		verifyDeleteRequestsToFilestorage(0)
+		verifyMessageStartsWith(key, mapOf("ok" hasCount 0, "Exception" hasCount 6))
+/*
+		verifyKafkaMetric(key, mapOf(
+			"get files from filestorage" hasCount 0,
+			"send files to archive" hasCount 0,
+			"delete files from filestorage" hasCount 1
+		))
+*/
+
+		verifyArchivingMetrics(getFilestorageErrorsBefore + 6, { metrics.getGetFilestorageErrors() })
+		verifyArchivingMetrics(getFilestorageSuccessesBefore + 0, { metrics.getGetFilestorageSuccesses() })
+		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, { metrics.getDelFilestorageSuccesses() })
+		verifyArchivingMetrics(joarkErrorsBefore + 0, { metrics.getJoarkErrors() })
+		verifyArchivingMetrics(joarkSuccessesBefore + 0, { metrics.getJoarkSuccesses() })
+		verifyArchivingMetrics(tasksBefore + 1, { metrics.getTasks() })
+		verifyArchivingMetrics(tasksGivenUpOnBefore + 1, { metrics.getTasksGivenUpOn() })
+	}
 
 	private fun verifyArchivingMetrics(expected: Double, actual: () -> Double, message: String? = null) {
 		loopAndVerify(expected.toInt(), { actual.invoke().toInt() },

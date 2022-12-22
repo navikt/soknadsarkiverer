@@ -91,17 +91,17 @@ class FilestorageServiceTests {
 	fun `getFilesFromFilestorage - Asking for 3 file - the files has been deleted - will throw FilesAlreadyDeletedException`() {
 		val soknadarkivschema = mockFindFilesAndCreateSoknadarkivschema(3, statusesInResponse = listOf("deleted"))
 
-		val e = assertThrows<Exception> {
+		val e = assertThrows<FilesAlreadyDeletedException> {
 			filestorageService.getFilesFromFilestorage(key, soknadarkivschema)
 		}
-		assertTrue(e.cause is FilesAlreadyDeletedException)
+		//assertTrue(e.cause is FilesAlreadyDeletedException)
 	}
 
 	@Test
 	fun `getFilesFromFilestorage - Asking for 1 file - the file has never been seen - will throw Exception`() {
 		val soknadarkivschema = mockFindFilesAndCreateSoknadarkivschema(1, statusesInResponse = listOf("not-found"))
 
-		assertThrows<Exception> {
+		assertThrows<ArchivingException> {
 			filestorageService.getFilesFromFilestorage(key, soknadarkivschema)
 		}
 	}

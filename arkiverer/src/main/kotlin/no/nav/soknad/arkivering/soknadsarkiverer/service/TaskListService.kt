@@ -277,11 +277,15 @@ open class TaskListService(
 				logger.error(e.message, e)
 			}
 			nextState = retry(key)
+		} catch (e: FilesAlreadyDeletedException) {
+			logger.warn("$key: All files gone from Filestorage, indicating that the application is already archived. " +
+				"Will continue without archiving")
+			nextState = EventTypes.FINISHED
 
 		} catch (e: Exception) {
 			nextState = when (e.cause) {
 				is FilesAlreadyDeletedException -> {
-					logger.warn("$key: Files gone from Filestorage, indicating that the application is already archived. " +
+					logger.warn("$key: All files gone from Filestorage, indicating that the application is already archived. " +
 						"Will continue without archiving")
 					EventTypes.ARCHIVED
 				}
