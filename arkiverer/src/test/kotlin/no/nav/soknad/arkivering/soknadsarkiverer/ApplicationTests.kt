@@ -2,6 +2,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.client.CollectorRegistry
@@ -9,10 +10,12 @@ import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
+import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -27,16 +30,12 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan
-import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.context.annotation.Import
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
+import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -46,28 +45,31 @@ import kotlin.properties.Delegates
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
-@EnableConfigurationProperties(ClientConfigurationProperties::class)
-@Import(ContainerizedKafka::class)
-class ApplicationTests {
+class ApplicationTests : ContainerizedKafka() {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
 
 	@Suppress("unused")
-	@MockBean
+	@MockkBean(relaxed = true)
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
 	@Suppress("unused")
-	@MockBean
+	@MockkBean(relaxed = true)
 	private lateinit var collectorRegistry: CollectorRegistry
 	@Autowired
-	private lateinit var appConfiguration: AppConfiguration
+	private lateinit var filestorageProperties: FilestorageProperties
+	@Autowired
+	private lateinit var kafkaConfig: KafkaConfig
 	@Autowired
 	private lateinit var taskListService: TaskListService
 	@Autowired
 	private lateinit var objectMapper: ObjectMapper
 	@Autowired
 	private lateinit var metrics: ArchivingMetrics
+	@Autowired
+	private lateinit var tasklistProperties: TaskListProperties
+	@Value("\${joark.journal-post}")
+	private lateinit var journalPostUrl: String
 
 	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 	private lateinit var kafkaProducerForBadData: KafkaProducer<String, String>
@@ -84,18 +86,18 @@ class ApplicationTests {
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap()
 			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 
-		kafkaListener = KafkaListener(appConfiguration.kafkaConfig)
+		kafkaListener = KafkaListener(kafkaConfig)
 	}
 
 	@BeforeEach
 	fun setup() {
 		setupMockedNetworkServices(
 			portToExternalServices!!,
-			appConfiguration.config.joarkUrl,
-			appConfiguration.config.filestorageUrl
+			journalPostUrl,
+			filestorageProperties.files
 		)
 
-		maxNumberOfAttempts = appConfiguration.config.retryTime.size
+		maxNumberOfAttempts = tasklistProperties.secondsBetweenRetries.size
 	}
 
 	@AfterEach
@@ -118,16 +120,18 @@ class ApplicationTests {
 
 		putDataOnKafkaTopic(key, soknadsarkivschema)
 
-		verifyProcessingEvents(key, mapOf(RECEIVED to 1, STARTED to 1, ARCHIVED to 1, FINISHED to 1, FAILURE to 0))
-		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
-		verifyDeleteRequestsToFilestorage(1)
-		verifyMessageStartsWith(key, mapOf("ok" to 1, "Exception" to 0))
-		verifyKafkaMetric(key, mapOf(
-			"get files from filestorage" to 1,
-			"send files to archive" to 1,
-			"delete files from filestorage" to 1
+		verifyProcessingEvents(key, mapOf(
+			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
 		))
-		val requests = verifyPostRequest(appConfiguration.config.joarkUrl)
+		verifyMockedPostRequests(1, journalPostUrl)
+		verifyDeleteRequestsToFilestorage(1)
+		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount 0))
+		verifyKafkaMetric(key, mapOf(
+			"get files from filestorage" hasCount 1,
+			"send files to archive" hasCount 1,
+			"delete files from filestorage" hasCount 1
+		))
+		val requests = verifyPostRequest(journalPostUrl)
 		assertEquals(1, requests.size)
 		val request = objectMapper.readValue<OpprettJournalpostRequest>(requests[0].body)
 		verifyRequestDataToJoark(soknadsarkivschema, request)
@@ -141,13 +145,15 @@ class ApplicationTests {
 		putDataOnKafkaTopic(key, invalidData)
 
 		TimeUnit.MILLISECONDS.sleep(500)
-		verifyProcessingEvents(key, mapOf(RECEIVED to 0, STARTED to 0, ARCHIVED to 0, FINISHED to 0, FAILURE to 0))
-		verifyMockedPostRequests(0, appConfiguration.config.joarkUrl)
+		verifyProcessingEvents(key, mapOf(
+			RECEIVED hasCount 0, STARTED hasCount 0, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 0
+		))
+		verifyMockedPostRequests(0, journalPostUrl)
 		verifyDeleteRequestsToFilestorage(0)
 		verifyKafkaMetric(key, mapOf(
-			"get files from filestorage" to 0,
-			"send files to archive" to 0,
-			"delete files from filestorage" to 0
+			"get files from filestorage" hasCount 0,
+			"send files to archive" hasCount 0,
+			"delete files from filestorage" hasCount 0
 		))
 	}
 
@@ -160,13 +166,15 @@ class ApplicationTests {
 
 		putDataOnKafkaTopic(key, createSoknadarkivschema())
 
-		verifyProcessingEvents(key, mapOf(RECEIVED to 1, STARTED to maxNumberOfAttempts, ARCHIVED to 0, FINISHED to 0, FAILURE to 0))
+		verifyProcessingEvents(key, mapOf(
+			RECEIVED hasCount 1, STARTED hasCount maxNumberOfAttempts, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 0
+		))
 		verifyDeleteRequestsToFilestorage(0)
-		verifyMessageStartsWith(key, mapOf("ok" to 0, "Exception" to maxNumberOfAttempts))
+		verifyMessageStartsWith(key, mapOf("ok" hasCount 0, "Exception" hasCount maxNumberOfAttempts))
 		verifyKafkaMetric(key, mapOf(
-			"get files from filestorage" to maxNumberOfAttempts,
-			"send files to archive" to 0,
-			"delete files from filestorage" to 0
+			"get files from filestorage" hasCount maxNumberOfAttempts,
+			"send files to archive" hasCount 0,
+			"delete files from filestorage" hasCount 0
 		))
 		verifyArchivingMetrics(tasksGivenUpOnBefore + 1, { metrics.getTasksGivenUpOn() })
 	}
@@ -175,12 +183,14 @@ class ApplicationTests {
 	fun `Restart task after failing succeeds`() {
 		val key = UUID.randomUUID().toString()
 		mockFilestorageIsWorking(fileUuid)
-		mockJoarkRespondsAfterAttempts(appConfiguration.config.retryTime.size + 1)
+		mockJoarkRespondsAfterAttempts(tasklistProperties.secondsBetweenRetries.size + 1)
 		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
 
 		putDataOnKafkaTopic(key, createSoknadarkivschema())
 
-		verifyProcessingEvents(key, mapOf(RECEIVED to 1, STARTED to maxNumberOfAttempts, ARCHIVED to 0, FINISHED to 0, FAILURE to 1))
+		verifyProcessingEvents(key, mapOf(
+			RECEIVED hasCount 1, STARTED hasCount maxNumberOfAttempts, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
+		))
 		verifyArchivingMetrics(tasksGivenUpOnBefore + 1, { metrics.getTasksGivenUpOn() })
 
 		val failedKeys = taskListService.getFailedTasks()
@@ -188,7 +198,7 @@ class ApplicationTests {
 
 		taskListService.startPaNytt(key)
 
-		verifyProcessingEvents(key, mapOf(FINISHED to 1))
+		verifyProcessingEvents(key, mapOf(FINISHED hasCount 1))
 		verifyArchivingMetrics(tasksGivenUpOnBefore + 0, { metrics.getTasksGivenUpOn() })
 	}
 
@@ -203,14 +213,16 @@ class ApplicationTests {
 		putDataOnKafkaTopic(keyForPoisonPill, "this is not deserializable")
 		putDataOnKafkaTopic(key, createSoknadarkivschema())
 
-		verifyProcessingEvents(key, mapOf(RECEIVED to 1, STARTED to 1, ARCHIVED to 1, FINISHED to 1, FAILURE to 0))
-		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
+		verifyProcessingEvents(key, mapOf(
+			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
+		))
+		verifyMockedPostRequests(1, journalPostUrl)
 		verifyDeleteRequestsToFilestorage(1)
-		verifyMessageStartsWith(key, mapOf("ok" to 1))
+		verifyMessageStartsWith(key, mapOf("ok" hasCount 1))
 		verifyKafkaMetric(key, mapOf(
-			"get files from filestorage" to 1,
-			"send files to archive" to 1,
-			"delete files from filestorage" to 1
+			"get files from filestorage" hasCount 1,
+			"send files to archive" hasCount 1,
+			"delete files from filestorage" hasCount 1
 		))
 	}
 
@@ -229,14 +241,16 @@ class ApplicationTests {
 
 		putDataOnKafkaTopic(key, createSoknadarkivschema())
 
-		verifyProcessingEvents(key, mapOf(RECEIVED to 1, STARTED to 2, ARCHIVED to 1, FINISHED to 1, FAILURE to 0))
-		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
+		verifyProcessingEvents(key, mapOf(
+			RECEIVED hasCount 1, STARTED hasCount 2, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
+		))
+		verifyMockedPostRequests(2, journalPostUrl)
 		verifyDeleteRequestsToFilestorage(1)
-		verifyMessageStartsWith(key, mapOf("ok" to 1, "Exception" to 1))
+		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount 1))
 		verifyKafkaMetric(key, mapOf(
-			"get files from filestorage" to 2,
-			"send files to archive" to 1,
-			"delete files from filestorage" to 1
+			"get files from filestorage" hasCount 2,
+			"send files to archive" hasCount 1,
+			"delete files from filestorage" hasCount 1
 		))
 
 		verifyArchivingMetrics(getFilestorageSuccessesBefore + 2, { metrics.getGetFilestorageSuccesses() })
@@ -257,14 +271,16 @@ class ApplicationTests {
 
 		putDataOnKafkaTopic(key, createSoknadarkivschema())
 
-		verifyProcessingEvents(key, mapOf(RECEIVED to 1, STARTED to 4, ARCHIVED to 1, FINISHED to 1, FAILURE to 0))
-		verifyMockedPostRequests(attemptsToFail + 1, appConfiguration.config.joarkUrl)
+		verifyProcessingEvents(key, mapOf(
+			RECEIVED hasCount 1, STARTED hasCount 4, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
+		))
+		verifyMockedPostRequests(attemptsToFail + 1, journalPostUrl)
 		verifyDeleteRequestsToFilestorage(1)
-		verifyMessageStartsWith(key, mapOf("ok" to 1, "Exception" to attemptsToFail))
+		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount attemptsToFail))
 		verifyKafkaMetric(key, mapOf(
-			"get files from filestorage" to 4,
-			"send files to archive" to 1,
-			"delete files from filestorage" to 1
+			"get files from filestorage" hasCount 4,
+			"send files to archive" hasCount 1,
+			"delete files from filestorage" hasCount 1
 		))
 		verifyArchivingMetrics(tasksGivenUpOnBefore + 0, { metrics.getTasksGivenUpOn() }, "Should not have given up on any task")
 	}
@@ -284,14 +300,16 @@ class ApplicationTests {
 
 		putDataOnKafkaTopic(key, createSoknadarkivschema())
 
-		verifyProcessingEvents(key, mapOf(RECEIVED to 1, STARTED to 1, ARCHIVED to 1, FINISHED to 1, FAILURE to 0))
-		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
+		verifyProcessingEvents(key, mapOf(
+			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
+		))
+		verifyMockedPostRequests(1, journalPostUrl)
 		verifyDeleteRequestsToFilestorage(1)
-		verifyMessageStartsWith(key, mapOf("ok" to 1, "Exception" to 0))
+		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount 0))
 		verifyKafkaMetric(key, mapOf(
-			"get files from filestorage" to 1,
-			"send files to archive" to 1,
-			"delete files from filestorage" to 1 // Metric succeeds even if the operation fails
+			"get files from filestorage" hasCount 1,
+			"send files to archive" hasCount 1,
+			"delete files from filestorage" hasCount 1 // Metric succeeds even if the operation fails
 		))
 
 		verifyArchivingMetrics(getFilestorageSuccessesBefore + 1, { metrics.getGetFilestorageSuccesses() })
@@ -309,14 +327,16 @@ class ApplicationTests {
 
 		putDataOnKafkaTopic(key, createSoknadarkivschema())
 
-		verifyProcessingEvents(key, mapOf(RECEIVED to 1, STARTED to maxNumberOfAttempts, ARCHIVED to 0, FINISHED to 0, FAILURE to 1))
-		verifyMockedPostRequests(maxNumberOfAttempts, appConfiguration.config.joarkUrl)
+		verifyProcessingEvents(key, mapOf(
+			RECEIVED hasCount 1, STARTED hasCount maxNumberOfAttempts, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
+		))
+		verifyMockedPostRequests(maxNumberOfAttempts, journalPostUrl)
 		verifyDeleteRequestsToFilestorage(0)
-		verifyMessageStartsWith(key, mapOf("ok" to 0, "Exception" to maxNumberOfAttempts))
+		verifyMessageStartsWith(key, mapOf("ok" hasCount 0, "Exception" hasCount maxNumberOfAttempts))
 		verifyKafkaMetric(key, mapOf(
-			"get files from filestorage" to maxNumberOfAttempts,
-			"send files to archive" to 0,
-			"delete files from filestorage" to 0
+			"get files from filestorage" hasCount maxNumberOfAttempts,
+			"send files to archive" hasCount 0,
+			"delete files from filestorage" hasCount 0
 		))
 	}
 
@@ -337,13 +357,15 @@ class ApplicationTests {
 
 		putDataOnKafkaTopic(key, createSoknadarkivschema())
 
-		verifyProcessingEvents(key, mapOf(RECEIVED to 1, STARTED to 1, ARCHIVED to 1, FINISHED to 1, FAILURE to 0))
+		verifyProcessingEvents(key, mapOf(
+			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
+		))
 		verifyDeleteRequestsToFilestorage(1)
-		verifyMessageStartsWith(key, mapOf("ok" to 1, "Exception" to 1))
+		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount 1))
 		verifyKafkaMetric(key, mapOf(
-			"get files from filestorage" to 1,
-			"send files to archive" to 0,
-			"delete files from filestorage" to 1
+			"get files from filestorage" hasCount 1,
+			"send files to archive" hasCount 0,
+			"delete files from filestorage" hasCount 1
 		))
 
 		verifyArchivingMetrics(getFilestorageErrorsBefore + 0, { metrics.getGetFilestorageErrors() })
@@ -371,13 +393,15 @@ class ApplicationTests {
 
 		putDataOnKafkaTopic(key, createSoknadarkivschema())
 
-		verifyProcessingEvents(key, mapOf(RECEIVED to 1, STARTED to maxNumberOfAttempts, ARCHIVED to 0, FINISHED to 0, FAILURE to 1))
+		verifyProcessingEvents(key, mapOf(
+			RECEIVED hasCount 1, STARTED hasCount maxNumberOfAttempts, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
+		))
 		verifyDeleteRequestsToFilestorage(0)
-		verifyMessageStartsWith(key, mapOf("ok" to 0, "Exception" to maxNumberOfAttempts))
+		verifyMessageStartsWith(key, mapOf("ok" hasCount 0, "Exception" hasCount maxNumberOfAttempts))
 		verifyKafkaMetric(key, mapOf(
-			"get files from filestorage" to 0,
-			"send files to archive" to 0,
-			"delete files from filestorage" to 0
+			"get files from filestorage" hasCount 0,
+			"send files to archive" hasCount 0,
+			"delete files from filestorage" hasCount 0
 		))
 
 		verifyArchivingMetrics(getFilestorageErrorsBefore + maxNumberOfAttempts, { metrics.getGetFilestorageErrors() })
@@ -405,13 +429,15 @@ class ApplicationTests {
 
 		putDataOnKafkaTopic(key, createSoknadarkivschema())
 
-		verifyProcessingEvents(key, mapOf(RECEIVED to 1, STARTED to 1, ARCHIVED to 1, FINISHED to 1, FAILURE to 0))
+		verifyProcessingEvents(key, mapOf(
+			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
+		))
 		verifyDeleteRequestsToFilestorage(1)
-		verifyMessageStartsWith(key, mapOf("ok" to 1, "Exception" to 1))
+		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount 1))
 		verifyKafkaMetric(key, mapOf(
-			"get files from filestorage" to 0,
-			"send files to archive" to 0,
-			"delete files from filestorage" to 1
+			"get files from filestorage" hasCount 0,
+			"send files to archive" hasCount 0,
+			"delete files from filestorage" hasCount 1
 		))
 
 		verifyArchivingMetrics(getFilestorageErrorsBefore + 1, { metrics.getGetFilestorageErrors() })
@@ -478,7 +504,7 @@ class ApplicationTests {
 
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
-		verifyMockedDeleteRequests(expectedCount, appConfiguration.config.filestorageUrl + ".*")
+		verifyMockedDeleteRequests(expectedCount, filestorageProperties.files + ".*")
 	}
 
 	private fun createSoknadarkivschema() = createSoknadarkivschema(fileUuid)
@@ -488,7 +514,7 @@ class ApplicationTests {
 		val expected = OpprettJournalpostRequest(
 			AvsenderMottaker(soknadsarkivschema.fodselsnummer, "FNR"),
 			Bruker(soknadsarkivschema.fodselsnummer, "FNR"),
-			DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(soknadsarkivschema.innsendtDato), ZoneOffset.UTC)),
+			DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(OffsetDateTime.ofInstant(Instant.ofEpochSecond(soknadsarkivschema.innsendtDato), ZoneId.of("Europe/Oslo"))),
 			listOf(
 				Dokument(
 					soknadsarkivschema.mottatteDokumenter[0].tittel,
@@ -515,12 +541,12 @@ class ApplicationTests {
 
 
 	private fun putDataOnKafkaTopic(key: Key, soknadarkivschema: Soknadarkivschema, headers: Headers = RecordHeaders()) {
-		val topic = appConfiguration.kafkaConfig.inputTopic
+		val topic = kafkaConfig.topics.mainTopic
 		putDataOnTopic(key, soknadarkivschema, headers, topic, kafkaProducer)
 	}
 
 	private fun putDataOnKafkaTopic(key: Key, badData: String, headers: Headers = RecordHeaders()) {
-		val topic = appConfiguration.kafkaConfig.inputTopic
+		val topic = kafkaConfig.topics.mainTopic
 		putDataOnTopic(key, badData, headers, topic, kafkaProducerForBadData)
 	}
 
@@ -539,9 +565,11 @@ class ApplicationTests {
 	private fun kafkaConfigMap(): MutableMap<String, Any> {
 		return HashMap<String, Any>().also {
 			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = "mock://mocked-scope"
-			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers
+			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig.brokers
 			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java
 		}
 	}
+
+	private infix fun <A> A.hasCount(count: Int) = this to count
 }

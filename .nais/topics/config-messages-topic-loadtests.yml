@@ -1,0 +1,23 @@
+apiVersion: kafka.nais.io/v1
+kind: Topic
+metadata:
+  name: privat-soknadinnsending-messages-v1-loadtests
+  namespace: team-soknad
+  labels:
+    team: team-soknad
+spec:
+  pool: nav-dev
+  config:
+    cleanupPolicy: delete
+    minimumInSyncReplicas: 2
+    partitions: 1
+    replication: 3
+    retentionBytes: -1  # -1 means unlimited
+    retentionHours: 72
+  acl:
+    - team: team-soknad
+      application: soknadsarkiverer-loadtests
+      access: readwrite
+    - team: team-soknad
+      application: innsending-system-tests
+      access: read

@@ -1,6 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.bootstrapping.KafkaBootstrapConsumer
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
@@ -15,45 +15,47 @@ import javax.annotation.PostConstruct
 @Service
 @Profile("!test")
 class KafkaSetup(
-	private val appConfiguration: AppConfiguration,
+	private val applicationState: ApplicationState,
 	private val taskListService: TaskListService,
 	private val kafkaPublisher: KafkaPublisher,
 	private val scheduler: Scheduler,
-	private val metrics: ArchivingMetrics
+	private val metrics: ArchivingMetrics,
+	private val kafkaConfig: KafkaConfig
 ) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@PostConstruct
 	fun setupKafka() {
 		logger.debug("Setting up Kafka Bootstrapping and Kafka Streams")
-		setupMetricsAndHealth(metrics, appConfiguration)
+		setupMetricsAndHealth(metrics, applicationState)
 
 		scheduleJob {
 			bootstrapKafka()
-			setupKafkaStreams(appConfiguration, taskListService, kafkaPublisher)
+			setupKafkaStreams(applicationState, taskListService, kafkaPublisher, kafkaConfig = kafkaConfig )
 		}
 	}
 
 	private fun bootstrapKafka() {
 		val startTime = System.currentTimeMillis()
 		logger.info("Starting Kafka Bootstrap Consumer to create tasks for any tasks that had not yet been finished")
-		KafkaBootstrapConsumer(appConfiguration, taskListService).recreateState()
+		KafkaBootstrapConsumer( taskListService, kafkaConfig).recreateState()
 		logger.info("Finished Kafka Bootstrap Consumer in ${System.currentTimeMillis() - startTime} ms.")
 	}
 
 	private fun scheduleJob(jobToRun: () -> Unit) {
-		val delay = appConfiguration.kafkaConfig.delayBeforeKafkaInitialization.toLong()
-		scheduler.scheduleSingleTask(jobToRun, Instant.now().plusSeconds(delay))
+		val delay = kafkaConfig.delayBeforeKafkaInitialization
+		scheduler.scheduleSingleTask(jobToRun, Instant.now().plusSeconds(delay.toLong()))
 	}
 }
 
 @Service
 @Profile("test")
 class KafkaSetupTest(
-	private val appConfiguration: AppConfiguration,
+	private val applicationState: ApplicationState,
 	private val taskListService: TaskListService,
 	private val kafkaPublisher: KafkaPublisher,
-	private val metrics: ArchivingMetrics
+	private val metrics: ArchivingMetrics,
+	private val kafkaConfig : KafkaConfig
 ) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -61,25 +63,26 @@ class KafkaSetupTest(
 	fun setupKafka() {
 		logger.debug("Setting up Kafka Streams")
 
-		setupMetricsAndHealth(metrics, appConfiguration)
+		setupMetricsAndHealth(metrics, applicationState)
 
-		val groupId = appConfiguration.kafkaConfig.groupId + "_" + UUID.randomUUID().toString()
-		setupKafkaStreams(appConfiguration, taskListService, kafkaPublisher, groupId)
+		val groupId = kafkaConfig.applicationId + "_" + UUID.randomUUID().toString()
+		setupKafkaStreams(applicationState, taskListService, kafkaPublisher, groupId,kafkaConfig)
 	}
 }
 
 private fun setupKafkaStreams(
-	appConfiguration: AppConfiguration,
+	applicationState: ApplicationState,
 	taskListService: TaskListService,
 	kafkaPublisher: KafkaPublisher,
-	groupId: String? = null
+	groupId: String? = null,
+	kafkaConfig : KafkaConfig
 ) {
-	val id = groupId ?: appConfiguration.kafkaConfig.groupId
-	KafkaStreamsSetup(appConfiguration, taskListService, kafkaPublisher).setupKafkaStreams(id)
+	val id = groupId ?: kafkaConfig.applicationId
+	KafkaStreamsSetup(applicationState, taskListService, kafkaPublisher,kafkaConfig).setupKafkaStreams(id)
 }
 
-private fun setupMetricsAndHealth(metrics: ArchivingMetrics, appConfiguration: AppConfiguration) {
+private fun setupMetricsAndHealth( metrics: ArchivingMetrics, applicationState: ApplicationState ) {
 	metrics.setUpOrDown(1.0)
-	appConfiguration.state.alive = true
-	appConfiguration.state.ready = true
+	applicationState.alive = true
+	applicationState.ready = true
 }

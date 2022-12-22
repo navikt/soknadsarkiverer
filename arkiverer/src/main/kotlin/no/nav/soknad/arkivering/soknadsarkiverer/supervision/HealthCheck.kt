@@ -5,7 +5,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import no.nav.security.token.support.core.api.Unprotected
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.isBusy
 import no.nav.soknad.arkivering.soknadsarkiverer.config.stop
 import org.slf4j.LoggerFactory
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping(value = ["/internal"])
 @Unprotected
-class HealthCheck(private val appConfiguration: AppConfiguration, private val metrics: ArchivingMetrics) {
+class HealthCheck(private val applicationState: ApplicationState, private val metrics: ArchivingMetrics) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Hidden
@@ -36,14 +36,14 @@ class HealthCheck(private val appConfiguration: AppConfiguration, private val me
 	fun isReady(): ResponseEntity<String> {
 		return try {
 			if (applicationIsReady()) {
-				ResponseEntity<String>(HttpStatus.OK)
+				ResponseEntity(HttpStatus.OK)
 			} else {
 				metrics.setUpOrDown(0.0)
 				logger.warn("/isReady called - application is not ready")
-				ResponseEntity<String>("Application is not ready", HttpStatus.INTERNAL_SERVER_ERROR)
+				ResponseEntity("Application is not ready", HttpStatus.INTERNAL_SERVER_ERROR)
 			}
 		} catch (e: Exception) {
-			ResponseEntity<String>("Application is not ready: ${e.message}", HttpStatus.INTERNAL_SERVER_ERROR)
+			ResponseEntity("Application is not ready: ${e.message}", HttpStatus.INTERNAL_SERVER_ERROR)
 		}
 	}
 
@@ -58,18 +58,18 @@ class HealthCheck(private val appConfiguration: AppConfiguration, private val me
 	@GetMapping("/stop")
 	fun stop() = runBlocking {
 		launch {
-			while (isBusy(appConfiguration)) {
+			while (isBusy(applicationState)) {
 				logger.info("Waiting for shutdown")
 				delay(2000L)
 			}
 			logger.info("Pod is now ready for shutdown")
 		}
-		stop(appConfiguration)
+		stop(applicationState)
 		logger.info("Pod is getting ready for shutdown")
 	}
 
 
-	private fun applicationIsReady() = appConfiguration.state.ready && !appConfiguration.state.stopping
+	private fun applicationIsReady() = applicationState.ready && !applicationState.stopping
 
-	private fun applicationIsAlive() = appConfiguration.state.alive
+	private fun applicationIsAlive() = applicationState.alive
 }

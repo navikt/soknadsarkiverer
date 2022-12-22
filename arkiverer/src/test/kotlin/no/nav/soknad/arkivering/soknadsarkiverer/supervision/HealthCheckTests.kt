@@ -2,7 +2,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
 import io.mockk.every
 import io.mockk.mockk
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
@@ -11,9 +11,8 @@ import org.springframework.http.ResponseEntity
 class HealthCheckTests  {
 
 	private val metrics = mockk<ArchivingMetrics>().also { every { it.setUpOrDown(any()) } returns Unit }
-	private val appConfiguration = AppConfiguration()
-	private val applicationState = appConfiguration.state
-	private val healthCheck = HealthCheck(appConfiguration, metrics)
+	private val applicationState = ApplicationState()
+	private val healthCheck = HealthCheck(applicationState, metrics)
 
 
 	@Test

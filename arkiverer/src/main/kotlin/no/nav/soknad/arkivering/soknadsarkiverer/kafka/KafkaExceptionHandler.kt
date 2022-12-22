@@ -1,6 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.errors.DeserializationExceptionHandler
@@ -15,7 +15,7 @@ class KafkaExceptionHandler : StreamsUncaughtExceptionHandler, DeserializationEx
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	private lateinit var kafkaPublisher: KafkaPublisher
-	private lateinit var appConfiguration: AppConfiguration
+	private lateinit var applicationState: ApplicationState
 
 
 	override fun handle(e: Throwable): StreamsUncaughtExceptionHandler.StreamThreadExceptionResponse {
@@ -23,7 +23,7 @@ class KafkaExceptionHandler : StreamsUncaughtExceptionHandler, DeserializationEx
 		val message = createMessage("Uncaught exception", e)
 		logger.error(message)
 
-		appConfiguration.state.alive = false // Set state.alive=false, which (through the Health Endpoint) will trigger a restart of this app instance
+		applicationState.alive = false // Set state.alive=false, which (through the Health Endpoint) will trigger a restart of this app instance
 
 		try {
 			kafkaPublisher.putMessageOnTopic("null", message)
@@ -57,7 +57,7 @@ class KafkaExceptionHandler : StreamsUncaughtExceptionHandler, DeserializationEx
 
 	override fun configure(configs: Map<String, *>) {
 		kafkaPublisher = getConfigForKey(configs, KAFKA_PUBLISHER) as KafkaPublisher
-		appConfiguration = getConfigForKey(configs, APP_CONFIGURATION) as AppConfiguration
+		applicationState = getConfigForKey(configs, APP_STATE) as ApplicationState
 	}
 
 	private fun getConfigForKey(configs: Map<String, *>, key: String): Any? {

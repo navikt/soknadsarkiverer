@@ -11,15 +11,6 @@ This component requires the following to work:
 * Kafka broker (for providing input data)
 
 
-## Admin Rest-API
-This application is driven by consuming events on Kafka streams. There is, however, an Admin Rest interface (intended to be used by [soknadsadmins](https://www.github.com/navikt/soknadsadmins)):
-
-* [localhost](http://localhost:8091/swagger-ui/index.html?configUrl=/v3/api-docs/swagger-config)
-* [q0](https://soknadsarkiverer-q0.dev.intern.nav.no/swagger-ui/index.html?configUrl=/v3/api-docs/swagger-config)
-* [q1](https://soknadsarkiverer-q1.dev.intern.nav.no/swagger-ui/index.html?configUrl=/v3/api-docs/swagger-config)
-* [teamsoknad (dev-fss)](https://soknadsarkiverer.dev.intern.nav.no/swagger-ui/index.html?configUrl=/v3/api-docs/swagger-config)
-* [prod](https://soknadsarkiverer.intern.nav.no/swagger-ui/index.html?configUrl=/v3/api-docs/swagger-config)
-
 ## Inquiries
 Questions regarding the code or the project can be asked to the team by [raising an issue on the repo](https://github.com/navikt/soknadsarkiverer/issues).
 

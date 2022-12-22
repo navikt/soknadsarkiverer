@@ -10,7 +10,9 @@ import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.context.properties.EnableConfigurationProperties
-import org.springframework.context.annotation.*
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Profile
 import org.springframework.http.client.reactive.ReactorClientHttpConnector
 import org.springframework.http.codec.ClientCodecConfigurer
 import org.springframework.web.reactive.function.client.ClientRequest
@@ -23,44 +25,42 @@ import reactor.netty.tcp.TcpClient
 
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 @Configuration
-class WebClientConfig(private val appConfiguration: AppConfiguration) {
+class WebClientConfig(private val maxMessageSize: Int = 1024 * 1024 * 325) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Bean
-	@Profile("spring | test | docker | default")
+	@Profile("!(prod | dev)")
 	@Qualifier("archiveWebClient")
-	@Scope("prototype")
-	@Lazy
-	fun archiveTestWebClient() = WebClient.builder().defaultHeader("testHeader", "test_value").build()
+	fun archiveTestWebClient(): WebClient = WebClient.builder().build()
 
 
 	@Bean
 	@Profile("prod | dev")
 	@Qualifier("archiveWebClient")
-	@Scope("prototype")
 	fun archiveWebClient(
 		oAuth2AccessTokenService: OAuth2AccessTokenService,
 		clientConfigurationProperties: ClientConfigurationProperties
 	): WebClient {
 
 		logger.info("Initializing archiveWebClient")
-		val properties: ClientProperties = clientConfigurationProperties.registration
-			?. get("soknadsarkiverer")
+		val properties: ClientProperties = clientConfigurationProperties.registration["arkiv"]
 			?: throw RuntimeException("Could not find oauth2 client config for archiveWebClient")
 
 		logClientProperties(properties)
 		val tcpClient = TcpClient.create()
 			.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000)
 			.doOnConnected { connection: Connection ->
-				connection.addHandlerLast(ReadTimeoutHandler(60))
-					.addHandlerLast(WriteTimeoutHandler(60))
+				connection
+					.addHandlerLast(ReadTimeoutHandler(2 * 60))
+					.addHandlerLast(WriteTimeoutHandler(2 * 60))
 			}
 		val exchangeStrategies = ExchangeStrategies.builder()
 			.codecs { configurer: ClientCodecConfigurer ->
 				configurer
 					.defaultCodecs()
-					.maxInMemorySize(appConfiguration.config.maxMessageSize) }
+					.maxInMemorySize(maxMessageSize)
+			}
 			.build()
 
 		return WebClient.builder()
@@ -70,7 +70,10 @@ class WebClientConfig(private val appConfiguration: AppConfiguration) {
 			.build()
 	}
 
-	private fun bearerTokenFilter(clientProperties: ClientProperties, oAuth2AccessTokenService: OAuth2AccessTokenService) =
+	private fun bearerTokenFilter(
+		clientProperties: ClientProperties,
+		oAuth2AccessTokenService: OAuth2AccessTokenService
+	) =
 		{ request: ClientRequest, next: ExchangeFunction ->
 			val response: OAuth2AccessTokenResponse = oAuth2AccessTokenService.getAccessToken(clientProperties)
 
@@ -85,10 +88,8 @@ class WebClientConfig(private val appConfiguration: AppConfiguration) {
 		logger.info("Properties.grantType = '${properties.grantType}'")
 		logger.info("Properties.scope = '${properties.scope}'")
 		logger.info("Properties.resourceUrl = '${properties.resourceUrl}'")
-		logger.info("Properties.authentication.clientId = '${properties.authentication?.clientId}'")
 		val clientSecret = when {
 			(properties.authentication?.clientSecret == null || properties.authentication?.clientSecret == "") -> "MISSING"
-			(properties.authentication.clientSecret == appConfiguration.kafkaConfig.password) -> "xxxx"
 			else -> properties.authentication.clientSecret.substring(0, 2)
 		}
 		logger.info("Properties.authentication.clientSecret = '$clientSecret'")

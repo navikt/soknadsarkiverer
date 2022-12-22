@@ -9,18 +9,15 @@ import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_SINGLETON
-import org.springframework.context.annotation.Scope
-import org.springframework.stereotype.Service
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.concurrent.Semaphore
 
-@Scope(SCOPE_SINGLETON) // This is a stateful component so it must be singleton
-@Service
-class TaskListService(
+open class TaskListService(
 	private val archiverService: ArchiverService,
-	private val appConfiguration: AppConfiguration,
+	private val startUpSeconds: Long,
+	private val secondsBetweenRetries: List<Long>,
+	private val applicationState: ApplicationState,
 	private val scheduler: Scheduler,
 	private val metrics: ArchivingMetrics,
 	private val kafkaPublisher: KafkaPublisher
@@ -34,14 +31,14 @@ class TaskListService(
 
 	private val processRun: Boolean = false // Hvis true så vil all behandling av ulike states på søknader initieres fra topology. Pt vil testene feilene hvis = true
 
-	private val startUpEndTime = Instant.now().plusSeconds(appConfiguration.config.secondsAfterStartupBeforeStarting)
+	private val startUpEndTime = Instant.now().plusSeconds(startUpSeconds)
 
 	init {
 		logger.info("startUpEndTime=$startUpEndTime")
 	}
 
 	@Synchronized
-	fun addOrUpdateTask(
+	open fun addOrUpdateTask(
 		key: String,
 		soknadarkivschema: Soknadarkivschema,
 		state: EventTypes,
@@ -111,9 +108,9 @@ class TaskListService(
 		if (tasks[key] != null && startUpEndTime.isAfter(Instant.now()) && (state == EventTypes.RECEIVED || state == EventTypes.STARTED || state == EventTypes.ARCHIVED)) {
 			// When recreating state, there could be more state updates in the processLoggTopic.
 			// Wait a little while to make sure we don't start before all queued states are read inorder to process the most recent state.
-			logger.debug("$key: Sleeping for ${appConfiguration.config.secondsAfterStartupBeforeStarting} sec state - $state")
-			delay(appConfiguration.config.secondsAfterStartupBeforeStarting * 1000)
-			logger.debug("$key: Slept ${appConfiguration.config.secondsAfterStartupBeforeStarting} sec state - $state")
+			logger.debug("$key: Sleeping for $startUpSeconds sec state - $state")
+			delay(startUpSeconds * 1000)
+			logger.debug("$key: Slept $startUpSeconds sec state - $state")
 		}
 
 		val task = tasks[key]
@@ -161,7 +158,7 @@ class TaskListService(
 
 	fun getSoknadarkivschema(key: String) = tasks[key]?.value
 
-	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int? = 0) {
+	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
 
 		if (tasks[key] == null || loggedTaskStates[key] == EventTypes.FAILURE || loggedTaskStates[key] == EventTypes.FINISHED) {
 			logger.warn("$key: Too many attempts ($attempt) or loggedstate ${loggedTaskStates[key]}, will not try again")
@@ -183,15 +180,15 @@ class TaskListService(
 		}
 	}
 
-	fun receivedState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int? = 0) {
+	private fun receivedState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
 		logger.info("$key: state = RECEIVED. Ready for next state STARTED")
-		setStateChange(key, EventTypes.STARTED, soknadarkivschema, attempt!!)
+		setStateChange(key, EventTypes.STARTED, soknadarkivschema, attempt)
 	}
 
-	fun archiveState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int? = 0) {
-		val secondsToWait = getSecondsToWait(attempt!!)
+	private fun archiveState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
+		val secondsToWait = getSecondsToWait(attempt)
 		val scheduledTime = Instant.now().plusSeconds(secondsToWait)
-		val task = { tryToArchive(key, soknadarkivschema) }
+		val task = { tryToArchive(key, soknadarkivschema, attempt) }
 		logger.info("$key: state = STARTED. About to schedule attempt $attempt at job in $secondsToWait seconds")
 
 		if (tasks[key]?.isBootstrappingTask == true)
@@ -200,7 +197,7 @@ class TaskListService(
 			scheduler.schedule(task, scheduledTime)
 	}
 
-	fun deleteFilesState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int? = 0) {
+	private fun deleteFilesState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
 		logger.info("$key: state = ARCHIVED. About to delete files in attempt $attempt")
 		tryToDeleteFiles(key, soknadarkivschema)
 	}
@@ -247,15 +244,15 @@ class TaskListService(
 	}
 
 	private fun getSecondsToWait(attempt: Int): Long {
-		val index = if (attempt < appConfiguration.config.retryTime.size)
+		val index = if (attempt < secondsBetweenRetries.size)
 			attempt
 		else
-			appConfiguration.config.retryTime.lastIndex
+			secondsBetweenRetries.lastIndex
 
-		return appConfiguration.config.retryTime[index].toLong()
+		return secondsBetweenRetries[index]
 	}
 
-	internal fun tryToArchive(key: String, soknadarkivschema: Soknadarkivschema) {
+	private fun tryToArchive(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int) {
 		var nextState: EventTypes? = null
 		val timer = metrics.archivingLatencyStart()
 		val histogram = metrics.archivingLatencyHistogramStart(soknadarkivschema.arkivtema)
@@ -263,7 +260,7 @@ class TaskListService(
 			logger.info("$key: Will now start to fetch files and send to the archive")
 			val files = archiverService.fetchFiles(key, soknadarkivschema)
 
-			protectFromShutdownInterruption(appConfiguration) {
+			protectFromShutdownInterruption(applicationState) {
 				archiverService.archive(key, soknadarkivschema, files)
 				nextState = EventTypes.ARCHIVED
 			}
@@ -275,7 +272,10 @@ class TaskListService(
 			nextState = EventTypes.ARCHIVED
 
 		} catch (e: ArchivingException) {
-			// Log nothing, the Exceptions of this type are supposed to already have been logged
+			if (attempt >= 3 || attempt >= secondsBetweenRetries.size - 1) {
+				// Logging as Error will trigger alerts. Only log as Error after there has been a few failures.
+				logger.error(e.message, e)
+			}
 			nextState = retry(key)
 
 		} catch (e: Exception) {
@@ -317,7 +317,7 @@ class TaskListService(
 		}
 	}
 
-	internal fun tryToDeleteFiles(key: String, soknadarkivschema: Soknadarkivschema) {
+	private fun tryToDeleteFiles(key: String, soknadarkivschema: Soknadarkivschema) {
 		try {
 			logger.info("$key: Will now start to delete files")
 			archiverService.deleteFiles(key, soknadarkivschema)
@@ -345,7 +345,7 @@ class TaskListService(
 			return null
 
 		val count = incrementRetryCount(key)
-		return if (count >= appConfiguration.config.retryTime.size) {
+		return if (count >= secondsBetweenRetries.size) {
 			EventTypes.FAILURE
 		} else {
 			EventTypes.STARTED

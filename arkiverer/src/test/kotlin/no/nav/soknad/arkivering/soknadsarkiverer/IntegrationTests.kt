@@ -1,12 +1,14 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
+import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -20,11 +22,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan
-import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.context.annotation.Import
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.util.*
@@ -33,24 +31,25 @@ import java.util.concurrent.TimeUnit
 @ActiveProfiles("test")
 @SpringBootTest
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
-@EnableConfigurationProperties(ClientConfigurationProperties::class)
-@Import(ContainerizedKafka::class)
-class IntegrationTests {
+class IntegrationTests : ContainerizedKafka() {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
 
 	@Suppress("unused")
-	@MockBean
+	@MockkBean(relaxed = true)
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
 
 	@Suppress("unused")
-	@MockBean
+	@MockkBean(relaxed = true)
 	private lateinit var collectorRegistry: CollectorRegistry
 
 	@Autowired
-	private lateinit var appConfiguration: AppConfiguration
+	private lateinit var filestorageProperties: FilestorageProperties
+	@Autowired
+	private lateinit var kafkaConfig: KafkaConfig
+	@Value("\${joark.journal-post}")
+	private lateinit var joarnalPostUrl: String
 	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 	private lateinit var kafkaProducerForBadData: KafkaProducer<String, String>
 
@@ -59,7 +58,7 @@ class IntegrationTests {
 
 	@BeforeEach
 	fun setup() {
-		setupMockedNetworkServices(portToExternalServices!!, appConfiguration.config.joarkUrl, appConfiguration.config.filestorageUrl)
+		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, filestorageProperties.files)
 
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
@@ -79,7 +78,7 @@ class IntegrationTests {
 		putDataOnKafkaTopic(createSoknadarkivschema())
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		verifyMockedPostRequests(2, appConfiguration.config.joarkUrl)
+		verifyMockedPostRequests(2, joarnalPostUrl)
 		verifyDeleteRequestsToFilestorage(2)
 	}
 
@@ -91,7 +90,7 @@ class IntegrationTests {
 		putDataOnKafkaTopic("this string is not deserializable")
 
 		TimeUnit.SECONDS.sleep(1)
-		verifyMockedPostRequests(0, appConfiguration.config.joarkUrl)
+		verifyMockedPostRequests(0, joarnalPostUrl)
 		verifyDeleteRequestsToFilestorage(0)
 	}
 
@@ -103,13 +102,13 @@ class IntegrationTests {
 		putDataOnKafkaTopic("this is not deserializable")
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		verifyMockedPostRequests(1, appConfiguration.config.joarkUrl)
+		verifyMockedPostRequests(1, joarnalPostUrl)
 		verifyDeleteRequestsToFilestorage(1)
 	}
 
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
-		val url = appConfiguration.config.filestorageUrl + ".*"
+		val url = filestorageProperties.files + ".*"
 		verifyMockedDeleteRequests(expectedCount, url)
 	}
 
@@ -125,12 +124,12 @@ class IntegrationTests {
 	}
 
 	private fun putDataOnTopic(key: String, value: Soknadarkivschema, headers: Headers = RecordHeaders()): RecordMetadata {
-		val topic = appConfiguration.kafkaConfig.inputTopic
+		val topic = kafkaConfig.topics.mainTopic
 		return putDataOnTopic(key, value, headers, topic, kafkaProducer)
 	}
 
 	private fun putDataOnTopic(key: String, value: String, headers: Headers = RecordHeaders()): RecordMetadata {
-		val topic = appConfiguration.kafkaConfig.inputTopic
+		val topic = kafkaConfig.topics.mainTopic
 		return putDataOnTopic(key, value, headers, topic, kafkaProducerForBadData)
 	}
 
@@ -149,7 +148,7 @@ class IntegrationTests {
 	private fun kafkaConfigMap(): MutableMap<String, Any> {
 		return HashMap<String, Any>().also {
 			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = "mock://mocked-scope"
-			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers
+			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig.brokers
 			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java
 		}

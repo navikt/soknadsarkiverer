@@ -14,13 +14,13 @@
 
 
 	<properties>
-		<jackson.version>2.13.1</jackson.version>
-		<okhttp.version>4.9.3</okhttp.version>
+		<jackson.version>2.13.4</jackson.version>
+		<okhttp3.version>4.10.0</okhttp3.version>
 
-		<openapi-generator-maven-plugin.version>5.4.0</openapi-generator-maven-plugin.version>
-		<remote-comparer-maven-plugin.version>1.0.3</remote-comparer-maven-plugin.version>
+		<openapi-generator-maven-plugin.version>6.2.0</openapi-generator-maven-plugin.version>
+		<remote-comparer-maven-plugin.version>1.0.5</remote-comparer-maven-plugin.version>
 
-		<kotlin.version>1.6.10</kotlin.version>
+		<kotlin.version>1.7.20</kotlin.version>
 		<java.version>17</java.version>
 
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -36,7 +36,7 @@
 		<dependency>
 			<groupId>com.squareup.okhttp3</groupId>
 			<artifactId>okhttp</artifactId>
-			<version>${okhttp.version}</version>
+			<version>${okhttp3.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.module</groupId>

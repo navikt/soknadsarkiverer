@@ -1,6 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -15,7 +16,19 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationEn
 
 @Configuration
 @EnableGlobalMethodSecurity(securedEnabled = true, prePostEnabled = true)
-class RestControllerSecurityConfig(private val config: AppConfiguration) : WebSecurityConfigurerAdapter() {
+class RestControllerSecurityConfig(@Value("\${no.nav.security.basic.username}") private val adminUsername : String,
+																	 @Value("\${no.nav.security.basic.password}") private val adminPassword: String ) : WebSecurityConfigurerAdapter() {
+
+
+
+	@Autowired
+	fun configureGlobal(auth: AuthenticationManagerBuilder) {
+		auth.inMemoryAuthentication()
+			.withUser(adminUsername)
+			.password("{noop}${adminPassword}")
+			.roles("USER", "ADMIN")
+	}
+
 
 	override fun configure(http: HttpSecurity) {
 		http
@@ -30,19 +43,6 @@ class RestControllerSecurityConfig(private val config: AppConfiguration) : WebSe
 			.and()
 			.sessionManagement()
 			.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-	}
-
-
-	@Autowired
-	fun configureGlobal(auth: AuthenticationManagerBuilder) {
-		auth.inMemoryAuthentication()
-			.withUser(config.config.username)
-			.password("{noop}${config.config.password}")
-			.roles("USER", "ADMIN")
-			.and()
-			.withUser(config.config.adminUser)
-			.password("{noop}${config.config.adminUserPassword}")
-			.roles("USER", "ADMIN")
 	}
 
 	@Bean

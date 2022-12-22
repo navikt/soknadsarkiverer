@@ -3,11 +3,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.kafka.bootstrapping
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConsumerBuilder
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaRecordConsumer
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.Key
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.PoisonSwallowingAvroDeserializer
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.*
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.Deserializer
@@ -15,24 +11,24 @@ import org.slf4j.LoggerFactory
 import java.util.*
 
 class KafkaBootstrapConsumer(
-	private val appConfiguration: AppConfiguration,
-	private val taskListService: TaskListService
+	private val taskListService: TaskListService,
+	private val kafkaConfig: KafkaConfig
 ) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	private val inputTopic = appConfiguration.kafkaConfig.inputTopic
-	private val processingTopic = appConfiguration.kafkaConfig.processingTopic
+	private val mainTopic = kafkaConfig.topics.mainTopic
+	private val processingTopic = kafkaConfig.topics.processingTopic
 	private val uuid = UUID.randomUUID().toString()
 
 
 	fun recreateState() {
 		val (finishedKeys, unfinishedProcessingRecords) = getProcessingRecords()
-		val unfinishedInputRecords = getUnfinishedInputRecords(finishedKeys)
+		val unfinishedMainRecords = getUnfinishedMainRecords(finishedKeys)
 
-		logger.info("Recreating state, found a total of ${unfinishedInputRecords.size} unfinished input records")
-		unfinishedInputRecords.chunked(250).forEach { sublist ->
-			logger.info("Recreating state, found these ${sublist.size} unfinished input records: ${sublist.map { it.key() }}")
+		logger.info("Recreating state, found a total of ${unfinishedMainRecords.size} unfinished main records")
+		unfinishedMainRecords.chunked(250).forEach { sublist ->
+			logger.info("Recreating state, found these ${sublist.size} unfinished main records: ${sublist.map { it.key() }}")
 		}
 
 		val filteredUnfinishedProcessingEvents = unfinishedProcessingRecords
@@ -41,7 +37,7 @@ class KafkaBootstrapConsumer(
 				getHighestProcessingEventState(key, acc, processingEvent)
 			}
 
-		unfinishedInputRecords
+		unfinishedMainRecords
 			.map { it.key() to it.value() }
 			.shuffled() // Only one event at a time will be processed while restarting. Shuffle in case several pods go down,
 									// so they don't process in the same order and can thus better parallelise.
@@ -53,7 +49,7 @@ class KafkaBootstrapConsumer(
 	}
 
 
-	private fun getUnfinishedInputRecords(finishedKeys: HashSet<Key>): List<ConsumerRecord<Key, Soknadarkivschema>> {
+	private fun getUnfinishedMainRecords(finishedKeys: HashSet<Key>): List<ConsumerRecord<Key, Soknadarkivschema>> {
 
 		val keepUnfinishedRecordsFilter = { records: List<ConsumerRecord<Key, Soknadarkivschema>> ->
 			records.filter { !finishedKeys.contains(it.key()) }
@@ -61,10 +57,10 @@ class KafkaBootstrapConsumer(
 
 		return BootstrapConsumer.Builder<Soknadarkivschema>()
 			.withFilter(keepUnfinishedRecordsFilter)
-			.withAppConfiguration(appConfiguration)
-			.withKafkaGroupId("soknadsarkiverer-bootstrapping-Input-$uuid")
+			.withKafkaConfig(kafkaConfig)
+			.withKafkaGroupId("soknadsarkiverer-bootstrapping-main-$uuid")
 			.withValueDeserializer(PoisonSwallowingAvroDeserializer())
-			.forTopic(inputTopic)
+			.forTopic(mainTopic)
 			.getAllKafkaRecords()
 	}
 
@@ -83,8 +79,8 @@ class KafkaBootstrapConsumer(
 
 		val kafkaRecords = BootstrapConsumer.Builder<ProcessingEvent>()
 			.withFilter(keepUnfinishedRecordsFilter)
-			.withAppConfiguration(appConfiguration)
-			.withKafkaGroupId("soknadsarkiverer-bootstrapping-ProcessingEvent-$uuid")
+			.withKafkaConfig(kafkaConfig)
+			.withKafkaGroupId("soknadsarkiverer-bootstrapping-processingevent-$uuid")
 			.withValueDeserializer(PoisonSwallowingAvroDeserializer())
 			.forTopic(processingTopic)
 			.getAllKafkaRecords()
@@ -121,17 +117,17 @@ class KafkaBootstrapConsumer(
 
 
 private class BootstrapConsumer<T> private constructor(
-	private val appConfiguration: AppConfiguration,
+	private val kafkaConfig: KafkaConfig,
 	kafkaGroupId: String,
 	deserializer: Deserializer<T>,
 	topic: String,
 	private val filter: (List<ConsumerRecord<Key, T>>) -> List<ConsumerRecord<Key, T>>
-) : KafkaRecordConsumer<T, ConsumerRecord<Key, T>>(appConfiguration, kafkaGroupId, deserializer, topic) {
+) : KafkaRecordConsumer<T, ConsumerRecord<Key, T>>(kafkaConfig, kafkaGroupId, deserializer, topic) {
 
 	private var records = mutableListOf<ConsumerRecord<Key, T>>()
 
 
-	override fun getEnforcedTimeoutInMs() = appConfiguration.kafkaConfig.bootstrappingTimeout.toInt() * 1000
+	override fun getEnforcedTimeoutInMs() = kafkaConfig.bootstrappingTimeout.toInt() * 1000
 
 	override fun addRecords(newRecords: List<ConsumerRecord<Key, T>>) {
 		records.addAll(newRecords)
@@ -148,7 +144,7 @@ private class BootstrapConsumer<T> private constructor(
 			apply { this.filter = filter }
 
 		override fun getAllKafkaRecords() =
-			BootstrapConsumer(appConfiguration!!, kafkaGroupId!!, deserializer!!, topic!!, filter!!)
+			BootstrapConsumer(kafkaConfig!!, kafkaGroupId!!, deserializer!!, topic!!, filter!!)
 				.getAllKafkaRecords()
 	}
 }

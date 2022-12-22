@@ -1,7 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice
 
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.ApplicationAlreadyArchivedException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.OpprettJournalpostRequest
@@ -11,6 +10,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON
@@ -19,23 +19,24 @@ import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
 
 @Service
-class JournalpostClient(private val appConfiguration: AppConfiguration,
+class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
+												@Value("\${joark.sendToJoark}") private val sendToJoark: Boolean,
+												@Value("\${joark.journal-post}") private val journalPostUrl: String,
 												@Qualifier("archiveWebClient") private val webClient: WebClient,
 												private val metrics: ArchivingMetrics): JournalpostClientInterface {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	val bidClient: WebClient = webClient.mutate().defaultHeader("Nav-Consumer-Id", "dialogstyring-bidrag" ).build()
+	val bidClient: WebClient = webClient.mutate().defaultHeader("Nav-Consumer-Id", "dialogstyring-bidrag").build()
 
 	override fun opprettJournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FileData>): String {
 		val timer = metrics.joarkLatencyStart()
 		try {
 			logger.info("$key: About to create journalpost for behandlingsId: '${soknadarkivschema.behandlingsid}'")
-			val request: OpprettJournalpostRequest = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)
+			val request = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)
 
-			val url = appConfiguration.config.joarkHost + appConfiguration.config.joarkUrl
 			val client = if (soknadarkivschema.arkivtema == "BID") bidClient else webClient
-			val response = sendDataToJoark(client, request, url)
+			val response = sendDataToJoark(key, request, client, joarkHost + journalPostUrl)
 			val journalpostId = response?.journalpostId ?: "-1"
 
 			logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.behandlingsid}', " +
@@ -48,15 +49,21 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 			throw e
 		} catch (e: Exception) {
 			metrics.incJoarkErrors()
-			logger.error("$key: Error sending to Joark", e)
-			throw ArchivingException(e)
+			val message = "$key: Error sending to Joark"
+			logger.warn(message, e)
+			throw ArchivingException(message, e)
 		} finally {
 			metrics.endTimer(timer)
 		}
 	}
 
-	private fun sendDataToJoark(client: WebClient, data: OpprettJournalpostRequest, uri: String):
+	private fun sendDataToJoark(key: String, data: OpprettJournalpostRequest, client: WebClient, uri: String):
 		OpprettJournalpostResponse? {
+
+		if (!sendToJoark) {
+			logger.info("$key: Feature flag is disabled - not sending to Joark.")
+			return null
+		}
 
 		val method = HttpMethod.POST
 		return client
@@ -64,6 +71,7 @@ class JournalpostClient(private val appConfiguration: AppConfiguration,
 			.uri(uri)
 			.contentType(APPLICATION_JSON)
 			.accept(APPLICATION_JSON)
+			.header("Nav-Callid", key)
 			.body(BodyInserters.fromValue(data))
 			.retrieve()
 			.onStatus(

@@ -1,6 +1,5 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.ConsumerRecord.NULL_CHECKSUM
@@ -77,7 +76,7 @@ class KafkaRecordConsumerTests {
 
 	@Test
 	fun `Has gaps in between returned records - will consume all`() {
-		val numberOfRecordsReturnedInEachPolling = listOf(0, 0, 0, 68, 0, 71, 12, 0, 0, 78,  0)
+		val numberOfRecordsReturnedInEachPolling = listOf(0, 0, 0, 68, 0, 71, 12, 0, 0, 78, 0)
 
 		val result = consumerBuilder
 			.mockPollReturnsRecordsOfGivenSizes(numberOfRecordsReturnedInEachPolling.asSequence())
@@ -127,7 +126,7 @@ class KafkaRecordConsumerTests {
 			.setCustomStopLogic(stopsWhenReturnedRecordsAreOfCertainSize)
 			.buildAndGetKafkaRecords()
 
-		assertEquals((0 .. magicNumber).sum(), result.size)
+		assertEquals((0..magicNumber).sum(), result.size)
 	}
 }
 
@@ -272,7 +271,7 @@ private class TestConsumer(
 	private val kafkaConsumer: KafkaConsumer<Key, String>,
 	testClock: Clock
 ) : KafkaRecordConsumer<String, ConsumerRecord<Key, String>>(
-	AppConfiguration(kafkaConfig()),
+	kafkaConfig(),
 	"testId",
 	StringDeserializer(),
 	topic,
@@ -329,19 +328,23 @@ private class TestClock : Clock() {
  * Boilerplate required by underlying libraries.
  */
 private fun kafkaProperties() = Properties().also {
-	it[ConsumerConfig.GROUP_ID_CONFIG] = kafkaConfig().groupId
-	it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig().servers
+	it[ConsumerConfig.GROUP_ID_CONFIG] = kafkaConfig().applicationId
+	it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig().brokers
 	it[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
 	it[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
 }
 
-private fun kafkaConfig() =	AppConfiguration.KafkaConfig(
-	"username", "password", "localhost:17171",	"localhost:16868", "FALSE",
-	"SASL_PLAINTEXT", "PLAIN", "", topic, "processingTopic",
-	"messageTopic", "metricsTopic", "0", "0",
-	"testGroupId"
+private fun kafkaConfig() = KafkaConfig(
+	applicationId = "testApplicationId",
+	brokers = "localhost:17171",
+	bootstrappingTimeout = "0",
+	delayBeforeKafkaInitialization = "0",
+	schemaRegistry = SchemaRegistry(url = "localhost:16868","dummy","dummy"),
+	security = SecurityConfig("FALSE","dummy","dummy","dummy","dummy","dummy","dummy"),
+	topics = Topics(topic,"processingTopic", messageTopic = "messageTopic",metricsTopic = "metricsTopic")
 )
 
 private typealias Time = Long
+
 private const val topic = "testTopic"
 private const val mockedTimeInMsForPolling = 500L

@@ -1,14 +1,14 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
+import io.confluent.kafka.schemaregistry.client.SchemaRegistryClientConfig
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroDeserializer
-import no.nav.soknad.arkivering.soknadsarkiverer.config.AppConfiguration
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.apache.kafka.common.config.SaslConfigs
+import org.apache.kafka.common.config.SslConfigs.*
 import org.apache.kafka.common.serialization.Deserializer
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.slf4j.LoggerFactory
@@ -17,7 +17,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 abstract class KafkaRecordConsumer<T, R>(
-	private val appConfiguration: AppConfiguration,
+	private val kafkaConfig: KafkaConfig,
 	private val kafkaGroupId: String,
 	private val valueDeserializer: Deserializer<T>,
 	private val topic: String,
@@ -66,9 +66,11 @@ abstract class KafkaRecordConsumer<T, R>(
 			if (shouldStop(newRecords))
 				break
 			if (hasTimedOut(timestampOfLastSuccessfulPoll, hasReadRecords)) {
-				logger.warn("For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records " +
-					"${clock.currentTimeMillis() - startTime} ms after starting. Has read ${getRecords().size} records. " +
-					"Aborting consumption.")
+				logger.warn(
+					"For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records " +
+						"${clock.currentTimeMillis() - startTime} ms after starting. Has read ${getRecords().size} records. " +
+						"Aborting consumption."
+				)
 				break
 			}
 			if (newRecords.isEmpty())
@@ -90,9 +92,9 @@ abstract class KafkaRecordConsumer<T, R>(
 
 		return (
 			shouldEnforceTimeout && hasTimedOut ||
-			!hasReadRecords && hasTimedOutWithoutRecords ||
-			hasReadRecords && hasTimedOutWithNoNewRecords
-		)
+				!hasReadRecords && hasTimedOutWithoutRecords ||
+				hasReadRecords && hasTimedOutWithNoNewRecords
+			)
 	}
 
 	private fun retrieveKafkaRecords(kafkaConsumer: KafkaConsumer<Key, T>): List<ConsumerRecord<Key, T>> {
@@ -106,26 +108,34 @@ abstract class KafkaRecordConsumer<T, R>(
 			if (record.key() != null && record.value() != null)
 				records.add(record)
 			else
-				logger.error("For ${kafkaConsumer.assignment()}: Record had null attributes. " +
-					"Key='${record.key()}', value ${if (record.value() == null) "is" else "is not"} null")
+				logger.error(
+					"For ${kafkaConsumer.assignment()}: Record had null attributes. " +
+						"Key='${record.key()}', value ${if (record.value() == null) "is" else "is not"} null"
+				)
 		}
 		return records
 	}
 
 
 	private fun kafkaConfig(valueDeserializer: Deserializer<T>) = Properties().also {
-		it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = appConfiguration.kafkaConfig.schemaRegistryUrl
+		it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = kafkaConfig.schemaRegistry.url
 		it[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
 		it[ConsumerConfig.GROUP_ID_CONFIG] = kafkaGroupId
 		it[ConsumerConfig.MAX_POLL_RECORDS_CONFIG] = 5000
-		it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = appConfiguration.kafkaConfig.servers
+		it[ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig.brokers
 		it[ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG] = StringDeserializer::class.java
 		it[ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG] = valueDeserializer::class.java
 
-		if (appConfiguration.kafkaConfig.secure == "TRUE") {
-			it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = appConfiguration.kafkaConfig.protocol
-			it[SaslConfigs.SASL_JAAS_CONFIG] = appConfiguration.kafkaConfig.saslJaasConfig
-			it[SaslConfigs.SASL_MECHANISM] = appConfiguration.kafkaConfig.salsmec
+		if (kafkaConfig.security.enabled == "TRUE") {
+			it[SchemaRegistryClientConfig.USER_INFO_CONFIG] = "${kafkaConfig.schemaRegistry.username}:${kafkaConfig.schemaRegistry.password}"
+			it[SchemaRegistryClientConfig.BASIC_AUTH_CREDENTIALS_SOURCE] = "USER_INFO"
+			it[CommonClientConfigs.SECURITY_PROTOCOL_CONFIG] = kafkaConfig.security.protocol
+			it[SSL_KEYSTORE_TYPE_CONFIG] = "PKCS12"
+			it[SSL_TRUSTSTORE_LOCATION_CONFIG] = kafkaConfig.security.trustStorePath
+			it[SSL_TRUSTSTORE_PASSWORD_CONFIG] = kafkaConfig.security.trustStorePassword
+			it[SSL_KEYSTORE_LOCATION_CONFIG] = kafkaConfig.security.keyStorePath
+			it[SSL_KEYSTORE_PASSWORD_CONFIG] = kafkaConfig.security.keyStorePassword
+			it[SSL_KEY_PASSWORD_CONFIG] = kafkaConfig.security.keyStorePassword
 		}
 	}
 
@@ -164,20 +174,22 @@ class PoisonSwallowingAvroDeserializer<T : SpecificRecord> : SpecificAvroDeseria
 		return try {
 			super.deserialize(topic, bytes)
 		} catch (e: Exception) {
-			logger.error("Unable to deserialize event on topic $topic\nByte Array: ${bytes.asList()}\n" +
-				"String representation: '${String(bytes)}'", e)
+			logger.error(
+				"Unable to deserialize event on topic $topic\nByte Array: ${bytes.asList()}\n" +
+					"String representation: '${String(bytes)}'", e
+			)
 			null
 		}
 	}
 }
 
 abstract class KafkaConsumerBuilder<T, R> {
-	var appConfiguration: AppConfiguration? = null
+	var kafkaConfig: KafkaConfig? = null
 	var kafkaGroupId: String? = null
 	var deserializer: Deserializer<T>? = null
 	var topic: String? = null
 
-	fun withAppConfiguration(appConfiguration: AppConfiguration) = apply { this.appConfiguration = appConfiguration }
+	fun withKafkaConfig(kafkaConfig: KafkaConfig) = apply { this.kafkaConfig = kafkaConfig }
 	fun withKafkaGroupId(kafkaGroupId: String) = apply { this.kafkaGroupId = kafkaGroupId }
 	fun withValueDeserializer(deserializer: Deserializer<T>) = apply { this.deserializer = deserializer }
 	fun forTopic(topic: String) = apply { this.topic = topic }
@@ -186,6 +198,7 @@ abstract class KafkaConsumerBuilder<T, R> {
 }
 
 typealias Key = String
+
 const val sleepInMsBetweenFetches = 100L
 const val timeoutWhenNotFindingRecords = 45 * 1000
 const val timeoutWhenNotFindingNewRecords = 30 * 1000

@@ -7,19 +7,18 @@ import no.nav.soknad.arkivering.avroschemas.Soknadstyper
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
+import java.time.OffsetDateTime
+import java.time.ZoneId
 
 
 fun createOpprettJournalpostRequest(o: Soknadarkivschema, attachedFiles: List<FileData>): OpprettJournalpostRequest {
-	val date = DateTimeFormatter.ISO_LOCAL_DATE.format(LocalDateTime.ofInstant(Instant.ofEpochSecond(o.innsendtDato), ZoneOffset.UTC))
+	val timestamp = OffsetDateTime.ofInstant(Instant.ofEpochSecond(o.innsendtDato), ZoneId.of("Europe/Oslo")).toString()
 
 	val documents = createDocuments(o.mottatteDokumenter, attachedFiles, o.soknadstype)
 	val tittel = getTitleFromMainDocument(documents)
 
 	return OpprettJournalpostRequest(AvsenderMottaker(o.fodselsnummer, "FNR"), Bruker(o.fodselsnummer, "FNR"),
-		date, documents, o.behandlingsid, "INNGAAENDE", "NAV_NO", o.arkivtema, tittel)
+		timestamp, documents, o.behandlingsid, "INNGAAENDE", "NAV_NO", o.arkivtema, tittel)
 }
 
 private fun getTitleFromMainDocument(documents: List<Dokument>): String {
@@ -91,6 +90,6 @@ private fun createDokumentVariant(variant: MottattVariant, attachedFiles: List<F
 	if (attachedFile[0].content == null)
 		throw Exception("File with uuid '${variant.uuid}' was null!")
 
-	val filtype = if (variant.filtype == "PDF/A") "PDFA" else variant.filtype
+	val filtype = if (variant.filtype.equals("PDF/A",true) ) "PDFA" else variant.filtype.uppercase()
 	return DokumentVariant(variant.filnavn, filtype, attachedFile[0].content!!, variant.variantformat)
 }
