@@ -117,6 +117,11 @@ fun mockRequestedFileIsGone() {
 	mockFilestorageGetRequest("$filestorageUrl.*", response)
 }
 
+fun mockRequestedFileIsNotFound() {
+	val response = createFilestorageResponse(Triple(UUID.randomUUID().toString(), null, "not-found"))
+	mockFilestorageGetRequest("$filestorageUrl.*", response)
+}
+
 private fun mockFilestorageGetRequest(url: String, response: String) {
 	wiremockServer.stubFor(
 		get(urlMatching(url))

@@ -37,16 +37,15 @@ class FilestorageService(
 			metrics.incGetFilestorageSuccesses()
 			return files
 
+		} catch (e: ArchivingException ) {
+			metrics.incGetFilestorageErrors()
+			throw e
+		} catch (e: FilesAlreadyDeletedException) {
+			metrics.incGetFilestorageErrors()
+			throw e
 		} catch (e: Exception) {
 			metrics.incGetFilestorageErrors()
-			if (e.cause is FilesAlreadyDeletedException) {
-				logger.warn("$key: File(s) were deleted in the file storage when trying to fetch them: ${e.message}")
-				throw e
-			} else {
-				val message = "$key: Error retrieving files from the file storage"
-				logger.warn(message, e)
-				throw ArchivingException(message, e)
-			}
+			throw ArchivingException(e.message ?: "", e)
 
 		} finally {
 			metrics.endTimer(timer)
@@ -87,9 +86,9 @@ class FilestorageService(
 		val files = filesApi.findFilesByIds(ids = fileIds, xInnsendingId = key, metadataOnly = false)
 
 		if (files.all { it.status == "deleted" })
-			throw Exception(FilesAlreadyDeletedException("$key: All the files are deleted: $fileIds"))
+			throw FilesAlreadyDeletedException("$key: All the files are deleted: $fileIds")
 		if (files.any { it.status != "ok" })
-			throw Exception("$key: Files had different statuses: ${files.map { "${it.id} - ${it.status}" }}")
+			throw ArchivingException("$key: Files had different statuses: ${files.map { "${it.id} - ${it.status}" }}", RuntimeException("$key: Got some, but not all files"))
 
 		return files
 	}
