@@ -469,7 +469,7 @@ class ApplicationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic(key, createSoknadarkivschema())
 
 		verifyProcessingEvents(key, mapOf(
-			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
+			RECEIVED hasCount 1, STARTED hasCount tasksBefore.toInt() + 1, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
 		))
 		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(key, mapOf("ok" hasCount 0, "Exception" hasCount 6))
