@@ -156,8 +156,6 @@ open class TaskListService(
 		.filter { if (key != null) it.key == key else true }
 		.mapValues { it.value.count to it.value.isRunningLock }
 
-	fun getSoknadarkivschema(key: String) = tasks[key]?.value
-
 	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
 
 		if (tasks[key] == null || loggedTaskStates[key] == EventTypes.FAILURE || loggedTaskStates[key] == EventTypes.FINISHED) {
