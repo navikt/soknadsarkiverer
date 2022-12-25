@@ -434,13 +434,12 @@ class ApplicationTests : ContainerizedKafka() {
 		))
 		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(key, mapOf("ok" hasCount 0, "Exception" hasCount 1))
-/*
+
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount 0,
 			"send files to archive" hasCount 0,
-			"delete files from filestorage" hasCount 1
+			"delete files from filestorage" hasCount 0
 		))
-*/
 
 		verifyArchivingMetrics(getFilestorageErrorsBefore + 1, { metrics.getGetFilestorageErrors() })
 		verifyArchivingMetrics(getFilestorageSuccessesBefore + 0, { metrics.getGetFilestorageSuccesses() })
@@ -450,7 +449,6 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyArchivingMetrics(tasksBefore, { metrics.getTasks() })
 		verifyArchivingMetrics(tasksGivenUpOnBefore, { metrics.getTasksGivenUpOn() })
 	}
-
 
 	@Test
 	fun `Not all files fetched from Filestorage will cause failure`() {
@@ -473,13 +471,12 @@ class ApplicationTests : ContainerizedKafka() {
 		))
 		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(key, mapOf("ok" hasCount 0, "Exception" hasCount 6))
-/*
+
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount 0,
 			"send files to archive" hasCount 0,
-			"delete files from filestorage" hasCount 1
+			"delete files from filestorage" hasCount 0
 		))
-*/
 
 		verifyArchivingMetrics(getFilestorageErrorsBefore + 6, { metrics.getGetFilestorageErrors() })
 		verifyArchivingMetrics(getFilestorageSuccessesBefore + 0, { metrics.getGetFilestorageSuccesses() })
@@ -489,6 +486,7 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyArchivingMetrics(tasksBefore + 1, { metrics.getTasks() })
 		verifyArchivingMetrics(tasksGivenUpOnBefore + 1, { metrics.getTasksGivenUpOn() })
 	}
+
 
 	private fun verifyArchivingMetrics(expected: Double, actual: () -> Double, message: String? = null) {
 		loopAndVerify(expected.toInt(), { actual.invoke().toInt() },
