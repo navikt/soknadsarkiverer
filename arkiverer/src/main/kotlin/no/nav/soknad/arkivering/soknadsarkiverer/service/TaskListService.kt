@@ -208,11 +208,11 @@ open class TaskListService(
 			loggedTaskStates.remove(key)
 			metrics.removeTask()
 			val jobThread = jobMap.remove(key)
-			logger.info("$key: Finished task")
+			logger.info("$key: Finished task ${jobThread?.key}")
 			jobThread?.cancel()
 
 		} else {
-			logger.info("$key: Tried to finish task, but it is already finished")
+			logger.info("$key: Tried to finish task, but it is already finished ${jobMap.remove(key)?.key}")
 		}
 	}
 

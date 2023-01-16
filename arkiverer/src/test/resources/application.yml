@@ -1,6 +1,9 @@
 spring:
   profiles:
     active: test
+cron:
+  startRetryOfFailedArchiving: 45 08 01 16 JAN ?
+failedApplications: ""
 application:
   SPRING_PROFILES_ACTIVE: test
   schema-registry-scope: mocked-scope

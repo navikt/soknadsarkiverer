@@ -1,6 +1,10 @@
 server:
   port: 8091
 
+cron:
+  startRetryOfFailedArchiving: 00 10 01 16 JAN ?
+failedApplications: ""
+
 management:
   endpoint:
     health:
@@ -68,8 +72,6 @@ spring:
       on-profile: default | dev | prod
 
 
-cron:
-  startRetryOfFailedArchiving: 45 08 01 16 JAN ?
 failedApplications: ${FAILED_APPLICATIONS}
 
 no.nav.security:
