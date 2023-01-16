@@ -54,6 +54,7 @@ spec:
         - application: "{{this}}"
       {{/each}}
   envFrom:
+    - secret: retry-failed-applications
     - secret: soknadsarkiver-google-secret
       metadata:
         annotations:
@@ -62,6 +63,9 @@ spec:
       metadata:
         annotations:
           reloader.stakater.com/match: "true"
+
+  leaderElection: true
+
   env:
     - name: SPRING_PROFILES_ACTIVE
       value: {{profile}}

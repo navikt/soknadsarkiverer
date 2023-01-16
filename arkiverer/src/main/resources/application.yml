@@ -67,6 +67,11 @@ spring:
     activate:
       on-profile: default | dev | prod
 
+
+cron:
+  startRetryOfFailedArchiving: 45 08 01 16 JAN ?
+failedApplications: ${FAILED_APPLICATIONS}
+
 no.nav.security:
   basic:
     username: ${ADMIN_USER}
