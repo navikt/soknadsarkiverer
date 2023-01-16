@@ -259,6 +259,11 @@
 						<artifactId>kotlin-maven-allopen</artifactId>
 						<version>${kotlin.version}</version>
 					</dependency>
+					<dependency>
+						<groupId>org.jetbrains.kotlin</groupId>
+						<artifactId>kotlin-maven-serialization</artifactId>
+						<version>${kotlin.version}</version>
+					</dependency>
 				</dependencies>
 			</plugin>
 		</plugins>
