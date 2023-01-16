@@ -250,6 +250,7 @@
 					</args>
 					<compilerPlugins>
 						<plugin>spring</plugin>
+						<plugin>kotlinx-serialization</plugin>
 					</compilerPlugins>
 				</configuration>
 				<dependencies>
