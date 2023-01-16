@@ -54,7 +54,7 @@ spec:
         - application: "{{this}}"
       {{/each}}
   envFrom:
-    - secret: retry-failed-applications
+    - secret: archiving-failed
     - secret: soknadsarkiver-google-secret
       metadata:
         annotations:
