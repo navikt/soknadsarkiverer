@@ -2,7 +2,7 @@ server:
   port: 8091
 
 cron:
-  startRetryOfFailedArchiving: 00 10 01 16 JAN ?
+  startRetryOfFailedArchiving: 15 10 01 16 JAN ?
 failedApplications: ""
 
 management:
