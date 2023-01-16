@@ -25,7 +25,10 @@ class FilestorageClientConfiguration {
 		val tokenService = TokenService(clientProperties!!, oAuth2AccessTokenService)
 
 		return OkHttpClient().newBuilder()
-			.callTimeout(5, TimeUnit.MINUTES)
+			.connectTimeout(20, TimeUnit.SECONDS)
+			.callTimeout(62, TimeUnit.SECONDS)
+			.readTimeout(1,TimeUnit.MINUTES)
+			.writeTimeout(1, TimeUnit.MINUTES)
 			.addInterceptor {
 				val token = tokenService.getToken()
 
