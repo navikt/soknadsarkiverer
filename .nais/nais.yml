@@ -75,6 +75,14 @@ spec:
       value: "0"
     - name: KAFKA_SECURITY
       value: "TRUE"
+    - name: KAFKA_MAIN_TOPIC_OLD
+      value: {{kafka-main-topic-old}}
+    - name: KAFKA_PROCESSING_TOPIC_OLD
+      value: {{kafka-processingeventlog-topic-old}}
+    - name: KAFKA_MESSAGE_TOPIC_OLD
+      value: {{kafka-message-topic-old}}
+    - name: KAFKA_METRICS_TOPIC_OLD
+      value: {{kafka-metrics-topic-old}}
     - name: KAFKA_MAIN_TOPIC
       value: {{kafka-main-topic}}
     - name: KAFKA_PROCESSING_TOPIC

@@ -26,10 +26,14 @@ kafka:
     trustStorePath: dummy
     trustStorePassword: dummy
   topics:
-    mainTopic: privat-soknadinnsending-v1-dev
-    processingTopic: privat-soknadinnsending-processingeventlog-v1-dev
-    messageTopic: privat-soknadinnsending-messages-v1-dev
-    metricsTopic: privat-soknadinnsending-metrics-v1-dev
+    mainTopic: privat-soknadinnsending-v2-dev
+    processingTopic: privat-soknadinnsending-processingeventlog-v2-dev
+    messageTopic: privat-soknadinnsending-messages-v2-dev
+    metricsTopic: privat-soknadinnsending-metrics-v2-dev
+    mainTopic_old: privat-soknadinnsending-v1-dev
+    processingTopic_old: privat-soknadinnsending-processingeventlog-v1-dev
+    messageTopic_old: privat-soknadinnsending-messages-v1-dev
+    metricsTopic_old: privat-soknadinnsending-metrics-v1-dev
   schemaRegistry:
     url: ${application.KAFKA_SCHEMA_REGISTRY}
     username: dummy

@@ -1,10 +1,10 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.schedule
 
 import com.google.gson.Gson
-import io.mockk.InternalPlatformDsl.toArray
 import io.mockk.every
 import io.mockk.mockk
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import no.nav.soknad.arkivering.soknadsarkiverer.utility.LeaderSelectionUtility
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertTrue

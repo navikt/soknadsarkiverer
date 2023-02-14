@@ -12,13 +12,12 @@ import java.util.*
 
 class KafkaBootstrapConsumer(
 	private val taskListService: TaskListService,
-	private val kafkaConfig: KafkaConfig
+	private val kafkaConfig: KafkaConfig,
+	private val topicSelection: TopicSelection
 ) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	private val mainTopic = kafkaConfig.topics.mainTopic
-	private val processingTopic = kafkaConfig.topics.processingTopic
 	private val uuid = UUID.randomUUID().toString()
 
 
@@ -60,7 +59,7 @@ class KafkaBootstrapConsumer(
 			.withKafkaConfig(kafkaConfig)
 			.withKafkaGroupId("soknadsarkiverer-bootstrapping-main-$uuid")
 			.withValueDeserializer(PoisonSwallowingAvroDeserializer())
-			.forTopic(mainTopic)
+			.forTopic(topicSelection.selectTopicVersion(TopicTypes.MAIN_TOPIC, kafkaConfig))
 			.getAllKafkaRecords()
 	}
 
@@ -82,7 +81,7 @@ class KafkaBootstrapConsumer(
 			.withKafkaConfig(kafkaConfig)
 			.withKafkaGroupId("soknadsarkiverer-bootstrapping-processingevent-$uuid")
 			.withValueDeserializer(PoisonSwallowingAvroDeserializer())
-			.forTopic(processingTopic)
+			.forTopic(topicSelection.selectTopicVersion(TopicTypes.PROCESSING_TOPIC, kafkaConfig))
 			.getAllKafkaRecords()
 
 		return allFinishedKeys to kafkaRecords

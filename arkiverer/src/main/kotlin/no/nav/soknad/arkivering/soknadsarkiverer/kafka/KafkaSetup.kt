@@ -5,6 +5,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.bootstrapping.KafkaBootstrapConsumer
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
+import no.nav.soknad.arkivering.soknadsarkiverer.utility.LeaderSelectionUtility
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Service
@@ -20,7 +21,8 @@ class KafkaSetup(
 	private val kafkaPublisher: KafkaPublisher,
 	private val scheduler: Scheduler,
 	private val metrics: ArchivingMetrics,
-	private val kafkaConfig: KafkaConfig
+	private val kafkaConfig: KafkaConfig,
+	private val topicSelection: TopicSelection
 ) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -31,14 +33,16 @@ class KafkaSetup(
 
 		scheduleJob {
 			bootstrapKafka()
-			setupKafkaStreams(applicationState, taskListService, kafkaPublisher, kafkaConfig = kafkaConfig )
+			setupKafkaStreams(applicationState, taskListService, kafkaPublisher, kafkaConfig = kafkaConfig,
+				topicSelection = topicSelection
+			)
 		}
 	}
 
 	private fun bootstrapKafka() {
 		val startTime = System.currentTimeMillis()
 		logger.info("Starting Kafka Bootstrap Consumer to create tasks for any tasks that had not yet been finished")
-		KafkaBootstrapConsumer( taskListService, kafkaConfig).recreateState()
+		KafkaBootstrapConsumer( taskListService, kafkaConfig, topicSelection).recreateState()
 		logger.info("Finished Kafka Bootstrap Consumer in ${System.currentTimeMillis() - startTime} ms.")
 	}
 
@@ -55,7 +59,8 @@ class KafkaSetupTest(
 	private val taskListService: TaskListService,
 	private val kafkaPublisher: KafkaPublisher,
 	private val metrics: ArchivingMetrics,
-	private val kafkaConfig : KafkaConfig
+	private val kafkaConfig : KafkaConfig,
+	private val topicSelection: TopicSelection
 ) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -66,7 +71,7 @@ class KafkaSetupTest(
 		setupMetricsAndHealth(metrics, applicationState)
 
 		val groupId = kafkaConfig.applicationId + "_" + UUID.randomUUID().toString()
-		setupKafkaStreams(applicationState, taskListService, kafkaPublisher, groupId,kafkaConfig)
+		setupKafkaStreams(applicationState, taskListService, kafkaPublisher, groupId, kafkaConfig, topicSelection)
 	}
 }
 
@@ -75,10 +80,11 @@ private fun setupKafkaStreams(
 	taskListService: TaskListService,
 	kafkaPublisher: KafkaPublisher,
 	groupId: String? = null,
-	kafkaConfig : KafkaConfig
+	kafkaConfig : KafkaConfig,
+	topicSelection: TopicSelection
 ) {
 	val id = groupId ?: kafkaConfig.applicationId
-	KafkaStreamsSetup(applicationState, taskListService, kafkaPublisher,kafkaConfig).setupKafkaStreams(id)
+	KafkaStreamsSetup(applicationState, taskListService, kafkaPublisher,kafkaConfig, topicSelection).setupKafkaStreams(id)
 }
 
 private fun setupMetricsAndHealth( metrics: ArchivingMetrics, applicationState: ApplicationState ) {

@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
+import no.nav.soknad.arkivering.soknadsarkiverer.main
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.ConsumerRecord.NULL_CHECKSUM
@@ -341,7 +342,8 @@ private fun kafkaConfig() = KafkaConfig(
 	delayBeforeKafkaInitialization = "0",
 	schemaRegistry = SchemaRegistry(url = "localhost:16868","dummy","dummy"),
 	security = SecurityConfig("FALSE","dummy","dummy","dummy","dummy","dummy","dummy"),
-	topics = Topics(topic,"processingTopic", messageTopic = "messageTopic",metricsTopic = "metricsTopic")
+	topics = Topics(topic,"processingTopic", messageTopic = "messageTopic",metricsTopic = "metricsTopic",
+		mainTopic_old = "topic_old", processingTopic_old = "processingTopic_old", messageTopic_old = "messageTopic_old", metricsTopic_old = "metricsTopic_old")
 )
 
 private typealias Time = Long

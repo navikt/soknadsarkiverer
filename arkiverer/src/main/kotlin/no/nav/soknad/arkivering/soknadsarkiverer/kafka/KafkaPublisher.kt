@@ -5,6 +5,7 @@ import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
+import no.nav.soknad.arkivering.soknadsarkiverer.utility.LeaderSelectionUtility
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -19,7 +20,9 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 @Service
-class KafkaPublisher(private val kafkaConfig: KafkaConfig) {
+class KafkaPublisher(
+	private val kafkaConfig: KafkaConfig,
+	private val topicSelection: TopicSelection) {
 
 	private val kafkaProcessingEventProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap())
 	private val kafkaMetricsProducer = KafkaProducer<String, InnsendingMetrics>(kafkaConfigMap())
@@ -34,13 +37,13 @@ class KafkaPublisher(private val kafkaConfig: KafkaConfig) {
 	}
 
 	fun putMessageOnTopic(key: String?, value: String, headers: Headers = RecordHeaders()) {
-		val topic = kafkaConfig.topics.messageTopic
+		val topic = topicSelection.selectTopicVersion(TopicTypes.MESSAGES_TOPIC, kafkaConfig)
 		val kafkaProducer = kafkaMessageProducer
 		putDataOnTopic(key, value, headers, topic, kafkaProducer)
 	}
 
 	fun putMetricOnTopic(key: String?, value: InnsendingMetrics, headers: Headers = RecordHeaders()) {
-		val topic = kafkaConfig.topics.metricsTopic
+		val topic = topicSelection.selectTopicVersion(TopicTypes.METRICS_TOPIC, kafkaConfig)
 		val kafkaProducer = kafkaMetricsProducer
 		putDataOnTopic(key, value, headers, topic, kafkaProducer)
 	}

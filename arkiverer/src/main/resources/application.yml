@@ -36,6 +36,10 @@ kafka:
     trustStorePath: ${KAFKA_TRUSTSTORE_PATH}
     trustStorePassword: ${KAFKA_CREDSTORE_PASSWORD}
   topics:
+    mainTopic-old: ${KAFKA_MAIN_TOPIC_OLD}
+    processingTopic_old: ${KAFKA_PROCESSING_TOPIC_OLD}
+    messageTopic_old: ${KAFKA_MESSAGE_TOPIC_OLD}
+    metricsTopic_old: ${KAFKA_METRICS_TOPIC_OLD}
     mainTopic: ${KAFKA_MAIN_TOPIC}
     processingTopic: ${KAFKA_PROCESSING_TOPIC}
     messageTopic: ${KAFKA_MESSAGE_TOPIC}
