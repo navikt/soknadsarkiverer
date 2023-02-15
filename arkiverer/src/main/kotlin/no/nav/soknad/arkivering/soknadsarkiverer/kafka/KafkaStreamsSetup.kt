@@ -8,8 +8,6 @@ import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
-import no.nav.soknad.arkivering.soknadsarkiverer.utility.LeaderElection
-import no.nav.soknad.arkivering.soknadsarkiverer.utility.LeaderSelectionUtility
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -32,8 +30,7 @@ class KafkaStreamsSetup(
 	private val applicationState: ApplicationState,
 	private val taskListService: TaskListService,
 	private val kafkaPublisher: KafkaPublisher,
-	private val kafkaConfig: KafkaConfig,
-	private val topicSelection: TopicSelection
+	private val kafkaConfig: KafkaConfig
 ) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
@@ -47,8 +44,8 @@ class KafkaStreamsSetup(
 	private fun kafkaStreams(streamsBuilder: StreamsBuilder) {
 		val joinDef = Joined.with(stringSerde, processingEventSerde, soknadarkivschemaSerde, "archivingState")
 		val materialized = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("processingeventdtos").withValueSerde(mutableListSerde)
-		val mainTopicStream = streamsBuilder.stream(topicSelection.selectTopicVersion(TopicTypes.MAIN_TOPIC, kafkaConfig), Consumed.with(stringSerde, soknadarkivschemaSerde))
-		val processingTopicStream = streamsBuilder.stream(topicSelection.selectTopicVersion(TopicTypes.PROCESSING_TOPIC, kafkaConfig), Consumed.with(stringSerde, processingEventSerde))
+		val mainTopicStream = streamsBuilder.stream(kafkaConfig.topics.mainTopic, Consumed.with(stringSerde, soknadarkivschemaSerde))
+		val processingTopicStream = streamsBuilder.stream(kafkaConfig.topics.processingTopic , Consumed.with(stringSerde, processingEventSerde))
 
 		val mainTopicTable = mainTopicStream.toTable()
 

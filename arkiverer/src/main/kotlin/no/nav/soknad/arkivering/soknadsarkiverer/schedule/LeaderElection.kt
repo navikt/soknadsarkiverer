@@ -1,4 +1,4 @@
-package no.nav.soknad.arkivering.soknadsarkiverer.utility
+package no.nav.soknad.arkivering.soknadsarkiverer.schedule
 
 import kotlinx.serialization.Serializable
 import java.time.LocalDateTime

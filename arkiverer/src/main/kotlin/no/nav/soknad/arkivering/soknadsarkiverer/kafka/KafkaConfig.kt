@@ -32,12 +32,7 @@ data class Topics(
 	val mainTopic : String,
 	val processingTopic : String,
 	val messageTopic : String,
-	val metricsTopic : String,
-	val mainTopic_old : String,
-	val processingTopic_old : String,
-	val messageTopic_old : String,
-	val metricsTopic_old : String
-
+	val metricsTopic : String
 )
 
 data class SchemaRegistry(

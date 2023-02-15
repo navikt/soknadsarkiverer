@@ -5,7 +5,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
-import io.mockk.every
 import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
@@ -13,13 +12,11 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.TopicSelection
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
-import no.nav.soknad.arkivering.soknadsarkiverer.utility.LeaderSelectionUtility
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -59,9 +56,6 @@ class ApplicationTests : ContainerizedKafka() {
 	@Suppress("unused")
 	@MockkBean(relaxed = true)
 	private lateinit var collectorRegistry: CollectorRegistry
-	@Suppress("unused")
-	@MockkBean(relaxed = true)
-	private lateinit var leaderSelectionUtility: LeaderSelectionUtility
 	@Autowired
 	private lateinit var filestorageProperties: FilestorageProperties
 	@Autowired
@@ -77,7 +71,6 @@ class ApplicationTests : ContainerizedKafka() {
 	@Value("\${joark.journal-post}")
 	private lateinit var journalPostUrl: String
 
-	private lateinit var topicSelection: TopicSelection
 	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 	private lateinit var kafkaProducerForBadData: KafkaProducer<String, String>
 	private lateinit var kafkaListener: KafkaListener
@@ -89,8 +82,6 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@BeforeAll
 	fun setupKafkaProducersAndListeners() {
-		every { leaderSelectionUtility.isLeader()} returns false
-
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap()
 			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })

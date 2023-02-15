@@ -12,9 +12,7 @@ import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.TopicSelection
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
-import no.nav.soknad.arkivering.soknadsarkiverer.utility.LeaderSelectionUtility
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.ContainerizedKafka
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -55,19 +53,8 @@ class StateRecreationTests : ContainerizedKafka() {
 	@MockkBean(relaxed = true)
 	private lateinit var kafkaStreams: KafkaStreams // Mock this so that the real chain isn't run by the tests
 
-	@Suppress("unused")
-	@MockkBean(relaxed = true)
-	private lateinit var leaderElection: LeaderSelectionUtility
-
-/*
-	private val leaderElection = mockk<LeaderSelectionUtility>().also {
-		every {it.isLeader()} returns false
-	}
-*/
-
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
-	private lateinit var topicSelection: TopicSelection
 	private lateinit var kafkaMainTopicProducer: KafkaProducer<String, Soknadarkivschema>
 	private lateinit var kafkaProcessingEventProducer: KafkaProducer<String, ProcessingEvent>
 	private lateinit var kafkaBootstrapConsumer: KafkaBootstrapConsumer
@@ -81,11 +68,9 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	@BeforeAll
 	fun setup() {
-		every {leaderElection.isLeader()} returns false
-		topicSelection = TopicSelection(leaderElection)
 		kafkaMainTopicProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProcessingEventProducer = KafkaProducer(kafkaConfigMap())
-		kafkaBootstrapConsumer = KafkaBootstrapConsumer(taskListService, kafkaConfig, topicSelection)
+		kafkaBootstrapConsumer = KafkaBootstrapConsumer(taskListService, kafkaConfig)
 
 		kafkaBootstrapConsumer.recreateState() // Other test classes could have left Kafka events on the topics. Consume them before running the tests in this class.
 	}

@@ -2,7 +2,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.schedule
 
 import com.nimbusds.jose.shaded.gson.Gson
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
-import no.nav.soknad.arkivering.soknadsarkiverer.utility.LeaderSelectionUtility
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value

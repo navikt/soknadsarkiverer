@@ -7,14 +7,10 @@
 	"outbound": [
 		"soknadsfillager"
 	],
-	"kafka-main-topic-old": "team-soknad.privat-soknadinnsending-v1-dev",
-	"kafka-processingeventlog-topic-old": "team-soknad.privat-soknadinnsending-processingeventlog-v1-dev",
-	"kafka-message-topic-old": "team-soknad.privat-soknadinnsending-messages-v1-dev",
-	"kafka-metrics-topic-old": "team-soknad.privat-soknadinnsending-metrics-v1-dev",
-	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v2-dev",
-	"kafka-processingeventlog-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v2-dev",
-	"kafka-message-topic": "team-soknad.privat-soknadinnsending-messages-v2-dev",
-	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v2-dev",
+	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v1-dev",
+	"kafka-processingeventlog-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v1-dev",
+	"kafka-message-topic": "team-soknad.privat-soknadinnsending-messages-v1-dev",
+	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v1-dev",
 	"filestorage-host": "https://soknadsfillager-gcp.dev.intern.nav.no",
 	"joark-host": "https://dokarkiv.dev-fss-pub.nais.io",
 	"dokarkiv-scope": "api://dev-fss.teamdokumenthandtering.dokarkiv-q1/.default",

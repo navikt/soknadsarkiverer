@@ -1,4 +1,4 @@
-package no.nav.soknad.arkivering.soknadsarkiverer.utility
+package no.nav.soknad.arkivering.soknadsarkiverer.schedule
 
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
