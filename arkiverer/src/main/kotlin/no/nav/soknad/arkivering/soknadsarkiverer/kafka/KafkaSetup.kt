@@ -77,7 +77,7 @@ private fun setupKafkaStreams(
 	groupId: String? = null,
 	kafkaConfig : KafkaConfig
 ) {
-	val id = groupId ?: kafkaConfig.applicationId
+	val id = groupId ?: (kafkaConfig.applicationId + "_v2")
 	KafkaStreamsSetup(applicationState, taskListService, kafkaPublisher,kafkaConfig).setupKafkaStreams(id)
 }
 
