@@ -1,8 +1,8 @@
 {
 	"appname": "soknadsarkiverer",
 	"profile": "dev",
-	"replicas-min": "1",
-	"replicas-max": "1",
+	"replicas-min": "2",
+	"replicas-max": "4",
 	"ingress": "https://soknadsarkiverer-gcp.dev.intern.nav.no",
 	"outbound": [
 		"soknadsfillager"
