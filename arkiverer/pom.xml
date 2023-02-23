@@ -16,7 +16,7 @@
 		<arkivering-schemas.version>f52ace8dcc</arkivering-schemas.version>
 		<token-support.version>2.1.7</token-support.version>
 
-		<kafka.version>3.3.1</kafka.version>
+		<kafka.version>3.4.0</kafka.version>
 		<kafka-streams-avro-serde.version>7.2.2</kafka-streams-avro-serde.version>
 		<jackson-module-kotlin.version>2.13.4</jackson-module-kotlin.version>
 		<okhttp3.version>4.10.0</okhttp3.version>
