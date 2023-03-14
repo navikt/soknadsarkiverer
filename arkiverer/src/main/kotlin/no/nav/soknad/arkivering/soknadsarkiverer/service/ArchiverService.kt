@@ -24,6 +24,7 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 			val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
 			createMetric(key, "send files to archive", startTime)
 			logger.info("$key: Opprettet journalpostId=$journalpostId for behandlingsid=${data.behandlingsid}")
+			createMessage(key, "**Archiving: OK.  journalpostId=$journalpostId")
 
 		} catch (e: Exception) {
 			createMessage(key, createExceptionMessage(e))
@@ -65,7 +66,7 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 	}
 
 
-	private fun createMessage(key: String, message: String) {
+	public fun createMessage(key: String, message: String) {
 		kafkaPublisher.putMessageOnTopic(key, message)
 	}
 
