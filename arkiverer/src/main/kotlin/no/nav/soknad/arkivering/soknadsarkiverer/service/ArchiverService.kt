@@ -26,6 +26,9 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 			logger.info("$key: Opprettet journalpostId=$journalpostId for behandlingsid=${data.behandlingsid}")
 			createMessage(key, "**Archiving: OK.  journalpostId=$journalpostId")
 
+		} catch (e: ApplicationAlreadyArchivedException) {
+			createMessage(key, "**Archiving OK. Already archived")
+			throw e
 		} catch (e: Exception) {
 			createMessage(key, createExceptionMessage(e))
 			throw e
