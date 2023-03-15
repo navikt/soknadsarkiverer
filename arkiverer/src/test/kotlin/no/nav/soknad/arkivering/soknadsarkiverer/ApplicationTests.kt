@@ -125,7 +125,7 @@ class ApplicationTests : ContainerizedKafka() {
 		))
 		verifyMockedPostRequests(1, journalPostUrl)
 		verifyDeleteRequestsToFilestorage(1)
-		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount 0))
+		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 0))
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount 1,
 			"send files to archive" hasCount 1,
@@ -170,7 +170,7 @@ class ApplicationTests : ContainerizedKafka() {
 			RECEIVED hasCount 1, STARTED hasCount maxNumberOfAttempts, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 0
 		))
 		verifyDeleteRequestsToFilestorage(0)
-		verifyMessageStartsWith(key, mapOf("ok" hasCount 0, "Exception" hasCount maxNumberOfAttempts))
+		verifyMessageStartsWith(key, mapOf("**Archiving: FAILED" hasCount 1, "ok" hasCount 0, "Exception" hasCount maxNumberOfAttempts))
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount maxNumberOfAttempts,
 			"send files to archive" hasCount 0,
@@ -305,7 +305,7 @@ class ApplicationTests : ContainerizedKafka() {
 		))
 		verifyMockedPostRequests(1, journalPostUrl)
 		verifyDeleteRequestsToFilestorage(1)
-		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount 0))
+		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 0))
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount 1,
 			"send files to archive" hasCount 1,
@@ -361,7 +361,7 @@ class ApplicationTests : ContainerizedKafka() {
 			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
 		))
 		verifyDeleteRequestsToFilestorage(1)
-		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount 1))
+		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 1))
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount 1,
 			"send files to archive" hasCount 0,

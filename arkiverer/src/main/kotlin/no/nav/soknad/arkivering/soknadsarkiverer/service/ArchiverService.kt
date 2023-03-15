@@ -27,7 +27,8 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 			createMessage(key, "**Archiving: OK.  journalpostId=$journalpostId")
 
 		} catch (e: ApplicationAlreadyArchivedException) {
-			createMessage(key, "**Archiving OK. Already archived")
+			createMessage(key, "**Archiving: OK. Already archived")
+			createMessage(key, createExceptionMessage(e))
 			throw e
 		} catch (e: Exception) {
 			createMessage(key, createExceptionMessage(e))
