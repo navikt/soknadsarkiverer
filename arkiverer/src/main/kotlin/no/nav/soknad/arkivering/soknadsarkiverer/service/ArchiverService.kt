@@ -71,6 +71,7 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 
 
 	public fun createMessage(key: String, message: String) {
+		logger.info("$key: publiser meldingsvarsling til avsender")
 		kafkaPublisher.putMessageOnTopic(key, message)
 	}
 
