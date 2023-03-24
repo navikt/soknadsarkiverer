@@ -61,7 +61,7 @@ private fun createVedlegg(documents: List<MottattDokument>, attachedFiles: List<
 }
 
 private fun createDokument(document: MottattDokument, attachedFiles: List<FileData>, soknadstype: Soknadstyper): Dokument {
-	val dokumentvarianter = filterDuplicats(document.mottatteVarianter.map { createDokumentVariant(it, attachedFiles) })
+	val dokumentvarianter = filterDuplicates(document.mottatteVarianter.map { createDokumentVariant(it, attachedFiles) })
 
 	val skjemanummer = getSkjemanummer(document, soknadstype)
 
@@ -76,7 +76,7 @@ private fun createDokument(document: MottattDokument, attachedFiles: List<FileDa
 		skjemanummer, "SOK", dokumentvarianter)
 }
 
-private fun filterDuplicats(dokumentVarianter: List<DokumentVariant>): List<DokumentVariant> {
+private fun filterDuplicates(dokumentVarianter: List<DokumentVariant>): List<DokumentVariant> {
 	if (dokumentVarianter.size <= 1) return dokumentVarianter
 	return dokumentVarianter.distinctBy { it.variantformat }
 }
