@@ -61,7 +61,8 @@ private fun createVedlegg(documents: List<MottattDokument>, attachedFiles: List<
 }
 
 private fun createDokument(document: MottattDokument, attachedFiles: List<FileData>, soknadstype: Soknadstyper): Dokument {
-	val dokumentvarianter = document.mottatteVarianter.map { createDokumentVariant(it, attachedFiles) }
+	val dokumentvarianter = filterDuplicates(document.mottatteVarianter.map { createDokumentVariant(it, attachedFiles) })
+
 	val skjemanummer = getSkjemanummer(document, soknadstype)
 
 	if (skjemanummer.isBlank()) {
@@ -73,6 +74,11 @@ private fun createDokument(document: MottattDokument, attachedFiles: List<FileDa
 
 	return Dokument(renameTitleDependingOnSoknadstype(document.tittel, soknadstype, document.erHovedskjema),
 		skjemanummer, "SOK", dokumentvarianter)
+}
+
+private fun filterDuplicates(dokumentVarianter: List<DokumentVariant>): List<DokumentVariant> {
+	if (dokumentVarianter.size <= 1) return dokumentVarianter
+	return dokumentVarianter.distinctBy { it.variantformat }
 }
 
 private fun getSkjemanummer(document: MottattDokument, soknadstype: Soknadstyper): String {

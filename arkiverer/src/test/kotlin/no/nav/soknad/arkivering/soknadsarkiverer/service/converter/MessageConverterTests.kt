@@ -79,6 +79,42 @@ class MessageConverterTests {
 	}
 
 	@Test
+	fun `Happy case - Ettersending - should filter variantFormat duplicates`() {
+		val tittel = "Apa bepa"
+		val skjemanummer = "NAV 11-13.06"
+		val uuid = UUID.randomUUID().toString()
+		val files = listOf(FileData(uuid, "apa".toByteArray(), OffsetDateTime.now(ZoneOffset.UTC)))
+
+		val schema = SoknadarkivschemaBuilder()
+			.withSoknadstype(Soknadstyper.ETTERSENDING)
+			.withMottatteDokumenter(
+				MottattDokumentBuilder()
+					.withTittel(tittel)
+					.withSkjemanummer(skjemanummer)
+					.withMottatteVarianter(
+						MottattVariantBuilder()
+							.withUuid(uuid)
+							.build()
+					)
+					.withMottatteVarianter(
+						MottattVariantBuilder()
+							.withUuid(uuid)
+							.build()
+					)
+					.build()
+			)
+			.build()
+
+		val arkivData = createOpprettJournalpostRequest(schema, files)
+
+		assertEquals("Ettersendelse til apa bepa", arkivData.tittel)
+		assertEquals(1, arkivData.dokumenter.size)
+		assertEquals(1, arkivData.dokumenter.first().dokumentvarianter.size)
+		assertEquals(arkivData.tittel, arkivData.dokumenter[0].tittel)
+		assertEquals("NAVe 11-13.06", arkivData.dokumenter[0].brevkode)
+	}
+
+	@Test
 	fun `Happy case - Large example - should convert correctly`() {
 		val innsendtDateTime = LocalDateTime.of(2020, 3, 17, 12, 37, 17)
 
