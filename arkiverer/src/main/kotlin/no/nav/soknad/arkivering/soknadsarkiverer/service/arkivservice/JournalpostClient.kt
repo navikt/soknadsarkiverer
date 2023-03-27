@@ -35,6 +35,10 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 			logger.info("$key: About to create journalpost for behandlingsId: '${soknadarkivschema.behandlingsid}'")
 			val request = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)
 
+			if (request.dokumenter.first().dokumentvarianter.size != soknadarkivschema.mottatteDokumenter.filter { it.erHovedskjema }.size) {
+				logger.warn("$key: Antall mottatte varianter av hovedskjema ulikt antall som skal arkiveres ${request.dokumenter.first().dokumentvarianter}")
+			}
+
 			val client = if (soknadarkivschema.arkivtema == "BID") bidClient else webClient
 			val response = sendDataToJoark(key, request, client, joarkHost + journalPostUrl)
 			val journalpostId = response?.journalpostId ?: "-1"
