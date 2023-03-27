@@ -1,5 +1,8 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
+import com.github.tomakehurst.wiremock.client.WireMock
+import com.github.tomakehurst.wiremock.http.RequestMethod
+import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
@@ -69,16 +72,16 @@ class IntegrationTests : ContainerizedKafka() {
 		stopMockedNetworkServices()
 	}
 
-
 	@Test
 	fun `Happy case - Putting events on Kafka will cause rest calls to Joark`() {
 		mockFilestorageIsWorking(fileId)
 		mockJoarkIsWorking()
 
+		val initialRequests = countRequests(joarnalPostUrl, RequestMethod.POST)
 		putDataOnKafkaTopic(createSoknadarkivschema())
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		verifyMockedPostRequests(2, joarnalPostUrl)
+		verifyMockedPostRequests(initialRequests+2, joarnalPostUrl)
 		verifyDeleteRequestsToFilestorage(2)
 	}
 

@@ -3,6 +3,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.utils
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.http.RequestMethod
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
@@ -38,6 +39,11 @@ fun stopMockedNetworkServices() {
 fun verifyMockedGetRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.GET)
 fun verifyMockedPostRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.POST)
 fun verifyMockedDeleteRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.DELETE)
+
+fun countRequests(url: String, requestMethod: RequestMethod): Int {
+	val requestPattern = RequestPatternBuilder.newRequestPattern(requestMethod, urlMatching(url)).build()
+	return wiremockServer.countRequestsMatching(requestPattern).count
+}
 
 private fun verifyMockedRequests(expectedCount: Int, url: String, requestMethod: RequestMethod) {
 

@@ -348,6 +348,8 @@ open class TaskListService(
 
 		val count = incrementRetryCount(key)
 		return if (count >= secondsBetweenRetries.size) {
+			logger.warn("$key: publiser meldingsvarsling til avsender")
+			archiverService.createMessage(key, "**Archiving: FAILED")
 			EventTypes.FAILURE
 		} else {
 			EventTypes.STARTED
