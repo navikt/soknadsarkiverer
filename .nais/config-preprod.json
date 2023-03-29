@@ -3,15 +3,20 @@
 	"profile": "dev",
 	"replicas-min": "2",
 	"replicas-max": "4",
-	"ingress": "https://soknadsarkiverer-gcp.dev.intern.nav.no",
+	"ingress": "https://soknadsarkiverer-gcp.intern.dev.nav.no",
 	"outbound": [
 		"soknadsfillager"
+	],
+	"outboundExternalHosts": [
+		"dokarkiv.dev-fss-pub.nais.io",
+
+		"soknadsfillager-gcp.intern.dev.nav.no"
 	],
 	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v2-dev",
 	"kafka-processingeventlog-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v2-dev",
 	"kafka-message-topic": "team-soknad.privat-soknadinnsending-messages-v2-dev",
 	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v2-dev",
-	"filestorage-host": "https://soknadsfillager-gcp.dev.intern.nav.no",
+	"filestorage-host": "https://soknadsfillager-gcp.intern.dev.nav.no",
 	"joark-host": "https://dokarkiv.dev-fss-pub.nais.io",
 	"dokarkiv-scope": "api://dev-fss.teamdokumenthandtering.dokarkiv-q1/.default",
 	"soknadsfillager-scope": "api://dev-gcp.team-soknad.soknadsfillager/.default",

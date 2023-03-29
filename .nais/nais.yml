@@ -53,6 +53,10 @@ spec:
       {{#each outbound}}
         - application: "{{this}}"
       {{/each}}
+      external:
+      {{#each outboundExternalHosts}}
+        - host: "{{this}}"
+      {{/each}}
   envFrom:
     - secret: archiving-failed
     - secret: soknadsarkiver-google-secret
