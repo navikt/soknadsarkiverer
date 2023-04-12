@@ -10,7 +10,6 @@
 	],
 	"outboundExternalHosts": [
 		"arkiv-mock-gcp.intern.dev.nav.no",
-
 		"soknadsfillager-gcp-loadtests.intern.dev.nav.no"
 	],
 	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v1-loadtests",

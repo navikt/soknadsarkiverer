@@ -9,7 +9,6 @@
 	],
 	"outboundExternalHosts": [
 		"dokarkiv.prod-fss-pub.nais.io",
-
 		"soknadsfillager-gcp.intern.nav.no"
 	],
 	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v2",
