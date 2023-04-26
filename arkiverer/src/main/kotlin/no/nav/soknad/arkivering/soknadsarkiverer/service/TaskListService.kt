@@ -160,7 +160,7 @@ open class TaskListService(
 
 		if (tasks[key] == null || loggedTaskStates[key] == EventTypes.FAILURE || loggedTaskStates[key] == EventTypes.FINISHED) {
 			logger.warn("$key: Too many attempts ($attempt) or loggedstate ${loggedTaskStates[key]}, will not try again")
-			if (loggedTaskStates[key] == EventTypes.FAILURE) updateNoOfFailedMetrics()
+			if (loggedTaskStates[key] == EventTypes.FAILURE) failTask(key)
 
 		} else {
 			logger.debug("$key: In schedule. Attempts: ($attempt), loggedstate: ${loggedTaskStates[key]}, currentTaskState: ${currentTaskStates[key]}")
