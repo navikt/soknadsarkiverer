@@ -70,7 +70,7 @@ class KafkaBootstrapConsumer(
 		val keepUnfinishedRecordsFilter = { records: List<ConsumerRecord<Key, ProcessingEvent>> ->
 
 			val finishedKeys = records
-				.filter { it.value().type == EventTypes.FINISHED || it.value().type == EventTypes.FAILURE }
+				.filter { it.value().type == EventTypes.FINISHED }
 				.map { it.key() }
 
 			allFinishedKeys.addAll(finishedKeys)
