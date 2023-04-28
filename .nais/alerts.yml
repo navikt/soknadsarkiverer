@@ -32,7 +32,7 @@ spec:
           annotations:
             title: "Low number of instances running"
             consequence: "There can be different causes for this, check logs for cause and evaluation of consequences."
-            action: { { error_log_url } }
+            action: {{ error_log_url }}
             summary: "Service has reported less than {{number_of_pods}} running PODs within 5 minutes."
             sla: "Action should be taken as soon as possible"
           labels:
