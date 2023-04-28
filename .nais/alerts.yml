@@ -1,0 +1,43 @@
+apiVersion: "monitoring.coreos.com/v1"
+kind: PrometheusRule
+metadata:
+  labels:
+    team: team-soknad
+  name: soknadsarkiverer-alerts
+  namespace: team-soknad
+spec:
+  groups:
+    - name: {{ env-name }}
+      rules:
+        - alert: High number of errors
+          expr: sum (increase(logd_messages_total{log_app="soknadsarkiverer",log_level=~"Error"}[5m])) > {{ number_of_errors }}
+          for: 5m
+          annotations:
+            title: "High number of errors logged"
+            consequence: "There can be different causes for errors, check logs for cause and evaluation of consequences."
+            action: {{ error_log_url }}
+            summary: "Service has reported more than {{number_of_error}} errors within 5 minutes."
+            sla: "Action should be taken as soon as possible"
+          labels:
+            service: "soknadsarkiverer"
+            namespace: fyllut-sendinn
+            special_type_to_use_in_alertmanager_config: {{common-labels.special_type_to_use_in_alertmanager_config}}
+            alert_type: custom
+            severity: critical
+    - name: {{ env-name }}
+      rules:
+        - alert: Low number of pods
+          expr: count(kube_pod_container_status_running{container="soknadsarkiverer", namespace=~"team-soknad"}) < {{ number_of_pods }}
+          for: 5m
+          annotations:
+            title: "Low number of instances running"
+            consequence: "There can be different causes for this, check logs for cause and evaluation of consequences."
+            action: { { error_log_url } }
+            summary: "Service has reported less than {{number_of_pods}} running PODs within 5 minutes."
+            sla: "Action should be taken as soon as possible"
+          labels:
+            service: "soknadsarkiverer"
+            namespace: fyllut-sendinn
+            special_type_to_use_in_alertmanager_config: {{common-labels.special_type_to_use_in_alertmanager_config}}
+            alert_type: custom
+            severity: warning
