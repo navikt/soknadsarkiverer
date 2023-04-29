@@ -9,7 +9,7 @@ spec:
   groups:
     - name: {{ env-name }}
       rules:
-        - alert: High number of errors
+        - alert: High number of soknadsarkiverer errors
           expr: sum (increase(logd_messages_total{log_app="soknadsarkiverer",log_level=~"Error"}[5m])) > {{ number_of_errors }}
           for: 5m
           annotations:
@@ -24,11 +24,11 @@ spec:
             special_type_to_use_in_alertmanager_config: {{common-labels.special_type_to_use_in_alertmanager_config}}
             alert_type: custom
             severity: critical
-        - alert: Low number of pods
+        - alert: Low number of soknadsarkiverer pods
           expr: count(kube_pod_container_status_running{container="soknadsarkiverer", namespace=~"team-soknad"}) < {{ number_of_pods }}
           for: 5m
           annotations:
-            title: "Low number of instances running"
+            title: "Low number of soknadsarkiverer instances running"
             consequence: "There can be different causes for this, check logs for cause and evaluation of consequences."
             action: {{ error_log_url }}
             summary: "Service has reported less than {{number_of_pods}} running PODs within 5 minutes."
