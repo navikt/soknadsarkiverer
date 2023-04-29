@@ -24,8 +24,6 @@ spec:
             special_type_to_use_in_alertmanager_config: {{common-labels.special_type_to_use_in_alertmanager_config}}
             alert_type: custom
             severity: critical
-    - name: {{ env-name }}
-      rules:
         - alert: Low number of pods
           expr: count(kube_pod_container_status_running{container="soknadsarkiverer", namespace=~"team-soknad"}) < {{ number_of_pods }}
           for: 5m
