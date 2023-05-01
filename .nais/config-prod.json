@@ -20,5 +20,6 @@
 	"dokarkiv-scope": "api://prod-fss.teamdokumenthandtering.dokarkiv/.default",
 	"soknadsfillager-scope": "api://prod-gcp.team-soknad.soknadsfillager/.default",
 	"send-to-joark": "true",
-	"kafka-pool": "nav-prod"
+	"kafka-pool": "nav-prod",
+	"AZURE_TENANT": "nav.no"
 }

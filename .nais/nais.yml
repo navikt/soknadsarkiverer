@@ -44,6 +44,8 @@ spec:
   azure:
     application:
       enabled: true
+      tenant: {{AZURE_TENANT}}
+
   accessPolicy:
     inbound:
       rules:
