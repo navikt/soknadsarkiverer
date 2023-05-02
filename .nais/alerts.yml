@@ -1,13 +1,13 @@
 apiVersion: "monitoring.coreos.com/v1"
 kind: PrometheusRule
 metadata:
-  labels:
-    team: team-soknad
   name: soknadsarkiverer-alerts
   namespace: team-soknad
+  labels:
+    team: team-soknad
 spec:
   groups:
-    - name: {{ env-name }}
+    - name: soknadsarkiverer-alerts
       rules:
         - alert: Low number of soknadsarkiverer pods
           expr: count(kube_pod_container_status_running{container="soknadsarkiverer", namespace="team-soknad"}) < {{ number_of_pods }}
@@ -16,7 +16,7 @@ spec:
             title: "Low number of instances running"
             consequence: "There can be different causes for this, check logs for cause and evaluation of consequences."
             action: {{ error_log_url }}
-            summary: "Service has reported less than {{number_of_pods}} running PODs within 5 minutes."
+            summary: "Service has reported less than minimum of running PODs within 5 minutes."
             sla: "Action should be taken as soon as possible"
           labels:
             service: "soknadsarkiverer"
