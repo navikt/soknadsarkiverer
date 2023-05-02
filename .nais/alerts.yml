@@ -24,3 +24,18 @@ spec:
             special_type_to_use_in_alertmanager_config: {{common-labels.special_type_to_use_in_alertmanager_config}}
             alert_type: custom
             severity: warning
+        - alert: High number of errors
+          expr: sum (increase(logd_messages_total{log_app="soknadsarkiverer",log_level=~"Error"}[5m])) > {{ number_of_errors }}
+          for: 5m
+          annotations:
+            title: "High number of errors logged"
+            consequence: "There can be different causes for errors, check logs for cause and evaluation of consequences."
+            action: {{ error_log_url }}
+            summary: "Service has reported more than {{number_of_error}} errors within 5 minutes."
+            sla: "Action should be taken as soon as possible"
+          labels:
+            service: "soknadsarkiverer"
+            namespace: fyllut-sendinn
+            special_type_to_use_in_alertmanager_config: {{common-labels.special_type_to_use_in_alertmanager_config}}
+            alert_type: custom
+            severity: critical
