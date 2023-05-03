@@ -20,5 +20,6 @@
 	"dokarkiv-scope": "api://dev-fss.teamdokumenthandtering.dokarkiv-q1/.default",
 	"soknadsfillager-scope": "api://dev-gcp.team-soknad.soknadsfillager/.default",
 	"send-to-joark": "true",
-	"kafka-pool": "nav-dev"
+	"kafka-pool": "nav-dev",
+	"AZURE_TENANT": "trygdeetaten.no"
 }

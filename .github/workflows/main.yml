@@ -68,3 +68,20 @@ jobs:
           RESOURCE: .nais/nais.yml
           VARS: .nais/config-prod.json
           VAR: image=${{ env.docker_image }}
+
+  deploy-alerts-prod:
+    if: github.event.inputs.environment == 'prod'
+    needs: deploy
+    name: Deploy alerts to prod
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Deploy to dev
+        uses: nais/deploy/actions/deploy@v1
+        env:
+          APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
+          CLUSTER: prod-gcp
+          RESOURCE: .nais/alerts.yml
+          VARS: .nais/prod-alert.json
+
