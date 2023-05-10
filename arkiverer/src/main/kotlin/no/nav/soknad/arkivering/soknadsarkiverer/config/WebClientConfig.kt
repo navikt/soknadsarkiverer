@@ -51,8 +51,8 @@ class WebClientConfig(private val maxMessageSize: Int = 1024 * 1024 * 325) {
 		val httpClient = HttpClient.create()
 			.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000)
 			.doOnConnected { conn -> conn
-				.addHandlerLast(ReadTimeoutHandler(2 * 60))
-				.addHandlerLast(WriteTimeoutHandler(2 * 60))
+				.addHandlerLast(ReadTimeoutHandler(3 * 60))
+				.addHandlerLast(WriteTimeoutHandler(3 * 60))
 			}
 
 		val exchangeStrategies = ExchangeStrategies.builder()
