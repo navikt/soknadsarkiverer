@@ -35,8 +35,9 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 			logger.info("$key: About to create journalpost for behandlingsId: '${soknadarkivschema.behandlingsid}'")
 			val request = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)
 
-			if (request.dokumenter.first().dokumentvarianter.size != soknadarkivschema.mottatteDokumenter.filter { it.erHovedskjema }.size) {
-				logger.warn("$key: Antall mottatte varianter av hovedskjema ulikt antall som skal arkiveres ${request.dokumenter.first().dokumentvarianter}")
+			val mainDocVariantFormats = soknadarkivschema.mottatteDokumenter.filter { it.erHovedskjema }.flatMap { it.mottatteVarianter }.groupBy { it.variantformat }
+			if (mainDocVariantFormats.any { it.value.size > 1} ) {
+				logger.warn("$key: Mottatte flere varianter av hovedskjema med samme variantfomat.  ${mainDocVariantFormats.filter { it.value.size > 1 }.map { it.key }}")
 			}
 
 			val client = if (soknadarkivschema.arkivtema == "BID") bidClient else webClient

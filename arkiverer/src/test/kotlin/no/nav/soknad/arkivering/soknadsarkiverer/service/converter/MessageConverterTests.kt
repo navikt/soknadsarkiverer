@@ -260,6 +260,28 @@ class MessageConverterTests {
 	}
 
 	@Test
+	fun `Several documentvariants -- should check main document variantformats and filter duplicates`() {
+		val uuid0 = UUID.randomUUID().toString()
+		val uuid1 = UUID.randomUUID().toString()
+		val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
+		val files = listOf(FileData(uuid0, "apa".toByteArray(), createdAt), FileData(uuid1, "bepa".toByteArray(), createdAt))
+
+		val schema = SoknadarkivschemaBuilder()
+			.withMottatteDokumenter(
+
+				MottattDokumentBuilder()
+					.withErHovedskjema(true)
+					.withMottatteVarianter(MottattVariantBuilder().withUuid(uuid0).build())
+					.withMottatteVarianter(MottattVariantBuilder().withUuid(uuid1).build())
+					.build(),
+				)
+			.build()
+
+
+		assertEquals(1, createOpprettJournalpostRequest(schema, files).dokumenter.first().dokumentvarianter.size)
+	}
+
+	@Test
 	fun `No Hovedskjema -- should throw exception`() {
 		val uuid0 = UUID.randomUUID().toString()
 		val uuid1 = UUID.randomUUID().toString()

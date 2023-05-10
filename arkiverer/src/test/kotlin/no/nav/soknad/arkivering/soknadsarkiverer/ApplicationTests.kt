@@ -138,6 +138,33 @@ class ApplicationTests : ContainerizedKafka() {
 	}
 
 	@Test
+	fun `Happy case - Putting events on Kafka with duplicate variantFormats for main document will cause filtered rest call to Joark`() {
+		val key = UUID.randomUUID().toString()
+		val fileIds = listOf(UUID.randomUUID().toString(),UUID.randomUUID().toString())
+		mockFilestorageIsWorking(listOf(fileIds[0] to filestorageContent, fileIds[1] to filestorageContent ))
+		mockJoarkIsWorking()
+		val soknadsarkivschema = createSoknadarkivschema(fileIds)
+
+		putDataOnKafkaTopic(key, soknadsarkivschema)
+
+		verifyProcessingEvents(key, mapOf(
+			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
+		))
+		verifyMockedPostRequests(1, journalPostUrl)
+		verifyDeleteRequestsToFilestorage(1)
+		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 0))
+		verifyKafkaMetric(key, mapOf(
+			"get files from filestorage" hasCount 1,
+			"send files to archive" hasCount 1,
+			"delete files from filestorage" hasCount 1
+		))
+		val requests = verifyPostRequest(journalPostUrl)
+		assertEquals(1, requests.size)
+		val request = objectMapper.readValue<OpprettJournalpostRequest>(requests[0].body)
+		verifyRequestDataToJoark(soknadsarkivschema, request)
+	}
+
+	@Test
 	fun `Sending in invalid data will not create Processing Events`() {
 		val key = UUID.randomUUID().toString()
 		val invalidData = "this string is not deserializable"
