@@ -66,7 +66,8 @@ class ReSendFailedApplicationsTests {
 	@Test
 	fun lagBase64Encoded() {
 		/*
-		Denne testen benyttes for å generere en Base64encoded string som kan legges inn som value i google secret.
+		Denne testen benyttes for å generere en Base64encoded string som kan legges inn som value i google secret, f.eks.
+		FAILED_APPLICATIONS=eyJpbm5zZW5kaW5nSWRzIjpbImFkZTU0NmFhLWJhM2QtNGZhMS04MGYyLTRiNmM3ZjExMmU1MyJdfQo=
 		 */
 		val jsonByteArray = readeBytesFromFile("innsendingsIds.json")
 
