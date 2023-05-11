@@ -48,13 +48,13 @@ class WebClientConfig(private val maxMessageSize: Int = 1024 * 1024 * 325) {
 			?: throw RuntimeException("Could not find oauth2 client config for archiveWebClient")
 
 		logClientProperties(properties)
-		val tcpClient = TcpClient.create()
+		val httpClient = HttpClient.create()
 			.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000)
-			.doOnConnected { connection: Connection ->
-				connection
-					.addHandlerLast(ReadTimeoutHandler(2 * 60))
-					.addHandlerLast(WriteTimeoutHandler(2 * 60))
+			.doOnConnected { conn -> conn
+				.addHandlerLast(ReadTimeoutHandler(4 * 60))
+				.addHandlerLast(WriteTimeoutHandler(4 * 60))
 			}
+
 		val exchangeStrategies = ExchangeStrategies.builder()
 			.codecs { configurer: ClientCodecConfigurer ->
 				configurer
@@ -66,7 +66,7 @@ class WebClientConfig(private val maxMessageSize: Int = 1024 * 1024 * 325) {
 		return WebClient.builder()
 			.filter(bearerTokenFilter(properties, oAuth2AccessTokenService))
 			.exchangeStrategies(exchangeStrategies)
-			.clientConnector(ReactorClientHttpConnector(HttpClient.from(tcpClient)))
+			.clientConnector(ReactorClientHttpConnector(httpClient))
 			.build()
 	}
 
