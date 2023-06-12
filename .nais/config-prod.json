@@ -5,7 +5,8 @@
 	"replicas-max": "4",
 	"ingress": "https://soknadsarkiverer-gcp.intern.nav.no",
 	"outbound": [
-		"soknadsfillager"
+		"soknadsfillager",
+		"innsending-api"
 	],
 	"outboundExternalHosts": [
 		"dokarkiv.prod-fss-pub.nais.io",
@@ -19,6 +20,7 @@
 	"joark-host": "https://dokarkiv.prod-fss-pub.nais.io",
 	"dokarkiv-scope": "api://prod-fss.teamdokumenthandtering.dokarkiv/.default",
 	"soknadsfillager-scope": "api://prod-gcp.team-soknad.soknadsfillager/.default",
+	"innsending-api-scope": "api://prod-gcp.team-soknad.innsending-api/.default",
 	"send-to-joark": "true",
 	"kafka-pool": "nav-prod",
 	"AZURE_TENANT": "nav.no"

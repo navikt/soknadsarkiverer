@@ -5,7 +5,8 @@
 	"replicas-max": "4",
 	"ingress": "https://soknadsarkiverer-gcp.intern.dev.nav.no",
 	"outbound": [
-		"soknadsfillager"
+		"soknadsfillager",
+		"innsending-api"
 	],
 	"outboundExternalHosts": [
 		"dokarkiv.dev-fss-pub.nais.io",
@@ -19,6 +20,7 @@
 	"joark-host": "https://dokarkiv.dev-fss-pub.nais.io",
 	"dokarkiv-scope": "api://dev-fss.teamdokumenthandtering.dokarkiv-q1/.default",
 	"soknadsfillager-scope": "api://dev-gcp.team-soknad.soknadsfillager/.default",
+	"innsending-api-scope": "api://dev-gcp.team-soknad.innsending-api/.default",
 	"send-to-joark": "true",
 	"kafka-pool": "nav-dev",
 	"AZURE_TENANT": "trygdeetaten.no"

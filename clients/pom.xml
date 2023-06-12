@@ -59,6 +59,7 @@
 						<goals>
 							<goal>generate</goal>
 						</goals>
+						<id>fillager</id>
 						<configuration>
 							<inputSpec>${project.basedir}/src/main/resources/soknadsfillager-api.yml</inputSpec>
 							<generatorName>kotlin</generatorName>
@@ -70,6 +71,25 @@
 								<groupId>no.nav.soknad.arkivering</groupId>
 								<artifactId>soknadsfillager-client</artifactId>
 								<packageName>no.nav.soknad.arkivering.soknadsfillager</packageName>
+							</configOptions>
+						</configuration>
+					</execution>
+					<execution>
+						<goals>
+							<goal>generate</goal>
+						</goals>
+						<id>innsending</id>
+						<configuration>
+							<inputSpec>${project.basedir}/src/main/resources/innsending-api.yml</inputSpec>
+							<generatorName>kotlin</generatorName>
+							<apiPackage>no.nav.soknad.innsending.api</apiPackage>
+							<modelPackage>no.nav.soknad.innsending.model</modelPackage>
+							<configOptions>
+								<serializationLibrary>jackson</serializationLibrary>
+								<omitGradlePluginVersions>true</omitGradlePluginVersions>
+								<groupId>no.nav.soknad.innsending</groupId>
+								<artifactId>innsending-api-client</artifactId>
+								<packageName>no.nav.soknad.innsending</packageName>
 							</configOptions>
 						</configuration>
 					</execution>

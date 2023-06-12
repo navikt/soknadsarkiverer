@@ -52,4 +52,7 @@ filestorage:
   files: /files/
   username: sender
   password: password
+innsendingapi:
+  host: http://localhost:2908
+  files: /files/
 

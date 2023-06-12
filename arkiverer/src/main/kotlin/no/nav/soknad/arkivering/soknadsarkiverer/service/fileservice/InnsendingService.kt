@@ -1,21 +1,20 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
-import no.nav.soknad.arkivering.soknadsfillager.api.FilesApi
-import no.nav.soknad.arkivering.soknadsfillager.api.HealthApi
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
+import no.nav.soknad.innsending.api.HealthApi
+import no.nav.soknad.innsending.api.HentInnsendteFilerApi
+import no.nav.soknad.innsending.model.SoknadFile
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 
 @Service
-class FilestorageService(
-	private val filesApi: FilesApi,
+class InnsendingService(
+	private val innsendingApi: HentInnsendteFilerApi,
 	private val healthApi: HealthApi,
 	private val metrics: ArchivingMetrics
-) : FileserviceInterface {
+) : FileserviceInterface  {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -24,7 +23,6 @@ class FilestorageService(
 		healthApi.ping()
 		return "pong"
 	}
-
 
 	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): FetchFileResponse {
 		val timer = metrics.filestorageGetLatencyStart()
@@ -43,35 +41,13 @@ class FilestorageService(
 	}
 
 	override fun deleteFilesFromFilestorage(key: String, data: Soknadarkivschema) {
-		val timer = metrics.filestorageDelLatencyStart()
-
-		val fileIds = getFileIds(data)
-		try {
-
-			logger.info("$key: Calling file storage to delete $fileIds")
-			deleteFiles(key, fileIds)
-			logger.info("$key: Deleted these files: $fileIds")
-
-			metrics.incDelFilestorageSuccesses()
-		} catch (e: Exception) {
-			metrics.incDelFilestorageErrors()
-			logger.warn(
-				"$key: Failed to delete files from file storage. Everything is saved to Joark correctly, " +
-					"so this error will be ignored. Affected file ids: '$fileIds'", e
-			)
-
-		} finally {
-			metrics.endTimer(timer)
-		}
 	}
 
 	private fun getFiles(key: String, fileIds: List<String>) =
 		mergeFetchResponses(fileIds.map { performGetCall(key, listOf(it)) } )
 
 	private fun mergeFetchResponses(responses: List<FetchFileResponse>): FetchFileResponse {
-		return if (responses == null || responses.isEmpty())
-			FetchFileResponse("ok", listOf(), null)
-		else if (responses.any{it.status== "error"})
+		return if (responses.any{it.status== "error"})
 			FetchFileResponse(status = "error", files = null, exception = responses.map{it.exception}.firstOrNull())
 		else if (responses.all{it.status == "deleted"})
 			FetchFileResponse(status = "deleted", files = null, exception = null)
@@ -81,27 +57,33 @@ class FilestorageService(
 			FetchFileResponse(status = "ok", files = responses.flatMap { it.files?:listOf() }.toList(), exception = null)
 	}
 
-	private fun deleteFiles(key: String, fileIds: List<String>) {
-		filesApi.deleteFiles(fileIds, key)
+	private fun mapToFileData(soknadFiles: List<SoknadFile>):List<FileData> {
+		return soknadFiles.stream().map{FileData(id=it.id, content = it.content, createdAt = it.createdAt, status = it.status )}.toList()
 	}
 
-	public fun performGetCall(key: String, fileIds: List<String>): FetchFileResponse {
+	private fun performGetCall(key: String, fileIds: List<String>): FetchFileResponse {
 		try {
-			if (fileIds.isEmpty()) return FetchFileResponse("ok", listOf(), null )
-			val files = filesApi.findFilesByIds(ids = fileIds, xInnsendingId = key, metadataOnly = false)
+			val files = innsendingApi.hentInnsendteFiler(uuid = fileIds, xInnsendingId = key)
 
 			if (files.all { it.status == "deleted" })
 				return FetchFileResponse(status = "deleted", files = null, exception = null)
 			if (files.any { it.status != "ok" })
-				return FetchFileResponse(status = "not-found", files = files, exception = null)
-			else return FetchFileResponse(status = "ok", files = files, exception = null)
+				return FetchFileResponse(status = "not-found", files = mapToFileData(files), exception = null)
+			/*
+							throw ArchivingException(
+								"$key: Files had different statuses: ${files.map { "${it.id} - ${it.status}" }}",
+								RuntimeException("$key: Got some, but not all files")
+							)
+			*/
+			else return FetchFileResponse(status = "ok", files = mapToFileData(files), exception = null)
 		} catch (ex: Exception) {
 			return FetchFileResponse(status = "error", files = null, exception = ex)
 		}
 	}
 
-
 	private fun getFileIds(data: Soknadarkivschema) =
 		data.mottatteDokumenter
 			.flatMap { it.mottatteVarianter.map { variant -> variant.uuid } }
 }
+
+

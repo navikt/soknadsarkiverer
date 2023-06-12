@@ -97,5 +97,7 @@ spec:
       value: {{dokarkiv-scope}}
     - name: SOKNADSFILLAGER_SCOPE
       value: {{soknadsfillager-scope}}
+    - name: INNSENDINGAPI_SCOPE
+      value: {{innsending-api-scope}}
     - name: SEND_TO_JOARK
       value: "{{send-to-joark}}"
