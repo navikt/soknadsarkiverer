@@ -18,7 +18,6 @@ class InnsendingService(
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-
 	override fun ping(): String {
 		healthApi.ping()
 		return "pong"

@@ -91,6 +91,8 @@ spec:
       value: {{kafka-metrics-topic}}
     - name: FILESTORAGE_HOST
       value: {{filestorage-host}}
+    - name: INNSENDING_API_HOST
+      value: {{innsending-api-host}}
     - name: JOARK_HOST
       value: {{joark-host}}
     - name: DOKARKIV_SCOPE

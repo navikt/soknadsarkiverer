@@ -64,7 +64,7 @@ filestorage:
   username: ${INNSENDING_USERNAME}
   password: ${INNSENDING_PASSWORD}
 innsendingapi:
-  host: ${INNSENDINGAPI_HOST}
+  host: ${INNSENDING_API_HOST}
   files: /files/
 
 

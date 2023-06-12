@@ -17,6 +17,7 @@
 	"kafka-message-topic": "team-soknad.privat-soknadinnsending-messages-v2-dev",
 	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v2-dev",
 	"filestorage-host": "https://soknadsfillager-gcp.intern.dev.nav.no",
+	"innsending-api-host": "https://innsending-api-gcp.intern.dev.nav.no",
 	"joark-host": "https://dokarkiv.dev-fss-pub.nais.io",
 	"dokarkiv-scope": "api://dev-fss.teamdokumenthandtering.dokarkiv-q1/.default",
 	"soknadsfillager-scope": "api://dev-gcp.team-soknad.soknadsfillager/.default",
