@@ -52,7 +52,7 @@ spec:
         - application: soknadsadmins
     outbound:
       rules:
-      {{#each outbound}}
+      {{#each outboundRules}}
         - application: "{{this}}"
       {{/each}}
       external:

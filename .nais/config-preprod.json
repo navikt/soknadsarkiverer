@@ -4,13 +4,14 @@
 	"replicas-min": "2",
 	"replicas-max": "4",
 	"ingress": "https://soknadsarkiverer-gcp.intern.dev.nav.no",
-	"outbound": [
+	"outboundRules": [
 		"soknadsfillager",
 		"innsending-api"
 	],
 	"outboundExternalHosts": [
 		"dokarkiv.dev-fss-pub.nais.io",
-		"soknadsfillager-gcp.intern.dev.nav.no"
+		"soknadsfillager-gcp.intern.dev.nav.no",
+		"innsending-api-gcp.intern.dev.nav.no"
 	],
 	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v2-dev",
 	"kafka-processingeventlog-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v2-dev",
