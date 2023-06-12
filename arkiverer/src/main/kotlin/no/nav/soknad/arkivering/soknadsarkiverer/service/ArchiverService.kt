@@ -62,10 +62,12 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 
 	fun makeParallelCallsToFetchFiles(key: String, data: Soknadarkivschema): List<FileData> {
 		return runBlocking {
-			val fileStorageResult = async { filestorageService.getFilesFromFilestorage(key, data) }
 			val innsendingApiResult = async { innsendingService.getFilesFromFilestorage(key, data) }
+			val fileStorageResult = async { filestorageService.getFilesFromFilestorage(key, data) }
 
 			val responses = listOf(fileStorageResult, innsendingApiResult).awaitAll()
+			logger.info("$key: respons fra filkilder ${responses.map{it.status}.toList()}")
+
 			val okResponse = responses.filter { it.status == "ok" }.firstOrNull()
 			if (okResponse != null) {
 				metrics.incGetFilestorageSuccesses()

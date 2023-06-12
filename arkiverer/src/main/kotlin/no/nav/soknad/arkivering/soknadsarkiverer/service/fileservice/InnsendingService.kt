@@ -31,7 +31,7 @@ class InnsendingService(
 
 			val fetchFileResponse = getFiles(key, fileIds)
 
-			logger.info("$key: Received ${fetchFileResponse.files?.size} files with a sum of ${fetchFileResponse.files?.sumOf { it.content?.size ?: 0 }} bytes")
+			logger.info("$key: Received ${fetchFileResponse.files?.size} files with a sum of ${fetchFileResponse.files?.sumOf { it.content?.size ?: 0 }} bytes from innsending-api")
 			return fetchFileResponse
 
 		} finally {
@@ -62,7 +62,9 @@ class InnsendingService(
 
 	private fun performGetCall(key: String, fileIds: List<String>): FetchFileResponse {
 		try {
+			logger.info("$key: Skal hente filer fra innsending-api $fileIds")
 			val files = innsendingApi.hentInnsendteFiler(uuid = fileIds, xInnsendingId = key)
+			logger.info("$key: Hentet soknadsFiler fra innsending-api ${files.map{it.status}.toList()}")
 
 			if (files.all { it.status == "deleted" })
 				return FetchFileResponse(status = "deleted", files = null, exception = null)
