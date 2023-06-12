@@ -28,7 +28,7 @@ class InnsendingService(
 		val timer = metrics.filestorageGetLatencyStart()
 		try {
 			val fileIds = getFileIds(data)
-			logger.info("$key: Getting files with ids: '$fileIds'")
+			logger.info("$key: Getting files from innsending-api with ids: '$fileIds'")
 
 			val fetchFileResponse = getFiles(key, fileIds)
 
@@ -69,14 +69,9 @@ class InnsendingService(
 				return FetchFileResponse(status = "deleted", files = null, exception = null)
 			if (files.any { it.status != "ok" })
 				return FetchFileResponse(status = "not-found", files = mapToFileData(files), exception = null)
-			/*
-							throw ArchivingException(
-								"$key: Files had different statuses: ${files.map { "${it.id} - ${it.status}" }}",
-								RuntimeException("$key: Got some, but not all files")
-							)
-			*/
 			else return FetchFileResponse(status = "ok", files = mapToFileData(files), exception = null)
 		} catch (ex: Exception) {
+			logger.error("performGetCall", ex)
 			return FetchFileResponse(status = "error", files = null, exception = ex)
 		}
 	}
