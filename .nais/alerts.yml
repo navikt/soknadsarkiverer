@@ -25,7 +25,7 @@ spec:
             alert_type: custom
             severity: warning
         - alert: High number of errors
-          expr: sum (increase(logd_messages_total{log_app="soknadsarkiverer",log_level=~"Error"}[5m])) > {{ number_of_errors }}
+          expr: sum (increase(log_messages_errors{app="soknadsarkiverer",level=~"Error"}[5m])) > {{ number_of_errors }}
           for: 5m
           annotations:
             title: "High number of errors logged"
