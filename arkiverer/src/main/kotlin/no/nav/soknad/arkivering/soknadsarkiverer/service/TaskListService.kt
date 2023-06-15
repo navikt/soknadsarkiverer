@@ -251,70 +251,79 @@ open class TaskListService(
 	}
 
 	private fun tryToArchive(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int) {
-		var nextState: EventTypes? = null
-		val timer = metrics.archivingLatencyStart()
-		val histogram = metrics.archivingLatencyHistogramStart(soknadarkivschema.arkivtema)
-		try {
-			logger.info("$key: Will now start to fetch files and send to the archive")
-			val files = archiverService.fetchFiles(key, soknadarkivschema)
+		CoroutineScope(Dispatchers.Default).launch {
+			var nextState: EventTypes? = null
+			val timer = metrics.archivingLatencyStart()
+			val histogram = metrics.archivingLatencyHistogramStart(soknadarkivschema.arkivtema)
+			try {
+				logger.info("$key: Will now start to fetch files and send to the archive")
+				val files = archiverService.fetchFiles(key, soknadarkivschema)
 
-			protectFromShutdownInterruption(applicationState) {
-				archiverService.archive(key, soknadarkivschema, files)
+				protectFromShutdownInterruption(applicationState) {
+					archiverService.archive(key, soknadarkivschema, files)
+					nextState = EventTypes.ARCHIVED
+				}
+
+				logger.info("$key: Finished sending to the archive")
+
+			} catch (e: ApplicationAlreadyArchivedException) {
+				// Log nothing, the Exceptions of this type are supposed to already have been logged
 				nextState = EventTypes.ARCHIVED
-			}
 
-			logger.info("$key: Finished sending to the archive")
-
-		} catch (e: ApplicationAlreadyArchivedException) {
-			// Log nothing, the Exceptions of this type are supposed to already have been logged
-			nextState = EventTypes.ARCHIVED
-
-		} catch (e: ArchivingException) {
-			if (attempt >= 3 || attempt >= secondsBetweenRetries.size - 1) {
-				// Logging as Error will trigger alerts. Only log as Error after there has been a few failures.
-				logger.error(e.message, e)
-			}
-			nextState = retry(key)
-		} catch (e: FilesAlreadyDeletedException) {
-			logger.warn("$key: All files gone from Filestorage, indicating that the application is already archived. " +
-				"Will continue without archiving")
-			nextState = EventTypes.FINISHED
-
-		} catch (e: Exception) {
-			nextState = when (e.cause) {
-				is FilesAlreadyDeletedException -> {
-					logger.warn("$key: All files gone from Filestorage, indicating that the application is already archived. " +
-						"Will continue without archiving")
-					EventTypes.ARCHIVED
+			} catch (e: ArchivingException) {
+				if (attempt >= 3 || attempt >= secondsBetweenRetries.size - 1) {
+					// Logging as Error will trigger alerts. Only log as Error after there has been a few failures.
+					logger.error(e.message, e)
 				}
-				is ApplicationAlreadyArchivedException -> {
-					logger.warn("$key: Application already archived. Will continue without archiving")
-					EventTypes.ARCHIVED
-				}
-				is ShuttingDownException -> {
-					logger.warn("$key: Will not start to archive - application is shutting down.")
-					null
-				}
-				else -> {
-					logger.error("$key: Error when performing scheduled task", e)
-					retry(key)
-				}
-			}
+				nextState = retry(key)
+			} catch (e: FilesAlreadyDeletedException) {
+				logger.warn(
+					"$key: All files gone from Filestorage, indicating that the application is already archived. " +
+						"Will continue without archiving"
+				)
+				nextState = EventTypes.FINISHED
 
-		} catch (t: Throwable) {
-			logger.error("$key: Serious error when performing scheduled task", t)
-			nextState = retry(key)
-			throw t
+			} catch (e: Exception) {
+				nextState = when (e.cause) {
+					is FilesAlreadyDeletedException -> {
+						logger.warn(
+							"$key: All files gone from Filestorage, indicating that the application is already archived. " +
+								"Will continue without archiving"
+						)
+						EventTypes.ARCHIVED
+					}
 
-		} finally {
-			metrics.endTimer(timer)
-			metrics.endHistogramTimer(histogram)
-			metrics.numberOfAttachmentHistogramSet(
-				soknadarkivschema.mottatteDokumenter.size.toDouble(),
-				soknadarkivschema.arkivtema
-			)
-			if (nextState != null && tasks[key] != null) {
-				setStateChange(key, nextState!!, soknadarkivschema, tasks[key]?.count!!)
+					is ApplicationAlreadyArchivedException -> {
+						logger.warn("$key: Application already archived. Will continue without archiving")
+						EventTypes.ARCHIVED
+					}
+
+					is ShuttingDownException -> {
+						logger.warn("$key: Will not start to archive - application is shutting down.")
+						null
+					}
+
+					else -> {
+						logger.error("$key: Error when performing scheduled task", e)
+						retry(key)
+					}
+				}
+
+			} catch (t: Throwable) {
+				logger.error("$key: Serious error when performing scheduled task", t)
+				nextState = retry(key)
+				throw t
+
+			} finally {
+				metrics.endTimer(timer)
+				metrics.endHistogramTimer(histogram)
+				metrics.numberOfAttachmentHistogramSet(
+					soknadarkivschema.mottatteDokumenter.size.toDouble(),
+					soknadarkivschema.arkivtema
+				)
+				if (nextState != null && tasks[key] != null) {
+					setStateChange(key, nextState!!, soknadarkivschema, tasks[key]?.count!!)
+				}
 			}
 		}
 	}

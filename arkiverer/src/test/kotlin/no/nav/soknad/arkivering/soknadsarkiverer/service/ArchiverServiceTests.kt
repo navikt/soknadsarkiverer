@@ -2,6 +2,9 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import io.mockk.*
 import io.prometheus.client.CollectorRegistry
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
@@ -90,8 +93,10 @@ class ArchiverServiceTests {
 		mockAlreadyArchivedException(key2)
 
 		val soknadschema = createSoknadarkivschema()
-		assertThrows<ApplicationAlreadyArchivedException> {
-			archiverService.archive(key2, soknadschema, archiverService.fetchFiles(key, soknadschema))
+		CoroutineScope(Dispatchers.Default).launch {
+			assertThrows<ApplicationAlreadyArchivedException> {
+				archiverService.archive(key2, soknadschema, archiverService.fetchFiles(key, soknadschema))
+			}
 		}
 	}
 
@@ -101,8 +106,9 @@ class ArchiverServiceTests {
 		val key = UUID.randomUUID().toString()
 		val soknadschema = createSoknadarkivschema()
 
-		archiverService.archive(key, soknadschema, archiverService.fetchFiles(key, soknadschema))
-
+		CoroutineScope(Dispatchers.Default).launch {
+			archiverService.archive(key, soknadschema, archiverService.fetchFiles(key, soknadschema))
+		}
 		verify(exactly = 1) { filestorageNotFound.getFilesFromFilestorage(eq(key), eq(soknadschema)) }
 		verify(exactly = 1) { innsendingApi.getFilesFromFilestorage(eq(key), eq(soknadschema)) }
 		verify(exactly = 1) { journalpostClient.opprettJournalpost(eq(key), eq(soknadschema), any()) }
@@ -114,10 +120,11 @@ class ArchiverServiceTests {
 
 		val key = UUID.randomUUID().toString()
 		val soknadschema = createSoknadarkivschema()
-		assertThrows<ArchivingException> {
-			archiverService.archive(key, soknadschema, archiverService.fetchFiles(key, soknadschema))
+		CoroutineScope(Dispatchers.Default).launch {
+			assertThrows<ArchivingException> {
+				archiverService.archive(key, soknadschema, archiverService.fetchFiles(key, soknadschema))
+			}
 		}
-
 	}
 
 	private fun mockAlreadyArchivedException(key: String) {

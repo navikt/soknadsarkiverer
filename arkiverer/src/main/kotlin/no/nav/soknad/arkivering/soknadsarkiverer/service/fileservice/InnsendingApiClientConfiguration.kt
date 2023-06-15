@@ -4,6 +4,7 @@ import no.nav.security.token.support.client.core.oauth2.OAuth2AccessTokenService
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.tokensupport.TokenService
 import okhttp3.OkHttpClient
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -13,6 +14,8 @@ import java.util.concurrent.TimeUnit
 @Configuration
 class InnsendingApiClientConfiguration {
 
+	private val logger = LoggerFactory.getLogger(javaClass)
+
 	@Bean
 	@Profile("prod | dev")
 	@Qualifier("innsendingApiClient")
@@ -21,6 +24,7 @@ class InnsendingApiClientConfiguration {
 		oAuth2AccessTokenService: OAuth2AccessTokenService
 	): OkHttpClient {
 
+		logger.info("**Initialisering av innsendingApiClient bean**")
 		val clientProperties = clientConfigProperties.registration["innsendingApi"]
 		val tokenService = TokenService(clientProperties!!, oAuth2AccessTokenService)
 
