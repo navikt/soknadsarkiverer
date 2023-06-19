@@ -90,6 +90,7 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 				}
 				})
 			.bodyToMono(OpprettJournalpostResponse::class.java)
+			.log()
 			.block()
 	}
 }
