@@ -1,13 +1,11 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsfillager.api.FilesApi
 import no.nav.soknad.arkivering.soknadsfillager.api.HealthApi
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 
 @Service
@@ -66,34 +64,32 @@ class FilestorageService(
 	}
 
 	private fun getFiles(key: String, fileIds: List<String>) =
-		mergeFetchResponses(fileIds.map { performGetCall(key, listOf(it)) } )
+		mergeFetchResponsesAndSetOverallStatus(key, fileIds.map { getOneFile(key, it) } )
 
-	private fun mergeFetchResponses(responses: List<FetchFileResponse>): FetchFileResponse {
-		return if (responses == null || responses.isEmpty())
-			FetchFileResponse("ok", listOf(), null)
-		else if (responses.any{it.status== "error"})
-			FetchFileResponse(status = "error", files = null, exception = responses.map{it.exception}.firstOrNull())
-		else if (responses.all{it.status == "deleted"})
-			FetchFileResponse(status = "deleted", files = null, exception = null)
-		else if (responses.any { it.status != "ok" })
-			FetchFileResponse(status = "not-found", files = responses.flatMap { it.files?:listOf() }.toList(), exception = null)
-		else
-			FetchFileResponse(status = "ok", files = responses.flatMap { it.files?:listOf() }.toList(), exception = null)
-	}
 
 	private fun deleteFiles(key: String, fileIds: List<String>) {
 		filesApi.deleteFiles(fileIds, key)
 	}
 
-	public fun performGetCall(key: String, fileIds: List<String>): FetchFileResponse {
-		try {
-			if (fileIds.isEmpty()) return FetchFileResponse("ok", listOf(), null )
-			val files = filesApi.findFilesByIds(ids = fileIds, xInnsendingId = key, metadataOnly = false)
+	private fun returnFirstOrNull(files: List<FileData>?): List<FileData>? {
+		if (files == null || files.isEmpty()) return null
+		return listOf(files.first())
+	}
 
-			if (files.all { it.status == "deleted" })
-				return FetchFileResponse(status = "deleted", files = null, exception = null)
-			if (files.any { it.status != "ok" })
-				return FetchFileResponse(status = "not-found", files = files, exception = null)
+	private fun getOneFile(key: String, fileId: String?): FetchFileResponse {
+		try {
+			if (fileId == null) return FetchFileResponse("ok", listOf(), null )
+			val files = filesApi.findFilesByIds(ids = listOf(fileId), xInnsendingId = key, metadataOnly = false)
+
+			if (files.size > 1) {
+				logger.error("$key: Fetched more than on files for attachment $fileId, Only using the first")
+			}
+			if (files.all {it.status == ResponseStatus.Ok.value})
+				return FetchFileResponse(status = ResponseStatus.Ok.value, files = returnFirstOrNull(files), exception = null)
+			if (files.all { it.status == ResponseStatus.NotFound.value })
+				return FetchFileResponse(status = ResponseStatus.NotFound.value, files = returnFirstOrNull(files), exception = null)
+			if (files.all { it.status == ResponseStatus.Deleted.value })
+				return FetchFileResponse(status = ResponseStatus.Deleted.value, files = null, exception = null)
 			else return FetchFileResponse(status = "ok", files = files, exception = null)
 		} catch (ex: Exception) {
 			return FetchFileResponse(status = "error", files = null, exception = ex)

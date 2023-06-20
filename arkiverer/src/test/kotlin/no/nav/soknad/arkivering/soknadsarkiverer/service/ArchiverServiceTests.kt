@@ -14,6 +14,8 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.InnsendingS
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -100,9 +102,13 @@ class ArchiverServiceTests {
 		}
 	}
 
+	var filer = slot<List<FileData>>()
+	private val journalpostClient2 = mockk<JournalpostClientInterface>().also {
+		every { it.opprettJournalpost(any(), any(), capture(filer)) } returns UUID.randomUUID().toString()
+	}
 	@Test
 	fun `Archiving succeeds when all is up and running`() {
-		archiverService = ArchiverService(filestorageNotFound, innsendingApi, journalpostClient, metrics, kafkaPublisher)
+		archiverService = ArchiverService(filestorageNotFound, innsendingApi, journalpostClient2, metrics, kafkaPublisher)
 		val key = UUID.randomUUID().toString()
 		val soknadschema = createSoknadarkivschema()
 
@@ -111,7 +117,10 @@ class ArchiverServiceTests {
 		}
 		verify(exactly = 1) { filestorageNotFound.getFilesFromFilestorage(eq(key), eq(soknadschema)) }
 		verify(exactly = 1) { innsendingApi.getFilesFromFilestorage(eq(key), eq(soknadschema)) }
-		verify(exactly = 1) { journalpostClient.opprettJournalpost(eq(key), eq(soknadschema), any()) }
+		verify(exactly = 1) { journalpostClient2.opprettJournalpost(eq(key), eq(soknadschema), any()) }
+		assertTrue(filer.isCaptured)
+		assertEquals(soknadschema.mottatteDokumenter.first().mottatteVarianter.size, filer.captured.size)
+
 	}
 
 	@Test

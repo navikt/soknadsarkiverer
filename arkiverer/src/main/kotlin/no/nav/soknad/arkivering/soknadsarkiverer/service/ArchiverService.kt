@@ -7,6 +7,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ShuttingDownException
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FetchFileResponse
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.InnsendingService
@@ -61,38 +62,48 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 	}
 
 	suspend fun makeParallelCallsToFetchFiles(key: String, data: Soknadarkivschema): List<FileData> {
-		return withContext(Dispatchers.IO)  {
+		return withContext(Dispatchers.IO) {
 			val innsendingApiResult = async { innsendingService.getFilesFromFilestorage(key, data) }
 			val fileStorageResult = async { filestorageService.getFilesFromFilestorage(key, data) }
 
 			val responses = listOf(fileStorageResult, innsendingApiResult).awaitAll()
-			logger.info("$key: respons fra filkilder ${responses.map{it.status}.toList()}")
+			logger.info("$key: respons fra filkilder ${responses.map { it.status }.toList()}")
 
-			val okResponse = responses.firstOrNull { it.status == "ok" }
-			if (okResponse != null) {
-				metrics.incGetFilestorageSuccesses()
-				if (okResponse.files != null) okResponse.files else listOf()
-			} else {
-					val deletedResponse = responses.firstOrNull { it.status == "deleted" }
-				if (deletedResponse != null) {
-						throw FilesAlreadyDeletedException("$key: All the files are deleted.")
-					} else {
-						metrics.incGetFilestorageErrors()
-						val notFoundResponse = responses.firstOrNull { it.status == "not-found" }
-					if (notFoundResponse?.files != null && notFoundResponse.files.any{it.status == "ok"})
-						throw ArchivingException(
-							"$key: Files had different statuses: ${notFoundResponse.files.map { "${it.id} - ${it.status}" }}",
-							RuntimeException("$key: Got some, but not all files")
-						)
-						val exceptionResponse = responses.firstOrNull { it.status == "error" }
-					throw ArchivingException(
-							"$key: Files not found",
-							if (exceptionResponse?.exception != null) exceptionResponse.exception
-							else RuntimeException("$key: Files not found")
-						)
-					}
-				}
+			selectAndReturnResponse(responses, key)
 		}
+	}
+
+	fun selectAndReturnResponse (
+		responses: List<FetchFileResponse>,
+		key: String
+	): List<FileData> {
+		val okResponse = responses.firstOrNull { it.status == "ok" }
+		if (okResponse != null) {
+			metrics.incGetFilestorageSuccesses()
+			if (okResponse.files != null)
+				return okResponse.files
+			else
+				return listOf()
+		}
+
+		val deletedResponse = responses.firstOrNull { it.status == "deleted" }
+		if (deletedResponse != null) {
+			throw FilesAlreadyDeletedException("$key: All the files are deleted.")
+		}
+
+		metrics.incGetFilestorageErrors()
+		val notFoundResponse = responses.firstOrNull { it.status == "not-found" }
+		if ((notFoundResponse?.files != null) && notFoundResponse.files.any { it.status == "ok" })
+			throw ArchivingException(
+				"$key: Files had different statuses: ${notFoundResponse.files.map { "${it.id} - ${it.status}" }}",
+				RuntimeException("$key: Got some, but not all files")
+			)
+		val exceptionResponse = responses.firstOrNull { it.status == "error" }
+		throw ArchivingException(
+			"$key: Files not found",
+			if (exceptionResponse?.exception != null) exceptionResponse.exception
+			else RuntimeException("$key: Files not found")
+		)
 	}
 
 	fun deleteFiles(key: String, data: Soknadarkivschema) {

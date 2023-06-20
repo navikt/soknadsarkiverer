@@ -18,17 +18,18 @@ class FilestorageClientConfiguration {
 	@Qualifier("filestorageClient")
 	fun filestorageClient(
 		clientConfigProperties: ClientConfigurationProperties,
-		oAuth2AccessTokenService: OAuth2AccessTokenService
+		oAuth2AccessTokenService: OAuth2AccessTokenService,
+		fileFetchTimeoutProperties: FileFetchTimeoutProperties
 	): OkHttpClient {
 
 		val clientProperties = clientConfigProperties.registration["soknadsfillager"]
 		val tokenService = TokenService(clientProperties!!, oAuth2AccessTokenService)
 
 		return OkHttpClient().newBuilder()
-			.connectTimeout(20, TimeUnit.SECONDS)
-			.callTimeout(62, TimeUnit.SECONDS)
-			.readTimeout(1,TimeUnit.MINUTES)
-			.writeTimeout(1, TimeUnit.MINUTES)
+			.connectTimeout(fileFetchTimeoutProperties.connectTimeout.toLong(), TimeUnit.SECONDS)
+			.callTimeout(fileFetchTimeoutProperties.callTimeout.toLong(), TimeUnit.SECONDS)
+			.readTimeout(fileFetchTimeoutProperties.readTimeout.toLong(), TimeUnit.MINUTES)
+			.writeTimeout(fileFetchTimeoutProperties.writeTimeout.toLong(), TimeUnit.MINUTES)
 			.addInterceptor {
 				val token = tokenService.getToken()
 

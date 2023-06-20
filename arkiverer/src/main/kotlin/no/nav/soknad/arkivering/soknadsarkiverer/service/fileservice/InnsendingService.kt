@@ -43,37 +43,42 @@ class InnsendingService(
 	}
 
 	private fun getFiles(key: String, fileIds: List<String>) =
-		mergeFetchResponses(fileIds.map { performGetCall(key, listOf(it)) } )
+		mergeFetchResponsesAndSetOverallStatus(key, fileIds.map { getOneFile(key, it) } )
 
-	private fun mergeFetchResponses(responses: List<FetchFileResponse>): FetchFileResponse {
-		return if (responses.any{it.status== "error"})
-			FetchFileResponse(status = "error", files = null, exception = responses.map{it.exception}.firstOrNull())
-		else if (responses.all{it.status == "deleted"})
-			FetchFileResponse(status = "deleted", files = null, exception = null)
-		else if (responses.any { it.status != "ok" })
-			FetchFileResponse(status = "not-found", files = responses.flatMap { it.files?:listOf() }.toList(), exception = null)
-		else
-			FetchFileResponse(status = "ok", files = responses.flatMap { it.files?:listOf() }.toList(), exception = null)
-	}
 
+/*
 	private fun mapToFileData(soknadFiles: List<SoknadFile>):List<FileData> {
-		return soknadFiles.stream().map{FileData(id=it.id, content = it.content, createdAt = it.createdAt, status = it.status )}.toList()
+		return soknadFiles.stream().map{ mapToFileData(it) }.toList()
+	}
+*/
+
+	private fun mapToFileData(soknadFile: SoknadFile?): List<FileData>? {
+		if (soknadFile == null) return null
+		return listOf(FileData(id=soknadFile.id, content = soknadFile.content, createdAt = soknadFile.createdAt, status = soknadFile.status))
 	}
 
-	private fun performGetCall(key: String, fileIds: List<String>): FetchFileResponse {
+	private fun getOneFile(key: String, fileId: String): FetchFileResponse {
 		try {
-			logger.info("$key: Skal hente filer fra innsending-api $fileIds")
-			val files = innsendingApi.hentInnsendteFiler(uuid = fileIds, xInnsendingId = key)
+			logger.info("$key: Skal hente filer fra innsending-api $fileId")
+			val files = innsendingApi.hentInnsendteFiler(uuid = listOf(fileId), xInnsendingId = key)
 			logger.info("$key: Hentet soknadsFiler fra innsending-api ${files.map{it.status}.toList()}")
 
-			if (files.all { it.status == "deleted" })
-				return FetchFileResponse(status = "deleted", files = null, exception = null)
-			if (files.any { it.status != "ok" })
-				return FetchFileResponse(status = "not-found", files = mapToFileData(files), exception = null)
-			else return FetchFileResponse(status = "ok", files = mapToFileData(files), exception = null)
+			if (files.size > 1) {
+				logger.error("$key: Fetched more than on files for attachment $fileId, Only using the first")
+			}
+
+			if (files.all{it.status == ResponseStatus.Ok.value})
+				return FetchFileResponse(status = ResponseStatus.Ok.value, files = mapToFileData(files.firstOrNull()), exception = null)
+			if (files.any{it.status == ResponseStatus.NotFound.value}) {
+				return FetchFileResponse(status = ResponseStatus.NotFound.value, files = mapToFileData(files.firstOrNull()), exception = null)
+			}
+			if (files.any{ it.status == ResponseStatus.Deleted.value }) {
+				return FetchFileResponse(status = ResponseStatus.Deleted.value, files = null, exception = null)
+			}
+			return FetchFileResponse(status = ResponseStatus.Error.value, files = null, exception = RuntimeException("$key: Feil ved henting av fil = $fileId"))
 		} catch (ex: Exception) {
-			logger.error("performGetCall", ex)
-			return FetchFileResponse(status = "error", files = null, exception = ex)
+			logger.error("$key: performGetCall", ex)
+			return FetchFileResponse(status = ResponseStatus.Error.value, files = null, exception = ex)
 		}
 	}
 

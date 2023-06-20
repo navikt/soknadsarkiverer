@@ -85,7 +85,7 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 					if (response.statusCode() == HttpStatus.CONFLICT) {
 						ApplicationAlreadyArchivedException("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'")
 					} else {
-						Exception("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'")
+						Exception("$key: Got ${response.statusCode()} when requesting $method $uri - response body: '$it'")
 					}
 				}
 				})
