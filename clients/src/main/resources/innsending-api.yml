@@ -120,6 +120,7 @@ paths:
                 $ref: "#/components/schemas/BodyStatusResponseDto"
       tags:
         - fyllUtSlettSoknad
+
   /fyllUt/v1/utfyltSoknad/{innsendingsId}:
     put:
       summary: Lagre en ferdig utfylt søknad
@@ -198,14 +199,15 @@ paths:
       tags:
         - aktiveSaker
 
-  /innsendte/v1/files/{uuid}:
+  /innsendte/v1/files/{uuids}:
     get:
       summary: Finds files with given uuids.
-      description: Given a list of uuids, this endpoint returns all files associated with those uuids. The files would be application, application variant and attachments
+      description: Given a list of uuids, this endpoint returns all files associated with those uuids. The files would be application, application variant and attachments.
+        If there are several files attached to a given uuid, the files are merged and returned as one file.
       operationId: hentInnsendteFiler
 
       parameters:
-        - name: uuid
+        - name: uuids
           in: path
           description: A list of uuids of files to be retrieved.
           required: true
@@ -1333,6 +1335,7 @@ components:
       type: object
       required:
         - id
+        - fileStatus
       properties:
         id:
           type: string
@@ -1350,8 +1353,9 @@ components:
           nullable: true
           description: Creation date and time in UTC
           example: 2021-12-03T14:10:00Z
-        status:
+        fileStatus:
           type: string
+          enum: ["ok", "not-found", "deleted"]
           description: current state of the file. Can be `deleted`, `not-found`, `ok`
           example: not-found
 
