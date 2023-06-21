@@ -52,25 +52,26 @@ class InnsendingService(
 	}
 */
 
-	private fun mapToFileData(soknadFile: SoknadFile?): List<FileData>? {
+	fun mapToFileInfo(soknadFile: SoknadFile?): List<FileInfo>? {
 		if (soknadFile == null) return null
-		return listOf(FileData(id=soknadFile.id, content = soknadFile.content, createdAt = soknadFile.createdAt, status = soknadFile.fileStatus.value))
+		return listOf(FileInfo(uuid=soknadFile.id, content = soknadFile.content, status = mapToResponseStatus(soknadFile.fileStatus)))
 	}
+
 
 	private fun getOneFile(key: String, fileId: String): FetchFileResponse {
 		try {
-			logger.info("$key: Skal hente filer fra innsending-api $fileId")
+			logger.info("$key: Skal hente fil fra innsending-api $fileId")
 			val files = innsendingApi.hentInnsendteFiler(uuids = listOf(fileId), xInnsendingId = key)
-			logger.info("$key: Hentet soknadsFiler fra innsending-api ${files.map{it.fileStatus}.toList()}")
+			logger.info("$key: Hentet fil fra innsending-api ${files.map{it.fileStatus}.toList()}")
 
 			if (files.size > 1) {
 				logger.error("$key: Fetched more than on files for attachment $fileId, Only using the first")
 			}
 
 			if (files.all{it.fileStatus == SoknadFile.FileStatus.ok})
-				return FetchFileResponse(status = ResponseStatus.Ok.value, files = mapToFileData(files.firstOrNull()), exception = null)
+				return FetchFileResponse(status = ResponseStatus.Ok.value, files = mapToFileInfo(files.firstOrNull()), exception = null)
 			if (files.any{it.fileStatus == SoknadFile.FileStatus.notMinusFound}) {
-				return FetchFileResponse(status = ResponseStatus.NotFound.value, files = mapToFileData(files.firstOrNull()), exception = null)
+				return FetchFileResponse(status = ResponseStatus.NotFound.value, files = mapToFileInfo(files.firstOrNull()), exception = null)
 			}
 			if (files.any{ it.fileStatus == SoknadFile.FileStatus.deleted }) {
 				return FetchFileResponse(status = ResponseStatus.Deleted.value, files = null, exception = null)

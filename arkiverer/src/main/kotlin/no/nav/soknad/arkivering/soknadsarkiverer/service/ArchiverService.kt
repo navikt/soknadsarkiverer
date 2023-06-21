@@ -7,10 +7,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ShuttingDownException
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FetchFileResponse
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileserviceInterface
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.InnsendingService
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.*
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.slf4j.LoggerFactory
@@ -26,7 +23,7 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 											private val kafkaPublisher: KafkaPublisher) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	fun archive(key: String, data: Soknadarkivschema, files: List<FileData>) {
+	fun archive(key: String, data: Soknadarkivschema, files: List<FileInfo>) {
 		try {
 			val startTime = System.currentTimeMillis()
 			val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
@@ -44,7 +41,7 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 		}
 	}
 
-	 suspend fun fetchFiles(key: String, data: Soknadarkivschema): List<FileData> {
+	 suspend fun fetchFiles(key: String, data: Soknadarkivschema): List<FileInfo> {
 		return try {
 			val startTime = System.currentTimeMillis()
 			val files = makeParallelCallsToFetchFiles(key, data)
@@ -61,7 +58,7 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 		}
 	}
 
-	suspend fun makeParallelCallsToFetchFiles(key: String, data: Soknadarkivschema): List<FileData> {
+	suspend fun makeParallelCallsToFetchFiles(key: String, data: Soknadarkivschema): List<FileInfo> {
 		return withContext(Dispatchers.IO) {
 			val innsendingApiResult = async { innsendingService.getFilesFromFilestorage(key, data) }
 			val fileStorageResult = async { filestorageService.getFilesFromFilestorage(key, data) }
@@ -76,8 +73,8 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 	fun selectAndReturnResponse (
 		responses: List<FetchFileResponse>,
 		key: String
-	): List<FileData> {
-		val okResponse = responses.firstOrNull { it.status == "ok" }
+	): List<FileInfo> {
+		val okResponse = responses.firstOrNull { it.status == ResponseStatus.Ok.value }
 		if (okResponse != null) {
 			metrics.incGetFilestorageSuccesses()
 			if (okResponse.files != null)
@@ -93,9 +90,9 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 
 		metrics.incGetFilestorageErrors()
 		val notFoundResponse = responses.firstOrNull { it.status == "not-found" }
-		if ((notFoundResponse?.files != null) && notFoundResponse.files.any { it.status == "ok" })
+		if ((notFoundResponse?.files != null) && notFoundResponse.files.any { it.status == ResponseStatus.Ok })
 			throw ArchivingException(
-				"$key: Files had different statuses: ${notFoundResponse.files.map { "${it.id} - ${it.status}" }}",
+				"$key: Files had different statuses: ${notFoundResponse.files.map { "${it.uuid} - ${it.status}" }}",
 				RuntimeException("$key: Got some, but not all files")
 			)
 		val exceptionResponse = responses.firstOrNull { it.status == "error" }

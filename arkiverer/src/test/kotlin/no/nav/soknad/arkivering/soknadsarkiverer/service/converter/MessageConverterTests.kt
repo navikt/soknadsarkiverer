@@ -4,6 +4,8 @@ import com.google.gson.Gson
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.converter.createOpprettJournalpostRequest
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattDokumentBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattVariantBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.SoknadarkivschemaBuilder
@@ -23,7 +25,7 @@ class MessageConverterTests {
 		val tittel = "Apa bepa"
 		val skjemanummer = "NAV 11-13.06"
 		val uuid = UUID.randomUUID().toString()
-		val files = listOf(FileData(uuid, "apa".toByteArray(), OffsetDateTime.now(ZoneOffset.UTC)))
+		val files = listOf(FileInfo(uuid, "apa".toByteArray(), ResponseStatus.Ok))
 
 		val schema = SoknadarkivschemaBuilder()
 			.withSoknadstype(Soknadstyper.SOKNAD)
@@ -53,7 +55,7 @@ class MessageConverterTests {
 		val tittel = "Apa bepa"
 		val skjemanummer = "NAV 11-13.06"
 		val uuid = UUID.randomUUID().toString()
-		val files = listOf(FileData(uuid, "apa".toByteArray(), OffsetDateTime.now(ZoneOffset.UTC)))
+		val files = listOf(FileInfo(uuid, "apa".toByteArray(), ResponseStatus.Ok))
 
 		val schema = SoknadarkivschemaBuilder()
 			.withSoknadstype(Soknadstyper.ETTERSENDING)
@@ -83,7 +85,7 @@ class MessageConverterTests {
 		val tittel = "Apa bepa"
 		val skjemanummer = "NAV 11-13.06"
 		val uuid = UUID.randomUUID().toString()
-		val files = listOf(FileData(uuid, "apa".toByteArray(), OffsetDateTime.now(ZoneOffset.UTC)))
+		val files = listOf(FileInfo(uuid, "apa".toByteArray(), ResponseStatus.Ok))
 
 		val schema = SoknadarkivschemaBuilder()
 			.withSoknadstype(Soknadstyper.ETTERSENDING)
@@ -122,10 +124,9 @@ class MessageConverterTests {
 		val uuid1 = UUID.randomUUID().toString()
 		val uuid2 = UUID.randomUUID().toString()
 		val uuid3 = UUID.randomUUID().toString()
-		val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
 		val files = listOf(
-			FileData(uuid0, "apa".toByteArray(), createdAt), FileData(uuid1, "bepa".toByteArray(), createdAt),
-			FileData(uuid2, "cepa".toByteArray(), createdAt), FileData(uuid3, "depa".toByteArray(), createdAt)
+			FileInfo(uuid0, "apa".toByteArray(), ResponseStatus.Ok), FileInfo(uuid1, "bepa".toByteArray(), ResponseStatus.Ok),
+			FileInfo(uuid2, "cepa".toByteArray(), ResponseStatus.Ok), FileInfo(uuid3, "depa".toByteArray(), ResponseStatus.Ok)
 		)
 
 
@@ -235,8 +236,7 @@ class MessageConverterTests {
 	fun `Several Hovedskjemas -- should throw exception`() {
 		val uuid0 = UUID.randomUUID().toString()
 		val uuid1 = UUID.randomUUID().toString()
-		val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
-		val files = listOf(FileData(uuid0, "apa".toByteArray(), createdAt), FileData(uuid1, "bepa".toByteArray(), createdAt))
+		val files = listOf(FileInfo(uuid0, "apa".toByteArray(), ResponseStatus.Ok), FileInfo(uuid1, "bepa".toByteArray(), ResponseStatus.Ok))
 
 		val schema = SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
@@ -263,8 +263,7 @@ class MessageConverterTests {
 	fun `Several documentvariants -- should check main document variantformats and filter duplicates`() {
 		val uuid0 = UUID.randomUUID().toString()
 		val uuid1 = UUID.randomUUID().toString()
-		val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
-		val files = listOf(FileData(uuid0, "apa".toByteArray(), createdAt), FileData(uuid1, "bepa".toByteArray(), createdAt))
+		val files = listOf(FileInfo(uuid0, "apa".toByteArray(), ResponseStatus.Ok), FileInfo(uuid1, "bepa".toByteArray(), ResponseStatus.Ok))
 
 		val schema = SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
@@ -285,8 +284,7 @@ class MessageConverterTests {
 	fun `No Hovedskjema -- should throw exception`() {
 		val uuid0 = UUID.randomUUID().toString()
 		val uuid1 = UUID.randomUUID().toString()
-		val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
-		val files = listOf(FileData(uuid0, "apa".toByteArray(), createdAt), FileData(uuid1, "bepa".toByteArray(), createdAt))
+		val files = listOf(FileInfo(uuid0, "apa".toByteArray(), ResponseStatus.Ok), FileInfo(uuid1, "bepa".toByteArray(), ResponseStatus.Ok))
 
 		val schema = SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
@@ -311,7 +309,7 @@ class MessageConverterTests {
 
 	@Test
 	fun `No MottatteDokumenter -- should throw exception`() {
-		val files = listOf(FileData(UUID.randomUUID().toString(), "apa".toByteArray(), OffsetDateTime.now(ZoneOffset.UTC)))
+		val files = listOf(FileInfo(UUID.randomUUID().toString(), "apa".toByteArray()))
 
 		val schema = SoknadarkivschemaBuilder().build()
 
@@ -323,7 +321,7 @@ class MessageConverterTests {
 
 	@Test
 	fun `No MottatteVarianter -- should throw exception`() {
-		val files = listOf(FileData(UUID.randomUUID().toString(), "apa".toByteArray(), OffsetDateTime.now(ZoneOffset.UTC)))
+		val files = listOf(FileInfo(UUID.randomUUID().toString(), "apa".toByteArray()))
 
 		val schema = SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
@@ -360,7 +358,7 @@ class MessageConverterTests {
 		val uuid1 = UUID.randomUUID().toString()
 		val uuidNotInFileList = UUID.randomUUID().toString()
 		val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
-		val files = listOf(FileData(uuid0, "apa".toByteArray(), createdAt), FileData(uuid1, "bepa".toByteArray(), createdAt))
+		val files = listOf(FileInfo(uuid0, "apa".toByteArray()), FileInfo(uuid1, "bepa".toByteArray()))
 
 		val schema = SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
@@ -379,7 +377,7 @@ class MessageConverterTests {
 	@Test
 	fun `Matching file is null -- should throw exception`() {
 		val uuid = UUID.randomUUID().toString()
-		val files = listOf(FileData(uuid, null, OffsetDateTime.now(ZoneOffset.UTC)))
+		val files = listOf(FileInfo(uuid, null))
 
 		val schema = SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
@@ -398,12 +396,11 @@ class MessageConverterTests {
 	@Test
 	fun `Real case - Ettersending - should convert correctly`() {
 		val expected = "NAVe 10-07.40"
-		val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
 		val files = listOf(
-			FileData("43121902-305c-4b31-b9ab-581f89f8da2c", "apa".toByteArray(), createdAt),
-			FileData("6e8db379-91c0-4395-ad95-c72dabea421c", "apa".toByteArray(), createdAt),
-			FileData("31115802-706f-4cde-8392-cd19b0edc777", "apa".toByteArray(), createdAt),
-			FileData("7311e586-c424-4898-a6b1-a2085ecf461d", "apa".toByteArray(), createdAt)
+			FileInfo("43121902-305c-4b31-b9ab-581f89f8da2c", "apa".toByteArray(), ResponseStatus.Ok),
+			FileInfo("6e8db379-91c0-4395-ad95-c72dabea421c", "apa".toByteArray(), ResponseStatus.Ok),
+			FileInfo("31115802-706f-4cde-8392-cd19b0edc777", "apa".toByteArray(), ResponseStatus.Ok),
+			FileInfo("7311e586-c424-4898-a6b1-a2085ecf461d", "apa".toByteArray(), ResponseStatus.Ok)
 		)
 
 		val schema = convertJsonTilInnsendtSoknad()

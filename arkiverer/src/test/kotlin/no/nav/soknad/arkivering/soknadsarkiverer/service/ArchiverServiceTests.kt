@@ -8,9 +8,7 @@ import kotlinx.coroutines.launch
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FetchFileResponse
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageService
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.InnsendingService
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.*
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
@@ -28,7 +26,7 @@ class ArchiverServiceTests {
 	private val filestorage = mockk<FilestorageService>().also {
 		every {
 		it.getFilesFromFilestorage(any(), any()) } returns FetchFileResponse(status = "ok",
-			listOf(FileData("id", "content".toByteArray(), now(), "ok")), exception = null)
+			listOf(FileInfo("id", "content".toByteArray(), ResponseStatus.Ok)), exception = null)
 	}
 	private val filestorageNotFound = mockk<FilestorageService>().also {
 		every {
@@ -48,7 +46,7 @@ class ArchiverServiceTests {
 	private val innsendingApi = mockk<InnsendingService>().also {
 		every {
 			it.getFilesFromFilestorage(any(), any()) } returns FetchFileResponse(status = "ok",
-			listOf(FileData("id", "content".toByteArray(), now(), "ok")), exception = null)
+			listOf(FileInfo("id", "content".toByteArray(),  ResponseStatus.Ok)), exception = null)
 	}
 	private val innsendingApiNotFound = mockk<InnsendingService>().also {
 		every {
@@ -102,7 +100,7 @@ class ArchiverServiceTests {
 		}
 	}
 
-	var filer = slot<List<FileData>>()
+	var filer = slot<List<FileInfo>>()
 	private val journalpostClient2 = mockk<JournalpostClientInterface>().also {
 		every { it.opprettJournalpost(any(), any(), capture(filer)) } returns UUID.randomUUID().toString()
 	}

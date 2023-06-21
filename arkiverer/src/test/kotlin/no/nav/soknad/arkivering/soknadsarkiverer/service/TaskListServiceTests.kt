@@ -8,6 +8,8 @@ import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
@@ -25,7 +27,7 @@ class TaskListServiceTests {
 
 	private	val scheduler = mockk<Scheduler>()
 	private val	archiverService = mockk<ArchiverService>().also {
-			every {	runBlocking{it.fetchFiles(any(), any())}} returns listOf(FileData("id", "content".toByteArray(), now(), "ok"))
+			every {	runBlocking{it.fetchFiles(any(), any())}} returns listOf(FileInfo("id", "content".toByteArray(), ResponseStatus.Ok))
 			every { it.archive(any(), any(), any()) } just Runs
 			every { it.deleteFiles(any(), any()) } just Runs
 		}

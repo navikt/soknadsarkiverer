@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
-import org.junit.jupiter.api.assertThrows
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -51,7 +50,7 @@ class FilestorageServiceTests {
 		val fetchFileResponse = filestorageService.getFilesFromFilestorage(key, soknadarkivschema)
 
 		assertEquals(numberOfFiles, fetchFileResponse.files!!.size)
-		//assertFileContentIsCorrect(fetchFileResponse.files)
+		assertFileContentIsCorrect(fetchFileResponse)
 		verify(exactly = 0) { filesApi.findFilesByIds(any(), any(), any()) }
 	}
 
@@ -63,7 +62,7 @@ class FilestorageServiceTests {
 		val fetchFileResponse = filestorageService.getFilesFromFilestorage(key, soknadarkivschema)
 
 		assertEquals(numberOfFiles, fetchFileResponse.files!!.size)
-		//assertFileContentIsCorrect(fetchFileResponse.files)
+		assertFileContentIsCorrect(fetchFileResponse)
 		verify(exactly = numberOfFiles) { filesApi.findFilesByIds(any(), any(), any()) }
 	}
 
@@ -138,12 +137,14 @@ class FilestorageServiceTests {
 	}
 
 
-	private fun assertFileContentIsCorrect(files: List<FileData>) {
+	private fun assertFileContentIsCorrect(fetchFileResponse: FetchFileResponse) {
+		val files = fetchFileResponse.files
+		assertTrue(files !=null)
 		assertAll("All files should have the right content",
-			files.map { result ->
+			files!!.map { result ->
 				{
 					assertEquals(
-						fileIdsAndResponses.first { it.first == result.id }.second,
+						fileIdsAndResponses.first { it.first == result.uuid }.second,
 						result.content?.map { it.toInt().toChar() }?.joinToString("")
 					)
 				}

@@ -71,9 +71,14 @@ class FilestorageService(
 		filesApi.deleteFiles(fileIds, key)
 	}
 
-	private fun returnFirstOrNull(files: List<FileData>?): List<FileData>? {
+	private fun returnFirstOrNull(files: List<FileData>?): List<FileInfo>? {
 		if (files == null || files.isEmpty()) return null
-		return listOf(files.first())
+		return mapToFileInfo(files.first())
+	}
+
+	fun mapToFileInfo(fileData: FileData?): List<FileInfo>? {
+		if (fileData == null) return null
+		return listOf(FileInfo(uuid=fileData.id, content = fileData.content, status = mapToResponseStatus(fileData.status?: "not-found")))
 	}
 
 	private fun getOneFile(key: String, fileId: String?): FetchFileResponse {
@@ -90,7 +95,8 @@ class FilestorageService(
 				return FetchFileResponse(status = ResponseStatus.NotFound.value, files = returnFirstOrNull(files), exception = null)
 			if (files.all { it.status == ResponseStatus.Deleted.value })
 				return FetchFileResponse(status = ResponseStatus.Deleted.value, files = null, exception = null)
-			else return FetchFileResponse(status = "ok", files = files, exception = null)
+			else
+				return FetchFileResponse(status = ResponseStatus.NotFound.value, files = returnFirstOrNull(files), exception = null)
 		} catch (ex: Exception) {
 			return FetchFileResponse(status = "error", files = null, exception = ex)
 		}
