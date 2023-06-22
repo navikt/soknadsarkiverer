@@ -2,7 +2,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
-import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import no.nav.soknad.innsending.api.HealthApi
 import no.nav.soknad.innsending.api.HentInnsendteFilerApi
 import no.nav.soknad.innsending.model.SoknadFile
@@ -45,12 +44,6 @@ class InnsendingService(
 	private fun getFiles(key: String, fileIds: List<String>) =
 		mergeFetchResponsesAndSetOverallStatus(key, fileIds.map { getOneFile(key, it) } )
 
-
-/*
-	private fun mapToFileData(soknadFiles: List<SoknadFile>):List<FileData> {
-		return soknadFiles.stream().map{ mapToFileData(it) }.toList()
-	}
-*/
 
 	fun mapToFileInfo(soknadFile: SoknadFile?): List<FileInfo>? {
 		if (soknadFile == null) return null
