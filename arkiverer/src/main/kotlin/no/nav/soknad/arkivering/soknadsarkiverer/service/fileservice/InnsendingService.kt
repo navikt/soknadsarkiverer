@@ -63,7 +63,7 @@ class InnsendingService(
 
 			if (files.all{it.fileStatus == SoknadFile.FileStatus.ok})
 				return FetchFileResponse(status = ResponseStatus.Ok.value, files = mapToFileInfo(files.firstOrNull()), exception = null)
-			if (files.any{it.fileStatus == SoknadFile.FileStatus.notMinusFound}) {
+			if (files.any{it.fileStatus == SoknadFile.FileStatus.notfound}) {
 				return FetchFileResponse(status = ResponseStatus.NotFound.value, files = mapToFileInfo(files.firstOrNull()), exception = null)
 			}
 			if (files.any{ it.fileStatus == SoknadFile.FileStatus.deleted }) {

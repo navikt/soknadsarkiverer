@@ -1355,8 +1355,8 @@ components:
           example: 2021-12-03T14:10:00Z
         fileStatus:
           type: string
-          enum: ["ok", "not-found", "deleted"]
-          description: current state of the file. Can be `deleted`, `not-found`, `ok`
+          enum: ["ok", "notfound", "deleted"]
+          description: current state of the file. Can be `deleted`, `notfound`, `ok`
           example: not-found
 
     Spraak:

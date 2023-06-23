@@ -27,7 +27,7 @@ fun mergeFetchResponsesAndSetOverallStatus(key: String, responses: List<FetchFil
 fun mapToResponseStatus(fileStatus:SoknadFile.FileStatus ): ResponseStatus {
 	return when(fileStatus) {
 		SoknadFile.FileStatus.ok -> ResponseStatus.Ok
-		SoknadFile.FileStatus.notMinusFound -> ResponseStatus.NotFound
+		SoknadFile.FileStatus.notfound -> ResponseStatus.NotFound
 		SoknadFile.FileStatus.deleted -> ResponseStatus.Deleted
 	}
 }
