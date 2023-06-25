@@ -1,5 +1,8 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.innsending.api.HealthApi
@@ -17,6 +20,8 @@ class InnsendingService(
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
+	private val inParallell = true
+
 	override fun ping(): String {
 		healthApi.ping()
 		return "pong"
@@ -28,7 +33,7 @@ class InnsendingService(
 			val fileIds = getFileIds(data)
 			logger.info("$key: Getting files from innsending-api with ids: '$fileIds'")
 
-			val fetchFileResponse = getFiles(key, fileIds)
+			val fetchFileResponse = if (inParallell) getFilesInParallell(key,fileIds) else  getFiles(key, fileIds)
 
 			logger.info("$key: Received ${fetchFileResponse.files?.size} files with a sum of ${fetchFileResponse.files?.sumOf { it.content?.size ?: 0 }} bytes from innsending-api")
 			return fetchFileResponse
@@ -50,6 +55,12 @@ class InnsendingService(
 		return listOf(FileInfo(uuid=soknadFile.id, content = soknadFile.content, status = mapToResponseStatus(soknadFile.fileStatus)))
 	}
 
+	private fun getFilesInParallell(key: String, fileIds: List<String>): FetchFileResponse {
+		return runBlocking {
+			val files = ( fileIds.map { async{ getOneFile(key, it) }}.toList()).awaitAll()
+			mergeFetchResponsesAndSetOverallStatus(key, files)
+		}
+	}
 
 	private fun getOneFile(key: String, fileId: String): FetchFileResponse {
 		try {
