@@ -2,17 +2,21 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import io.mockk.*
 import io.prometheus.client.CollectorRegistry
+import kotlinx.coroutines.*
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime.now
 import java.util.*
@@ -20,15 +24,17 @@ import java.util.*
 class TaskListServiceTests {
 
 	private val metrics: ArchivingMetrics = ArchivingMetrics(CollectorRegistry.defaultRegistry)
-	private val scheduler = mockk<Scheduler>()
-	private val archiverService = mockk<ArchiverService>().also {
-		every { it.fetchFiles(any(), any()) } returns listOf(FileData("id", "content".toByteArray(), now(), "ok"))
-		every { it.archive(any(), any(), any()) } just Runs
-		every { it.deleteFiles(any(), any()) } just Runs
-	}
-	private val kafkaPublisher = mockk<KafkaPublisher>().also {
-		every { it.putProcessingEventOnTopic(any(), any(), any()) } just Runs
-	}
+
+	private	val scheduler = mockk<Scheduler>()
+	private val	archiverService = mockk<ArchiverService>().also {
+			every {	runBlocking{it.fetchFiles(any(), any())}} returns listOf(FileInfo("id", "content".toByteArray(), ResponseStatus.Ok))
+			every { it.archive(any(), any(), any()) } just Runs
+			every { it.deleteFiles(any(), any()) } just Runs
+		}
+	private val	kafkaPublisher = mockk<KafkaPublisher>().also {
+			every { it.putProcessingEventOnTopic(any(), any(), any()) } just Runs
+		}
+
 
 	private val taskListService = TaskListService(
 		archiverService,

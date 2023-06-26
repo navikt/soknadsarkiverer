@@ -52,4 +52,12 @@ filestorage:
   files: /files/
   username: sender
   password: password
+innsendingapi:
+  host: http://localhost:2908
+
+filefetchtimeouts:
+  connectTimeout: 20
+  callTimeout: 62
+  readTimeout: 1
+  writeTimeout: 1
 

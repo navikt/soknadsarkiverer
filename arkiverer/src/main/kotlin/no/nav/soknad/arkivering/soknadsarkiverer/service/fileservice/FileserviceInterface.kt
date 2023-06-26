@@ -4,7 +4,7 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 
 interface FileserviceInterface {
-	fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): List<FileData>
+	fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): FetchFileResponse
 
 	fun deleteFilesFromFilestorage(key: String, data: Soknadarkivschema)
 

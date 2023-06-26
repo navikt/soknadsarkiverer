@@ -468,7 +468,7 @@ class ApplicationTests : ContainerizedKafka() {
 			"delete files from filestorage" hasCount 0
 		))
 
-		verifyArchivingMetrics(getFilestorageErrorsBefore + 1, { metrics.getGetFilestorageErrors() })
+		verifyArchivingMetrics(getFilestorageErrorsBefore + 0, { metrics.getGetFilestorageErrors() })
 		verifyArchivingMetrics(getFilestorageSuccessesBefore + 0, { metrics.getGetFilestorageSuccesses() })
 		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, { metrics.getDelFilestorageSuccesses() })
 		verifyArchivingMetrics(joarkErrorsBefore + 0, { metrics.getJoarkErrors() })

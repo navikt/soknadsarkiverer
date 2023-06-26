@@ -4,6 +4,7 @@ import no.nav.security.token.support.client.core.oauth2.OAuth2AccessTokenService
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.tokensupport.TokenService
 import okhttp3.OkHttpClient
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -11,18 +12,21 @@ import org.springframework.context.annotation.Profile
 import java.util.concurrent.TimeUnit
 
 @Configuration
-class FilestorageClientConfiguration {
+class InnsendingApiClientConfiguration {
+
+	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Bean
 	@Profile("prod | dev")
-	@Qualifier("filestorageClient")
-	fun filestorageClient(
+	@Qualifier("innsendingApiClient")
+	fun innsendingApiClient(
 		clientConfigProperties: ClientConfigurationProperties,
 		oAuth2AccessTokenService: OAuth2AccessTokenService,
 		fileFetchTimeoutProperties: FileFetchTimeoutProperties
 	): OkHttpClient {
 
-		val clientProperties = clientConfigProperties.registration["soknadsfillager"]
+		logger.info("**Initialisering av innsendingApiClient bean**")
+		val clientProperties = clientConfigProperties.registration["innsendingApi"]
 		val tokenService = TokenService(clientProperties!!, oAuth2AccessTokenService)
 
 		return OkHttpClient().newBuilder()
@@ -42,6 +46,7 @@ class FilestorageClientConfiguration {
 
 	@Bean
 	@Profile("!(prod | dev)")
-	@Qualifier("filestorageClient")
-	fun filestorageClientWithoutOAuth() = OkHttpClient.Builder().build()
+	@Qualifier("innsendingApiClient")
+	fun innsendingApiClientWithoutOAuth() = OkHttpClient.Builder().build()
+
 }

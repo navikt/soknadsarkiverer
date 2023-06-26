@@ -52,7 +52,7 @@ spec:
         - application: soknadsadmins
     outbound:
       rules:
-      {{#each outbound}}
+      {{#each outboundRules}}
         - application: "{{this}}"
       {{/each}}
       external:
@@ -91,11 +91,15 @@ spec:
       value: {{kafka-metrics-topic}}
     - name: FILESTORAGE_HOST
       value: {{filestorage-host}}
+    - name: INNSENDING_API_HOST
+      value: {{innsending-api-host}}
     - name: JOARK_HOST
       value: {{joark-host}}
     - name: DOKARKIV_SCOPE
       value: {{dokarkiv-scope}}
     - name: SOKNADSFILLAGER_SCOPE
       value: {{soknadsfillager-scope}}
+    - name: INNSENDING_API_SCOPE
+      value: {{innsending-api-scope}}
     - name: SEND_TO_JOARK
       value: "{{send-to-joark}}"

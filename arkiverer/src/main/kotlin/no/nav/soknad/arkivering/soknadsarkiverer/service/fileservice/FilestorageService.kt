@@ -1,7 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsfillager.api.FilesApi
 import no.nav.soknad.arkivering.soknadsfillager.api.HealthApi
@@ -25,27 +24,16 @@ class FilestorageService(
 	}
 
 
-	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): List<FileData> {
+	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): FetchFileResponse {
 		val timer = metrics.filestorageGetLatencyStart()
 		try {
 			val fileIds = getFileIds(data)
 			logger.info("$key: Getting files with ids: '$fileIds'")
 
-			val files = getFiles(key, fileIds)
+			val fetchFileResponse = getFiles(key, fileIds)
 
-			logger.info("$key: Received ${files.size} files with a sum of ${files.sumOf { it.content?.size ?: 0 }} bytes")
-			metrics.incGetFilestorageSuccesses()
-			return files
-
-		} catch (e: ArchivingException ) {
-			metrics.incGetFilestorageErrors()
-			throw e
-		} catch (e: FilesAlreadyDeletedException) {
-			metrics.incGetFilestorageErrors()
-			throw e
-		} catch (e: Exception) {
-			metrics.incGetFilestorageErrors()
-			throw ArchivingException(e.message ?: "", e)
+			logger.info("$key: Received ${fetchFileResponse.files?.size} files with a sum of ${fetchFileResponse.files?.sumOf { it.content?.size ?: 0 }} bytes")
+			return fetchFileResponse
 
 		} finally {
 			metrics.endTimer(timer)
@@ -75,22 +63,43 @@ class FilestorageService(
 		}
 	}
 
+	private fun getFiles(key: String, fileIds: List<String>) =
+		mergeFetchResponsesAndSetOverallStatus(key, fileIds.map { getOneFile(key, it) } )
 
-	private fun getFiles(key: String, fileIds: List<String>) = fileIds.map { performGetCall(key, listOf(it)) }.flatten()
 
 	private fun deleteFiles(key: String, fileIds: List<String>) {
 		filesApi.deleteFiles(fileIds, key)
 	}
 
-	private fun performGetCall(key: String, fileIds: List<String>): List<FileData> {
-		val files = filesApi.findFilesByIds(ids = fileIds, xInnsendingId = key, metadataOnly = false)
+	private fun returnFirstOrNull(files: List<FileData>?): List<FileInfo>? {
+		if (files == null || files.isEmpty()) return null
+		return mapToFileInfo(files.first())
+	}
 
-		if (files.all { it.status == "deleted" })
-			throw FilesAlreadyDeletedException("$key: All the files are deleted: $fileIds")
-		if (files.any { it.status != "ok" })
-			throw ArchivingException("$key: Files had different statuses: ${files.map { "${it.id} - ${it.status}" }}", RuntimeException("$key: Got some, but not all files"))
+	fun mapToFileInfo(fileData: FileData?): List<FileInfo>? {
+		if (fileData == null) return null
+		return listOf(FileInfo(uuid=fileData.id, content = fileData.content, status = mapToResponseStatus(fileData.status?: "not-found")))
+	}
 
-		return files
+	private fun getOneFile(key: String, fileId: String?): FetchFileResponse {
+		try {
+			if (fileId == null) return FetchFileResponse("ok", listOf(), null )
+			val files = filesApi.findFilesByIds(ids = listOf(fileId), xInnsendingId = key, metadataOnly = false)
+
+			if (files.size > 1) {
+				logger.error("$key: Fetched more than on files for attachment $fileId, Only using the first")
+			}
+			if (files.all {it.status == ResponseStatus.Ok.value})
+				return FetchFileResponse(status = ResponseStatus.Ok.value, files = returnFirstOrNull(files), exception = null)
+			if (files.all { it.status == ResponseStatus.NotFound.value })
+				return FetchFileResponse(status = ResponseStatus.NotFound.value, files = returnFirstOrNull(files), exception = null)
+			if (files.all { it.status == ResponseStatus.Deleted.value })
+				return FetchFileResponse(status = ResponseStatus.Deleted.value, files = null, exception = null)
+			else
+				return FetchFileResponse(status = ResponseStatus.NotFound.value, files = returnFirstOrNull(files), exception = null)
+		} catch (ex: Exception) {
+			return FetchFileResponse(status = "error", files = null, exception = ex)
+		}
 	}
 
 
