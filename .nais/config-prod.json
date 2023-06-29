@@ -6,7 +6,8 @@
 	"ingress": "https://soknadsarkiverer-gcp.intern.nav.no",
 	"outboundRules": [
 		"soknadsfillager",
-		"innsending-api"
+		"innsending-api",
+		"innsending-admin"
 	],
 	"outboundExternalHosts": [
 		"dokarkiv.prod-fss-pub.nais.io",
