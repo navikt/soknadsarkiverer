@@ -25,5 +25,10 @@
 	"innsending-api-scope": "api://prod-gcp.team-soknad.innsending-api/.default",
 	"send-to-joark": "true",
 	"kafka-pool": "nav-prod",
-	"AZURE_TENANT": "nav.no"
+	"AZURE_TENANT": "nav.no",
+	"AZURE_ALLOW_ALL_USERS": false,
+	"AZURE_ALLOWED_GROUPS": [
+		"5c4d5ed5-eeb8-4586-bf2f-3421ee98df40",
+		"6d98053f-362d-447e-a272-8132f278f42b"
+	]
 }
