@@ -1,5 +1,35 @@
 version: '2'
 services:
+  authserver:
+    image: ghcr.io/navikt/mock-oauth2-server:0.5.5
+    ports:
+      - "6969:6969"
+    environment:
+      TZ: Europe/Oslo
+      SERVER_PORT: 6969
+      JSON_CONFIG: '{
+    "interactiveLogin": true,
+    "httpServer": "NettyWrapper",
+    "tokenCallbacks": [
+      {
+        "issuerId": "azuread",
+        "tokenExpiry": 600000,
+        "requestMappings": [
+          {
+            "requestParam": "scope",
+            "match": "openid somescope",
+            "claims": {
+              "sub": "sendsoknad-boot",
+              "aud": "azuread-client-id",
+              "NAVident": "A123456",
+              "pid": "28898698736",
+              "name": "Test Testesen"
+            }
+          }
+        ]
+      }
+    ]
+  }'
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     environment:

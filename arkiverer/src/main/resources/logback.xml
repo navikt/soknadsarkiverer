@@ -3,13 +3,13 @@
 
 	<springProfile name="!local">
 		<appender name="STDOUT_JSON" class="ch.qos.logback.core.ConsoleAppender">
-			<encoder class="net.logstash.logback.encoder.LogstashEncoder" />
+			<encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
 		</appender>
 
-		<logger name="org.apache" level="${log.level.org.apache:-INFO}" />
-		<logger name="org.apache.kafka" level="${log.level.org.apache.kafka:-INFO}" />
-		<logger name="ch.qos.logback" level="${log.level.ch.qos.logback:-INFO}" />
-		<logger name="org.springframework" level="${log.level.org.springframework:-INFO}" />
+		<logger name="org.apache" level="${log.level.org.apache:-INFO}"/>
+		<logger name="org.apache.kafka" level="${log.level.org.apache.kafka:-INFO}"/>
+		<logger name="ch.qos.logback" level="${log.level.ch.qos.logback:-INFO}"/>
+		<logger name="org.springframework" level="${log.level.org.springframework:-INFO}"/>
 
 		<logger name="io" level="INFO"/>
 		<logger name="org" level="INFO"/>

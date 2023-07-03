@@ -34,7 +34,6 @@ class TaskListConfig {
 }
 
 @ConfigurationProperties("services.tasklist.scheduling")
-@ConstructorBinding
 data class TaskListProperties(
 	val startUpSeconds: Long,
 	val secondsBetweenRetries: List<Long>

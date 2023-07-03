@@ -12,28 +12,6 @@
 	<name>${project.artifactId}</name>
 	<description>Archives benefit applications</description>
 
-	<properties>
-		<arkivering-schemas.version>f52ace8dcc</arkivering-schemas.version>
-		<token-support.version>2.1.7</token-support.version>
-
-		<kafka.version>3.4.0</kafka.version>
-		<kafka-streams-avro-serde.version>7.2.2</kafka-streams-avro-serde.version>
-		<jackson-module-kotlin.version>2.13.4</jackson-module-kotlin.version>
-		<okhttp3.version>4.10.0</okhttp3.version>
-		<prometheus.client.version>0.16.0</prometheus.client.version>
-		<logstash.version>7.2</logstash.version>
-		<coroutines.version>1.6.4</coroutines.version>
-		<kotlin-serialization.version>1.4.1</kotlin-serialization.version>
-		<springdoc.version>1.6.12</springdoc.version>
-		<wiremock.version>2.27.2</wiremock.version>
-		<testcontainers.version>1.17.5</testcontainers.version>
-		<mockk.version>1.13.2</mockk.version>
-		<springmockk.version>3.1.1</springmockk.version>
-
-		<kotlin.version>1.7.20</kotlin.version>
-		<java.version>17</java.version>
-	</properties>
-
 	<dependencies>
 		<dependency>
 			<groupId>no.nav.soknad.arkivering</groupId>
@@ -231,6 +209,11 @@
 			<version>${mockk.version}</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>jakarta.annotation</groupId>
+			<artifactId>jakarta.annotation-api</artifactId>
+			<version>${jakarta-annotation.version}</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -244,6 +227,7 @@
 			<plugin>
 				<groupId>org.jetbrains.kotlin</groupId>
 				<artifactId>kotlin-maven-plugin</artifactId>
+				<version>${kotlin.version}</version>
 				<configuration>
 					<args>
 						<arg>-Xjsr305=strict</arg>
