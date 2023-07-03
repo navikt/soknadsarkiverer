@@ -16,11 +16,72 @@
 	<name>soknadsarkiverer</name>
 	<description>Archives benefit applications</description>
 
+	<properties>
+		<java.version>17</java.version>
+		<kotlin.version>1.8.22</kotlin.version>
+		<maven.version>3.2.5</maven.version>
+
+		<!--Plugins-->
+		<versions-maven-plugin.version>2.16.0</versions-maven-plugin.version>
+		<cyclonedx-maven-plugin.version>2.7.9</cyclonedx-maven-plugin.version>
+		<maven-enforcer.version>3.3.0</maven-enforcer.version>
+	</properties>
+
 
 	<modules>
 		<module>clients</module>
 		<module>arkiverer</module>
 	</modules>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>versions-maven-plugin</artifactId>
+				<version>${versions-maven-plugin.version}</version>
+				<configuration>
+					<rulesUri>file://${user.dir}/maven-version-rules.xml</rulesUri>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<version>${maven-enforcer.version}</version>
+				<executions>
+					<execution>
+						<id>enforce-maven</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<banDuplicatePomDependencyVersions/>
+								<requireMavenVersion>
+									<version>${maven.version}</version>
+								</requireMavenVersion>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- https://docs.nais.io/security/salsa/salsa/#known-limitations-->
+			<plugin>
+				<groupId>org.cyclonedx</groupId>
+				<artifactId>cyclonedx-maven-plugin</artifactId>
+				<version>${cyclonedx-maven-plugin.version}</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>makeAggregateBom</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
 
 	<repositories>
 		<repository>
