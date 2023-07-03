@@ -25,5 +25,7 @@
 	"innsending-api-scope": "api://dev-gcp.team-soknad.innsending-api/.default",
 	"send-to-joark": "true",
 	"kafka-pool": "nav-dev",
-	"AZURE_TENANT": "trygdeetaten.no"
+	"AZURE_TENANT": "trygdeetaten.no",
+	"AZURE_ALLOW_ALL_USERS": true,
+	"AZURE_ALLOWED_GROUPS": []
 }

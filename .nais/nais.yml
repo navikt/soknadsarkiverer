@@ -45,6 +45,12 @@ spec:
     application:
       enabled: true
       tenant: {{AZURE_TENANT}}
+      allowAllUsers: {{AZURE_ALLOW_ALL_USERS}}
+      claims:
+        groups:
+        {{#each AZURE_ALLOWED_GROUPS}}
+          - id: "{{this}}"
+        {{/each}}
 
   accessPolicy:
     inbound:
