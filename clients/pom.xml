@@ -12,20 +12,6 @@
 	<name>${project.artifactId}</name>
 	<description>Clients used by soknadsarkiverer</description>
 
-
-	<properties>
-		<jackson.version>2.13.4</jackson.version>
-		<okhttp3.version>4.10.0</okhttp3.version>
-
-		<openapi-generator-maven-plugin.version>6.2.0</openapi-generator-maven-plugin.version>
-		<remote-comparer-maven-plugin.version>1.0.5</remote-comparer-maven-plugin.version>
-
-		<kotlin.version>1.7.20</kotlin.version>
-		<java.version>17</java.version>
-
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-	</properties>
-
 	<dependencies>
 		<dependency>
 			<groupId>org.jetbrains.kotlin</groupId>
@@ -41,7 +27,7 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.module</groupId>
 			<artifactId>jackson-module-kotlin</artifactId>
-			<version>${jackson.version}</version>
+			<version>${jackson-module-kotlin.version}</version>
 		</dependency>
 	</dependencies>
 
@@ -66,6 +52,7 @@
 							<apiPackage>no.nav.soknad.arkivering.soknadsfillager.api</apiPackage>
 							<modelPackage>no.nav.soknad.arkivering.soknadsfillager.model</modelPackage>
 							<configOptions>
+								<useSpringBoot3>true</useSpringBoot3>
 								<serializationLibrary>jackson</serializationLibrary>
 								<omitGradlePluginVersions>true</omitGradlePluginVersions>
 								<groupId>no.nav.soknad.arkivering</groupId>
@@ -85,6 +72,7 @@
 							<apiPackage>no.nav.soknad.innsending.api</apiPackage>
 							<modelPackage>no.nav.soknad.innsending.model</modelPackage>
 							<configOptions>
+								<useSpringBoot3>true</useSpringBoot3>
 								<serializationLibrary>jackson</serializationLibrary>
 								<omitGradlePluginVersions>true</omitGradlePluginVersions>
 								<groupId>no.nav.soknad.innsending</groupId>

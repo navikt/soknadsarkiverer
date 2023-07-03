@@ -56,6 +56,9 @@ spec:
     inbound:
       rules:
         - application: innsending-admin
+        - application: debug-dings
+          namespace: plattformsikkerhet
+          cluster: dev-gcp
     outbound:
       rules:
       {{#each outboundRules}}

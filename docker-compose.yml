@@ -1,0 +1,53 @@
+version: '2'
+services:
+  authserver:
+    image: ghcr.io/navikt/mock-oauth2-server:0.5.5
+    ports:
+      - "6969:6969"
+    environment:
+      TZ: Europe/Oslo
+      SERVER_PORT: 6969
+      JSON_CONFIG: '{
+    "interactiveLogin": true,
+    "httpServer": "NettyWrapper",
+    "tokenCallbacks": [
+      {
+        "issuerId": "azuread",
+        "tokenExpiry": 600000,
+        "requestMappings": [
+          {
+            "requestParam": "scope",
+            "match": "openid somescope",
+            "claims": {
+              "sub": "sendsoknad-boot",
+              "aud": "azuread-client-id",
+              "NAVident": "A123456",
+              "pid": "28898698736",
+              "name": "Test Testesen"
+            }
+          }
+        ]
+      }
+    ]
+  }'
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 22181:2181
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - 29092:29092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1

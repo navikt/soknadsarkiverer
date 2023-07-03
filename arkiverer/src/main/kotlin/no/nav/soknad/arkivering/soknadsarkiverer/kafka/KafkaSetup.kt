@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Service
 import java.time.Instant
 import java.util.*
-import javax.annotation.PostConstruct
+import jakarta.annotation.PostConstruct
 
 @Service
 @Profile("!test")

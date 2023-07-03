@@ -1,21 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-	<appender name="STDOUT_JSON" class="ch.qos.logback.core.ConsoleAppender">
-		<encoder class="net.logstash.logback.encoder.LogstashEncoder" />
-	</appender>
 
-	<logger name="org.apache" level="${log.level.org.apache:-INFO}" />
-	<logger name="org.apache.kafka" level="${log.level.org.apache.kafka:-INFO}" />
-	<logger name="ch.qos.logback" level="${log.level.ch.qos.logback:-INFO}" />
-	<logger name="org.springframework" level="${log.level.org.springframework:-INFO}" />
+	<springProfile name="!local">
+		<appender name="STDOUT_JSON" class="ch.qos.logback.core.ConsoleAppender">
+			<encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+		</appender>
 
-	<logger name="io" level="INFO"/>
-	<logger name="org" level="INFO"/>
-	<logger name="com" level="INFO"/>
-	<logger name="no.nav" level="INFO"/>
-	<logger name="no.nav.soknad.arkivering" level="DEBUG"/>
+		<logger name="org.apache" level="${log.level.org.apache:-INFO}"/>
+		<logger name="org.apache.kafka" level="${log.level.org.apache.kafka:-INFO}"/>
+		<logger name="ch.qos.logback" level="${log.level.ch.qos.logback:-INFO}"/>
+		<logger name="org.springframework" level="${log.level.org.springframework:-INFO}"/>
 
-	<root level="INFO">
-		<appender-ref ref="STDOUT_JSON"/>
-	</root>
+		<logger name="io" level="INFO"/>
+		<logger name="org" level="INFO"/>
+		<logger name="com" level="INFO"/>
+		<logger name="no.nav" level="INFO"/>
+		<logger name="no.nav.soknad.arkivering" level="DEBUG"/>
+
+		<root level="INFO">
+			<appender-ref ref="STDOUT_JSON"/>
+		</root>
+	</springProfile>
+
+	<springProfile name="local">
+		<appender name="STDOUT_JSON" class="ch.qos.logback.core.ConsoleAppender">
+			<layout class="ch.qos.logback.classic.PatternLayout">
+				<pattern>
+					%green(%d{HH:mm:ss}) %cyan([%-5.5t]) %boldCyan(%0.-5p) %yellow(%logger{36}) %cyan(:) %m%n
+				</pattern>
+			</layout>
+		</appender>
+
+		<root level="INFO">
+			<appender-ref ref="STDOUT_JSON"/>
+		</root>
+	</springProfile>
 </configuration>

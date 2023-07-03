@@ -72,7 +72,6 @@ filestorage:
 innsendingapi:
   host: ${INNSENDING_API_HOST}
 
-
 ---
 spring:
   config:
@@ -83,9 +82,6 @@ spring:
 failedApplications: ${FAILED_APPLICATIONS}
 
 no.nav.security:
-  basic:
-    username: ${ADMIN_USER}
-    password: ${ADMIN_USER_PASSWORD}
   jwt:
     issuer.azuread:
         discoveryurl: ${AZURE_APP_WELL_KNOWN_URL}
