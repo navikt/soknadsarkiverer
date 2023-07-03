@@ -112,12 +112,14 @@ class ArchiverServiceTests {
 
 		CoroutineScope(Dispatchers.Default).launch {
 			archiverService.archive(key, soknadschema, archiverService.fetchFiles(key, soknadschema))
+
+			verify(exactly = 1) { filestorageNotFound.getFilesFromFilestorage(eq(key), eq(soknadschema)) }
+			verify(exactly = 1) { innsendingApi.getFilesFromFilestorage(eq(key), eq(soknadschema)) }
+			verify(exactly = 1) { journalpostClient2.opprettJournalpost(eq(key), eq(soknadschema), any()) }
+			assertTrue(filer.isCaptured)
+			assertEquals(soknadschema.mottatteDokumenter.first().mottatteVarianter.size, filer.captured.size)
+
 		}
-		verify(exactly = 1) { filestorageNotFound.getFilesFromFilestorage(eq(key), eq(soknadschema)) }
-		verify(exactly = 1) { innsendingApi.getFilesFromFilestorage(eq(key), eq(soknadschema)) }
-		verify(exactly = 1) { journalpostClient2.opprettJournalpost(eq(key), eq(soknadschema), any()) }
-		assertTrue(filer.isCaptured)
-		assertEquals(soknadschema.mottatteDokumenter.first().mottatteVarianter.size, filer.captured.size)
 
 	}
 
