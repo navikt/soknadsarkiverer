@@ -52,6 +52,7 @@
 							<apiPackage>no.nav.soknad.arkivering.soknadsfillager.api</apiPackage>
 							<modelPackage>no.nav.soknad.arkivering.soknadsfillager.model</modelPackage>
 							<configOptions>
+								<useSpringBoot3>true</useSpringBoot3>
 								<serializationLibrary>jackson</serializationLibrary>
 								<omitGradlePluginVersions>true</omitGradlePluginVersions>
 								<groupId>no.nav.soknad.arkivering</groupId>
@@ -71,6 +72,7 @@
 							<apiPackage>no.nav.soknad.innsending.api</apiPackage>
 							<modelPackage>no.nav.soknad.innsending.model</modelPackage>
 							<configOptions>
+								<useSpringBoot3>true</useSpringBoot3>
 								<serializationLibrary>jackson</serializationLibrary>
 								<omitGradlePluginVersions>true</omitGradlePluginVersions>
 								<groupId>no.nav.soknad.innsending</groupId>
