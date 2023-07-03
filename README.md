@@ -10,6 +10,14 @@ This component requires the following to work:
 * Joark (REST-endpoint for sending data)
 * Kafka broker (for providing input data)
 
+## API Users
+### Production
+These groups have API access in production:
+* [nais-team-fyllut-sendinn](https://myaccount.microsoft.com/groups/5c4d5ed5-eeb8-4586-bf2f-3421ee98df40) (5c4d5ed5-eeb8-4586-bf2f-3421ee98df40)
+* [Team Skjemadigitalisering](https://myaccount.microsoft.com/groups/6d98053f-362d-447e-a272-8132f278f42b) (6d98053f-362d-447e-a272-8132f278f42b)
+
+### Preprod
+Preprod requires an NAV preprod user
 
 ## Inquiries
 Questions regarding the code or the project can be asked to the team by [raising an issue on the repo](https://github.com/navikt/soknadsarkiverer/issues).

@@ -23,5 +23,7 @@
 	"soknadsfillager-scope": "api://dev-gcp.team-soknad.soknadsfillager-loadtests/.default",
 	"innsending-api-scope": "api://dev-gcp.team-soknad.innsending-api-loadtests/.default",
 	"send-to-joark": "true",
-	"kafka-pool": "nav-dev"
+	"kafka-pool": "nav-dev",
+	"AZURE_ALLOW_ALL_USERS": false,
+	"AZURE_ALLOWED_GROUPS": []
 }
