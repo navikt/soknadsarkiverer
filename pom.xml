@@ -35,7 +35,7 @@
 
 		<!--Kotlin-->
 		<kotlin-serialization.version>1.5.1</kotlin-serialization.version>
-		<coroutines.version>1.7.2</coroutines.version>
+		<coroutines.version>1.7.3</coroutines.version>
 
 		<!--Kafka-->
 		<kafka.version>3.5.0</kafka.version>
