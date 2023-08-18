@@ -27,9 +27,9 @@ open class TaskListService(
 	private val tasks = hashMapOf<String, Task>()
 	private val loggedTaskStates = hashMapOf<String, EventTypes>()
 	private val currentTaskStates = hashMapOf<String, EventTypes>()
-	private val jobMap = hashMapOf<String, Job>()
+//	private val jobMap = hashMapOf<String, Job>()
 
-	private val processRun: Boolean = false // Hvis true så vil all behandling av ulike states på søknader initieres fra topology. Pt vil testene feilene hvis = true
+	private val processRun: Boolean = true // Hvis true så vil all behandling av ulike states på søknader initieres fra topology. Pt vil testene feilene hvis = true
 
 	private val startUpEndTime = Instant.now().plusSeconds(startUpSeconds)
 
@@ -67,24 +67,30 @@ open class TaskListService(
 		metrics.addTask()
 		logger.info("$key: Created new task with state = $state")
 
-		startNewlyCreatedTask(key, state)
+		schedule(key, soknadarkivschema, 0)
 	}
 
+/*
 	private fun startNewlyCreatedTask(key: String, state: EventTypes) {
 		if (tasks[key] != null) {
 			jobMap[key] = GlobalScope.launch { start(key, state) } // Start new thread for handling archiving of application with key
 		}
 	}
+*/
 
 	private fun updateTaskState(key: String, state: EventTypes) {
 		if (tasks[key] != null) {
 			val task = tasks[key]!!
 			loggedTaskStates[key] = state
 			logger.debug("$key: Updated task, new state - $state")
+/*
 			if (processRun && task.isRunningLock.tryAcquire()) {
 				jobMap[key] = GlobalScope.launch { start(key, state) } // Start new thread for handling archiving of application with key
 			}
+*/
+
 			updateNoOfFailedMetrics()
+			schedule(key, task.value, task.count)
 		} else {
 			logger.debug("$key: Ignoring state - $state")
 		}
@@ -92,8 +98,8 @@ open class TaskListService(
 
 	private fun setStateChange(key: String, state: EventTypes, soknadarkivschema: Soknadarkivschema, attempt: Int) {
 		if (processRun) {
-			val jobThread = jobMap.remove(key)
-			jobThread?.cancel()
+//			val jobThread = jobMap.remove(key)
+//			jobThread?.cancel()
 			currentTaskStates[key] = state
 			tasks[key]?.isRunningLock?.release()
 			createProcessingEvent(key, state)
@@ -158,10 +164,12 @@ open class TaskListService(
 
 	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
 
+/*
 		if (tasks[key] == null || loggedTaskStates[key] == EventTypes.FAILURE || loggedTaskStates[key] == EventTypes.FINISHED) {
 			logger.warn("$key: Too many attempts ($attempt) or loggedstate ${loggedTaskStates[key]}, will not try again")
 
 		} else {
+*/
 			logger.debug("$key: In schedule. Attempts: ($attempt), loggedstate: ${loggedTaskStates[key]}, currentTaskState: ${currentTaskStates[key]}")
 
 			when (currentTaskStates[key]) {
@@ -175,12 +183,19 @@ open class TaskListService(
 					receivedState(key, soknadarkivschema, attempt)
 				}
 			}
-		}
+//		}
 	}
 
 	private fun receivedState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
-		logger.info("$key: state = RECEIVED. Ready for next state STARTED")
-		setStateChange(key, EventTypes.STARTED, soknadarkivschema, attempt)
+		if (tasks[key] != null && startUpEndTime.isAfter(Instant.now()) ) {
+			// When recreating state, there could be more state updates in the processLoggTopic.
+			// Wait a little while to make sure we don't start before all queued states are read inorder to process the most recent state.
+			val task = { receivedState(key, soknadarkivschema, attempt) }
+			scheduler.schedule(task, Instant.now().plusSeconds(startUpSeconds))
+		} else {
+			logger.info("$key: state = RECEIVED. Ready for next state STARTED")
+			setStateChange(key, EventTypes.STARTED, soknadarkivschema, attempt)
+		}
 	}
 
 	private fun archiveState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
@@ -197,7 +212,12 @@ open class TaskListService(
 
 	private fun deleteFilesState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
 		logger.info("$key: state = ARCHIVED. About to delete files in attempt $attempt")
-		tryToDeleteFiles(key, soknadarkivschema)
+		val task = {tryToDeleteFiles(key, soknadarkivschema)}
+		val scheduledTime = Instant.now().plusSeconds(0)
+		if (tasks[key]?.isBootstrappingTask == true)
+			scheduler.scheduleSingleTask(task, scheduledTime)
+		else
+			scheduler.schedule(task, scheduledTime)
 	}
 
 	// Remove task and cancel thread
@@ -207,12 +227,14 @@ open class TaskListService(
 			tasks.remove(key)
 			loggedTaskStates.remove(key)
 			metrics.removeTask()
+/*
 			val jobThread = jobMap.remove(key)
 			logger.info("$key: Finished task ${jobThread?.key}")
 			jobThread?.cancel()
+*/
 
 		} else {
-			logger.info("$key: Tried to finish task, but it is already finished ${jobMap.remove(key)?.key}")
+			logger.debug("$key: Already finished")
 		}
 	}
 
@@ -222,10 +244,10 @@ open class TaskListService(
 
 			loggedTaskStates[key] = EventTypes.FAILURE
 			updateNoOfFailedMetrics()
-			val jobThread = jobMap.remove(key)
+//			val jobThread = jobMap.remove(key)
 			logger.info("$key: Failed task")
 			tasks[key]?.isRunningLock?.release()
-			jobThread?.cancel()
+//			jobThread?.cancel()
 
 		} else {
 			logger.info("$key: Tried to fail task, but it is already finished")
