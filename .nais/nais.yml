@@ -114,3 +114,5 @@ spec:
       value: "{{send-to-joark}}"
     - name: SAF_URL
       value: "{{SAF_URL}}"
+    - name: SAF_SCOPE
+      value: "{{SAF_SCOPE}}"
