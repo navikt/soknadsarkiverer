@@ -54,7 +54,10 @@ filestorage:
   password: password
 innsendingapi:
   host: http://localhost:2908
-
+saf:
+  url: http://localhost:2908
+  path: /graphql
+applicationName: soknadsarkiverer
 filefetchtimeouts:
   connectTimeout: 20
   callTimeout: 62

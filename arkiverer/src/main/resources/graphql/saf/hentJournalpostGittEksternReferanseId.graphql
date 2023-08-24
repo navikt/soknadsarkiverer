@@ -1,0 +1,19 @@
+query ($journalpostId: String, $eksternReferanseId: String) {
+	journalpost(journalpostId: $journalpostId, eksternReferanseId: $eksternReferanseId) {
+		journalpostId
+		tittel
+		journalposttype
+		journalstatus
+		tema
+		bruker{
+			id
+			type
+		}
+		avsenderMottaker{
+			id
+			type
+		}
+		datoOpprettet
+		eksternReferanseId
+	}
+}

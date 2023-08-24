@@ -3,10 +3,10 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafService
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.ConfigurationProperties
-import org.springframework.boot.context.properties.ConstructorBinding
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -21,12 +21,14 @@ class TaskListConfig {
 	@Bean
 	fun taskListService(
 		archiverService: ArchiverService,
+		safService: SafService,
 		applicationState: ApplicationState,
 		scheduler: Scheduler,
 		metrics: ArchivingMetrics,
 		kafkaPublisher: KafkaPublisher
 	) = TaskListService(
 		archiverService,
+		safService,
 		taskListProperties.startUpSeconds,
 		taskListProperties.secondsBetweenRetries,
 		applicationState, scheduler, metrics, kafkaPublisher

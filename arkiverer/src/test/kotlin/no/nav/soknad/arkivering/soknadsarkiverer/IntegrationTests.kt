@@ -1,8 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
-import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.http.RequestMethod
-import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
@@ -52,7 +50,9 @@ class IntegrationTests : ContainerizedKafka() {
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
 	@Value("\${joark.journal-post}")
-	private lateinit var joarnalPostUrl: String
+	private lateinit var journalPostUrl: String
+	@Value("\${saf.path}")
+	private lateinit var safUrl: String
 	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 	private lateinit var kafkaProducerForBadData: KafkaProducer<String, String>
 
@@ -61,7 +61,7 @@ class IntegrationTests : ContainerizedKafka() {
 
 	@BeforeEach
 	fun setup() {
-		setupMockedNetworkServices(portToExternalServices!!, joarnalPostUrl, filestorageProperties.files)
+		setupMockedNetworkServices(portToExternalServices!!, journalPostUrl, filestorageProperties.files, safUrl )
 
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
@@ -77,11 +77,15 @@ class IntegrationTests : ContainerizedKafka() {
 		mockFilestorageIsWorking(fileId)
 		mockJoarkIsWorking()
 
-		val initialRequests = countRequests(joarnalPostUrl, RequestMethod.POST)
-		putDataOnKafkaTopic(createSoknadarkivschema())
+		val initialRequests = countRequests(journalPostUrl, RequestMethod.POST)
+		val soknadarkivschema = createSoknadarkivschema()
+		mockSafRequest_notFound(innsendingsId = soknadarkivschema.behandlingsid)
+		putDataOnKafkaTopic(soknadarkivschema)
+		val soknadarkivschema2= createSoknadarkivschema()
+		mockSafRequest_notFound(innsendingsId = soknadarkivschema2.behandlingsid)
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		verifyMockedPostRequests(initialRequests+2, joarnalPostUrl)
+		verifyMockedPostRequests(initialRequests+2, journalPostUrl)
 		verifyDeleteRequestsToFilestorage(2)
 	}
 
@@ -93,7 +97,7 @@ class IntegrationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic("this string is not deserializable")
 
 		TimeUnit.SECONDS.sleep(1)
-		verifyMockedPostRequests(0, joarnalPostUrl)
+		verifyMockedPostRequests(0, journalPostUrl)
 		verifyDeleteRequestsToFilestorage(0)
 	}
 
@@ -103,12 +107,39 @@ class IntegrationTests : ContainerizedKafka() {
 		mockJoarkIsWorking()
 
 		putDataOnKafkaTopic("this is not deserializable")
-		putDataOnKafkaTopic(createSoknadarkivschema())
+		val soknadarkivschema = createSoknadarkivschema()
+		mockSafRequest_notFound(innsendingsId = soknadarkivschema.behandlingsid)
+		putDataOnKafkaTopic(soknadarkivschema)
 
-		verifyMockedPostRequests(1, joarnalPostUrl)
+		verifyMockedPostRequests(1, journalPostUrl)
 		verifyDeleteRequestsToFilestorage(1)
 	}
 
+	@Test
+	fun `Application not sent to Joark if it is already archived`() {
+		mockFilestorageIsWorking(fileId)
+		mockJoarkIsWorking()
+
+		val soknadarkivschema = createSoknadarkivschema()
+		mockSafRequest_found(innsendingsId = soknadarkivschema.behandlingsid)
+		putDataOnKafkaTopic(soknadarkivschema)
+
+		verifyMockedPostRequests(0, journalPostUrl)
+		verifyDeleteRequestsToFilestorage(1)
+	}
+
+	@Test
+	fun `Application sent to Joark if error checking SAF`() {
+		mockFilestorageIsWorking(fileId)
+		mockJoarkIsWorking()
+
+		val soknadarkivschema = createSoknadarkivschema()
+		mockSafRequest_error(innsendingsId = soknadarkivschema.behandlingsid)
+		putDataOnKafkaTopic(soknadarkivschema)
+
+		verifyMockedPostRequests(1, journalPostUrl)
+		verifyDeleteRequestsToFilestorage(1)
+	}
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
 		val url = filestorageProperties.files + ".*"

@@ -11,7 +11,8 @@
 	"outboundExternalHosts": [
 		"dokarkiv.prod-fss-pub.nais.io",
 		"soknadsfillager-gcp.intern.nav.no",
-		"innsending-api-gcp.intern.nav.no"
+		"innsending-api-gcp.intern.nav.no",
+		"saf.prod-fss-pub.nais.io"
 	],
 	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v2",
 	"kafka-processingeventlog-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v2",
@@ -25,6 +26,8 @@
 	"innsending-api-scope": "api://prod-gcp.team-soknad.innsending-api/.default",
 	"send-to-joark": "true",
 	"kafka-pool": "nav-prod",
+	"SAF_URL": "https://saf.prod-fss-pub.nais.io",
+	"SAF_SCOPE": "api://prod-fss.teamdokumenthandtering.saf/.default",
 	"AZURE_TENANT": "nav.no",
 	"AZURE_ALLOW_ALL_USERS": false,
 	"AZURE_ALLOWED_GROUPS": [

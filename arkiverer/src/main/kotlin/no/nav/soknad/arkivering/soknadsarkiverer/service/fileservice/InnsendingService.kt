@@ -31,7 +31,7 @@ class InnsendingService(
 
 			val fetchFileResponse = getFiles(key, fileIds)
 
-			logger.info("$key: Received ${fetchFileResponse.files?.size} files with a sum of ${fetchFileResponse.files?.sumOf { it.content?.size ?: 0 }} bytes from innsending-api")
+			logger.info("$key: From innsending-api for filids ${fileIds} received status ${fetchFileResponse.status} with ${fetchFileResponse.files?.size} files with a sum of ${fetchFileResponse.files?.sumOf { it.content?.size ?: 0 }} bytes from innsending-api")
 			return fetchFileResponse
 
 		} finally {
