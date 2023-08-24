@@ -36,6 +36,7 @@ class SafService(
 			)
 			if (!response.errors.isNullOrEmpty()) {
 				handleErrors(innsendingId, response.errors!!, "saf")
+				return null
 			}
 			if (response.data != null && response.data!!.journalpost != null) {
 				return response.data!!.journalpost
@@ -44,7 +45,7 @@ class SafService(
 				return null
 			}
 		} catch (ex: Exception) {
-			logger.error("$innsendingId: Error calling SAF", ex)
+			logger.warn("$innsendingId: Error calling SAF", ex)
 			return null
 		}
 	}
@@ -53,8 +54,7 @@ class SafService(
 		val errorMessage = errors
 			.map { "${it.message} (feilkode: ${it.path} ${it.path?.forEach { e -> e.toString() }}" }
 			.joinToString(prefix = "Error i respons fra $system: ", separator = ", ") { it }
-		logger.error("$innsendingId: Oppslag mot $system feilet med $errorMessage")
-		throw RuntimeException("$innsendingId: Oppslag mot $system feilet. Fikk feil i responsen fra $system")
+		logger.info("$innsendingId: Oppslag mot $system feilet med $errorMessage")
 	}
 
 }
