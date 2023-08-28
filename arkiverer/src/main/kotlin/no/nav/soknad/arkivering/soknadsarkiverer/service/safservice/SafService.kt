@@ -5,6 +5,7 @@ import com.expediagroup.graphql.client.types.GraphQLClientError
 import kotlinx.coroutines.runBlocking
 import no.nav.soknad.arkiverer.saf.generated.HentJournalpostGittEksternReferanseId
 import no.nav.soknad.arkiverer.saf.generated.hentjournalpostgitteksternreferanseid.Journalpost
+import no.nav.soknad.arkivering.soknadsarkiverer.Constants
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Profile
@@ -32,16 +33,17 @@ class SafService(
 						eksternReferanseId = innsendingId
 					)
 				)
-			)
-			if (!response.errors.isNullOrEmpty()) {
+			) {
+				header(Constants.HEADER_CALL_ID, innsendingId)
+				header(Constants.CORRELATION_ID, innsendingId)
+			}
+			response.errors?.let  {
 				handleErrors(innsendingId, response.errors!!, "saf")
 				return null
 			}
-			if (response.data != null && response.data!!.journalpost != null) {
-				return response.data!!.journalpost
-			} else {
+			return response.data?.journalpost ?: run {
 				logger.info("$innsendingId: Ikke funnet i arkivet")
-				return null
+				null
 			}
 		} catch (ex: Exception) {
 			logger.warn("$innsendingId: Error calling SAF", ex)

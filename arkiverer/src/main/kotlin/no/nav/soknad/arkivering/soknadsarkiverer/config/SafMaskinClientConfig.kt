@@ -3,6 +3,10 @@ package no.nav.soknad.arkivering.soknadsarkiverer.config
 import com.expediagroup.graphql.client.spring.GraphQLWebClient
 import no.nav.security.token.support.client.core.oauth2.OAuth2AccessTokenService
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
+import no.nav.soknad.arkivering.soknadsarkiverer.Constants.BEARER
+import no.nav.soknad.arkivering.soknadsarkiverer.Constants.CORRELATION_ID
+import no.nav.soknad.arkivering.soknadsarkiverer.Constants.HEADER_CALL_ID
+import no.nav.soknad.arkivering.soknadsarkiverer.Constants.NAV_CONSUMER_ID
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
@@ -61,12 +65,10 @@ class SafMaskinClientConfig(
 				)
 			)
 			.defaultRequest {
-				it.header(HEADER_CALL_ID, UUID.randomUUID().toString())
-				it.header(CORRELATION_ID, UUID.randomUUID().toString())
 				it.header(NAV_CONSUMER_ID, applicationName)
 				it.header(
 					HttpHeaders.AUTHORIZATION,
-					"Bearer ${oAuth2AccessTokenService.getAccessToken(getClientProperties(oauth2Config)).accessToken}",
+					"$BEARER ${oAuth2AccessTokenService.getAccessToken(getClientProperties(oauth2Config)).accessToken}",
 				)
 			}
 	)
@@ -75,11 +77,5 @@ class SafMaskinClientConfig(
 
 	fun getClientProperties(oauth2Config: ClientConfigurationProperties) = oauth2Config.registration[safMaskintilmaskin]
 		?: throw RuntimeException("could not find oauth2 client config for $safMaskintilmaskin")
-
-	companion object {
-		const val NAV_CONSUMER_ID = "Nav-Consumer-Id"
-		const val HEADER_CALL_ID = "Nav-Call-Id"
-		const val CORRELATION_ID = "correlation_id"
-	}
 }
 

@@ -256,10 +256,6 @@
 							<queryFileDirectory>${project.basedir}/src/main/resources/graphql/saf</queryFileDirectory>
 							<schemaFile>${project.basedir}/src/main/resources/graphql/saf/saf.graphqls</schemaFile>
 							<packageName>no.nav.soknad.arkiverer.saf.generated</packageName>
-							<!-- optional configuration below -->
-							<!--
-							<serializer>KOTLINX</serializer>
-							-->
 						</configuration>
 					</execution>
 				</executions>

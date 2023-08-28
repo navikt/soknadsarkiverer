@@ -261,7 +261,6 @@ fun mockSafRequest_foundAfterAttempt(url: String? = safUrl, innsendingsId: Strin
 
 private fun createSafResponse_withJournalpost(innsendingsId: String): String {
 	val objectMapper = ObjectMapper()
-	objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
 	return objectMapper.writeValueAsString(
 		graphQlResponse(data = createSafJournalpostResponse(innsendingsId), errors = null, extensions = null)
 	)
@@ -270,7 +269,6 @@ private fun createSafResponse_withJournalpost(innsendingsId: String): String {
 private fun createSafResponse_withoutJournalpost(innsendingsId: String): String
 {
 	val objectMapper = ObjectMapper()
-	objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
 	return objectMapper.writeValueAsString(
 		graphQlResponse(data = null, errors = null, extensions = null))
 }
