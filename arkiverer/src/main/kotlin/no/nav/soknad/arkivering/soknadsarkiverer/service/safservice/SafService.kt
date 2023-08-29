@@ -8,12 +8,16 @@ import no.nav.soknad.arkiverer.saf.generated.hentjournalpostgitteksternreferanse
 import no.nav.soknad.arkivering.soknadsarkiverer.Constants
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.context.annotation.Profile
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
+import org.springframework.web.reactive.function.client.WebClient
 
 @Component
 class SafService(
-	@Qualifier("safWebClient") private val safWebClient: GraphQLWebClient
+	@Qualifier("safWebClientBuilder") private val safWebClientBuilder: WebClient.Builder,
+	@Value("\${saf.url}") private val safUrl: String,
+	@Value("\${saf.path}") private val queryPath: String
+
 ) : SafServiceInterface
 {
 	private val logger = LoggerFactory.getLogger(javaClass)
@@ -26,7 +30,15 @@ class SafService(
 
 	suspend fun execute(innsendingId: String): Journalpost? {
 		try {
-			val response = safWebClient.execute(
+			val graphQLClient = GraphQLWebClient(
+				url = "${safUrl}${queryPath}",
+				builder = safWebClientBuilder.clone()
+					.defaultHeader(Constants.HEADER_CALL_ID, innsendingId)
+					.defaultHeader(Constants.CORRELATION_ID, innsendingId)
+			)
+
+
+			val response = graphQLClient.execute(
 				HentJournalpostGittEksternReferanseId(
 					HentJournalpostGittEksternReferanseId.Variables(
 						journalpostId = null,
@@ -34,7 +46,6 @@ class SafService(
 					)
 				)
 			) {
-				header(Constants.HEADER_CALL_ID, innsendingId)
 				header(Constants.CORRELATION_ID, innsendingId)
 			}
 			response.errors?.let  {

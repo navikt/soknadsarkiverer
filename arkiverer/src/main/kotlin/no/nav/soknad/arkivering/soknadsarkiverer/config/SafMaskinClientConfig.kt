@@ -36,7 +36,12 @@ class SafMaskinClientConfig(
 	@Profile("!(prod | dev)")
 	@Qualifier("safWebClient")
 	fun safTestWebClient(): GraphQLWebClient =
-		GraphQLWebClient(url = "${safUrl}${queryPath}", builder = WebClient.builder())
+		GraphQLWebClient(url = "${safUrl}${queryPath}",
+			builder = WebClient.builder()
+				.defaultRequest {
+					it.header(NAV_CONSUMER_ID, applicationName)
+				}
+		)
 
 	@Bean
 	@Profile("prod | dev")
@@ -72,6 +77,48 @@ class SafMaskinClientConfig(
 				)
 			}
 	)
+
+	@Bean
+	@Profile("!(prod | dev)")
+	@Qualifier("safWebClientBuilder")
+	fun safTestWebClientBuilder(): WebClient.Builder =
+		WebClient.builder()
+				.defaultRequest {
+					it.header(NAV_CONSUMER_ID, applicationName)
+				}
+
+	@Bean
+	@Profile("prod | dev")
+	@Qualifier("safWebClientBuilder")
+	fun safWebClientBuilder(
+		oauth2Config: ClientConfigurationProperties,
+		oAuth2AccessTokenService: OAuth2AccessTokenService
+	) = WebClient.builder()
+			.clientConnector(
+				ReactorClientHttpConnector(
+					HttpClient.create()
+						.doOnRequest { request: HttpClientRequest, _ ->
+							logger.info("{} {} {}", request.version(), request.method(), request.resourceUrl())
+						}
+						.doOnResponse { response: HttpClientResponse, _ ->
+							logger.info(
+								"{} - {} {} {}",
+								response.status().toString(),
+								response.version(),
+								response.method(),
+								response.resourceUrl()
+							)
+						}
+				)
+			)
+			.defaultRequest {
+				it.header(NAV_CONSUMER_ID, applicationName)
+				it.header(
+					HttpHeaders.AUTHORIZATION,
+					"$BEARER ${oAuth2AccessTokenService.getAccessToken(getClientProperties(oauth2Config)).accessToken}",
+				)
+			}
+
 
 	private val safMaskintilmaskin = "saf-maskintilmaskin"
 
