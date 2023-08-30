@@ -112,3 +112,7 @@ spec:
       value: {{innsending-api-scope}}
     - name: SEND_TO_JOARK
       value: "{{send-to-joark}}"
+    - name: SAF_URL
+      value: "{{SAF_URL}}"
+    - name: SAF_SCOPE
+      value: "{{SAF_SCOPE}}"

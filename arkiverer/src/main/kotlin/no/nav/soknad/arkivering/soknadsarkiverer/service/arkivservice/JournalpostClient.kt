@@ -1,6 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice
 
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.Constants.NAV_CONSUMER_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.ApplicationAlreadyArchivedException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.OpprettJournalpostRequest
@@ -28,7 +29,7 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	val bidClient: WebClient = webClient.mutate().defaultHeader("Nav-Consumer-Id", "dialogstyring-bidrag").build()
+	val bidClient: WebClient = webClient.mutate().defaultHeader(NAV_CONSUMER_ID, "dialogstyring-bidrag").build()
 
 	override fun opprettJournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FileInfo>): String {
 		val timer = metrics.joarkLatencyStart()

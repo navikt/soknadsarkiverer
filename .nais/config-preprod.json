@@ -11,7 +11,8 @@
 	"outboundExternalHosts": [
 		"dokarkiv.dev-fss-pub.nais.io",
 		"soknadsfillager-gcp.intern.dev.nav.no",
-		"innsending-api-gcp.intern.dev.nav.no"
+		"innsending-api-gcp.intern.dev.nav.no",
+		"saf.dev-fss-pub.nais.io"
 	],
 	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v2-dev",
 	"kafka-processingeventlog-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v2-dev",
@@ -25,6 +26,8 @@
 	"innsending-api-scope": "api://dev-gcp.team-soknad.innsending-api/.default",
 	"send-to-joark": "true",
 	"kafka-pool": "nav-dev",
+	"SAF_URL": "https://saf.dev-fss-pub.nais.io",
+	"SAF_SCOPE": "api://dev-fss.teamdokumenthandtering.saf-q1/.default",
 	"AZURE_TENANT": "trygdeetaten.no",
 	"AZURE_ALLOW_ALL_USERS": true,
 	"AZURE_ALLOWED_GROUPS": []

@@ -10,15 +10,13 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
+import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafServiceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
-import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import java.time.OffsetDateTime.now
 import java.util.*
 
 class TaskListServiceTests {
@@ -35,9 +33,11 @@ class TaskListServiceTests {
 			every { it.putProcessingEventOnTopic(any(), any(), any()) } just Runs
 		}
 
+	private val safService = mockk<SafServiceInterface>()
 
 	private val taskListService = TaskListService(
 		archiverService,
+		safService,
 		0,
 		listOf(0, 0, 0, 0, 0, 0),
 		ApplicationState(),

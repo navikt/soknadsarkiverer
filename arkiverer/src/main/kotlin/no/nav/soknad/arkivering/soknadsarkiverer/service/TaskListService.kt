@@ -7,6 +7,7 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.*
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException
+import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafServiceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.slf4j.LoggerFactory
 import java.time.Instant
@@ -15,6 +16,7 @@ import java.util.concurrent.Semaphore
 
 open class TaskListService(
 	private val archiverService: ArchiverService,
+	private val safService: SafServiceInterface,
 	private val startUpSeconds: Long,
 	private val secondsBetweenRetries: List<Long>,
 	private val applicationState: ApplicationState,
@@ -278,6 +280,7 @@ open class TaskListService(
 			val timer = metrics.archivingLatencyStart()
 			val histogram = metrics.archivingLatencyHistogramStart(soknadarkivschema.arkivtema)
 			try {
+				checkIfAlreadyArchived(key)
 				logger.info("$key: Will now start to fetch files and send to the archive")
 				val files = archiverService.fetchFiles(key, soknadarkivschema)
 
@@ -347,6 +350,19 @@ open class TaskListService(
 					setStateChange(key, nextState!!, soknadarkivschema, tasks[key]?.count!!)
 				}
 			}
+		}
+	}
+
+	private fun checkIfAlreadyArchived(key: String) {
+		val journalpost = try {
+			 safService.hentJournalpostGittInnsendingId(key)
+		} catch (ex: Exception) {
+			logger.warn("$key: Call to SAF service failed", ex)
+			return
+		}
+		if (journalpost != null) {
+			logger.info("$key: archived ${journalpost.datoOpprettet}")
+			throw ApplicationAlreadyArchivedException("$key: archived ${journalpost.datoOpprettet}")
 		}
 	}
 
