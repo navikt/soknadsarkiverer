@@ -74,6 +74,12 @@
 			<artifactId>jackson-module-kotlin</artifactId>
 			<version>${jackson-module-kotlin.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>com.expediagroup</groupId>
+			<artifactId>graphql-kotlin-spring-client</artifactId>
+			<version>${graphql-kotlin.version}</version>
+			<scope>compile</scope>
+		</dependency>
 
 		<dependency>
 			<groupId>org.apache.kafka</groupId>
@@ -235,6 +241,24 @@
 						<version>${kotlin.version}</version>
 					</dependency>
 				</dependencies>
+			</plugin>
+			<plugin>
+				<groupId>com.expediagroup</groupId>
+				<artifactId>graphql-kotlin-maven-plugin</artifactId>
+				<version>${graphql-kotlin.version}</version>
+				<executions>
+					<execution>
+						<id>generate-saf-client</id>
+						<goals>
+							<goal>generate-client</goal>
+						</goals>
+						<configuration>
+							<queryFileDirectory>${project.basedir}/src/main/resources/graphql/saf</queryFileDirectory>
+							<schemaFile>${project.basedir}/src/main/resources/graphql/saf/saf.graphqls</schemaFile>
+							<packageName>no.nav.soknad.arkiverer.saf.generated</packageName>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>
