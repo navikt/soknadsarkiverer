@@ -1,11 +1,8 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
-import com.expediagroup.graphql.client.spring.GraphQLWebClient
 import no.nav.security.token.support.client.core.oauth2.OAuth2AccessTokenService
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.Constants.BEARER
-import no.nav.soknad.arkivering.soknadsarkiverer.Constants.CORRELATION_ID
-import no.nav.soknad.arkivering.soknadsarkiverer.Constants.HEADER_CALL_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.Constants.NAV_CONSUMER_ID
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
@@ -31,52 +28,6 @@ class SafMaskinClientConfig(
 ) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-
-	@Bean
-	@Profile("!(prod | dev)")
-	@Qualifier("safWebClient")
-	fun safTestWebClient(): GraphQLWebClient =
-		GraphQLWebClient(url = "${safUrl}${queryPath}",
-			builder = WebClient.builder()
-				.defaultRequest {
-					it.header(NAV_CONSUMER_ID, applicationName)
-				}
-		)
-
-	@Bean
-	@Profile("prod | dev")
-	@Qualifier("safWebClient")
-	fun safGraphQLWebClient(
-		oauth2Config: ClientConfigurationProperties,
-		oAuth2AccessTokenService: OAuth2AccessTokenService
-		) = GraphQLWebClient(
-		url = "${safUrl}${queryPath}",
-		builder = WebClient.builder()
-			.clientConnector(
-				ReactorClientHttpConnector(
-					HttpClient.create()
-						.doOnRequest { request: HttpClientRequest, _ ->
-							logger.info("{} {} {}", request.version(), request.method(), request.resourceUrl())
-						}
-						.doOnResponse { response: HttpClientResponse, _ ->
-							logger.info(
-								"{} - {} {} {}",
-								response.status().toString(),
-								response.version(),
-								response.method(),
-								response.resourceUrl()
-							)
-						}
-				)
-			)
-			.defaultRequest {
-				it.header(NAV_CONSUMER_ID, applicationName)
-				it.header(
-					HttpHeaders.AUTHORIZATION,
-					"$BEARER ${oAuth2AccessTokenService.getAccessToken(getClientProperties(oauth2Config)).accessToken}",
-				)
-			}
-	)
 
 	@Bean
 	@Profile("!(prod | dev)")
