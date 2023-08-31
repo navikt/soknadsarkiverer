@@ -55,7 +55,7 @@
 
 		<!--Plugins-->
 		<versions-maven-plugin.version>2.16.0</versions-maven-plugin.version>
-		<openapi-generator-maven-plugin.version>6.6.0</openapi-generator-maven-plugin.version>
+		<openapi-generator-maven-plugin.version>7.0.0</openapi-generator-maven-plugin.version>
 		<remote-comparer-maven-plugin.version>1.0.5</remote-comparer-maven-plugin.version>
 		<cyclonedx-maven-plugin.version>2.7.9</cyclonedx-maven-plugin.version>
 		<maven-enforcer.version>3.3.0</maven-enforcer.version>
