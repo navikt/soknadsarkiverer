@@ -164,6 +164,8 @@ open class TaskListService(
 		.filter { if (key != null) it.key == key else true }
 		.mapValues { it.value.count to it.value.isRunningLock }
 
+	internal fun getNumberOfAttempts(key: String): Int? = tasks[key]?.count
+
 	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
 
 /*
@@ -188,12 +190,12 @@ open class TaskListService(
 //		}
 	}
 
-	private fun receivedState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
+	fun receivedState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
 		if (tasks[key] != null && startUpEndTime.isAfter(Instant.now()) ) {
 			// When recreating state, there could be more state updates in the processLoggTopic.
 			// Wait a little while to make sure we don't start before all queued states are read inorder to process the most recent state.
 			val task = { receivedState(key, soknadarkivschema, attempt) }
-			scheduler.schedule(task, Instant.now().plusSeconds(startUpSeconds))
+			scheduler.scheduleSingleTask(task, Instant.now().plusSeconds(startUpSeconds))
 		} else {
 			logger.info("$key: state = RECEIVED. Ready for next state STARTED")
 			setStateChange(key, EventTypes.STARTED, soknadarkivschema, attempt)
@@ -361,8 +363,10 @@ open class TaskListService(
 			return
 		}
 		if (journalpost != null) {
-			logger.info("$key: archived ${journalpost.datoOpprettet}")
-			throw ApplicationAlreadyArchivedException("$key: archived ${journalpost.datoOpprettet}")
+			val archivingdetails = "Already archived journalpostId=${journalpost.journalpostId}, opprettet=${journalpost.datoOpprettet}"
+			logger.info("$key: $archivingdetails")
+			archiverService.createMessage(key, "**Archiving: OK. $archivingdetails")
+			throw ApplicationAlreadyArchivedException("$key: $archivingdetails")
 		}
 	}
 

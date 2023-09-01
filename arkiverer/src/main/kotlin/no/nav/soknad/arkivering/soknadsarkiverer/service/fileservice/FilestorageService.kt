@@ -25,19 +25,27 @@ class FilestorageService(
 
 
 	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): FetchFileResponse {
-		val timer = metrics.filestorageGetLatencyStart()
-		try {
-			val fileIds = getFileIds(data)
-			logger.info("$key: Getting files with ids: '$fileIds'")
+		if (filterRequestOnApplicationNumber(data)) {
+			val timer = metrics.filestorageGetLatencyStart()
+			try {
+				val fileIds = getFileIds(data)
+				logger.info("$key: Getting files with ids: '$fileIds'")
 
-			val fetchFileResponse = getFiles(key, fileIds)
+				val fetchFileResponse = getFiles(key, fileIds)
 
-			logger.info("$key: Received ${fetchFileResponse.files?.size} files with a sum of ${fetchFileResponse.files?.sumOf { it.content?.size ?: 0 }} bytes")
-			return fetchFileResponse
+				logger.info("$key: Received ${fetchFileResponse.files?.size} files with a sum of ${fetchFileResponse.files?.sumOf { it.content?.size ?: 0 }} bytes")
+				return fetchFileResponse
 
-		} finally {
-			metrics.endTimer(timer)
+			} finally {
+				metrics.endTimer(timer)
+			}
+		} else {
+			return FetchFileResponse(status = ResponseStatus.NotFound.value, files = null, exception = null )
 		}
+	}
+
+	private fun filterRequestOnApplicationNumber(data: Soknadarkivschema): Boolean {
+		return relevantApplicationNumbers.any{ it == data.mottatteDokumenter.first{it.erHovedskjema }.skjemanummer}
 	}
 
 	override fun deleteFilesFromFilestorage(key: String, data: Soknadarkivschema) {

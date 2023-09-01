@@ -53,7 +53,7 @@ class SafService(
 				return null
 			}
 			return response.data?.journalpost ?: run {
-				logger.info("$innsendingId: Ikke funnet i arkivet")
+				logger.debug("$innsendingId: Ikke funnet i arkivet")
 				null
 			}
 		} catch (ex: Exception) {
@@ -66,7 +66,7 @@ class SafService(
 		val errorMessage = errors
 			.map { "${it.message} (feilkode: ${it.path} ${it.path?.forEach { e -> e.toString() }}" }
 			.joinToString(prefix = "Error i respons fra $system: ", separator = ", ") { it }
-		logger.info("$innsendingId: Oppslag mot $system feilet med $errorMessage")
+		logger.debug("$innsendingId: Oppslag mot $system feilet med $errorMessage")
 	}
 
 }

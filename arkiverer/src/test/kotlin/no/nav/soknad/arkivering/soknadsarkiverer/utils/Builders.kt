@@ -11,7 +11,7 @@ import java.util.*
 class SoknadarkivschemaBuilder {
 	private var behandlingsid: String = "behandlingsid"
 	private var fodselsnummer: String = "12345687901"
-	private var arkivtema: String = "BIL"
+	private var arkivtema: String = "TSO"
 	private var innsendtDato: Long = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)
 	private var soknadstype: Soknadstyper = Soknadstyper.SOKNAD
 	private var mottatteDokumenter: MutableList<MottattDokument> = mutableListOf()
@@ -27,9 +27,9 @@ class SoknadarkivschemaBuilder {
 }
 
 class MottattDokumentBuilder {
-	private var skjemanummer: String = "NAV 11-13.05"
+	private var skjemanummer: String = "NAV 11-12.10"
 	private var erHovedskjema: Boolean = true
-	private var tittel: String = "Søknad om arbeidsavklaringspenger"
+	private var tittel: String = "Kjøreliste for godkjent bruk av egen bil"
 	private var mottatteVarianter: MutableList<MottattVariant> = mutableListOf()
 
 	fun withSkjemanummer(skjemanummer: String) = apply { this.skjemanummer = skjemanummer }
@@ -55,11 +55,11 @@ class MottattVariantBuilder {
 	fun build() = MottattVariant(uuid, filnavn, filtype, variantformat)
 }
 
-fun createSoknadarkivschema(fileId: String = UUID.randomUUID().toString()) = createSoknadarkivschema(listOf(fileId))
+fun createSoknadarkivschema(fileId: String = UUID.randomUUID().toString(), behandlingsId: String = UUID.randomUUID().toString()) = createSoknadarkivschema(listOf(fileId), behandlingsId)
 
-fun createSoknadarkivschema(fileIds: List<String>) =
+fun createSoknadarkivschema(fileIds: List<String>, behandlingsId: String = UUID.randomUUID().toString()) =
 	SoknadarkivschemaBuilder()
-		.withBehandlingsid(UUID.randomUUID().toString())
+		.withBehandlingsid(behandlingsId)
 		.withMottatteDokumenter(MottattDokumentBuilder()
 			.withMottatteVarianter(
 				fileIds.map { MottattVariantBuilder().withUuid(it).build() }
