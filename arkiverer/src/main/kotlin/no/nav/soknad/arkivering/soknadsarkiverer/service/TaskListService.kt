@@ -4,12 +4,14 @@ import kotlinx.coroutines.*
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.Constants.MDC_INNSENDINGS_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.config.*
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafServiceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.concurrent.Semaphore
@@ -46,7 +48,8 @@ open class TaskListService(
 		state: EventTypes,
 		isBootstrappingTask: Boolean = false
 	) {
-
+		MDC.put(MDC_INNSENDINGS_ID, key)
+		
 		if (!tasks.containsKey(key)) {
 			newTask(key, soknadarkivschema, state, isBootstrappingTask)
 		} else {
@@ -204,6 +207,8 @@ open class TaskListService(
 
 	// Remove task and cancel thread
 	fun finishTask(key: String) {
+		MDC.clear()
+
 		if (tasks.containsKey(key)) {
 
 			tasks.remove(key)
