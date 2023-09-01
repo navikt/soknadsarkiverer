@@ -6,6 +6,7 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.Constants.MDC_INNSENDINGS_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import org.apache.avro.specific.SpecificRecord
@@ -24,6 +25,7 @@ import org.apache.kafka.streams.kstream.Joined
 import org.apache.kafka.streams.kstream.Materialized
 import org.apache.kafka.streams.state.KeyValueStore
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import java.util.*
 
 class KafkaStreamsSetup(
@@ -50,7 +52,7 @@ class KafkaStreamsSetup(
 		val mainTopicTable = mainTopicStream.toTable()
 
 		mainTopicStream
-			.peek { key, value -> logger.info("$key: Processing MainTopic. BehandlingsId: ${value.behandlingsid}") }
+			.peek { key, value ->	logger.info("$key: Processing MainTopic. BehandlingsId: ${value.behandlingsid}") }
 			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
 
 		processingTopicStream
@@ -74,7 +76,7 @@ class KafkaStreamsSetup(
 			.leftJoin(mainTopicTable, { state, soknadarkivschema -> soknadarkivschema to state }, joinDef) // Oppdatere state på tabell, archivingState, ved join av soknadarkivschema og state.
 			.filter { key, (soknadarkivschema, _) -> filterSoknadarkivschemaThatAreNull(key, soknadarkivschema) } // Ta bort alle innslag i tabell der soknadarkivschema er null.
 			.peek { key, (soknadarkivschema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state Soknadarkivschema: ${soknadarkivschema.print()}") }
-			.foreach { key, (soknadarkivschema, state) -> taskListService.addOrUpdateTask(key, soknadarkivschema, state.type) } // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
+			.foreach { key, (soknadarkivschema, state) ->	taskListService.addOrUpdateTask(key, soknadarkivschema, state.type)	} // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
 	}
 
 	private fun isConsideredFinished(key: String, processingEvent: ProcessingEvent): Boolean {

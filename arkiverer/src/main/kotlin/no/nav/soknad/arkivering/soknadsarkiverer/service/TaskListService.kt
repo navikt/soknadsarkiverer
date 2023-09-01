@@ -49,7 +49,7 @@ open class TaskListService(
 		isBootstrappingTask: Boolean = false
 	) {
 		MDC.put(MDC_INNSENDINGS_ID, key)
-		
+
 		if (!tasks.containsKey(key)) {
 			newTask(key, soknadarkivschema, state, isBootstrappingTask)
 		} else {
@@ -96,6 +96,7 @@ open class TaskListService(
 	}
 
 	private fun setStateChange(key: String, state: EventTypes, soknadarkivschema: Soknadarkivschema, attempt: Int) {
+		MDC.put(MDC_INNSENDINGS_ID, key)
 		if (processRun) {
 			val jobThread = jobMap.remove(key)
 			jobThread?.cancel()
@@ -110,6 +111,8 @@ open class TaskListService(
 	}
 
 	private suspend fun start(key: String, state: EventTypes) = withContext(Dispatchers.IO) {
+		MDC.put(MDC_INNSENDINGS_ID, key)
+
 		if (tasks[key] != null && startUpEndTime.isAfter(Instant.now()) && (state == EventTypes.RECEIVED || state == EventTypes.STARTED || state == EventTypes.ARCHIVED)) {
 			// When recreating state, there could be more state updates in the processLoggTopic.
 			// Wait a little while to make sure we don't start before all queued states are read inorder to process the most recent state.
@@ -131,6 +134,8 @@ open class TaskListService(
 	// Starte på nytt task som har failed. Må resette task.count og sette state til STARTED.
 	// Setter processingEvent for å trigge re-start fra POD som kjører partition.
 	fun startPaNytt(key: String) {
+		MDC.put(MDC_INNSENDINGS_ID, key)
+
 		logger.info("$key: state = FAILURE. Ready for next state STARTED")
 		val task = tasks[key]
 		if (task != null && loggedTaskStates[key] == EventTypes.FAILURE) {
@@ -162,7 +167,6 @@ open class TaskListService(
 		.mapValues { it.value.count to it.value.isRunningLock }
 
 	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
-
 		if (tasks[key] == null || loggedTaskStates[key] == EventTypes.FAILURE || loggedTaskStates[key] == EventTypes.FINISHED) {
 			logger.warn("$key: Too many attempts ($attempt) or loggedstate ${loggedTaskStates[key]}, will not try again")
 
@@ -207,7 +211,6 @@ open class TaskListService(
 
 	// Remove task and cancel thread
 	fun finishTask(key: String) {
-		MDC.clear()
 
 		if (tasks.containsKey(key)) {
 
@@ -221,6 +224,7 @@ open class TaskListService(
 		} else {
 			logger.info("$key: Tried to finish task, but it is already finished ${jobMap.remove(key)?.key}")
 		}
+		MDC.clear()
 	}
 
 	//  Keep task. Note that the thread is canceled and new coroutine must be started in order to resume processing
@@ -237,6 +241,7 @@ open class TaskListService(
 		} else {
 			logger.info("$key: Tried to fail task, but it is already finished")
 		}
+		MDC.clear()
 	}
 
 	internal fun getFailedTasks(): Set<String> {
@@ -258,6 +263,7 @@ open class TaskListService(
 	}
 
 	private fun tryToArchive(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int) {
+		MDC.put(MDC_INNSENDINGS_ID, key)
 		CoroutineScope(Dispatchers.Default).launch {
 			var nextState: EventTypes? = null
 			val timer = metrics.archivingLatencyStart()
@@ -323,6 +329,7 @@ open class TaskListService(
 				throw t
 
 			} finally {
+				MDC.clear()
 				metrics.endTimer(timer)
 				metrics.endHistogramTimer(histogram)
 				metrics.numberOfAttachmentHistogramSet(
@@ -351,6 +358,7 @@ open class TaskListService(
 
 	private fun tryToDeleteFiles(key: String, soknadarkivschema: Soknadarkivschema) {
 		try {
+			MDC.put(MDC_INNSENDINGS_ID, key)
 			logger.info("$key: Will now start to delete files")
 			archiverService.deleteFiles(key, soknadarkivschema)
 			logger.info("$key: Finished deleting files")
@@ -369,6 +377,7 @@ open class TaskListService(
 			if (tasks[key] != null) {
 				setStateChange(key, EventTypes.FINISHED, soknadarkivschema, tasks[key]?.count!!)
 			}
+			MDC.clear()
 		}
 	}
 
