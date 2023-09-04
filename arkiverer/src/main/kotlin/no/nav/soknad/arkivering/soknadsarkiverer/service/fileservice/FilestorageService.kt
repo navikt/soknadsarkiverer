@@ -25,7 +25,7 @@ class FilestorageService(
 
 
 	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): FetchFileResponse {
-		if (filterRequestOnApplicationNumber(data)) {
+		if (filterRequestOnApplicationNumber(data)) { // Avgrenser forsøk på å hente filer fra soknadsfillager til de søknader med hoveddokument med avgrenset sett av skjemanummere
 			val timer = metrics.filestorageGetLatencyStart()
 			try {
 				val fileIds = getFileIds(data)
