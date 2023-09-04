@@ -204,7 +204,7 @@ class ApplicationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 
 		verifyProcessingEvents(key, mapOf(
-			RECEIVED hasCount 1, STARTED hasCount maxNumberOfAttempts, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 0
+			RECEIVED hasCount 1, STARTED hasCount maxNumberOfAttempts, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
 		))
 		verifyMockedPostRequests(maxNumberOfAttempts, safUrl)
 		verifyDeleteRequestsToFilestorage(0)

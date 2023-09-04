@@ -24,7 +24,6 @@ class InnsendingService(
 	}
 
 	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): FetchFileResponse {
-		if (filterRequestOnApplicationNumber(data)) {
 			val timer = metrics.filestorageGetLatencyStart()
 			try {
 				val fileIds = getFileIds(data)
@@ -38,13 +37,6 @@ class InnsendingService(
 			} finally {
 				metrics.endTimer(timer)
 			}
-		} else {
-			return FetchFileResponse(status = ResponseStatus.NotFound.value, files = null, exception = null )
-		}
-	}
-
-	private fun filterRequestOnApplicationNumber(data: Soknadarkivschema): Boolean {
-		return !relevantApplicationNumbers.any{ it == data.mottatteDokumenter.first{it.erHovedskjema }.skjemanummer}
 	}
 
 	override fun deleteFilesFromFilestorage(key: String, data: Soknadarkivschema) {

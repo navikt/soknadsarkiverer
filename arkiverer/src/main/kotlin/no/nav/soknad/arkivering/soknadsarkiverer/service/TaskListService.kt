@@ -33,7 +33,7 @@ open class TaskListService(
 	private val currentTaskStates = hashMapOf<String, EventTypes>()
 	private val jobMap = hashMapOf<String, Job>()
 
-	private val processRun: Boolean = false // Hvis true så vil all behandling av ulike states på søknader initieres fra topology. Pt vil testene feilene hvis = true
+	private val processRun: Boolean = true // Hvis true så vil all behandling av ulike states på søknader initieres fra topology. Pt vil testene feilene hvis = true
 
 	private val startUpEndTime = Instant.now().plusSeconds(startUpSeconds)
 
@@ -72,7 +72,7 @@ open class TaskListService(
 		metrics.addTask()
 		logger.info("$key: Created new task with state = $state")
 
-		startNewlyCreatedTask(key, state)
+		schedule(key, soknadarkivschema, 0)
 	}
 
 /*
