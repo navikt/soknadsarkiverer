@@ -271,6 +271,7 @@ open class TaskListService(
 				val files = archiverService.fetchFiles(key, soknadarkivschema)
 
 				protectFromShutdownInterruption(applicationState) {
+					MDC.put(MDC_INNSENDINGS_ID, key)
 					archiverService.archive(key, soknadarkivschema, files)
 					nextState = EventTypes.ARCHIVED
 				}

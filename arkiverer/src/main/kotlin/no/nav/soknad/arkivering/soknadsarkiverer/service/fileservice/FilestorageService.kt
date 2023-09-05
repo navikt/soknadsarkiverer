@@ -1,11 +1,13 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.Constants
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsfillager.api.FilesApi
 import no.nav.soknad.arkivering.soknadsfillager.api.HealthApi
 import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.stereotype.Service
 
 @Service
@@ -27,6 +29,7 @@ class FilestorageService(
 	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): FetchFileResponse {
 		if (filterRequestOnApplicationNumber(data)) { // Avgrenser forsøk på å hente filer fra soknadsfillager til de søknader med hoveddokument med avgrenset sett av skjemanummere
 			val timer = metrics.filestorageGetLatencyStart()
+			MDC.put(Constants.MDC_INNSENDINGS_ID, key)
 			try {
 				val fileIds = getFileIds(data)
 				logger.info("$key: Getting files with ids: '$fileIds'")
