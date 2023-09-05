@@ -66,7 +66,7 @@ class TaskListServiceTests {
 	fun `Can add task`() {
 		taskListService.addOrUpdateTask(UUID.randomUUID().toString(), soknadarkivschema, EventTypes.RECEIVED)
 
-		verify(atLeast = 1, timeout = 10_000) {kafkaPublisher.putProcessingEventOnTopic(any(), eq(ProcessingEvent(EventTypes.STARTED)), any())}
+		verify(atLeast = 1, timeout = 2_000) {kafkaPublisher.putProcessingEventOnTopic(any(), eq(ProcessingEvent(EventTypes.STARTED)), any())}
 		assertEquals(1, taskListService.listTasks().size)
 	}
 
@@ -79,7 +79,7 @@ class TaskListServiceTests {
 		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.RECEIVED)
 		assertEquals(1, taskListService.listTasks().size)
 		assertEquals(originalCount, getTaskListCount(key))
-		verify(atLeast = 1, timeout = 10_000) {kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.STARTED)), any())}
+		verify(atLeast = 1, timeout = 2_000) {kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.STARTED)), any())}
 
 		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.STARTED)
 		assertEquals(1, taskListService.listTasks().size)
@@ -118,8 +118,8 @@ class TaskListServiceTests {
 
 		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.STARTED)
 
-		verify(exactly = 1, timeout = 10_000) { archiverService.archive(eq(key), any(), any()) }
-		verify(atLeast = 1, timeout = 10_000) {kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.ARCHIVED)), any())}
+		verify(exactly = 1, timeout = 2_000) { archiverService.archive(eq(key), any(), any()) }
+		verify(atLeast = 1, timeout = 2_000) {kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.ARCHIVED)), any())}
 
 	}
 
@@ -131,9 +131,9 @@ class TaskListServiceTests {
 
 		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.STARTED)
 
-		verify(atLeast = 1, timeout = 10_000) { scheduler.schedule(any(), any()) }
-		verify(atLeast = 1, timeout = 10_000) { archiverService.archive(eq(key), any(), any()) }
-		verify(atLeast = 1, timeout = 10_000) {kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.STARTED)), any())}
+		verify(atLeast = 1, timeout = 2_000) { scheduler.schedule(any(), any()) }
+		verify(atLeast = 1, timeout = 2_000) { archiverService.archive(eq(key), any(), any()) }
+		verify(atLeast = 1, timeout = 2_000) {kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.STARTED)), any())}
 		assertFalse(taskListService.listTasks().isEmpty())
 		loopAndVerify(1, { getTaskListCount(key) })
 		assertEquals(1, taskListService.getNumberOfAttempts(key))
@@ -149,9 +149,9 @@ class TaskListServiceTests {
 		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.RECEIVED)
 		//taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.STARTED)
 
-		verify(atLeast = 1, timeout = 10_000) {kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.STARTED)), any())}
-		verify(exactly = 1, timeout = 10_000) { archiverService.archive(eq(key), any(), any()) }
-		verify(atLeast = 1, timeout = 10_000) { kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.ARCHIVED)), any()) }
+		verify(atLeast = 1, timeout = 2_000) {kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.STARTED)), any())}
+		verify(exactly = 1, timeout = 2_000) { archiverService.archive(eq(key), any(), any()) }
+		verify(atLeast = 1, timeout = 2_000) { kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.ARCHIVED)), any()) }
 
 	}
 

@@ -324,7 +324,6 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyMockedPostRequests(attemptsToFail + 1, safUrl)
 		verifyMockedPostRequests(attemptsToFail, journalPostUrl)
 		verifyDeleteRequestsToFilestorage(0)
-		//verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount attemptsToFail))
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount attemptsToFail,
 			"send files to archive" hasCount 0,

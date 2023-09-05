@@ -31,7 +31,6 @@ open class TaskListService(
 	private val tasks = hashMapOf<String, Task>()
 	private val loggedTaskStates = hashMapOf<String, EventTypes>()
 	private val currentTaskStates = hashMapOf<String, EventTypes>()
-	private val jobMap = hashMapOf<String, Job>()
 
 	private val processRun: Boolean = true // Hvis true så vil all behandling av ulike states på søknader initieres fra topology. Pt vil noen tester feile hvis  = false
 
@@ -102,26 +101,6 @@ open class TaskListService(
 		}
 	}
 
-	private suspend fun start(key: String, state: EventTypes) = withContext(Dispatchers.IO) {
-		MDC.put(MDC_INNSENDINGS_ID, key)
-
-		if (tasks[key] != null && startUpEndTime.isAfter(Instant.now()) && (state == EventTypes.RECEIVED || state == EventTypes.STARTED || state == EventTypes.ARCHIVED)) {
-			// When recreating state, there could be more state updates in the processLoggTopic.
-			// Wait a little while to make sure we don't start before all queued states are read inorder to process the most recent state.
-			logger.debug("$key: Sleeping for $startUpSeconds sec state - $state")
-			delay(startUpSeconds * 1000)
-			logger.debug("$key: Slept $startUpSeconds sec state - $state")
-		}
-
-		val task = tasks[key]
-		if (task != null) {
-			// Process application given most recent logged processing state
-			currentTaskStates[key] = loggedTaskStates[key]!!
-			schedule(key, task.value, task.count)
-		} else {
-			logger.debug("$key: cannot start empty task, state - $state")
-		}
-	}
 
 	// Starte på nytt task som har failed. Må resette task.count og sette state til STARTED.
 	// Setter processingEvent for å trigge re-start fra POD som kjører partition.
