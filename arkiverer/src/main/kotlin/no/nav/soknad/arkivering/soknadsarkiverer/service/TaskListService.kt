@@ -4,12 +4,14 @@ import kotlinx.coroutines.*
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.Constants.MDC_INNSENDINGS_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.config.*
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafServiceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.concurrent.Semaphore
@@ -29,9 +31,8 @@ open class TaskListService(
 	private val tasks = hashMapOf<String, Task>()
 	private val loggedTaskStates = hashMapOf<String, EventTypes>()
 	private val currentTaskStates = hashMapOf<String, EventTypes>()
-	private val jobMap = hashMapOf<String, Job>()
 
-	private val processRun: Boolean = false // Hvis true så vil all behandling av ulike states på søknader initieres fra topology. Pt vil testene feilene hvis = true
+	private val processRun: Boolean = true // Hvis true så vil all behandling av ulike states på søknader initieres fra topology. Pt vil noen tester feile hvis  = false
 
 	private val startUpEndTime = Instant.now().plusSeconds(startUpSeconds)
 
@@ -46,6 +47,7 @@ open class TaskListService(
 		state: EventTypes,
 		isBootstrappingTask: Boolean = false
 	) {
+		MDC.put(MDC_INNSENDINGS_ID, key)
 
 		if (!tasks.containsKey(key)) {
 			newTask(key, soknadarkivschema, state, isBootstrappingTask)
@@ -69,33 +71,26 @@ open class TaskListService(
 		metrics.addTask()
 		logger.info("$key: Created new task with state = $state")
 
-		startNewlyCreatedTask(key, state)
+		schedule(key, soknadarkivschema, 0)
 	}
 
-	private fun startNewlyCreatedTask(key: String, state: EventTypes) {
-		if (tasks[key] != null) {
-			jobMap[key] = GlobalScope.launch { start(key, state) } // Start new thread for handling archiving of application with key
-		}
-	}
 
 	private fun updateTaskState(key: String, state: EventTypes) {
 		if (tasks[key] != null) {
 			val task = tasks[key]!!
 			loggedTaskStates[key] = state
 			logger.debug("$key: Updated task, new state - $state")
-			if (processRun && task.isRunningLock.tryAcquire()) {
-				jobMap[key] = GlobalScope.launch { start(key, state) } // Start new thread for handling archiving of application with key
-			}
+
 			updateNoOfFailedMetrics()
+			schedule(key, task.value, task.count)
 		} else {
 			logger.debug("$key: Ignoring state - $state")
 		}
 	}
 
 	private fun setStateChange(key: String, state: EventTypes, soknadarkivschema: Soknadarkivschema, attempt: Int) {
+		MDC.put(MDC_INNSENDINGS_ID, key)
 		if (processRun) {
-			val jobThread = jobMap.remove(key)
-			jobThread?.cancel()
 			currentTaskStates[key] = state
 			tasks[key]?.isRunningLock?.release()
 			createProcessingEvent(key, state)
@@ -106,28 +101,12 @@ open class TaskListService(
 		}
 	}
 
-	private suspend fun start(key: String, state: EventTypes) = withContext(Dispatchers.IO) {
-		if (tasks[key] != null && startUpEndTime.isAfter(Instant.now()) && (state == EventTypes.RECEIVED || state == EventTypes.STARTED || state == EventTypes.ARCHIVED)) {
-			// When recreating state, there could be more state updates in the processLoggTopic.
-			// Wait a little while to make sure we don't start before all queued states are read inorder to process the most recent state.
-			logger.debug("$key: Sleeping for $startUpSeconds sec state - $state")
-			delay(startUpSeconds * 1000)
-			logger.debug("$key: Slept $startUpSeconds sec state - $state")
-		}
-
-		val task = tasks[key]
-		if (task != null) {
-			// Process application given most recent logged processing state
-			currentTaskStates[key] = loggedTaskStates[key]!!
-			schedule(key, task.value, task.count)
-		} else {
-			logger.debug("$key: cannot start empty task, state - $state")
-		}
-	}
 
 	// Starte på nytt task som har failed. Må resette task.count og sette state til STARTED.
 	// Setter processingEvent for å trigge re-start fra POD som kjører partition.
 	fun startPaNytt(key: String) {
+		MDC.put(MDC_INNSENDINGS_ID, key)
+
 		logger.info("$key: state = FAILURE. Ready for next state STARTED")
 		val task = tasks[key]
 		if (task != null && loggedTaskStates[key] == EventTypes.FAILURE) {
@@ -158,31 +137,35 @@ open class TaskListService(
 		.filter { if (key != null) it.key == key else true }
 		.mapValues { it.value.count to it.value.isRunningLock }
 
+	internal fun getNumberOfAttempts(key: String): Int? = tasks[key]?.count
+
 	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
 
-		if (tasks[key] == null || loggedTaskStates[key] == EventTypes.FAILURE || loggedTaskStates[key] == EventTypes.FINISHED) {
-			logger.warn("$key: Too many attempts ($attempt) or loggedstate ${loggedTaskStates[key]}, will not try again")
+		logger.debug("$key: In schedule. Attempts: ($attempt), loggedstate: ${loggedTaskStates[key]}, currentTaskState: ${currentTaskStates[key]}")
 
-		} else {
-			logger.debug("$key: In schedule. Attempts: ($attempt), loggedstate: ${loggedTaskStates[key]}, currentTaskState: ${currentTaskStates[key]}")
-
-			when (currentTaskStates[key]) {
-				EventTypes.RECEIVED -> receivedState(key, soknadarkivschema, attempt)
-				EventTypes.STARTED  -> archiveState(key, soknadarkivschema, attempt)
-				EventTypes.ARCHIVED -> deleteFilesState(key, soknadarkivschema, attempt)
-				EventTypes.FAILURE  -> failTask(key)
-				EventTypes.FINISHED -> finishTask(key)
-				else -> {
-					logger.error("$key: - Unexpected state ${currentTaskStates[key]} - Will assume it was ${EventTypes.RECEIVED}")
-					receivedState(key, soknadarkivschema, attempt)
-				}
+		when (currentTaskStates[key]) {
+			EventTypes.RECEIVED -> receivedState(key, soknadarkivschema, attempt)
+			EventTypes.STARTED  -> archiveState(key, soknadarkivschema, attempt)
+			EventTypes.ARCHIVED -> deleteFilesState(key, soknadarkivschema, attempt)
+			EventTypes.FAILURE  -> failTask(key)
+			EventTypes.FINISHED -> finishTask(key)
+			else -> {
+				logger.error("$key: - Unexpected state ${currentTaskStates[key]} - Will assume it was ${EventTypes.RECEIVED}")
+				receivedState(key, soknadarkivschema, attempt)
 			}
 		}
 	}
 
-	private fun receivedState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
-		logger.info("$key: state = RECEIVED. Ready for next state STARTED")
-		setStateChange(key, EventTypes.STARTED, soknadarkivschema, attempt)
+	fun receivedState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
+		if (tasks[key] != null && startUpEndTime.isAfter(Instant.now()) ) {
+			// When recreating state, there could be more state updates in the processLoggTopic.
+			// Wait a little while to make sure we don't start before all queued states are read inorder to process the most recent state.
+			val task = { receivedState(key, soknadarkivschema, attempt) }
+			scheduler.scheduleSingleTask(task, Instant.now().plusSeconds(startUpSeconds))
+		} else {
+			logger.info("$key: state = RECEIVED. Ready for next state STARTED")
+			setStateChange(key, EventTypes.STARTED, soknadarkivschema, attempt)
+		}
 	}
 
 	private fun archiveState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
@@ -199,23 +182,27 @@ open class TaskListService(
 
 	private fun deleteFilesState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
 		logger.info("$key: state = ARCHIVED. About to delete files in attempt $attempt")
-		tryToDeleteFiles(key, soknadarkivschema)
+		val task = {tryToDeleteFiles(key, soknadarkivschema)}
+		val scheduledTime = Instant.now().plusSeconds(0)
+		if (tasks[key]?.isBootstrappingTask == true)
+			scheduler.scheduleSingleTask(task, scheduledTime)
+		else
+			scheduler.schedule(task, scheduledTime)
 	}
 
 	// Remove task and cancel thread
 	fun finishTask(key: String) {
+
 		if (tasks.containsKey(key)) {
 
 			tasks.remove(key)
 			loggedTaskStates.remove(key)
 			metrics.removeTask()
-			val jobThread = jobMap.remove(key)
-			logger.info("$key: Finished task ${jobThread?.key}")
-			jobThread?.cancel()
 
 		} else {
-			logger.info("$key: Tried to finish task, but it is already finished ${jobMap.remove(key)?.key}")
+			logger.debug("$key: Already finished")
 		}
+		MDC.clear()
 	}
 
 	//  Keep task. Note that the thread is canceled and new coroutine must be started in order to resume processing
@@ -224,14 +211,13 @@ open class TaskListService(
 
 			loggedTaskStates[key] = EventTypes.FAILURE
 			updateNoOfFailedMetrics()
-			val jobThread = jobMap.remove(key)
 			logger.info("$key: Failed task")
 			tasks[key]?.isRunningLock?.release()
-			jobThread?.cancel()
 
 		} else {
 			logger.info("$key: Tried to fail task, but it is already finished")
 		}
+		MDC.clear()
 	}
 
 	internal fun getFailedTasks(): Set<String> {
@@ -254,6 +240,7 @@ open class TaskListService(
 
 	private fun tryToArchive(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int) {
 		CoroutineScope(Dispatchers.Default).launch {
+			MDC.put(MDC_INNSENDINGS_ID, key)
 			var nextState: EventTypes? = null
 			val timer = metrics.archivingLatencyStart()
 			val histogram = metrics.archivingLatencyHistogramStart(soknadarkivschema.arkivtema)
@@ -263,6 +250,7 @@ open class TaskListService(
 				val files = archiverService.fetchFiles(key, soknadarkivschema)
 
 				protectFromShutdownInterruption(applicationState) {
+					MDC.put(MDC_INNSENDINGS_ID, key)
 					archiverService.archive(key, soknadarkivschema, files)
 					nextState = EventTypes.ARCHIVED
 				}
@@ -318,6 +306,7 @@ open class TaskListService(
 				throw t
 
 			} finally {
+				MDC.clear()
 				metrics.endTimer(timer)
 				metrics.endHistogramTimer(histogram)
 				metrics.numberOfAttachmentHistogramSet(
@@ -339,13 +328,16 @@ open class TaskListService(
 			return
 		}
 		if (journalpost != null) {
-			logger.info("$key: archived ${journalpost.datoOpprettet}")
-			throw ApplicationAlreadyArchivedException("$key: archived ${journalpost.datoOpprettet}")
+			val archivingdetails = "Already archived journalpostId=${journalpost.journalpostId}, opprettet=${journalpost.datoOpprettet}"
+			logger.info("$key: $archivingdetails")
+			archiverService.createMessage(key, "**Archiving: OK. $archivingdetails")
+			throw ApplicationAlreadyArchivedException("$key: $archivingdetails")
 		}
 	}
 
 	private fun tryToDeleteFiles(key: String, soknadarkivschema: Soknadarkivschema) {
 		try {
+			MDC.put(MDC_INNSENDINGS_ID, key)
 			logger.info("$key: Will now start to delete files")
 			archiverService.deleteFiles(key, soknadarkivschema)
 			logger.info("$key: Finished deleting files")
@@ -364,6 +356,7 @@ open class TaskListService(
 			if (tasks[key] != null) {
 				setStateChange(key, EventTypes.FINISHED, soknadarkivschema, tasks[key]?.count!!)
 			}
+			MDC.clear()
 		}
 	}
 

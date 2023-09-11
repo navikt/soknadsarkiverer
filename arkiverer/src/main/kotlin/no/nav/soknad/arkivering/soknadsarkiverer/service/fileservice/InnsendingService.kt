@@ -2,11 +2,13 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
 import kotlinx.coroutines.*
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.Constants
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.innsending.api.HealthApi
 import no.nav.soknad.innsending.api.HentInnsendteFilerApi
 import no.nav.soknad.innsending.model.SoknadFile
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.stereotype.Service
 
 @Service
@@ -25,6 +27,7 @@ class InnsendingService(
 
 	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): FetchFileResponse {
 		val timer = metrics.filestorageGetLatencyStart()
+		MDC.put(Constants.MDC_INNSENDINGS_ID, key)
 		try {
 			val fileIds = getFileIds(data)
 			logger.info("$key: Getting files from innsending-api with ids: '$fileIds'")

@@ -6,6 +6,7 @@ import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.client.CollectorRegistry
+import kotlinx.coroutines.delay
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
@@ -119,7 +120,7 @@ class ApplicationTests : ContainerizedKafka() {
 		val key = UUID.randomUUID().toString()
 		mockFilestorageIsWorking(fileUuid)
 		mockJoarkIsWorking()
-		val soknadsarkivschema = createSoknadarkivschema()
+		val soknadsarkivschema = createSoknadarkivschema(key)
 		mockSafRequest_notFound(innsendingsId= soknadsarkivschema.behandlingsid)
 
 		putDataOnKafkaTopic(key, soknadsarkivschema)
@@ -148,7 +149,7 @@ class ApplicationTests : ContainerizedKafka() {
 		val fileIds = listOf(UUID.randomUUID().toString(),UUID.randomUUID().toString())
 		mockFilestorageIsWorking(listOf(fileIds[0] to filestorageContent, fileIds[1] to filestorageContent ))
 		mockJoarkIsWorking()
-		val soknadsarkivschema = createSoknadarkivschema(fileIds)
+		val soknadsarkivschema = createSoknadarkivschema(fileIds, key)
 		mockSafRequest_notFound(innsendingsId= soknadsarkivschema.behandlingsid)
 
 		putDataOnKafkaTopic(key, soknadsarkivschema)
@@ -200,10 +201,10 @@ class ApplicationTests : ContainerizedKafka() {
 		mockSafRequest_notFound(innsendingsId= key)
 		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
 
-		putDataOnKafkaTopic(key, createSoknadarkivschema())
+		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 
 		verifyProcessingEvents(key, mapOf(
-			RECEIVED hasCount 1, STARTED hasCount maxNumberOfAttempts, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 0
+			RECEIVED hasCount 1, STARTED hasCount maxNumberOfAttempts, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
 		))
 		verifyMockedPostRequests(maxNumberOfAttempts, safUrl)
 		verifyDeleteRequestsToFilestorage(0)
@@ -224,7 +225,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockSafRequest_notFound(innsendingsId= key)
 		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
 
-		putDataOnKafkaTopic(key, createSoknadarkivschema())
+		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 
 		verifyProcessingEvents(key, mapOf(
 			RECEIVED hasCount 1, STARTED hasCount maxNumberOfAttempts, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
@@ -251,7 +252,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockSafRequest_notFound(innsendingsId= key)
 
 		putDataOnKafkaTopic(keyForPoisonPill, "this is not deserializable")
-		putDataOnKafkaTopic(key, createSoknadarkivschema())
+		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 
 		verifyProcessingEvents(key, mapOf(
 			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
@@ -282,17 +283,17 @@ class ApplicationTests : ContainerizedKafka() {
 		mockJoarkRespondsAfterAttempts(numberOfFailures)
 		mockSafRequest_notFound(innsendingsId= key)
 
-		putDataOnKafkaTopic(key, createSoknadarkivschema())
+		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 
 		verifyProcessingEvents(key, mapOf(
-			RECEIVED hasCount 1, STARTED hasCount 2, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
+			RECEIVED hasCount 1, STARTED hasCount numberOfFailures+1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
 		))
 		verifyMockedPostRequests(numberOfFailures+1, safUrl)
 		verifyMockedPostRequests(numberOfFailures+1, journalPostUrl)
 		verifyDeleteRequestsToFilestorage(1)
 		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount 1))
 		verifyKafkaMetric(key, mapOf(
-			"get files from filestorage" hasCount 2,
+			"get files from filestorage" hasCount numberOfFailures+1,
 			"send files to archive" hasCount 1,
 			"delete files from filestorage" hasCount 1
 		))
@@ -302,31 +303,6 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyArchivingMetrics(joarkErrorsBefore + 1, { metrics.getJoarkErrors() })
 		verifyArchivingMetrics(joarkSuccessesBefore + 1, { metrics.getJoarkSuccesses() })
 		verifyArchivingMetrics(tasksBefore + 0, { metrics.getTasks() }, "Should have created and finished task")
-		verifyArchivingMetrics(tasksGivenUpOnBefore + 0, { metrics.getTasksGivenUpOn() }, "Should not have given up on any task")
-	}
-
-	@Test
-	fun `First attempt to Joark fails, the fourth succeeds`() {
-		val key = UUID.randomUUID().toString()
-		val attemptsToFail = 3
-		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
-		mockFilestorageIsWorking(fileUuid)
-		mockJoarkRespondsAfterAttempts(attemptsToFail)
-		mockSafRequest_notFound(innsendingsId= key)
-
-		putDataOnKafkaTopic(key, createSoknadarkivschema())
-
-		verifyProcessingEvents(key, mapOf(
-			RECEIVED hasCount 1, STARTED hasCount 4, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
-		))
-		verifyMockedPostRequests(attemptsToFail + 1, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(1)
-		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount attemptsToFail))
-		verifyKafkaMetric(key, mapOf(
-			"get files from filestorage" hasCount 4,
-			"send files to archive" hasCount 1,
-			"delete files from filestorage" hasCount 1
-		))
 		verifyArchivingMetrics(tasksGivenUpOnBefore + 0, { metrics.getTasksGivenUpOn() }, "Should not have given up on any task")
 	}
 
@@ -340,15 +316,14 @@ class ApplicationTests : ContainerizedKafka() {
 		mockJoarkRespondsAfterAttempts(attemptsToFail)
 		mockSafRequest_foundAfterAttempt(innsendingsId= key, attempts = attemptsToFail)
 
-		putDataOnKafkaTopic(key, createSoknadarkivschema())
+		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 
 		verifyProcessingEvents(key, mapOf(
-			RECEIVED hasCount 1, STARTED hasCount attemptsToFail+1, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 0
+			RECEIVED hasCount 1, STARTED hasCount attemptsToFail+1, ARCHIVED hasCount 1, FINISHED hasCount 0, FAILURE hasCount 0
 		))
 		verifyMockedPostRequests(attemptsToFail + 1, safUrl)
 		verifyMockedPostRequests(attemptsToFail, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(1)
-		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount attemptsToFail))
+		verifyDeleteRequestsToFilestorage(0)
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount attemptsToFail,
 			"send files to archive" hasCount 0,
@@ -371,7 +346,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId= key)
 
-		putDataOnKafkaTopic(key, createSoknadarkivschema())
+		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 
 		verifyProcessingEvents(key, mapOf(
 			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
@@ -399,7 +374,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockJoarkIsWorkingButGivesInvalidResponse()
 		mockSafRequest_notFound(innsendingsId= key)
 
-		putDataOnKafkaTopic(key, createSoknadarkivschema())
+		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 
 		verifyProcessingEvents(key, mapOf(
 			RECEIVED hasCount 1, STARTED hasCount maxNumberOfAttempts, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
@@ -412,6 +387,33 @@ class ApplicationTests : ContainerizedKafka() {
 			"send files to archive" hasCount 0,
 			"delete files from filestorage" hasCount 0
 		))
+	}
+
+	@Test
+	fun `First attempt to Joark fails, the fourth succeeds`() {
+		Thread.sleep(1000) // Får av og til feil i telling av metrics når alle testene kjøres da metrics endringer i andre tester kan påvirke denne
+		val key = UUID.randomUUID().toString()
+		val attemptsToFail = 3
+		mockFilestorageIsWorking(fileUuid)
+		mockJoarkRespondsAfterAttempts(attemptsToFail)
+		mockSafRequest_notFound(innsendingsId= key)
+		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
+
+		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
+
+		verifyProcessingEvents(key, mapOf(
+			RECEIVED hasCount 1, STARTED hasCount attemptsToFail+1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
+		))
+		verifyMockedPostRequests(attemptsToFail+1, safUrl)
+		verifyMockedPostRequests(attemptsToFail + 1, journalPostUrl)
+		verifyDeleteRequestsToFilestorage(1)
+		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount attemptsToFail))
+		verifyKafkaMetric(key, mapOf(
+			"get files from filestorage" hasCount attemptsToFail+1,
+			"send files to archive" hasCount 1,
+			"delete files from filestorage" hasCount 1
+		))
+		verifyArchivingMetrics(tasksGivenUpOnBefore + 0, { metrics.getTasksGivenUpOn() }, "Should not have given up on any task")
 	}
 
 
@@ -430,7 +432,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockAlreadyArchivedResponse(1)
 		mockSafRequest_notFound(innsendingsId= key)
 
-		putDataOnKafkaTopic(key, createSoknadarkivschema())
+		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 
 		verifyProcessingEvents(key, mapOf(
 			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
@@ -453,6 +455,43 @@ class ApplicationTests : ContainerizedKafka() {
 	}
 
 	@Test
+	fun `Application found after calling saf will cause finishing archiving`() {
+		val key = UUID.randomUUID().toString()
+		val tasksBefore = metrics.getTasks()
+		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
+		val getFilestorageErrorsBefore = metrics.getGetFilestorageErrors()
+		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
+		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
+		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
+		val joarkErrorsBefore = metrics.getJoarkErrors()
+
+		mockFilestorageIsWorking(fileUuid)
+		mockAlreadyArchivedResponse(1)
+		mockSafRequest_found(innsendingsId= key)
+
+		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
+
+		verifyProcessingEvents(key, mapOf(
+			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
+		))
+		verifyDeleteRequestsToFilestorage(1)
+		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 0))
+		verifyKafkaMetric(key, mapOf(
+			"get files from filestorage" hasCount 0,
+			"send files to archive" hasCount 0,
+			"delete files from filestorage" hasCount 1
+		))
+
+		verifyArchivingMetrics(getFilestorageErrorsBefore + 0, { metrics.getGetFilestorageErrors() })
+		verifyArchivingMetrics(getFilestorageSuccessesBefore + 0, { metrics.getGetFilestorageSuccesses() })
+		verifyArchivingMetrics(delFilestorageSuccessesBefore + 1, { metrics.getDelFilestorageSuccesses() })
+		verifyArchivingMetrics(joarkErrorsBefore + 0, { metrics.getJoarkErrors() })
+		verifyArchivingMetrics(joarkSuccessesBefore + 0, { metrics.getJoarkSuccesses() })
+		verifyArchivingMetrics(tasksBefore, { metrics.getTasks() })
+		verifyArchivingMetrics(tasksGivenUpOnBefore, { metrics.getTasksGivenUpOn() })
+	}
+
+	@Test
 	fun `Failing to get files from Filestorage will cause retries`() {
 		val key = UUID.randomUUID().toString()
 		val tasksBefore = metrics.getTasks()
@@ -467,7 +506,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId= key)
 
-		putDataOnKafkaTopic(key, createSoknadarkivschema())
+		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 
 		verifyProcessingEvents(key, mapOf(
 			RECEIVED hasCount 1, STARTED hasCount maxNumberOfAttempts, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
@@ -504,7 +543,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId= key)
 
-		putDataOnKafkaTopic(key, createSoknadarkivschema())
+		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 
 		verifyProcessingEvents(key, mapOf(
 			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 0, FINISHED hasCount 1, FAILURE hasCount 0
@@ -529,6 +568,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@Test
 	fun `Not all files fetched from Filestorage will cause failure`() {
+		Thread.sleep(1000) // Får av og til feil i telling av metrics når alle testene kjøres da metrics endringer i andre tester kan påvirke denne
 		val key = UUID.randomUUID().toString()
 		val tasksBefore = metrics.getTasks()
 		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
@@ -542,7 +582,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId= key)
 
-		putDataOnKafkaTopic(key, createSoknadarkivschema())
+		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 
 		verifyProcessingEvents(key, mapOf(
 			RECEIVED hasCount 1, STARTED hasCount tasksBefore.toInt() + 1, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
@@ -623,7 +663,7 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyMockedDeleteRequests(expectedCount, filestorageProperties.files + ".*")
 	}
 
-	private fun createSoknadarkivschema() = createSoknadarkivschema(fileUuid)
+	private fun createSoknadarkivschema(behandlingsId: String) = createSoknadarkivschema(fileUuid, behandlingsId)
 
 
 	private fun verifyRequestDataToJoark(soknadsarkivschema: Soknadarkivschema, requestData: OpprettJournalpostRequest) {
