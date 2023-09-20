@@ -21,3 +21,6 @@ spec:
     - team: team-soknad
       application: soknadsarkiverer
       access: readwrite
+    - team: team-soknad
+      application: debugging
+      access: readwrite
