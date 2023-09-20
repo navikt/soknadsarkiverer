@@ -109,7 +109,7 @@ class StateRecreationTests : ContainerizedKafka() {
 	@BeforeAll
 	fun setup() {
 		setupMockedNetworkServices(
-			portToExternalServices!!,
+			portToExternalServices!!+1,
 			journalPostUrl,
 			filestorageProperties.files,
 			safUrl
