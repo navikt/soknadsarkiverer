@@ -259,6 +259,32 @@ fun mockSafRequest_foundAfterAttempt(url: String? = safUrl, innsendingsId: Strin
 	)
 }
 
+fun mockSafRequest_foundAfterAttempt_ApplicationTest(url: String? = safUrl, innsendingsId: String, attempts: Int) {
+	val stateNames = listOf(Scenario.STARTED).plus((0 until attempts).map { "iteration_$it" })
+		wiremockServer.stubFor(
+			post(urlMatching(url))
+				.inScenario("applicationTest")
+				.whenScenarioStateIs(stateNames[0])
+				.willReturn(
+					aResponse()
+						.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+						.withBody(createSafResponse_withoutJournalpost(innsendingsId = innsendingsId))
+						.withStatus(HttpStatus.OK.value())
+				)
+				.willSetStateTo(stateNames.last())
+		)
+	wiremockServer.stubFor(
+		post(urlMatching(url))
+			.inScenario("applicationTest")
+			.whenScenarioStateIs(stateNames.last())
+			.willReturn(
+				aResponse()
+					.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+					.withBody(createSafResponse_withJournalpost(innsendingsId = innsendingsId ))
+					.withStatus(HttpStatus.OK.value())
+			)
+	)
+}
 private fun createSafResponse_withJournalpost(innsendingsId: String): String {
 	val objectMapper = ObjectMapper()
 	return objectMapper.writeValueAsString(

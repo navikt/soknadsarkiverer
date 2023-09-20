@@ -109,7 +109,7 @@ open class TaskListService(
 
 		logger.info("$key: state = FAILURE. Ready for next state STARTED")
 		val task = tasks[key]
-		if (task != null && loggedTaskStates[key] == EventTypes.FAILURE) {
+		if (task != null && (loggedTaskStates[key] == EventTypes.FAILURE || loggedTaskStates[key] == EventTypes.FINISHED || loggedTaskStates[key] == EventTypes.ARCHIVED)) {
 			tasks.remove(key)
 		}
 		createProcessingEvent(key, EventTypes.STARTED)
@@ -268,20 +268,21 @@ open class TaskListService(
 				}
 				nextState = retry(key)
 			} catch (e: FilesAlreadyDeletedException) {
+
 				logger.warn(
-					"$key: All files gone from Filestorage, indicating that the application is already archived. " +
-						"Will continue without archiving"
+					"$key: Files deleted, indicating that the application is already archived. " +
+						"Will check if application is archived and re-try if not"
 				)
-				nextState = EventTypes.FINISHED
+				nextState = retry(key)
 
 			} catch (e: Exception) {
 				nextState = when (e.cause) {
 					is FilesAlreadyDeletedException -> {
 						logger.warn(
-							"$key: All files gone from Filestorage, indicating that the application is already archived. " +
-								"Will continue without archiving"
+							"$key: Files deleted, indicating that the application is already archived. " +
+								"Will check if application is archived and re-try if not"
 						)
-						EventTypes.ARCHIVED
+						retry(key)
 					}
 
 					is ApplicationAlreadyArchivedException -> {
