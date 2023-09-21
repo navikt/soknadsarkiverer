@@ -15,12 +15,8 @@ class ProcessingEventDto(processingEventStrings: List<String>) {
 		}
 	}
 
-	fun getNewestState(key: String): ProcessingEvent {
-		// TODO: Fjern denne
-		if (key == "b4a5f62b-03c3-4f3a-848c-c0f3f1f3832e") {
-			return ProcessingEvent(EventTypes.STARTED)
-		}
-		
+	fun getNewestState(): ProcessingEvent {
+
 		if (values.contains(ProcessingEvent(EventTypes.FINISHED))) return ProcessingEvent(EventTypes.FINISHED)
 
 		if (values.last().type == EventTypes.FAILURE) return ProcessingEvent(EventTypes.FAILURE)
