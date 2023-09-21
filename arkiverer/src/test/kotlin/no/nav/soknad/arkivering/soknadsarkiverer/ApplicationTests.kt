@@ -538,23 +538,24 @@ class ApplicationTests : ContainerizedKafka() {
 		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
 		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
 		val joarkErrorsBefore = metrics.getJoarkErrors()
+		val attemptsToFail = 1
 
 		mockRequestedFileIsGone()
 		mockJoarkIsWorking()
-		mockSafRequest_notFound(innsendingsId= key)
+		mockSafRequest_foundAfterAttempt_ApplicationTest(innsendingsId= key, attempts = attemptsToFail)
 
 		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 
 		verifyProcessingEvents(key, mapOf(
-			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 0, FINISHED hasCount 1, FAILURE hasCount 0
+			RECEIVED hasCount 1, STARTED hasCount 2, ARCHIVED hasCount 0, FINISHED hasCount 1, FAILURE hasCount 0
 		))
-		verifyDeleteRequestsToFilestorage(0)
-		verifyMessageStartsWith(key, mapOf("ok" hasCount 0, "Exception" hasCount 1))
+		verifyDeleteRequestsToFilestorage(1)
+		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount 1))
 
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount 0,
 			"send files to archive" hasCount 0,
-			"delete files from filestorage" hasCount 0
+			"delete files from filestorage" hasCount 1
 		))
 
 		verifyArchivingMetrics(getFilestorageErrorsBefore + 0, { metrics.getGetFilestorageErrors() })

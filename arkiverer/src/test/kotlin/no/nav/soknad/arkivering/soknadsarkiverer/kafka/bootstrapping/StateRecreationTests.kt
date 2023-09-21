@@ -5,16 +5,27 @@ import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.mockk.*
 import io.prometheus.client.CollectorRegistry
+import kotlinx.coroutines.runBlocking
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
+import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaSetupTest
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
+import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.ContainerizedKafka
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageProperties
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
+import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafService
+import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafServiceInterface
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -27,6 +38,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
@@ -41,6 +53,13 @@ import java.util.concurrent.TimeUnit
 @EnableConfigurationProperties(ClientConfigurationProperties::class, KafkaConfig::class)
 class StateRecreationTests : ContainerizedKafka() {
 
+	@Value("\${application.mocked-port-for-external-services}")
+	private val portToExternalServices: Int? = null
+	@Value("\${joark.journal-post}")
+	private lateinit var journalPostUrl: String
+	@Value("\${saf.path}")
+	private lateinit var safUrl: String
+
 	@Suppress("unused")
 	@MockkBean(relaxed = true)
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
@@ -54,25 +73,61 @@ class StateRecreationTests : ContainerizedKafka() {
 	private lateinit var kafkaStreams: KafkaStreams // Mock this so that the real chain isn't run by the tests
 
 	@Autowired
+	private lateinit var filestorageProperties: FilestorageProperties
+	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
+	@Autowired
+	private lateinit var kafkaPublisher: KafkaPublisher
+
 	private lateinit var kafkaMainTopicProducer: KafkaProducer<String, Soknadarkivschema>
 	private lateinit var kafkaProcessingEventProducer: KafkaProducer<String, ProcessingEvent>
 	private lateinit var kafkaBootstrapConsumer: KafkaBootstrapConsumer
 
+	private val metrics: ArchivingMetrics = ArchivingMetrics(CollectorRegistry.defaultRegistry)
 
+	private val safService = mockk<SafServiceInterface>()
+	private	val scheduler = mockk<Scheduler>().also {
+		every{it.schedule(any(), any())} just Runs
+		every{it.scheduleSingleTask(any(), any())} just Runs
+	}
+	private val	archiverService = mockk<ArchiverService>().also {
+		every {	runBlocking{it.fetchFiles(any(), any())} } returns listOf(FileInfo("id", "content".toByteArray(), ResponseStatus.Ok))
+		every { it.archive(any(), any(), any()) } just Runs
+		every { it.deleteFiles(any(), any()) } just Runs
+	}
 	private val taskListService = mockk<TaskListService>().also {
 		every { it.addOrUpdateTask(any(), any(), any(), any()) } just Runs
 	}
 
+
+	private lateinit var kafkaSetup: KafkaSetupTest
+
+
 	private val soknadarkivschema = createSoknadarkivschema()
+	private val fileUuid = UUID.randomUUID().toString()
 
 	@BeforeAll
 	fun setup() {
+		setupMockedNetworkServices(
+			portToExternalServices!!+1,
+			journalPostUrl,
+			filestorageProperties.files,
+			safUrl
+			)
 		kafkaMainTopicProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProcessingEventProducer = KafkaProducer(kafkaConfigMap())
 		kafkaBootstrapConsumer = KafkaBootstrapConsumer(taskListService, kafkaConfig)
+		kafkaSetup = KafkaSetupTest(
+			applicationState = ApplicationState(alive = true,ready = true),
+			taskListService = taskListService,
+			kafkaPublisher = kafkaPublisher,
+			metrics = metrics,
+			kafkaConfig = kafkaConfig
+		)
+
 
 		kafkaBootstrapConsumer.recreateState() // Other test classes could have left Kafka events on the topics. Consume them before running the tests in this class.
+
 	}
 
 
@@ -86,6 +141,10 @@ class StateRecreationTests : ContainerizedKafka() {
 	@Test
 	fun `Can read Event Log with Event that was never started`() {
 		val key = UUID.randomUUID().toString()
+		mockFilestorageIsWorking(fileUuid)
+		mockJoarkIsWorking()
+		val soknadsarkivschema = createSoknadarkivschema(key)
+		mockSafRequest_notFound(innsendingsId= soknadsarkivschema.behandlingsid)
 
 		publishSoknadsarkivschemas(key)
 		publishProcessingEvents(key to RECEIVED)
@@ -302,6 +361,29 @@ class StateRecreationTests : ContainerizedKafka() {
 		verifyThatTaskListService().wasNotCalled()
 	}
 
+	var countFinishedOrFailure: Int = 0
+
+	@Test
+	fun `Process events, simulate upstart with some FINISHED and FAILURE and Not Finished events - some should be scheduled`() {
+		val size = 40
+		val keyList = MutableList(size) { UUID.randomUUID().toString() }
+
+		keyList.forEach { key -> publishSoknadsarkivschemas(key) }
+
+		countFinishedOrFailure = 0
+		keyList.forEach { key ->
+			publishProcessingEvents(
+				key to RECEIVED,
+				key to STARTED,
+				randomFailureOrFinishedOrStarted(key)
+			)
+		}
+
+		recreateState()
+
+		verifyThatTaskListService().wasCalled(size-countFinishedOrFailure)
+	}
+
 
 	private fun randomFailureOrFinished(key: String): Pair<String, EventTypes> {
 		val rand = (1..1000).random()
@@ -309,6 +391,17 @@ class StateRecreationTests : ContainerizedKafka() {
 			key to FAILURE
 		else
 			key to FINISHED
+	}
+
+	private fun randomFailureOrFinishedOrStarted(key: String): Pair<String, EventTypes> {
+		val rand = (1..1000).random()
+		if (rand>300) countFinishedOrFailure+1 else countFinishedOrFailure
+		return if (rand > 400)
+			key to FAILURE
+		else if (rand > 300)
+			key to FINISHED
+		else
+			key to STARTED
 	}
 
 	private fun publishSoknadsarkivschemas(vararg keys: String) {

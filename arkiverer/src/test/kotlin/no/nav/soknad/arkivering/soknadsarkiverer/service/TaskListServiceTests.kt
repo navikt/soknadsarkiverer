@@ -16,40 +16,42 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.*
 
 class TaskListServiceTests {
 
-	private val metrics: ArchivingMetrics = ArchivingMetrics(CollectorRegistry.defaultRegistry)
-
-	private	val scheduler = mockk<Scheduler>().also {
-		every{it.schedule(any(), any())} just Runs
-		every{it.scheduleSingleTask(any(), any())} just Runs
-	}
-	private val	archiverService = mockk<ArchiverService>().also {
+		private	val scheduler = mockk<Scheduler>().also {
+			every{it.schedule(any(), any())} just Runs
+			every{it.scheduleSingleTask(any(), any())} just Runs
+		}
+		private val	archiverService = mockk<ArchiverService>().also {
 			every {	runBlocking{it.fetchFiles(any(), any())}} returns listOf(FileInfo("id", "content".toByteArray(), ResponseStatus.Ok))
 			every { it.archive(any(), any(), any()) } just Runs
 			every { it.deleteFiles(any(), any()) } just Runs
 		}
-	private val	kafkaPublisher = mockk<KafkaPublisher>().also {
+		private val	kafkaPublisher = mockk<KafkaPublisher>().also {
 			every { it.putProcessingEventOnTopic(any(), any(), any()) } just Runs
 		}
 
-	private val safService = mockk<SafServiceInterface>()
+		private val safService = mockk<SafServiceInterface>()
 
-	private val taskListService = TaskListService(
-		archiverService,
-		safService,
-		0,
-		listOf(0, 0, 0, 0, 0, 0),
-		ApplicationState(),
-		scheduler,
-		metrics,
-		kafkaPublisher
-	)
-	private val soknadarkivschema = createSoknadarkivschema()
+		private val soknadarkivschema = createSoknadarkivschema()
 
+		private val metrics: ArchivingMetrics = ArchivingMetrics(CollectorRegistry())
+
+		private val secondsBetweenRetries = listOf(0L, 0L, 0L, 0L, 0L, 0L)
+		private val taskListService = TaskListService(
+									archiverService,
+									safService,
+									0,
+									secondsBetweenRetries,
+									ApplicationState(),
+									scheduler,
+									metrics,
+									kafkaPublisher
+								)
 
 	@AfterEach
 	fun teardown() {
