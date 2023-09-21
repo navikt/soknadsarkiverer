@@ -69,7 +69,7 @@ class KafkaStreamsSetup(
 				materialized // Materialisert som KeyValue store
 			)
 			.mapValues { processingEvents -> ProcessingEventDto(processingEvents) } // mapper eventtype til ProcessingEventDto
-			.mapValues { key, processingEvents -> processingEvents.getNewestState(key) }
+			.mapValues { processingEvents -> processingEvents.getNewestState() }
 			.toStream()
 			.peek { key, state -> logger.debug("$key: ProcessingTopic in state $state") }
 			.filter { key, state -> !(isConsideredFinished(key, state)) }
