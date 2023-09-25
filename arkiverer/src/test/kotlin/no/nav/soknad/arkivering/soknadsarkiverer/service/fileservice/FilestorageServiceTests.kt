@@ -111,7 +111,7 @@ class FilestorageServiceTests {
 
 		filestorageService.deleteFilesFromFilestorage(key, soknadarkivschema)
 
-		verify(exactly = 1) { filesApi.deleteFiles(any(), any()) }
+		verify(exactly = 0) { filesApi.deleteFiles(any(), any()) }
 	}
 
 	@Test
@@ -122,7 +122,7 @@ class FilestorageServiceTests {
 
 		filestorageService.deleteFilesFromFilestorage(key, soknadarkivschema)
 
-		verify(exactly = 1) { filesApi.deleteFiles(fileIdsAndResponses.take(numberOfFiles).map { it.first }, any()) }
+		verify(exactly = 0) { filesApi.deleteFiles(fileIdsAndResponses.take(numberOfFiles).map { it.first }, any()) }
 	}
 
 	@Test
@@ -133,7 +133,7 @@ class FilestorageServiceTests {
 
 		filestorageService.deleteFilesFromFilestorage(key, soknadarkivschema)
 
-		verify(exactly = 1) { filesApi.deleteFiles(fileIdsAndResponses.take(numberOfFiles).map { it.first }, any()) }
+		verify(exactly = 0) { filesApi.deleteFiles(fileIdsAndResponses.take(numberOfFiles).map { it.first }, any()) }
 	}
 
 

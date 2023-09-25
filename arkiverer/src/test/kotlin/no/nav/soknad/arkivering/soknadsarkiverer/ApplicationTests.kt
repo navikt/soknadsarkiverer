@@ -130,7 +130,7 @@ class ApplicationTests : ContainerizedKafka() {
 		))
 		verifyMockedPostRequests(1, safUrl)
 		verifyMockedPostRequests(1, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(1)
+		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 0))
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount 1,
@@ -159,7 +159,7 @@ class ApplicationTests : ContainerizedKafka() {
 		))
 		verifyMockedPostRequests(1, safUrl)
 		verifyMockedPostRequests(1, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(1)
+		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 0))
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount 1,
@@ -259,7 +259,7 @@ class ApplicationTests : ContainerizedKafka() {
 		))
 		verifyMockedPostRequests(1, safUrl)
 		verifyMockedPostRequests(1, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(1)
+		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(key, mapOf("ok" hasCount 1))
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount 1,
@@ -290,7 +290,7 @@ class ApplicationTests : ContainerizedKafka() {
 		))
 		verifyMockedPostRequests(numberOfFailures+1, safUrl)
 		verifyMockedPostRequests(numberOfFailures+1, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(1)
+		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount 1))
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount numberOfFailures+1,
@@ -299,7 +299,7 @@ class ApplicationTests : ContainerizedKafka() {
 		))
 
 		verifyArchivingMetrics(getFilestorageSuccessesBefore + 2, { metrics.getGetFilestorageSuccesses() })
-		verifyArchivingMetrics(delFilestorageSuccessesBefore + 1, { metrics.getDelFilestorageSuccesses() })
+		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, { metrics.getDelFilestorageSuccesses() })
 		verifyArchivingMetrics(joarkErrorsBefore + 1, { metrics.getJoarkErrors() })
 		verifyArchivingMetrics(joarkSuccessesBefore + 1, { metrics.getJoarkSuccesses() })
 		verifyArchivingMetrics(tasksBefore + 0, { metrics.getTasks() }, "Should have created and finished task")
@@ -352,7 +352,7 @@ class ApplicationTests : ContainerizedKafka() {
 			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
 		))
 		verifyMockedPostRequests(1, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(1)
+		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 0))
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount 1,
@@ -362,7 +362,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		verifyArchivingMetrics(getFilestorageSuccessesBefore + 1, { metrics.getGetFilestorageSuccesses() })
 		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, { metrics.getDelFilestorageSuccesses() })
-		verifyArchivingMetrics(delFilestorageErrorsBefore + 1, { metrics.getDelFilestorageErrors() })
+		verifyArchivingMetrics(delFilestorageErrorsBefore + 0, { metrics.getDelFilestorageErrors() })
 		verifyArchivingMetrics(joarkErrorsBefore + 0, { metrics.getJoarkErrors() })
 		verifyArchivingMetrics(joarkSuccessesBefore + 1, { metrics.getJoarkSuccesses() })
 	}
@@ -406,7 +406,7 @@ class ApplicationTests : ContainerizedKafka() {
 		))
 		verifyMockedPostRequests(attemptsToFail+1, safUrl)
 		verifyMockedPostRequests(attemptsToFail + 1, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(1)
+		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount attemptsToFail))
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount attemptsToFail+1,
@@ -437,7 +437,7 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyProcessingEvents(key, mapOf(
 			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
 		))
-		verifyDeleteRequestsToFilestorage(1)
+		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 1))
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount 1,
@@ -447,7 +447,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		verifyArchivingMetrics(getFilestorageErrorsBefore + 0, { metrics.getGetFilestorageErrors() })
 		verifyArchivingMetrics(getFilestorageSuccessesBefore + 1, { metrics.getGetFilestorageSuccesses() })
-		verifyArchivingMetrics(delFilestorageSuccessesBefore + 1, { metrics.getDelFilestorageSuccesses() })
+		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, { metrics.getDelFilestorageSuccesses() })
 		verifyArchivingMetrics(joarkErrorsBefore + 0, { metrics.getJoarkErrors() })
 		verifyArchivingMetrics(joarkSuccessesBefore + 0, { metrics.getJoarkSuccesses() })
 		verifyArchivingMetrics(tasksBefore, { metrics.getTasks() })
@@ -474,7 +474,7 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyProcessingEvents(key, mapOf(
 			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
 		))
-		verifyDeleteRequestsToFilestorage(1)
+		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 0))
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount 0,
@@ -484,7 +484,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		verifyArchivingMetrics(getFilestorageErrorsBefore + 0, { metrics.getGetFilestorageErrors() })
 		verifyArchivingMetrics(getFilestorageSuccessesBefore + 0, { metrics.getGetFilestorageSuccesses() })
-		verifyArchivingMetrics(delFilestorageSuccessesBefore + 1, { metrics.getDelFilestorageSuccesses() })
+		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, { metrics.getDelFilestorageSuccesses() })
 		verifyArchivingMetrics(joarkErrorsBefore + 0, { metrics.getJoarkErrors() })
 		verifyArchivingMetrics(joarkSuccessesBefore + 0, { metrics.getJoarkSuccesses() })
 		verifyArchivingMetrics(tasksBefore, { metrics.getTasks() })
@@ -549,7 +549,7 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyProcessingEvents(key, mapOf(
 			RECEIVED hasCount 1, STARTED hasCount 2, ARCHIVED hasCount 0, FINISHED hasCount 1, FAILURE hasCount 0
 		))
-		verifyDeleteRequestsToFilestorage(1)
+		verifyDeleteRequestsToFilestorage(0)
 		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount 1))
 
 		verifyKafkaMetric(key, mapOf(

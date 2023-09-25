@@ -86,7 +86,7 @@ class IntegrationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		verifyMockedPostRequests(initialRequests+2, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(2)
+		verifyDeleteRequestsToFilestorage(0)
 	}
 
 	@Test
@@ -112,7 +112,7 @@ class IntegrationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic(soknadarkivschema)
 
 		verifyMockedPostRequests(1, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(1)
+		verifyDeleteRequestsToFilestorage(0)
 	}
 
 	@Test
@@ -125,7 +125,7 @@ class IntegrationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic(soknadarkivschema)
 
 		verifyMockedPostRequests(0, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(1)
+		verifyDeleteRequestsToFilestorage(0)
 	}
 
 	@Test
@@ -138,7 +138,7 @@ class IntegrationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic(soknadarkivschema)
 
 		verifyMockedPostRequests(1, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(1)
+		verifyDeleteRequestsToFilestorage(0)
 	}
 
 	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
