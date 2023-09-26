@@ -24,6 +24,8 @@
 	"innsending-api-scope": "api://dev-gcp.team-soknad.innsending-api-loadtests/.default",
 	"send-to-joark": "true",
 	"kafka-pool": "nav-dev",
+	"SAF_URL": "https://arkiv-mock-gcp.intern.dev.nav.no",
+	"SAF_SCOPE": "api://dev-gcp.team-soknad.arkiv-mock/.default",
 	"AZURE_ALLOW_ALL_USERS": false,
 	"AZURE_ALLOWED_GROUPS": []
 }
