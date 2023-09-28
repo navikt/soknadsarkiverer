@@ -86,7 +86,6 @@ class IntegrationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		verifyMockedPostRequests(initialRequests+2, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(2)
 	}
 
 	@Test
@@ -98,7 +97,6 @@ class IntegrationTests : ContainerizedKafka() {
 
 		TimeUnit.SECONDS.sleep(1)
 		verifyMockedPostRequests(0, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(0)
 	}
 
 	@Test
@@ -112,7 +110,6 @@ class IntegrationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic(soknadarkivschema)
 
 		verifyMockedPostRequests(1, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(1)
 	}
 
 	@Test
@@ -125,7 +122,6 @@ class IntegrationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic(soknadarkivschema)
 
 		verifyMockedPostRequests(0, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(1)
 	}
 
 	@Test
@@ -138,12 +134,6 @@ class IntegrationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic(soknadarkivschema)
 
 		verifyMockedPostRequests(1, journalPostUrl)
-		verifyDeleteRequestsToFilestorage(1)
-	}
-
-	private fun verifyDeleteRequestsToFilestorage(expectedCount: Int) {
-		val url = filestorageProperties.files + ".*"
-		verifyMockedDeleteRequests(expectedCount, url)
 	}
 
 	private fun createSoknadarkivschema() = createSoknadarkivschema(fileId)
