@@ -18,6 +18,11 @@
 			<artifactId>soknadsarkiverer-clients</artifactId>
 			<version>${project.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>no.nav.soknad.arkivering</groupId>
+			<artifactId>admin-api</artifactId>
+			<version>${project.version}</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
