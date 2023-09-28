@@ -60,10 +60,6 @@ class FilestorageService(
 		mergeFetchResponsesAndSetOverallStatus(key, fileIds.map { getOneFile(key, it) } )
 
 
-	private fun deleteFiles(key: String, fileIds: List<String>) {
-		filesApi.deleteFiles(fileIds, key)
-	}
-
 	private fun returnFirstOrNull(files: List<FileData>?): List<FileInfo>? {
 		if (files == null || files.isEmpty()) return null
 		return mapToFileInfo(files.first())
