@@ -52,35 +52,13 @@ class FilestorageService(
 	}
 
 	override fun deleteFilesFromFilestorage(key: String, data: Soknadarkivschema) {
-		val timer = metrics.filestorageDelLatencyStart()
-
 		val fileIds = getFileIds(data)
-		try {
-
-			logger.info("$key: Calling file storage to delete $fileIds")
-			deleteFiles(key, fileIds)
-			logger.info("$key: Deleted these files: $fileIds")
-
-			metrics.incDelFilestorageSuccesses()
-		} catch (e: Exception) {
-			metrics.incDelFilestorageErrors()
-			logger.warn(
-				"$key: Failed to delete files from file storage. Everything is saved to Joark correctly, " +
-					"so this error will be ignored. Affected file ids: '$fileIds'", e
-			)
-
-		} finally {
-			metrics.endTimer(timer)
-		}
+		logger.info("$key: The following files are archived and can be deleted (by sendsoknad or innsending-api) $fileIds")
 	}
 
 	private fun getFiles(key: String, fileIds: List<String>) =
 		mergeFetchResponsesAndSetOverallStatus(key, fileIds.map { getOneFile(key, it) } )
 
-
-	private fun deleteFiles(key: String, fileIds: List<String>) {
-		filesApi.deleteFiles(fileIds, key)
-	}
 
 	private fun returnFirstOrNull(files: List<FileData>?): List<FileInfo>? {
 		if (files == null || files.isEmpty()) return null
