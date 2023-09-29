@@ -51,6 +51,16 @@
 			<version>${jackson-databind-nullable.version}</version>
 		</dependency>
 		<dependency>
+			<groupId>com.github.java-json-tools</groupId>
+			<artifactId>jackson-coreutils</artifactId>
+			<version>${jackson-coreutils.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.github.java-json-tools</groupId>
+			<artifactId>jackson-coreutils-equivalence</artifactId>
+			<version>${jackson-equivalence.version}</version>
+		</dependency>
+		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-ui</artifactId>
 			<version>${springdoc-openapi.version}</version>
@@ -104,7 +114,17 @@
 				</executions>
 				<configuration>
 					<jvmTarget>${java.version}</jvmTarget>
+					<compilerPlugins>
+						<plugin>spring</plugin>
+					</compilerPlugins>
 				</configuration>
+				<dependencies>
+					<dependency>
+						<groupId>org.jetbrains.kotlin</groupId>
+						<artifactId>kotlin-maven-allopen</artifactId>
+						<version>${kotlin.version}</version>
+					</dependency>
+				</dependencies>
 			</plugin>
 		</plugins>
 	</build>

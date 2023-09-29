@@ -27,6 +27,8 @@
 		<okhttp3.version>4.11.0</okhttp3.version>
 		<springdoc.version>1.7.0</springdoc.version>
 		<token-support.version>3.1.5</token-support.version>
+		<jackson-coreutils.version>2.0</jackson-coreutils.version>
+		<jackson-equivalence.version>1.0</jackson-equivalence.version>
 		<jackson-databind-nullable.version>0.2.6</jackson-databind-nullable.version>
 		<jackson-module-kotlin.version>2.15.2</jackson-module-kotlin.version>
 		<gson.version>2.10.1</gson.version>
