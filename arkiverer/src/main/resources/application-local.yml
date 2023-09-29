@@ -95,3 +95,12 @@ no.nav.security:
             client-id: fake
             client-secret: someSecret
             client-auth-method: client_secret_basic
+
+        saf-maskintilmaskin:
+          token-endpoint-url: http://localhost:6969/fake/token
+          grant-type: client_credentials
+          scope: ${SAF_SCOPE}
+          authentication:
+            client-id: fakr
+            client-secret: someSecret
+            client-auth-method: client_secret_basic
