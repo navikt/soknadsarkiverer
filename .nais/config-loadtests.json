@@ -17,13 +17,15 @@
 	"kafka-message-topic": "team-soknad.privat-soknadinnsending-messages-v1-loadtests",
 	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v1-loadtests",
 	"filestorage-host": "https://soknadsfillager-gcp-loadtests.intern.dev.nav.no",
-	"innsending-api-host": "arkiv-mock-gcp.intern.dev.nav.no",
+	"innsending-api-host": "https://arkiv-mock-gcp.intern.dev.nav.no",
 	"joark-host": "https://arkiv-mock-gcp.intern.dev.nav.no",
 	"dokarkiv-scope": "api://dev-gcp.team-soknad.arkiv-mock/.default",
 	"soknadsfillager-scope": "api://dev-gcp.team-soknad.soknadsfillager-loadtests/.default",
 	"innsending-api-scope": "api://dev-gcp.team-soknad.innsending-api-loadtests/.default",
 	"send-to-joark": "true",
 	"kafka-pool": "nav-dev",
+	"SAF_URL": "https://arkiv-mock-gcp.intern.dev.nav.no",
+	"SAF_SCOPE": "api://dev-gcp.team-soknad.arkiv-mock/.default",
 	"AZURE_ALLOW_ALL_USERS": false,
 	"AZURE_ALLOWED_GROUPS": []
 }
