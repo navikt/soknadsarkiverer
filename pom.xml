@@ -32,7 +32,7 @@
 		<snappy-java.version>1.1.10.5</snappy-java.version>
 		<snakeyaml.version>2.2</snakeyaml.version>
 		<guava.version>32.1.2-jre</guava.version>
-		<graphql-kotlin.version>6.5.3</graphql-kotlin.version>
+		<graphql-kotlin.version>7.0.1</graphql-kotlin.version>
 
 		<!--Kotlin-->
 		<kotlin-serialization.version>1.6.0</kotlin-serialization.version>
