@@ -18,9 +18,7 @@ no.nav.security:
     username: admin
     password: password
   jwt:
-    issuer:
-      azuread:
-    azure:
+    issuer.azuread:
       discoveryurl: ${AZURE_APP_WELL_KNOWN_URL}
       accepted_audience: ${AZURE_APP_CLIENT_ID}
     client:
