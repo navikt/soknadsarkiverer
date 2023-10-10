@@ -25,7 +25,7 @@ paths:
       parameters:
         - name: key
           in: path
-          description: identification of application for which re-run shall be triggered
+          description: The innsendingsId, ie. identification of application for which re-run shall be triggered
           required: true
           schema:
             type: string
@@ -46,7 +46,7 @@ paths:
       parameters:
         - name: key
           in: path
-          description: identification of application for which re-run shall be triggered
+          description: ie. identification, ie. identification of application for which re-run shall be triggered
           required: true
           schema:
             type: string
