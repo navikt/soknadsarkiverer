@@ -1,0 +1,137 @@
+openapi: 3.0.3
+info:
+  description: Admin interface to support supervision and maintenance of functionality to archive applications
+  version: 2.0.0
+  title: Soknadsarkiverer
+  contact:
+    name: team-soknad
+    email: team-soknad@nav.no
+  license:
+    name: MIT License
+    url: https://github.com/navikt/soknadsarkiverer/blob/main/LICENSE
+tags:
+  - name: admin
+    description: Access to the admin interface of soknadsarkiverer
+  - name: health
+    description: Application health endpoint
+
+paths:
+  /admin/rerun/{key}:
+    post:
+      summary: Trigger re-try of archiving an application.
+      description: If archiving of an application has failed, this interface can be called to re-run the archiving process
+      operationId: rerun
+
+      parameters:
+        - name: key
+          in: path
+          description: The innsendingsId, ie. identification of application for which re-run shall be triggered
+          required: true
+          schema:
+            type: string
+          style: simple
+
+      responses:
+        200:
+          description: Successful operation
+      tags:
+        - rerun
+
+  /admin/isarchived/{key}:
+    get:
+      summary: Request to check if an application has been archived.
+      description: Given identification of an application a call is made to check if the application has been archived.
+      operationId: isArchived
+
+      parameters:
+        - name: key
+          in: path
+          description: ie. identification, ie. identification of application for which re-run shall be triggered
+          required: true
+          schema:
+            type: string
+          style: simple
+
+      responses:
+        '200':
+          description: Archiving status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchivingStatus"
+        404:
+          description: Application is not archived.
+      tags:
+        - files
+
+  /internal/ping:
+    get:
+      summary: Pings the application to see if it responds
+      description: Pings the application to see if it responds
+      operationId: ping
+
+      security: []   # No security
+      responses:
+        '200':
+          description: Successful operation; application is responding
+      tags:
+        - health
+
+  /internal/isAlive:
+    get:
+      summary: Checks if the application and its dependencies up
+      description: Checks if the application and its dependencies are up and running.
+      operationId: isAlive
+
+      security: []   # No security
+      responses:
+        '200':
+          description: Successful operation; application is alive
+        '500':
+          description: The application or one of its dependencies are not up and running.
+      tags:
+        - health
+
+  /internal/isReady:
+    get:
+      summary: Checks if the application is ready to accept traffic
+      description: Checks if the application is ready to accept traffic.
+      operationId: isReady
+
+      security: []   # No security
+      responses:
+        '200':
+          description: Successful operation; application is ready
+        '503':
+          description: The application or one of its dependencies are not ready
+      tags:
+        - health
+
+
+components:
+  schemas:
+    ArchivingStatus:
+      type: object
+      required:
+        - key
+      properties:
+        key:
+          type: string
+          description: Unique id of the application
+          example: 2f9b8d25-1056-4827-8ddd-cedab7fafaaf
+        journalpostId:
+          type: string
+          description: the application id in the archive
+          example: 2990225
+        datoOpprettet:
+          type: string
+          format: date-time
+          nullable: true
+          description: Creation date and time in UTC
+          example: 2021-12-03T14:10:00Z
+
+security: []
+
+externalDocs:
+  description: Documentation of the whole archiving system
+  url: https://github.com/navikt/archiving-infrastructure/wiki

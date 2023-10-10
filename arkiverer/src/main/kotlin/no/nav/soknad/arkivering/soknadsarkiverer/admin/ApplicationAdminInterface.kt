@@ -1,28 +1,49 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
-import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
-import io.swagger.v3.oas.annotations.responses.ApiResponse
-import io.swagger.v3.oas.annotations.responses.ApiResponses
 import no.nav.security.token.support.core.api.ProtectedWithClaims
+import no.nav.soknad.arkivering.api.AdminApi
+import no.nav.soknad.arkivering.model.ArchivingStatus
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafServiceInterface
+import no.nav.soknad.arkivering.soknadsarkiverer.util.konverterTilDateTime
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @ProtectedWithClaims(issuer = "azuread")
 @RequestMapping("/admin")
-class ApplicationAdminInterface(private val taskListService: TaskListService) {
+class ApplicationAdminInterface(private val taskListService: TaskListService, private val safService: SafServiceInterface): AdminApi {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	@Operation(summary = "Requests that the task with the given key should be rerun. It might take a little while " +
-		"before the rerun is started.", tags = ["operations"])
-	@ApiResponses(value = [ApiResponse(responseCode = "200", description = "Will always return successfully, but the " +
-		"actual rerun will be triggered some time in the future.")])
-	@PostMapping("/rerun/{key}")
-	fun rerun(@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String) {
+	override fun rerun(@Parameter(description = "Key of a Soknadsarkivschema") @PathVariable key: String): ResponseEntity<Unit> {
 		logger.info("$key: Performing forced rerun")
 
 		taskListService.startPaNytt(key)
+
+		return ResponseEntity
+			.status(HttpStatus.OK)
+			.body(Unit)
 	}
+
+	override fun isArchived(@Parameter(description = "application key") @PathVariable key: String): ResponseEntity<ArchivingStatus> {
+		logger.info("$key: Check if application is archived")
+
+		val journalpost = safService.hentJournalpostGittInnsendingId(key)
+
+		if (journalpost == null) {
+			return ResponseEntity
+				.status(HttpStatus.NOT_FOUND)
+				.body(ArchivingStatus(key, null, null))
+		} else {
+			return ResponseEntity
+				.status(HttpStatus.OK)
+				.body(ArchivingStatus(key, journalpost.journalpostId, konverterTilDateTime(journalpost.datoOpprettet)))
+		}
+
+	}
+
+
 }

@@ -19,24 +19,59 @@ no.nav.security:
     password: password
   jwt:
     issuer:
-      someshortname:
-        discoveryurl: http://metadata
-        accepted_audience: aud-localhost
-        cookie_name: localhost-idtoken
       azuread:
-        discoveryurl: http://metadata
-        accepted_audience: aud-localhost
-        cookie_name: localhost-idtoken
+    azure:
+      discoveryurl: ${AZURE_APP_WELL_KNOWN_URL}
+      accepted_audience: ${AZURE_APP_CLIENT_ID}
     client:
       registration:
-        soknadsarkiverer:
-          token-endpoint-url: http://localhost:8181/oauth2/v2.0/token
-          grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
-          scope: scope1
+        soknadsfillager:
+          token-endpoint-url: ${AZURE_OPENID_CONFIG_TOKEN_ENDPOINT}
+          grant-type: client_credentials
+          scope: ${SOKNADSFILLAGER_SCOPE}
           authentication:
-            client-id: testclient
-            client-secret: testsecret
+            client-id: ${AZURE_APP_CLIENT_ID}
+            client-secret: ${AZURE_APP_CLIENT_SECRET}
             client-auth-method: client_secret_basic
+        innsendingApi:
+          token-endpoint-url: ${AZURE_OPENID_CONFIG_TOKEN_ENDPOINT}
+          grant-type: client_credentials
+          scope: ${INNSENDING_API_SCOPE}
+          authentication:
+            client-id: ${AZURE_APP_CLIENT_ID}
+            client-secret: ${AZURE_APP_CLIENT_SECRET}
+            client-auth-method: client_secret_basic
+        arkiv:
+          token-endpoint-url: ${AZURE_OPENID_CONFIG_TOKEN_ENDPOINT}
+          grant-type: client_credentials
+          scope: ${DOKARKIV_SCOPE}
+          authentication:
+            client-id: ${AZURE_APP_CLIENT_ID}
+            client-secret: ${AZURE_APP_CLIENT_SECRET}
+            client-auth-method: client_secret_basic
+        saf-maskintilmaskin:
+          token-endpoint-url: ${AZURE_OPENID_CONFIG_TOKEN_ENDPOINT}
+          grant-type: client_credentials
+          scope: ${SAF_SCOPE}
+          authentication:
+            client-id: ${AZURE_APP_CLIENT_ID}
+            client-jwk: ${AZURE_APP_JWK}
+            client-auth-method: private_key_jwt
+
+joark:
+  host: ${JOARK_HOST}
+  sendToJoark: true
+  journal-post: /rest/journalpostapi/v1/journalpost
 filestorage:
-  username: innsending
+  host: ${FILESTORAGE_HOST}
+  files: /files/
+  username: sender
   password: password
+innsendingapi:
+  host: ${INNSENDING_API_HOST}
+saf:
+  url: ${SAF_URL}
+  path: /graphql
+applicationName: "soknadsarkiverer"
+
+
