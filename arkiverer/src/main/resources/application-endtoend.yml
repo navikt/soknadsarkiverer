@@ -28,18 +28,34 @@ no.nav.security:
           token-endpoint-url: http://localhost:8181/oauth2/v2.0/token
           grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
           scope: scope1
+          authentication:
+            client-id: ${AZURE_APP_CLIENT_ID}
+            client-secret: ${AZURE_APP_CLIENT_SECRET}
+            client-auth-method: client_secret_basic
         innsendingApi:
           token-endpoint-url: http://localhost:8181/oauth2/v2.0/token
           grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
           scope: scope1
+          authentication:
+            client-id: ${AZURE_APP_CLIENT_ID}
+            client-secret: ${AZURE_APP_CLIENT_SECRET}
+            client-auth-method: client_secret_basic
         arkiv:
           token-endpoint-url: http://localhost:8181/oauth2/v2.0/token
           grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
           scope: scope1
+          authentication:
+            client-id: ${AZURE_APP_CLIENT_ID}
+            client-secret: ${AZURE_APP_CLIENT_SECRET}
+            client-auth-method: client_secret_basic
         saf-maskintilmaskin:
           token-endpoint-url: http://localhost:8181/oauth2/v2.0/token
           grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
           scope: scope1
+          authentication:
+            client-id: ${AZURE_APP_CLIENT_ID}
+            client-secret: ${AZURE_APP_CLIENT_SECRET}
+            client-auth-method: client_secret_basic
 
 joark:
   host: ${JOARK_HOST}
