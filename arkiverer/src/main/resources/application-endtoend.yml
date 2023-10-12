@@ -26,7 +26,7 @@ no.nav.security:
       registration:
         soknadsfillager:
           token-endpoint-url: http://localhost:8181/oauth2/v2.0/token
-          grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
+          grant-type: client_credentials
           scope: scope1
           authentication:
             client-id: ${AZURE_APP_CLIENT_ID}
@@ -34,7 +34,7 @@ no.nav.security:
             client-auth-method: client_secret_basic
         innsendingApi:
           token-endpoint-url: http://localhost:8181/oauth2/v2.0/token
-          grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
+          grant-type: client_credentials
           scope: scope1
           authentication:
             client-id: ${AZURE_APP_CLIENT_ID}
@@ -42,7 +42,7 @@ no.nav.security:
             client-auth-method: client_secret_basic
         arkiv:
           token-endpoint-url: http://localhost:8181/oauth2/v2.0/token
-          grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
+          grant-type: client_credentials
           scope: scope1
           authentication:
             client-id: ${AZURE_APP_CLIENT_ID}
@@ -50,7 +50,7 @@ no.nav.security:
             client-auth-method: client_secret_basic
         saf-maskintilmaskin:
           token-endpoint-url: http://localhost:8181/oauth2/v2.0/token
-          grant-type: urn:ietf:params:oauth:grant-type:jwt-bearer
+          grant-type: client_credentials
           scope: scope1
           authentication:
             client-id: ${AZURE_APP_CLIENT_ID}
