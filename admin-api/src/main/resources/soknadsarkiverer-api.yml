@@ -107,9 +107,51 @@ paths:
       tags:
         - health
 
+  /health/status:
+    get:
+      summary: Returnerer operativ status på applikasjonen
+      description: Sjekker om applikasjonen er oppe og kjører som forventet
+      operationId: getStatus
+
+      security: [ ]
+      responses:
+        '200':
+          description: Status på applikasjonen er OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationStatus"
+      tags:
+        - health
+
 
 components:
   schemas:
+    ApplicationStatus:
+      type: object
+      description: Operativ status på applikasjonen
+      required:
+        - status
+
+      properties:
+        status:
+          $ref: "#/components/schemas/ApplicationStatusType"
+        description:
+          type: string
+          description: Beskrivelse av feilsituasjon
+          example: "Databasen i innsending-api er nede"
+        logLink:
+          type: string
+          description: Link til Kibana logs for mer info om feilen
+          example: https://logs.adeo.no/app/discover#/view/170a6860-df4c-11ed-8b42-0b0644af4500
+
+    ApplicationStatusType:
+      type: string
+      enum: [ "OK", "ISSUE", "DOWN" ]
+      x-enum-varnames: [ "OK", "ISSUE", "DOWN" ]
+      description: Operativ status på applikasjonen. (OK=Tjeneste er tilgjengelig og fungerer normalt, ISSUE=Tjeneste er tilgjengelig, men med begrenset funksjonalitet/kapasitet, DOWN=Tjeneste er utilgjengelig)
+      example: OK
+
     ArchivingStatus:
       type: object
       required:

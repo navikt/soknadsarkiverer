@@ -5,6 +5,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import no.nav.security.token.support.core.api.Unprotected
+import no.nav.soknad.arkivering.api.HealthApi
+import no.nav.soknad.arkivering.model.ApplicationStatus
+import no.nav.soknad.arkivering.model.ApplicationStatusType
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.isBusy
 import no.nav.soknad.arkivering.soknadsarkiverer.config.stop
@@ -16,13 +19,12 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping(value = ["/internal"])
 @Unprotected
-class HealthCheck(private val applicationState: ApplicationState, private val metrics: ArchivingMetrics) {
+class HealthCheck(private val applicationState: ApplicationState, private val metrics: ArchivingMetrics): HealthApi {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Hidden
-	@GetMapping("/isAlive")
+	@GetMapping("internal/isAlive")
 	fun isAlive() = if (applicationIsAlive()) {
 		ResponseEntity(HttpStatus.OK)
 	} else {
@@ -32,7 +34,7 @@ class HealthCheck(private val applicationState: ApplicationState, private val me
 	}
 
 	@Hidden
-	@GetMapping("/isReady")
+	@GetMapping("internal/isReady")
 	fun isReady(): ResponseEntity<String> {
 		return try {
 			if (applicationIsReady()) {
@@ -48,14 +50,14 @@ class HealthCheck(private val applicationState: ApplicationState, private val me
 	}
 
 	@Hidden
-	@GetMapping("/ping")
+	@GetMapping("internal/ping")
 	fun ping(): ResponseEntity<String> {
 		metrics.setUpOrDown(0.0)
 		return ResponseEntity("pong", HttpStatus.OK)
 	}
 
 	@Hidden
-	@GetMapping("/stop")
+	@GetMapping("internal/stop")
 	fun stop() = runBlocking {
 		launch {
 			while (isBusy(applicationState)) {
@@ -68,6 +70,12 @@ class HealthCheck(private val applicationState: ApplicationState, private val me
 		logger.info("Pod is getting ready for shutdown")
 	}
 
+	override fun getStatus(): ResponseEntity<ApplicationStatus> {
+		return ResponseEntity(
+			ApplicationStatus(status = ApplicationStatusType.OK, description = "OK"),
+			HttpStatus.OK
+		)
+	}
 
 	private fun applicationIsReady() = applicationState.ready && !applicationState.stopping
 
