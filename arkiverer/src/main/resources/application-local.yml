@@ -55,6 +55,7 @@ saf:
   url: http://localhost:2908
   path: /graphql
 applicationName: "soknadsarkiverer"
+status_log_url: "https://logs.adeo.no"
 
 filefetchtimeouts:
   connectTimeout: 20

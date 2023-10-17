@@ -118,3 +118,5 @@ spec:
       value: "{{SAF_URL}}"
     - name: SAF_SCOPE
       value: "{{SAF_SCOPE}}"
+    - name: STATUS_LOG_URL
+      value: {{STATUS_LOG_URL}}

@@ -12,6 +12,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.isBusy
 import no.nav.soknad.arkivering.soknadsarkiverer.config.stop
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @Unprotected
-class HealthCheck(private val applicationState: ApplicationState, private val metrics: ArchivingMetrics): HealthApi {
+class HealthCheck(private val applicationState: ApplicationState, private val metrics: ArchivingMetrics, @Value("\${status_log_url}") private val statusLogUrl: String): HealthApi {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Hidden
@@ -72,7 +73,7 @@ class HealthCheck(private val applicationState: ApplicationState, private val me
 
 	override fun getStatus(): ResponseEntity<ApplicationStatus> {
 		return ResponseEntity(
-			ApplicationStatus(status = ApplicationStatusType.OK, description = "OK"),
+			ApplicationStatus(status = ApplicationStatusType.OK, description = "OK", logLink = statusLogUrl),
 			HttpStatus.OK
 		)
 	}
