@@ -12,7 +12,7 @@ class HealthCheckTests  {
 
 	private val metrics = mockk<ArchivingMetrics>().also { every { it.setUpOrDown(any()) } returns Unit }
 	private val applicationState = ApplicationState()
-	private val healthCheck = HealthCheck(applicationState, metrics)
+	private val healthCheck = HealthCheck(applicationState, metrics, "https://logs.adeo.no")
 
 
 	@Test
