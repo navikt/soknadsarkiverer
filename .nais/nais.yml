@@ -59,6 +59,8 @@ spec:
         - application: debug-dings
           namespace: plattformsikkerhet
           cluster: dev-gcp
+        - application: statuspoll
+          namespace: navdig
     outbound:
       rules:
       {{#each outboundRules}}
@@ -116,3 +118,5 @@ spec:
       value: "{{SAF_URL}}"
     - name: SAF_SCOPE
       value: "{{SAF_SCOPE}}"
+    - name: STATUS_LOG_URL
+      value: {{STATUS_LOG_URL}}
