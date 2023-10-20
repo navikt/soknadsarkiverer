@@ -72,5 +72,5 @@ saf:
   url: ${SAF_URL}
   path: /graphql
 applicationName: "soknadsarkiverer"
-
+status_log_url: "https://logs.adeo.no"
 

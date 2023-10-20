@@ -30,5 +30,6 @@
 	"SAF_SCOPE": "api://dev-fss.teamdokumenthandtering.saf-q1/.default",
 	"AZURE_TENANT": "trygdeetaten.no",
 	"AZURE_ALLOW_ALL_USERS": true,
-	"AZURE_ALLOWED_GROUPS": []
+	"AZURE_ALLOWED_GROUPS": [],
+	"STATUS_LOG_URL": "https://logs.adeo.no/app/discover#/view/9aa683f0-df5d-11ed-8b42-0b0644af4500"
 }
