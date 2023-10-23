@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*
 
 @RestController
 @ProtectedWithClaims(issuer = "azuread")
-@RequestMapping("/admin")
 class ApplicationAdminInterface(private val taskListService: TaskListService, private val safService: SafServiceInterface): AdminApi {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
