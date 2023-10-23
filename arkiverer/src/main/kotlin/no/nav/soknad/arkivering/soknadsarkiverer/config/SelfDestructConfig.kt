@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
+import no.nav.soknad.arkivering.soknadsarkiverer.schedule.LeaderSelectionUtility
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -9,7 +10,10 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 @Configuration
-class SelfDestructConfig(private val scheduler: Scheduler, private val appState: ApplicationState) {
+class SelfDestructConfig(private val scheduler: Scheduler,
+												 private val appState: ApplicationState,
+												 private val leaderSelectionUtility: LeaderSelectionUtility,
+) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	/**
@@ -82,7 +86,9 @@ class SelfDestructConfig(private val scheduler: Scheduler, private val appState:
 	}
 
 	private fun selfDestruct() {
-		logger.info("Initialising self-destruction sequence")
-		appState.alive = false
+		if (leaderSelectionUtility.isLeader()) {
+			logger.info("Initialising self-destruction sequence")
+			appState.alive = false
+		}
 	}
 }
