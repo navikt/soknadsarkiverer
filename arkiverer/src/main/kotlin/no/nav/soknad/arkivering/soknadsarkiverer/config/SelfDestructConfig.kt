@@ -85,10 +85,8 @@ class SelfDestructConfig(private val scheduler: Scheduler,
 	 * different times during the night, meaning that it is very likely that there is at least one other pod running.
 	 */
 	private fun timeTomorrowNightBetween2and5(): Instant {
-		val nextMidnight = LocalDateTime.now() // TODO remove
-		val selfDestructTime = nextMidnight.plusHours(0).plusMinutes((0..1 * 60).random().toLong()) // TODO remove
-		//val nextMidnight = LocalDate.now().atStartOfDay().plusDays(1) // TODO add
-		//val selfDestructTime = nextMidnight.plusHours(2).plusMinutes((0..3 * 60).random().toLong())  // TODO add
+		val nextMidnight = LocalDate.now().atStartOfDay().plusDays(1)
+		val selfDestructTime = nextMidnight.plusHours(2).plusMinutes((0..3 * 60).random().toLong())
 		return selfDestructTime.toInstant(ZoneId.of("Europe/Oslo").rules.getOffset(Instant.now()))
 	}
 
