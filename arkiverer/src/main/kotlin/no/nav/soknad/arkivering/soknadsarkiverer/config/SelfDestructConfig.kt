@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
 
 @Configuration
@@ -69,6 +70,10 @@ class SelfDestructConfig(private val scheduler: Scheduler,
 	@Profile("prod | dev")
 	@Bean
 	fun scheduleSelfDestruct() {
+		setUpSelfDestructTime()
+	}
+
+	private fun setUpSelfDestructTime() {
 		val time = timeTomorrowNightBetween2and5()
 		logger.info("Will self-destruct at $time")
 		scheduler.scheduleSingleTask({ selfDestruct() }, time)
@@ -80,8 +85,10 @@ class SelfDestructConfig(private val scheduler: Scheduler,
 	 * different times during the night, meaning that it is very likely that there is at least one other pod running.
 	 */
 	private fun timeTomorrowNightBetween2and5(): Instant {
-		val nextMidnight = LocalDate.now().atStartOfDay().plusDays(1)
-		val selfDestructTime = nextMidnight.plusHours(2).plusMinutes((0..3 * 60).random().toLong())
+		val nextMidnight = LocalDateTime.now() // TODO remove
+		val selfDestructTime = nextMidnight.plusHours(0).plusMinutes((0..1 * 60).random().toLong()) // TODO remove
+		//val nextMidnight = LocalDate.now().atStartOfDay().plusDays(1) // TODO add
+		//val selfDestructTime = nextMidnight.plusHours(2).plusMinutes((0..3 * 60).random().toLong())  // TODO add
 		return selfDestructTime.toInstant(ZoneId.of("Europe/Oslo").rules.getOffset(Instant.now()))
 	}
 
@@ -89,6 +96,9 @@ class SelfDestructConfig(private val scheduler: Scheduler,
 		if (leaderSelectionUtility.isLeader()) {
 			logger.info("Initialising self-destruction sequence")
 			appState.alive = false
+		} else {
+			logger.info("Not leader, schedule new self-destruct time")
+			setUpSelfDestructTime()
 		}
 	}
 }
