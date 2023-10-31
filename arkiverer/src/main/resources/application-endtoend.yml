@@ -53,8 +53,8 @@ no.nav.security:
           scope: ${SAF_SCOPE}
           authentication:
             client-id: ${AZURE_APP_CLIENT_ID}
-            client-jwk: ${AZURE_APP_JWK}
-            client-auth-method: private_key_jwt
+            client-secret: ${AZURE_APP_CLIENT_SECRET}
+            client-auth-method: client_secret_basic
 
 joark:
   host: ${JOARK_HOST}

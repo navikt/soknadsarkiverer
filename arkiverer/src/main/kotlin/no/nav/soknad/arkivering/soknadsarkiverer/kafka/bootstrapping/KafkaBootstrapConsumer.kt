@@ -37,6 +37,7 @@ class KafkaBootstrapConsumer(
 				getHighestProcessingEventState(key, acc, processingEvent)
 			}
 
+		// For all not finished tasks with found received soknadsarkivschema trigger processing by adding to taskListService
 		unfinishedMainRecords
 			.map { it.key() to it.value() }
 			.shuffled() // Only one event at a time will be processed while restarting. Shuffle in case several pods go down,
