@@ -357,7 +357,6 @@ class MessageConverterTests {
 		val uuid0 = UUID.randomUUID().toString()
 		val uuid1 = UUID.randomUUID().toString()
 		val uuidNotInFileList = UUID.randomUUID().toString()
-		val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
 		val files = listOf(FileInfo(uuid0, "apa".toByteArray()), FileInfo(uuid1, "bepa".toByteArray()))
 
 		val schema = SoknadarkivschemaBuilder()
