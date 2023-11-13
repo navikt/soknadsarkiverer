@@ -1,7 +1,11 @@
-FROM ghcr.io/navikt/baseimages/temurin:17
+FROM gcr.io/distroless/java21-debian12:nonroot
 
 ENV APPLICATION_NAME=soknadsarkiverer
-ENV JAVA_OPTS="-Dhttps.protocols=TLSv1,TLSv1.1,TLSv1.2 -XX:+ExitOnOutOfMemoryError"
-COPY arkiverer/target/*.jar app.jar
+ENV JAVA_TOOL_OPTIONS="-XX:+ExitOnOutOfMemoryError"
+ENV LANG='nb_NO.UTF-8' LANGUAGE='nb_NO:nb' LC_ALL='nb:NO.UTF-8' TZ="Europe/Oslo"
 
-CMD java -jar app.jar
+COPY arkiverer/target/*.jar /app/app.jar
+
+WORKDIR /app
+
+CMD ["app.jar"]

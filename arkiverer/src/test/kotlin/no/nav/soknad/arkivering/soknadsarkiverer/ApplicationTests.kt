@@ -270,7 +270,6 @@ class ApplicationTests : ContainerizedKafka() {
 		val tasksBefore = metrics.getTasks()
 		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
 		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
-		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
 		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
 		val joarkErrorsBefore = metrics.getJoarkErrors()
 
@@ -329,7 +328,6 @@ class ApplicationTests : ContainerizedKafka() {
 		val key = UUID.randomUUID().toString()
 		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
 		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
-		val delFilestorageErrorsBefore = metrics.getDelFilestorageErrors()
 		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
 		val joarkErrorsBefore = metrics.getJoarkErrors()
 
@@ -412,7 +410,6 @@ class ApplicationTests : ContainerizedKafka() {
 		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
 		val getFilestorageErrorsBefore = metrics.getGetFilestorageErrors()
 		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
-		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
 		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
 		val joarkErrorsBefore = metrics.getJoarkErrors()
 
@@ -447,7 +444,6 @@ class ApplicationTests : ContainerizedKafka() {
 		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
 		val getFilestorageErrorsBefore = metrics.getGetFilestorageErrors()
 		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
-		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
 		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
 		val joarkErrorsBefore = metrics.getJoarkErrors()
 
