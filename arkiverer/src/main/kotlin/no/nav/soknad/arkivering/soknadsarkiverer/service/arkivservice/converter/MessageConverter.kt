@@ -60,6 +60,7 @@ private fun createVedlegg(documents: List<MottattDokument>, attachedFiles: List<
 		.filter { !it.erHovedskjema }
 		.map { createDokument(it, attachedFiles, soknadstype) }
 }
+//test
 
 private fun createDokument(document: MottattDokument, attachedFiles: List<FileInfo>, soknadstype: Soknadstyper): Dokument {
 	val dokumentvarianter = filterDuplicates(document.mottatteVarianter.map { createDokumentVariant(it, attachedFiles) })
