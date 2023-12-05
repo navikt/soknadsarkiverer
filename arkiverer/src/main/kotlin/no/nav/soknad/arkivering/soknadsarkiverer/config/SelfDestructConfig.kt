@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
+import jakarta.annotation.PostConstruct
 import no.nav.soknad.arkivering.soknadsarkiverer.schedule.LeaderSelectionUtility
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
@@ -67,7 +68,7 @@ class SelfDestructConfig(private val scheduler: Scheduler,
 	 * to restart the pods, thus triggering abandoned tasks to be picked up again.
 	 */
 	@Profile("prod | dev")
-	@Bean
+	@PostConstruct
 	fun scheduleSelfDestruct() {
 		setUpSelfDestructTime()
 	}
