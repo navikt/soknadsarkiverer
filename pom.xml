@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.1.5</version>
+		<version>3.2.0</version>
 		<relativePath/>
 	</parent>
 
@@ -18,20 +18,20 @@
 
 	<properties>
 		<java.version>21</java.version>
-		<spring-boot.version>3.1.5</spring-boot.version>
-		<spring-web.version>6.0.13</spring-web.version>
+		<spring-boot.version>3.2.0</spring-boot.version>
+		<spring-web.version>6.1.1</spring-web.version>
 
-		<kotlin.version>1.9.20</kotlin.version>
+		<kotlin.version>1.9.21</kotlin.version>
 		<maven.version>3.8.8</maven.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
 		<okhttp3.version>4.12.0</okhttp3.version>
 		<springdoc.version>1.7.0</springdoc.version>
-		<token-support.version>3.1.7</token-support.version>
+		<token-support.version>3.2.0</token-support.version>
 		<jackson-coreutils.version>2.0</jackson-coreutils.version>
 		<jackson-equivalence.version>1.0</jackson-equivalence.version>
 		<jackson-databind-nullable.version>0.2.6</jackson-databind-nullable.version>
-		<jackson-module-kotlin.version>2.15.3</jackson-module-kotlin.version>
+		<jackson-module-kotlin.version>2.16.0</jackson-module-kotlin.version>
 		<gson.version>2.10.1</gson.version>
 		<jakarta-servlet-api.version>6.0.0</jakarta-servlet-api.version>
 		<jakarta-validation-api.version>3.0.2</jakarta-validation-api.version>
@@ -43,15 +43,15 @@
 
 		<!-- OpenAPI -->
 		<springdoc-openapi.version>1.7.0</springdoc-openapi.version>
-		<swagger-annotations.version>2.2.18</swagger-annotations.version>
+		<swagger-annotations.version>2.2.19</swagger-annotations.version>
 
 		<!--Kotlin-->
-		<kotlin-serialization.version>1.6.0</kotlin-serialization.version>
+		<kotlin-serialization.version>1.6.2</kotlin-serialization.version>
 		<coroutines.version>1.7.3</coroutines.version>
 
 		<!--Kafka-->
-		<kafka.version>3.6.0</kafka.version>
-		<kafka-streams-avro-serde.version>7.5.1</kafka-streams-avro-serde.version>
+		<kafka.version>3.6.1</kafka.version>
+		<kafka-streams-avro-serde.version>7.5.2</kafka-streams-avro-serde.version>
 		<arkivering-schemas.version>f52ace8dcc</arkivering-schemas.version>
 
 		<!--Logging-->
@@ -59,14 +59,14 @@
 		<logstash.version>7.4</logstash.version>
 
 		<!--Test-->
-		<testcontainers.version>1.19.1</testcontainers.version>
+		<testcontainers.version>1.19.3</testcontainers.version>
 		<mockk.version>1.13.8</mockk.version>
 		<springmockk.version>4.0.2</springmockk.version>
 		<wiremock.version>2.27.2</wiremock.version>
 
 		<!--Plugins-->
-		<versions-maven-plugin.version>2.16.1</versions-maven-plugin.version>
-		<openapi-generator-maven-plugin.version>7.0.1</openapi-generator-maven-plugin.version>
+		<versions-maven-plugin.version>2.16.2</versions-maven-plugin.version>
+		<openapi-generator-maven-plugin.version>7.1.0</openapi-generator-maven-plugin.version>
 		<remote-comparer-maven-plugin.version>1.0.5</remote-comparer-maven-plugin.version>
 		<cyclonedx-maven-plugin.version>2.7.10</cyclonedx-maven-plugin.version>
 		<maven-enforcer.version>3.4.1</maven-enforcer.version>
