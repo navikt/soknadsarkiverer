@@ -72,14 +72,6 @@ spec:
       {{/each}}
   envFrom:
     - secret: archiving-failed
-    - secret: soknadsarkiver-google-secret
-      metadata:
-        annotations:
-          reloader.stakater.com/match: "true"
-    - secret: shared-innsending-secret
-      metadata:
-        annotations:
-          reloader.stakater.com/match: "true"
 
   leaderElection: true
 
