@@ -6,6 +6,4 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class FilestorageProperties(
 	val host : String,
 	val files : String,
-	val username : String,
-	val password: String
 )
