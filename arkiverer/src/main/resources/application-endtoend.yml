@@ -14,9 +14,6 @@ services:
       startUpSeconds: 8
       secondsBetweenRetries: [0, 1, 1, 1, 1, 1]
 no.nav.security:
-  basic:
-    username: admin
-    password: password
   jwt:
     issuer.azuread:
       discoveryurl: ${AZURE_APP_WELL_KNOWN_URL}
@@ -63,8 +60,6 @@ joark:
 filestorage:
   host: ${FILESTORAGE_HOST}
   files: /files/
-  username: sender
-  password: password
 innsendingapi:
   host: ${INNSENDING_API_HOST}
 saf:

@@ -47,8 +47,6 @@ joark:
 filestorage:
   host: http://localhost:2908
   files: /files/
-  username: sender
-  password: password
 innsendingapi:
   host: http://localhost:2908
 saf:
@@ -62,7 +60,6 @@ filefetchtimeouts:
   callTimeout: 62
   readTimeout: 1
   writeTimeout: 1
-
 
 no.nav.security:
   jwt:

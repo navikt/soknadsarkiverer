@@ -67,8 +67,6 @@ joark:
 filestorage:
   host: ${FILESTORAGE_HOST}
   files: /files/
-  username: ${INNSENDING_USERNAME}
-  password: ${INNSENDING_PASSWORD}
 innsendingapi:
   host: ${INNSENDING_API_HOST}
 saf:
