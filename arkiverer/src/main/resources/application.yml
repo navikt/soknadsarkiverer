@@ -8,7 +8,7 @@ failedApplications: ""
 filefetchtimeouts:
   connectTimeout: 20
   callTimeout: 62
-  readTimeout: 1
+  readTimeout: 3
   writeTimeout: 1
 
 management:
