@@ -7,9 +7,9 @@ failedApplications: ""
 
 filefetchtimeouts:
   connectTimeout: 20
-  callTimeout: 62
+  callTimeout: 182
   readTimeout: 3
-  writeTimeout: 1
+  writeTimeout: 3
 
 management:
   endpoint:
