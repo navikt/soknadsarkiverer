@@ -7,11 +7,13 @@ on:
     paths-ignore:
       - '**.md'
       - '**/**.md'
+
+permissions:
+  contents: "write"
+  id-token: "write"
+
 jobs:
   build-and-push:
-    permissions:
-      contents: "write"
-      id-token: "write"
     name: Build and push Docker container
     runs-on: ubuntu-latest
     steps:
@@ -49,9 +51,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: nais/deploy/actions/deploy@v1
+      - uses: nais/deploy/actions/deploy@v2
         env:
-          APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
           CLUSTER: dev-gcp
           RESOURCE: .nais/nais.yml
           VARS: .nais/config-loadtests.json
@@ -64,9 +65,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: nais/deploy/actions/deploy@v1
+      - uses: nais/deploy/actions/deploy@v2
         env:
-          APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
           CLUSTER: prod-gcp
           RESOURCE: .nais/nais.yml
           VARS: .nais/config-prod.json
@@ -80,9 +80,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Deploy to alerts to prod
-        uses: nais/deploy/actions/deploy@v1
+        uses: nais/deploy/actions/deploy@v2
         env:
-          APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
           CLUSTER: prod-gcp
           RESOURCE: .nais/alerts.yml
           VARS: .nais/prod-alert.json
