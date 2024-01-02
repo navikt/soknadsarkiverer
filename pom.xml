@@ -36,9 +36,6 @@
 		<jakarta-servlet-api.version>6.0.0</jakarta-servlet-api.version>
 		<jakarta-validation-api.version>3.0.2</jakarta-validation-api.version>
 		<jakarta-annotation.version>2.1.1</jakarta-annotation.version>
-		<snappy-java.version>1.1.10.5</snappy-java.version>
-		<snakeyaml.version>2.2</snakeyaml.version>
-		<guava.version>32.1.3-jre</guava.version>
 		<graphql-kotlin.version>7.0.2</graphql-kotlin.version>
 
 		<!-- OpenAPI -->
@@ -78,27 +75,6 @@
 		<module>arkiverer</module>
 		<module>admin-api</module>
 	</modules>
-
-	<!-- Dependencies that might be used as transitive dependencies and have security issues-->
-	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>org.yaml</groupId>
-				<artifactId>snakeyaml</artifactId>
-				<version>${snakeyaml.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.xerial.snappy</groupId>
-				<artifactId>snappy-java</artifactId>
-				<version>${snappy-java.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>com.google.guava</groupId>
-				<artifactId>guava</artifactId>
-				<version>${guava.version}</version>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
 
 	<build>
 		<plugins>
