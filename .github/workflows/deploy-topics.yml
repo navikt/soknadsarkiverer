@@ -24,7 +24,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: nais/deploy/actions/deploy@v2
         env:
-          APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
           CLUSTER: dev-gcp
           RESOURCE: .nais/topics/config-messages-topic-dev.yml,.nais/topics/config-metrics-topic-dev.yml,.nais/topics/config-processingeventlog-topic-dev.yml,.nais/topics/config-soknadinnsending-topic-dev.yml,.nais/topics/config-messages-topic-loadtests.yml,.nais/topics/config-metrics-topic-loadtests.yml,.nais/topics/config-processingeventlog-topic-loadtests.yml,.nais/topics/config-soknadinnsending-topic-loadtests.yml
 
@@ -36,6 +35,5 @@ jobs:
       - uses: actions/checkout@v4
       - uses: nais/deploy/actions/deploy@v2
         env:
-          APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
           CLUSTER: prod-gcp
           RESOURCE: .nais/topics/config-messages-topic-prod.yml,.nais/topics/config-metrics-topic-prod.yml,.nais/topics/config-processingeventlog-topic-prod.yml,.nais/topics/config-soknadinnsending-topic-prod.yml
