@@ -30,7 +30,7 @@ jobs:
         run: mvn install --file pom.xml
 
       - name: Dependency submission (for dependabot)
-        uses: advanced-security/maven-dependency-submission-action@v3
+        uses: advanced-security/maven-dependency-submission-action@v4
 
       - name: Build and push Docker image
         uses: nais/docker-build-push@v0
