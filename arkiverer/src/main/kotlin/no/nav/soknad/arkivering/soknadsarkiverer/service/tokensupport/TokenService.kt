@@ -5,5 +5,5 @@ import no.nav.security.token.support.client.core.oauth2.OAuth2AccessTokenRespons
 import no.nav.security.token.support.client.core.oauth2.OAuth2AccessTokenService
 
 class TokenService(private val clientProperties: ClientProperties, private val oauth2TokenService: OAuth2AccessTokenService) {
-	fun getToken(): OAuth2AccessTokenResponse = oauth2TokenService.getAccessToken(clientProperties)
+	fun getToken(): OAuth2AccessTokenResponse? = oauth2TokenService.getAccessToken(clientProperties)
 }
