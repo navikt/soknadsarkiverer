@@ -310,7 +310,7 @@ open class TaskListService(
 				MDC.clear()
 				metrics.endTimer(timer)
 				metrics.endHistogramTimer(histogram)
-				metrics.numberOfAttachmentHistogramSet(
+				metrics.setNumberOfAttachmentHistogram(
 					soknadarkivschema.mottatteDokumenter.size.toDouble(),
 					soknadarkivschema.arkivtema
 				)

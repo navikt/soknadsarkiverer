@@ -45,6 +45,11 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 	private val SUMMARY_FILESTORAGE_DEL_LATENCY = "latency_filestorage_del_operations"
 	private val SUMMARY_FILESTORAGE_DEL_LATENCY_DESC = "Latency for deleting from filestorage"
 
+	private val SUMMARY_FILE_FETCH_SIZE = "file_fetch_size"
+	private val SUMMARY_FILE_FETCH_SIZE_DESC = "Size of fetched file"
+	private val HISTOGRAM_FILE_FETCH_SIZE = "file_fetch_size_distribution"
+	private val HISTOGRAM_FILE_FETCH_SIZE_DESC = "Distribution of sizes of fetched files"
+
 	private val COUNTER_JOARK_SUCCESS = "counter_joark_success"
 	private val COUNTER_JOARK_SUCCESS_DESC = "Number of successes when sending to Joark"
 
@@ -67,10 +72,12 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 	private val filestorageDelErrorCounter: Counter = registerCounter(COUNTER_FILESTORAGE_DEL_ERROR, COUNTER_FILESTORAGE_DEL_ERROR_DESC)
 	private val filestorageGetLatencySummary = registerSummary(SUMMARY_FILESTORAGE_GET_LATENCY, SUMMARY_FILESTORAGE_GET_LATENCY_DESC)
 	private val filestorageDelLatencySummary = registerSummary(SUMMARY_FILESTORAGE_DEL_LATENCY, SUMMARY_FILESTORAGE_DEL_LATENCY_DESC)
+	private val filefetchSizeSummary = registerSummary(SUMMARY_FILE_FETCH_SIZE, SUMMARY_FILE_FETCH_SIZE_DESC)
+	private val filefetchSizeHistogram = registerFileSizeHistogram(HISTOGRAM_FILE_FETCH_SIZE, HISTOGRAM_FILE_FETCH_SIZE_DESC)
 	private val joarkSuccessCounter: Counter = registerCounter(COUNTER_JOARK_SUCCESS, COUNTER_JOARK_SUCCESS_DESC)
 	private val joarkErrorCounter: Counter = registerCounter(COUNTER_JOARK_ERROR, COUNTER_JOARK_ERROR_DESC)
 	private val joarkLatencySummary = registerSummary(SUMMARY_JOARK_LATENCY, SUMMARY_JOARK_LATENCY_DESC)
-	private val archivingLatencyHistogram = registerHistogram(HISTOGRAM_ARCHIVING_LATENCY, HISTORGRAM_ARCHIVING_LATENCY_DESC)
+	private val archivingLatencyHistogram = registerLatencyHistogram(HISTOGRAM_ARCHIVING_LATENCY, HISTORGRAM_ARCHIVING_LATENCY_DESC)
 
 	private val HISTOGRAM_ATTACHMENT_NUMBER = "histogram_attachment_number"
 	private val HISTOGRAM_ATTACHMENT_NUMBER_DESC = "Histogram for number of attachment per application"
@@ -106,13 +113,23 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 			.labelNames(APP_LABEL)
 			.register(registry)
 
-	private fun registerHistogram(name: String, help: String): Histogram =
+	private fun registerLatencyHistogram(name: String, help: String): Histogram =
 		Histogram
 			.build()
 			.namespace(SOKNAD_NAMESPACE)
 			.name(name)
 			.help(help)
-			.buckets(0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 12.8, 25.6, 51.2, 100.2)
+			.buckets(0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 12.8, 25.6, 51.2, 100.2, 240.0)
+			.labelNames(TEMA_LABEL)
+			.register(registry)
+
+	private fun registerFileSizeHistogram(name: String, help: String): Histogram =
+		Histogram
+			.build()
+			.namespace(SOKNAD_NAMESPACE)
+			.name(name)
+			.help(help)
+			.buckets(1024.0, 10*1024.0, 50*1024.0, 100*1024.0, 1024*1024.0, 10*1024*1024.0, 50*1024*1024.0, 150*1024*1024.0)
 			.labelNames(TEMA_LABEL)
 			.register(registry)
 
@@ -156,9 +173,15 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 	fun archivingLatencyStart(): Summary.Timer = archivingLatencySummary.labels(APP).startTimer()
 	fun filestorageGetLatencyStart(): Summary.Timer = filestorageGetLatencySummary.labels(APP).startTimer()
 	fun filestorageDelLatencyStart(): Summary.Timer = filestorageDelLatencySummary.labels(APP).startTimer()
-	fun joarkLatencyStart(): Summary.Timer = joarkLatencySummary.labels(APP).startTimer()
+	fun startJoarkLatency(): Summary.Timer = joarkLatencySummary.labels(APP).startTimer()
+	fun getJoarkLatency(): Summary.Child.Value = joarkLatencySummary.labels(APP).get()
 	fun archivingLatencyHistogramStart(tema: String): Histogram.Timer = archivingLatencyHistogram.labels(tema).startTimer()
-	fun numberOfAttachmentHistogramSet(number: Double, tema: String) = numberOfAttachmentHistogram.labels(tema).observe(number)
+	fun setNumberOfAttachmentHistogram(number: Double, tema: String) = numberOfAttachmentHistogram.labels(tema).observe(number)
+	fun getNumberOfAttachmentHistogram(tema: String) = numberOfAttachmentHistogram.labels(tema).get()
+	fun setFileFetchSize(size: Double) = filefetchSizeSummary.labels(APP).observe(size)
+	fun getFileFetchSize() = filefetchSizeSummary.labels(APP).get()
+	fun setFileFetchSizeHistogram(size: Double, tema: String) = filefetchSizeHistogram.labels(tema).observe(size)
+	fun getFileFetchSizeHistogram(tema: String) = filefetchSizeHistogram.labels(tema).get()
 
 	fun endTimer(timer: Summary.Timer) {
 		timer.observeDuration()
@@ -184,5 +207,6 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 		registry.unregister(taskGauge)
 		registry.unregister(upOrDownGauge)
 		registry.unregister(numberOfAttachmentHistogram)
+		registry.unregister(filefetchSizeSummary)
 	}
 }

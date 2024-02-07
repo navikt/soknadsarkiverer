@@ -2,9 +2,8 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import io.mockk.*
 import io.prometheus.client.CollectorRegistry
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import no.nav.soknad.arkivering.soknadsarkiverer.SoknadsarkivererApplication
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
@@ -18,10 +17,14 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.mock.mockito.MockBean
 import java.time.OffsetDateTime.now
 import java.util.*
 
 class ArchiverServiceTests {
+
+	private lateinit var metrics: ArchivingMetrics
 
 	private val filestorage = mockk<FilestorageService>().also {
 		every {
@@ -68,8 +71,6 @@ class ArchiverServiceTests {
 	private val journalpostClient = mockk<JournalpostClientInterface>().also {
 		every { it.opprettJournalpost(any(), any(), any()) } returns UUID.randomUUID().toString()
 	}
-	@Autowired
-	private lateinit var metrics: ArchivingMetrics
 
 	private val kafkaPublisher = mockk<KafkaPublisher>().also {
 		every { it.putMetricOnTopic(any(), any(), any()) } just Runs
@@ -104,6 +105,44 @@ class ArchiverServiceTests {
 	private val journalpostClient2 = mockk<JournalpostClientInterface>().also {
 		every { it.opprettJournalpost(any(), any(), capture(filer)) } returns UUID.randomUUID().toString()
 	}
+
+	@Test
+	fun `Fetch file metrics test`() {
+		archiverService = ArchiverService(filestorageNotFound, innsendingApi, journalpostClient2, metrics, kafkaPublisher)
+		val key = UUID.randomUUID().toString()
+		val tema = "AAP"
+		val soknadschema =
+			createSoknadarkivschema(behandlingsId = key,
+				tema = tema,
+				fileIds = listOf(
+					UUID.randomUUID().toString(),
+					UUID.randomUUID().toString(),
+					UUID.randomUUID().toString(),
+					UUID.randomUUID().toString(),
+					UUID.randomUUID().toString(),
+					UUID.randomUUID().toString(),
+					UUID.randomUUID().toString(),
+					UUID.randomUUID().toString()
+					))
+
+		CoroutineScope(Dispatchers.Default).launch {
+			archiverService.fetchFiles(key, soknadschema)
+
+			verify(exactly = 1) { filestorageNotFound.getFilesFromFilestorage(eq(key), eq(soknadschema)) }
+			verify(exactly = 1) { innsendingApi.getFilesFromFilestorage(eq(key), eq(soknadschema)) }
+			assertTrue(filer.isCaptured)
+			assertEquals(soknadschema.mottatteDokumenter.first().mottatteVarianter.size, filer.captured.size)
+		}
+		// Wait for the coroutine to finish before checking metrics
+		Thread.sleep(500)
+		val fetchObservation = metrics.getFileFetchSize()
+		assertTrue(fetchObservation != null)
+		assertTrue(fetchObservation.quantiles[0.99]!! > 1)
+		val fetchFileHistogram = metrics.getFileFetchSizeHistogram(tema)
+		assertTrue(fetchFileHistogram != null)
+		assertEquals("content".length.toDouble(), fetchFileHistogram.sum)
+	}
+
 	@Test
 	fun `Archiving succeeds when all is up and running`() {
 		archiverService = ArchiverService(filestorageNotFound, innsendingApi, journalpostClient2, metrics, kafkaPublisher)
@@ -118,7 +157,6 @@ class ArchiverServiceTests {
 			verify(exactly = 1) { journalpostClient2.opprettJournalpost(eq(key), eq(soknadschema), any()) }
 			assertTrue(filer.isCaptured)
 			assertEquals(soknadschema.mottatteDokumenter.first().mottatteVarianter.size, filer.captured.size)
-
 		}
 
 	}
