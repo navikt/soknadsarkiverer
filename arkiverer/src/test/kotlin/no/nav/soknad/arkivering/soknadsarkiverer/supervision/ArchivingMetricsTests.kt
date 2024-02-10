@@ -131,6 +131,8 @@ class ArchivingMetricsTests {
 
 		val observations = metrics.getJoarkLatency()
 		assertEquals(latencies.values.sum().toDouble(), observations.count)
+		assertTrue(observations.quantiles[0.5]!! > 0.1)
+		assertTrue(observations.quantiles[0.9]!! > 1.0)
 		assertTrue(observations.quantiles[0.99]!! > 10.0)
 
 	}

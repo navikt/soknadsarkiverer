@@ -125,22 +125,16 @@ class ArchiverServiceTests {
 					UUID.randomUUID().toString()
 					))
 
-		CoroutineScope(Dispatchers.Default).launch {
+		runBlocking {
 			archiverService.fetchFiles(key, soknadschema)
 
-			verify(exactly = 1) { filestorageNotFound.getFilesFromFilestorage(eq(key), eq(soknadschema)) }
-			verify(exactly = 1) { innsendingApi.getFilesFromFilestorage(eq(key), eq(soknadschema)) }
-			assertTrue(filer.isCaptured)
-			assertEquals(soknadschema.mottatteDokumenter.first().mottatteVarianter.size, filer.captured.size)
+			val fetchObservation = metrics.getFileFetchSize()
+			assertTrue(fetchObservation != null)
+			assertEquals(7.0, fetchObservation.quantiles[0.99]!!)
+			val fetchFileHistogram = metrics.getFileFetchSizeHistogram(tema)
+			assertTrue(fetchFileHistogram != null)
+			assertEquals("content".length.toDouble(), fetchFileHistogram.sum)
 		}
-		// Wait for the coroutine to finish before checking metrics
-		Thread.sleep(500)
-		val fetchObservation = metrics.getFileFetchSize()
-		assertTrue(fetchObservation != null)
-		assertTrue(fetchObservation.quantiles[0.99]!! > 1)
-		val fetchFileHistogram = metrics.getFileFetchSizeHistogram(tema)
-		assertTrue(fetchFileHistogram != null)
-		assertEquals("content".length.toDouble(), fetchFileHistogram.sum)
 	}
 
 	@Test

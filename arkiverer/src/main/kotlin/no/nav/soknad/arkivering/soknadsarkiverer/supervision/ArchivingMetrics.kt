@@ -123,15 +123,30 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 			.labelNames(TEMA_LABEL)
 			.register(registry)
 
-	private fun registerFileSizeHistogram(name: String, help: String): Histogram =
-		Histogram
+	private fun registerFileSizeHistogram(name: String, help: String): Histogram {
+		val kB = 1024.0
+		val mB = kB * kB
+		return Histogram
 			.build()
 			.namespace(SOKNAD_NAMESPACE)
 			.name(name)
 			.help(help)
-			.buckets(1024.0, 10*1024.0, 50*1024.0, 100*1024.0, 1024*1024.0, 10*1024*1024.0, 50*1024*1024.0, 150*1024*1024.0)
+			.buckets(
+				kB,
+				10 * kB,
+				50 * kB,
+				100 * kB,
+				500 * kB,
+				mB,
+				2 * mB,
+				5 * mB,
+				25 * mB,
+				50 * mB,
+				150 * mB
+			)
 			.labelNames(TEMA_LABEL)
 			.register(registry)
+	}
 
 	private fun registerAttachmentNumberHistogram(name: String, help: String): Histogram =
 		Histogram
