@@ -3,16 +3,13 @@ package no.nav.soknad.arkivering.soknadsarkiverer.service
 import kotlinx.coroutines.*
 import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.Constants
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ShuttingDownException
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.*
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
-import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.slf4j.LoggerFactory
-import org.slf4j.MDC
 import org.springframework.stereotype.Service
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -29,7 +26,7 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 		try {
 			val startTime = System.currentTimeMillis()
 			val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
-			createMetric(key, "send files to archive", startTime)
+			createMetricAndPublishOnKafka(key, "send files to archive", startTime)
 			logger.info("$key: Opprettet journalpostId=$journalpostId for behandlingsid=${data.behandlingsid}")
 			createMessage(key, "**Archiving: OK.  journalpostId=$journalpostId")
 
@@ -47,7 +44,13 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 		return try {
 			val startTime = System.currentTimeMillis()
 			val files = makeParallelCallsToFetchFiles(key, data)
-			createMetric(key, "get files from filestorage", startTime)
+
+			createMetricAndPublishOnKafka(key, "get files from filestorage", startTime)
+			files.filter{it.content != null}.forEach {
+				metrics.setFileFetchSizeHistogram(it.content!!.size.toDouble(), data.arkivtema)
+				metrics.setFileFetchSize(it.content.size.toDouble())
+			}
+
 			files
 
 		} catch (e: ShuttingDownException) {
@@ -79,10 +82,11 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 		val okResponse = responses.firstOrNull { it.status == ResponseStatus.Ok.value }
 		if (okResponse != null) {
 			metrics.incGetFilestorageSuccesses()
-			if (okResponse.files != null)
+			if (okResponse.files != null) {
 				return okResponse.files
-			else
+			} else {
 				return listOf()
+			}
 		}
 
 		val deletedResponse = responses.firstOrNull { it.status == "deleted" }
@@ -109,7 +113,7 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 		try {
 			val startTime = System.currentTimeMillis()
 			filestorageService.deleteFilesFromFilestorage(key, data)
-			createMetric(key, "delete files from filestorage", startTime)
+			createMetricAndPublishOnKafka(key, "delete files from filestorage", startTime)
 			createMessage(key, "ok")
 
 		} catch (e: ShuttingDownException) {
@@ -127,7 +131,7 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 		kafkaPublisher.putMessageOnTopic(key, message)
 	}
 
-	private fun createMetric(key: String, message: String, startTime: Long) {
+	private fun createMetricAndPublishOnKafka(key: String, message: String, startTime: Long) {
 		val duration = System.currentTimeMillis() - startTime
 		val metrics = InnsendingMetrics("soknadsarkiverer", message, startTime, duration)
 		kafkaPublisher.putMetricOnTopic(key, metrics)

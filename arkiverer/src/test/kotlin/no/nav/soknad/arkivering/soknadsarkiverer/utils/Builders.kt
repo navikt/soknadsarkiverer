@@ -56,13 +56,15 @@ class MottattVariantBuilder {
 }
 
 fun createSoknadarkivschema(fileId: String = UUID.randomUUID().toString(), behandlingsId: String = UUID.randomUUID().toString()) = createSoknadarkivschema(listOf(fileId), behandlingsId)
+fun createSoknadarkivschema(behandlingsId: String = UUID.randomUUID().toString(), tema: String, fileIds: List<String> = listOf(UUID.randomUUID().toString()), ) = createSoknadarkivschema(fileIds, behandlingsId, tema)
 
-fun createSoknadarkivschema(fileIds: List<String>, behandlingsId: String = UUID.randomUUID().toString()) =
+fun createSoknadarkivschema(fileIds: List<String>, variantformat: String = "ARKIV",behandlingsId: String = UUID.randomUUID().toString(), tema: String = "AAP") =
 	SoknadarkivschemaBuilder()
 		.withBehandlingsid(behandlingsId)
+		.withArkivtema(tema)
 		.withMottatteDokumenter(MottattDokumentBuilder()
 			.withMottatteVarianter(
-				fileIds.map { MottattVariantBuilder().withUuid(it).build() }
+				fileIds.map { MottattVariantBuilder().withUuid(it).withVariantformat(variantformat).build() }
 			)
 			.build())
 		.build()
