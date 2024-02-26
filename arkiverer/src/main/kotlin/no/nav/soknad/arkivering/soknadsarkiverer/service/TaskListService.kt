@@ -331,7 +331,6 @@ open class TaskListService(
 		if (journalpost != null) {
 			val archivingdetails = "Already archived journalpostId=${journalpost.journalpostId}, opprettet=${journalpost.datoOpprettet}"
 			logger.info("$key: $archivingdetails")
-			archiverService.createMessage(key, "**Archiving: OK. $archivingdetails")
 			throw ApplicationAlreadyArchivedException("$key: $archivingdetails")
 		}
 	}
