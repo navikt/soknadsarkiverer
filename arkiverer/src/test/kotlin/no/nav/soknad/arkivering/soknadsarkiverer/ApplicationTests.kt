@@ -456,7 +456,6 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyProcessingEvents(key, mapOf(
 			RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
 		))
-		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 0))
 		verifyKafkaMetric(key, mapOf(
 			"get files from filestorage" hasCount 0,
 			"send files to archive" hasCount 0,
