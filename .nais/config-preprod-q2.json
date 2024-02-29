@@ -26,7 +26,7 @@
 	"innsending-api-scope": "api://dev-gcp.team-soknad.innsending-api/.default",
 	"send-to-joark": "true",
 	"kafka-pool": "nav-dev",
-	"SAF_URL": "https://saf-q2.dev.intern.nav.no/graphql",
+	"SAF_URL": "https://saf-q2.dev-fss-pub.nais.io/graphql",
 	"SAF_SCOPE": "api://dev-fss.teamdokumenthandtering.saf/.default",
 	"AZURE_TENANT": "trygdeetaten.no",
 	"AZURE_ALLOW_ALL_USERS": true,
