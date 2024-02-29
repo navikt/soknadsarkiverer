@@ -7,7 +7,7 @@ on:
       environment:
         description: 'Environment to deploy'
         required: true
-        default: 'preprod'
+        default: 'preprod-q1'
         type: choice
         options:
           - none
@@ -111,7 +111,7 @@ jobs:
 
 
   deploy-alerts-preprod:
-    if: github.event.inputs.environment == 'preprod'
+    if: github.event.inputs.environment == 'preprod-q1' || github.event.inputs.environment == 'preprod-q2'
     needs: deploy-preprod
     name: Deploy alerts to dev
     runs-on: ubuntu-latest
