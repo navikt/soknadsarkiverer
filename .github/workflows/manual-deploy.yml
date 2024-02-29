@@ -54,7 +54,7 @@ jobs:
       image: ${{ steps.docker-build-push.outputs.image }}
 
   deploy-preprod-q1:
-    name: Deploy to preprod
+    name: Deploy to preprod-q1
     needs: build-and-push
     if: github.event.inputs.environment == 'preprod-q1'
     runs-on: ubuntu-latest
@@ -68,7 +68,7 @@ jobs:
           VAR: image=${{ needs.build-and-push.outputs.image }}
 
   deploy-preprod-q2:
-    name: Deploy to preprod
+    name: Deploy to preprod-q2
     needs: build-and-push
     if: github.event.inputs.environment == 'preprod-q2'
     runs-on: ubuntu-latest
@@ -111,8 +111,7 @@ jobs:
 
 
   deploy-alerts-preprod:
-    if: github.event.inputs.environment == 'preprod-q1' || github.event.inputs.environment == 'preprod-q2'
-    needs: [deploy-preprod-q1, deploy-preprod-q2]
+    if: ${{ always() && (needs.preprod-q1.result == 'success' || needs.preprod-q2.result == 'success') }}
     name: Deploy alerts to dev
     runs-on: ubuntu-latest
     steps:
