@@ -11,7 +11,8 @@ on:
         type: choice
         options:
           - none
-          - preprod
+          - preprod-q1
+          - preprod-q2
           - loadtests
           - prod
 
@@ -52,10 +53,10 @@ jobs:
     outputs:
       image: ${{ steps.docker-build-push.outputs.image }}
 
-  deploy-preprod:
+  deploy-preprod-q1:
     name: Deploy to preprod
     needs: build-and-push
-    if: github.event.inputs.environment == 'preprod'
+    if: github.event.inputs.environment == 'preprod-q1'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -64,6 +65,20 @@ jobs:
           CLUSTER: dev-gcp
           RESOURCE: .nais/nais.yml
           VARS: .nais/config-preprod.json
+          VAR: image=${{ needs.build-and-push.outputs.image }}
+
+  deploy-preprod-q2:
+    name: Deploy to preprod
+    needs: build-and-push
+    if: github.event.inputs.environment == 'preprod-q2'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: nais/deploy/actions/deploy@v2
+        env:
+          CLUSTER: dev-gcp
+          RESOURCE: .nais/nais.yml
+          VARS: .nais/config-preprod-q2.json
           VAR: image=${{ needs.build-and-push.outputs.image }}
 
   deploy-loadtests:

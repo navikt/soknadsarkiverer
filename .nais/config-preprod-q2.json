@@ -1,0 +1,35 @@
+{
+	"appname": "soknadsarkiverer",
+	"profile": "dev",
+	"replicas-min": "2",
+	"replicas-max": "4",
+	"ingress": "https://soknadsarkiverer-gcp.intern.dev.nav.no",
+	"outboundRules": [
+		"soknadsfillager",
+		"innsending-api"
+	],
+	"outboundExternalHosts": [
+		"dokarkiv.dev-fss-pub.nais.io",
+		"soknadsfillager-gcp.intern.dev.nav.no",
+		"innsending-api-gcp.intern.dev.nav.no",
+		"saf.dev-fss-pub.nais.io"
+	],
+	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v2-dev",
+	"kafka-processingeventlog-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v2-dev",
+	"kafka-message-topic": "team-soknad.privat-soknadinnsending-messages-v2-dev",
+	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v2-dev",
+	"filestorage-host": "https://soknadsfillager-gcp.intern.dev.nav.no",
+	"innsending-api-host": "https://innsending-api-gcp.intern.dev.nav.no",
+	"joark-host": "https://dokarkiv.dev-fss-pub.nais.io",
+	"dokarkiv-scope": "api://dev-fss.teamdokumenthandtering.dokarkiv-q2/.default",
+	"soknadsfillager-scope": "api://dev-gcp.team-soknad.soknadsfillager/.default",
+	"innsending-api-scope": "api://dev-gcp.team-soknad.innsending-api/.default",
+	"send-to-joark": "true",
+	"kafka-pool": "nav-dev",
+	"SAF_URL": "https://saf.dev-fss-pub.nais.io",
+	"SAF_SCOPE": "api://dev-fss.teamdokumenthandtering.saf-q2/.default",
+	"AZURE_TENANT": "trygdeetaten.no",
+	"AZURE_ALLOW_ALL_USERS": true,
+	"AZURE_ALLOWED_GROUPS": [],
+	"STATUS_LOG_URL": "https://logs.adeo.no/app/discover#/view/9aa683f0-df5d-11ed-8b42-0b0644af4500"
+}
