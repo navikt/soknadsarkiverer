@@ -112,7 +112,7 @@ jobs:
 
   deploy-alerts-preprod:
     if: github.event.inputs.environment == 'preprod-q1' || github.event.inputs.environment == 'preprod-q2'
-    needs: deploy-preprod
+    needs: [deploy-preprod-q1, deploy-preprod-q2]
     name: Deploy alerts to dev
     runs-on: ubuntu-latest
     steps:
