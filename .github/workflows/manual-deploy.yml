@@ -112,6 +112,7 @@ jobs:
 
   deploy-alerts-preprod:
     if: ${{ always() && (needs.preprod-q1.result == 'success' || needs.preprod-q2.result == 'success') }}
+    needs:  [deploy-preprod-q1, deploy-preprod-q2]
     name: Deploy alerts to dev
     runs-on: ubuntu-latest
     steps:
