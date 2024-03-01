@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.2.1</version>
+		<version>3.2.3</version>
 		<relativePath/>
 	</parent>
 
@@ -18,8 +18,8 @@
 
 	<properties>
 		<java.version>21</java.version>
-		<spring-boot.version>3.2.1</spring-boot.version>
-		<spring-web.version>6.1.2</spring-web.version>
+		<spring-boot.version>3.2.3</spring-boot.version>
+		<spring-web.version>6.1.4</spring-web.version>
 
 		<kotlin.version>1.9.22</kotlin.version>
 		<maven.version>3.8.8</maven.version>
@@ -42,12 +42,12 @@
 		<swagger-annotations.version>2.2.20</swagger-annotations.version>
 
 		<!--Kotlin-->
-		<kotlin-serialization.version>1.6.2</kotlin-serialization.version>
-		<coroutines.version>1.7.3</coroutines.version>
+		<kotlin-serialization.version>1.6.3</kotlin-serialization.version>
+		<coroutines.version>1.8.0</coroutines.version>
 
 		<!--Kafka-->
-		<kafka.version>3.6.1</kafka.version>
-		<kafka-streams-avro-serde.version>7.5.3</kafka-streams-avro-serde.version>
+		<kafka.version>3.7.0</kafka.version>
+		<kafka-streams-avro-serde.version>7.6.0</kafka-streams-avro-serde.version>
 		<arkivering-schemas.version>f52ace8dcc</arkivering-schemas.version>
 
 		<!--Logging-->
@@ -55,8 +55,8 @@
 		<logstash.version>7.4</logstash.version>
 
 		<!--Test-->
-		<testcontainers.version>1.19.3</testcontainers.version>
-		<mockk.version>1.13.8</mockk.version>
+		<testcontainers.version>1.19.6</testcontainers.version>
+		<mockk.version>1.13.10</mockk.version>
 		<springmockk.version>4.0.2</springmockk.version>
 		<wiremock.version>2.27.2</wiremock.version>
 
@@ -64,7 +64,7 @@
 		<versions-maven-plugin.version>2.16.2</versions-maven-plugin.version>
 		<openapi-generator-maven-plugin.version>7.3.0</openapi-generator-maven-plugin.version>
 		<remote-comparer-maven-plugin.version>1.0.5</remote-comparer-maven-plugin.version>
-		<cyclonedx-maven-plugin.version>2.7.10</cyclonedx-maven-plugin.version>
+		<cyclonedx-maven-plugin.version>2.7.11</cyclonedx-maven-plugin.version>
 		<maven-enforcer.version>3.4.1</maven-enforcer.version>
 	</properties>
 
