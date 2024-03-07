@@ -7,7 +7,7 @@ failedApplications: ""
 
 filefetchtimeouts:
   connectTimeout: 20
-  callTimeout: 182
+  callTimeout: 302
   readTimeout: 5
   writeTimeout: 5
 
