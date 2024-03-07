@@ -111,7 +111,7 @@ jobs:
 
 
   deploy-alerts-preprod:
-    if: always() && (steps.deploy-preprod-q1.result == 'success' || steps.deploy-preprod-q2.result == 'success')
+    if: always() && (deploy-preprod-q1.result == 'success' || deploy-preprod-q2.result == 'success')
     name: Deploy alerts to dev
     runs-on: ubuntu-latest
     steps:
