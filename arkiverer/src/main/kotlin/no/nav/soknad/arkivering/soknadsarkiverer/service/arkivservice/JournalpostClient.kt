@@ -9,7 +9,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.Oppret
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.converter.createOpprettJournalpostRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
-import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
@@ -32,7 +31,7 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 	val bidClient: WebClient = webClient.mutate().defaultHeader(NAV_CONSUMER_ID, "dialogstyring-bidrag").build()
 
 	override fun opprettJournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FileInfo>): String {
-		val timer = metrics.joarkLatencyStart()
+		val timer = metrics.startJoarkLatency()
 		try {
 			logger.info("$key: About to create journalpost for behandlingsId: '${soknadarkivschema.behandlingsid}'")
 			val request = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)

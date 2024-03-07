@@ -310,7 +310,7 @@ open class TaskListService(
 				MDC.clear()
 				metrics.endTimer(timer)
 				metrics.endHistogramTimer(histogram)
-				metrics.numberOfAttachmentHistogramSet(
+				metrics.setNumberOfAttachmentHistogram(
 					soknadarkivschema.mottatteDokumenter.size.toDouble(),
 					soknadarkivschema.arkivtema
 				)
@@ -331,7 +331,6 @@ open class TaskListService(
 		if (journalpost != null) {
 			val archivingdetails = "Already archived journalpostId=${journalpost.journalpostId}, opprettet=${journalpost.datoOpprettet}"
 			logger.info("$key: $archivingdetails")
-			archiverService.createMessage(key, "**Archiving: OK. $archivingdetails")
 			throw ApplicationAlreadyArchivedException("$key: $archivingdetails")
 		}
 	}
