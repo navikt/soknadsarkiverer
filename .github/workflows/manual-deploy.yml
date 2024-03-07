@@ -57,6 +57,7 @@ jobs:
     name: Deploy to preprod-q1
     needs: build-and-push
     if: github.event.inputs.environment == 'preprod-q1'
+    id: deploy-preprod-q1
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -71,6 +72,7 @@ jobs:
     name: Deploy to preprod-q2
     needs: build-and-push
     if: github.event.inputs.environment == 'preprod-q2'
+    id: deploy-preprod-q2
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -111,8 +113,7 @@ jobs:
 
 
   deploy-alerts-preprod:
-    needs:  [deploy-preprod-q1, deploy-preprod-q2]
-    if: always() && (needs.preprod-q1.result == 'success' || needs.preprod-q2.result == 'success')
+    if: always() && (steps.deploy-preprod-q1.result == 'success' || steps.deploy-preprod-q2.result == 'success')
     name: Deploy alerts to dev
     runs-on: ubuntu-latest
     steps:
