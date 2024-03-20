@@ -4,9 +4,9 @@ import io.confluent.kafka.schemaregistry.client.SchemaRegistryClientConfig
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
 import no.nav.soknad.arkivering.avroschemas.EventTypes
+import no.nav.soknad.arkivering.avroschemas.MottattDokument
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.Constants.MDC_INNSENDINGS_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import org.apache.avro.specific.SpecificRecord
@@ -25,7 +25,6 @@ import org.apache.kafka.streams.kstream.Joined
 import org.apache.kafka.streams.kstream.Materialized
 import org.apache.kafka.streams.state.KeyValueStore
 import org.slf4j.LoggerFactory
-import org.slf4j.MDC
 import java.util.*
 
 class KafkaStreamsSetup(
@@ -102,10 +101,14 @@ class KafkaStreamsSetup(
 
 	private fun Soknadarkivschema.print(): String {
 		val fnr = "**fnr can be found in Soknadsmottaker's secure logs**"
-		val a = Soknadarkivschema(this.behandlingsid, fnr, this.arkivtema, this.innsendtDato, this.soknadstype, this.mottatteDokumenter)
-		return a.toString()
+		return Soknadarkivschema(this.behandlingsid, fnr, this.arkivtema, this.innsendtDato, this.soknadstype,
+			mottatteDokumenterMaskert(this.mottatteDokumenter)).toString()
 	}
 
+	private fun mottatteDokumenterMaskert(motattedokumenter: List<MottattDokument>): List<MottattDokument> {
+		return motattedokumenter.map{MottattDokument(it.skjemanummer, it.erHovedskjema,
+			if (it.skjemanummer == "N6") "**Maskert**" else it.tittel, it.mottatteVarianter)}
+	}
 
 	fun setupKafkaStreams(id: String): KafkaStreams {
 		logger.info("Setting up KafkaStreams")
