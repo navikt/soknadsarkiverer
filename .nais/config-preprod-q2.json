@@ -12,7 +12,7 @@
 		"dokarkiv.dev-fss-pub.nais.io",
 		"soknadsfillager-gcp.intern.dev.nav.no",
 		"innsending-api-gcp.intern.dev.nav.no",
-		"saf.dev-fss-pub.nais.io"
+		"saf-q2.dev-fss-pub.nais.io"
 	],
 	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v2-dev",
 	"kafka-processingeventlog-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v2-dev",
