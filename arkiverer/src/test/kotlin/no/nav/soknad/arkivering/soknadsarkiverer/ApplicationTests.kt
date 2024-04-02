@@ -473,6 +473,11 @@ class ApplicationTests : ContainerizedKafka() {
 	@Test
 	fun `Failing to get files from Filestorage will cause retries`() {
 		val key = UUID.randomUUID().toString()
+
+		mockFilestorageIsDown()
+		mockJoarkIsWorking()
+		mockSafRequest_notFound(innsendingsId= key)
+
 		val tasksBefore = metrics.getTasks()
 		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
 		val getFilestorageErrorsBefore = metrics.getGetFilestorageErrors()
@@ -480,10 +485,6 @@ class ApplicationTests : ContainerizedKafka() {
 		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
 		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
 		val joarkErrorsBefore = metrics.getJoarkErrors()
-
-		mockFilestorageIsDown()
-		mockJoarkIsWorking()
-		mockSafRequest_notFound(innsendingsId= key)
 
 		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 
