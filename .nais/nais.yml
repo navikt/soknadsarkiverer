@@ -13,6 +13,10 @@ metadata:
 spec:
   image: {{image}}
   port: 8091
+  observability:
+    autoInstrumentation:
+      enabled: true
+      runtime: java
   liveness:
     path: /internal/isAlive
     initialDelay: 100
