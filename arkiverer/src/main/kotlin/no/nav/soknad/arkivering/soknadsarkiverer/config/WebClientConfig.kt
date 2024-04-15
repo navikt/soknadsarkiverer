@@ -75,10 +75,14 @@ class WebClientConfig(private val maxMessageSize: Int = 1024 * 1024 * 325) {
 		oAuth2AccessTokenService: OAuth2AccessTokenService
 	) =
 		{ request: ClientRequest, next: ExchangeFunction ->
-			val response: OAuth2AccessTokenResponse = oAuth2AccessTokenService.getAccessToken(clientProperties)
+			val response: OAuth2AccessTokenResponse? = oAuth2AccessTokenService.getAccessToken(clientProperties)
+
+			if (response?.accessToken == null) {
+				throw RuntimeException("Fikk ikke accessToken fra token exchange")
+			}
 
 			val filtered = ClientRequest.from(request)
-				.headers { it.setBearerAuth(response.accessToken) }
+				.headers { it.setBearerAuth(response.accessToken as String) }
 				.build()
 			next.exchange(filtered)
 		}
@@ -89,10 +93,10 @@ class WebClientConfig(private val maxMessageSize: Int = 1024 * 1024 * 325) {
 		logger.info("Properties.scope = '${properties.scope}'")
 		logger.info("Properties.resourceUrl = '${properties.resourceUrl}'")
 		val clientSecret = when {
-			(properties.authentication?.clientSecret == null || properties.authentication?.clientSecret == "") -> "MISSING"
-			else -> properties.authentication.clientSecret.substring(0, 2)
+			(properties.authentication.clientSecret == null || properties.authentication.clientSecret == "") -> "MISSING"
+			else -> properties.authentication.clientSecret?.substring(0, 2)
 		}
 		logger.info("Properties.authentication.clientSecret = '$clientSecret'")
-		logger.info("Properties.authentication.clientAuthMethod = '${properties.authentication?.clientAuthMethod}'")
+		logger.info("Properties.authentication.clientAuthMethod = '${properties.authentication.clientAuthMethod}'")
 	}
 }

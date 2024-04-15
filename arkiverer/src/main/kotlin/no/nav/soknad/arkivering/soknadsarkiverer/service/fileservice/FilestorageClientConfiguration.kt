@@ -34,7 +34,7 @@ class FilestorageClientConfiguration {
 				val token = tokenService.getToken()
 
 				val bearerRequest = it.request().newBuilder().headers(it.request().headers)
-					.header("Authorization", "Bearer ${token.accessToken}").build()
+					.header("Authorization", "Bearer ${token?.accessToken}").build()
 
 				it.proceed(bearerRequest)
 			}.build()
