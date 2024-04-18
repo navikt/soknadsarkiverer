@@ -37,7 +37,7 @@
 		<graphql-kotlin.version>7.1.0</graphql-kotlin.version>
 
 		<!-- OpenAPI -->
-		<springdoc-openapi.version>2.3.0</springdoc-openapi.version>
+		<springdoc-openapi.version>2.5.0</springdoc-openapi.version>
 		<swagger-annotations.version>2.2.20</swagger-annotations.version>
 
 		<!--Kotlin-->
