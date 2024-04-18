@@ -51,6 +51,11 @@
 			<version>${jackson-databind-nullable.version}</version>
 		</dependency>
 		<dependency>
+			<groupId>com.github.java-json-tools</groupId>
+			<artifactId>jackson-coreutils</artifactId>
+			<version>${jackson-coreutils.version}</version>
+		</dependency>
+		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-common</artifactId>
 			<version>${springdoc-openapi.version}</version>
