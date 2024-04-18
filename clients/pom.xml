@@ -18,16 +18,15 @@
 			<artifactId>kotlin-stdlib</artifactId>
 			<version>${kotlin.version}</version>
 		</dependency>
-
-		<dependency>
-			<groupId>com.squareup.okhttp3</groupId>
-			<artifactId>okhttp</artifactId>
-			<version>${okhttp3.version}</version>
-		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.module</groupId>
 			<artifactId>jackson-module-kotlin</artifactId>
 			<version>${jackson-module-kotlin.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+			<version>${springdoc-openapi.version}</version>
 		</dependency>
 	</dependencies>
 
@@ -49,6 +48,8 @@
 						<configuration>
 							<inputSpec>${project.basedir}/src/main/resources/soknadsfillager-api.yml</inputSpec>
 							<generatorName>kotlin</generatorName>
+							<additionalProperties>useSpringBoot3</additionalProperties>
+							<library>jvm-spring-restclient</library>
 							<apiPackage>no.nav.soknad.arkivering.soknadsfillager.api</apiPackage>
 							<modelPackage>no.nav.soknad.arkivering.soknadsfillager.model</modelPackage>
 							<configOptions>
@@ -69,6 +70,8 @@
 						<configuration>
 							<inputSpec>${project.basedir}/src/main/resources/innsending-api.yml</inputSpec>
 							<generatorName>kotlin</generatorName>
+							<additionalProperties>useSpringBoot3</additionalProperties>
+							<library>jvm-spring-restclient</library>
 							<apiPackage>no.nav.soknad.innsending.api</apiPackage>
 							<modelPackage>no.nav.soknad.innsending.model</modelPackage>
 							<configOptions>

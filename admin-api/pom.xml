@@ -52,7 +52,7 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springdoc</groupId>
-			<artifactId>springdoc-openapi-ui</artifactId>
+			<artifactId>springdoc-openapi-starter-common</artifactId>
 			<version>${springdoc-openapi.version}</version>
 		</dependency>
 	</dependencies>

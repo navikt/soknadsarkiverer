@@ -14,8 +14,10 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
+import org.springframework.http.HttpStatusCode
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.stereotype.Service
+import org.springframework.web.client.RestClient
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
 
@@ -23,12 +25,12 @@ import org.springframework.web.reactive.function.client.WebClient
 class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 												@Value("\${joark.sendToJoark}") private val sendToJoark: Boolean,
 												@Value("\${joark.journal-post}") private val journalPostUrl: String,
-												@Qualifier("archiveWebClient") private val webClient: WebClient,
+												@Qualifier("archiveRestClient") private val restClient: RestClient,
 												private val metrics: ArchivingMetrics): JournalpostClientInterface {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	val bidClient: WebClient = webClient.mutate().defaultHeader(NAV_CONSUMER_ID, "dialogstyring-bidrag").build()
+	val bidClient: RestClient = restClient.mutate().defaultHeader(NAV_CONSUMER_ID, "dialogstyring-bidrag").build()
 
 	override fun opprettJournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FileInfo>): String {
 		val timer = metrics.startJoarkLatency()
@@ -41,8 +43,8 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 				logger.warn("$key: Mottatte flere varianter av hovedskjema med samme variantfomat.  ${mainDocVariantFormats.filter { it.value.size > 1 }.map { it.key }}")
 			}
 
-			val client = if (soknadarkivschema.arkivtema == "BID") bidClient else webClient
-			val response = sendDataToJoark(key, request, client, joarkHost + journalPostUrl)
+			val client = if (soknadarkivschema.arkivtema == "BID") bidClient else restClient
+			val response = sendDataToJoark(key, request, client, journalPostUrl)
 			val journalpostId = response?.journalpostId ?: "-1"
 
 			logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.behandlingsid}', " +
@@ -63,7 +65,7 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 		}
 	}
 
-	private fun sendDataToJoark(key: String, data: OpprettJournalpostRequest, client: WebClient, uri: String):
+	private fun sendDataToJoark(key: String, data: OpprettJournalpostRequest, client: RestClient, uri: String):
 		OpprettJournalpostResponse? {
 
 		if (!sendToJoark) {
@@ -78,20 +80,28 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 			.contentType(APPLICATION_JSON)
 			.accept(APPLICATION_JSON)
 			.header("Nav-Callid", key)
-			.body(BodyInserters.fromValue(data))
+			.body(data)
 			.retrieve()
-			.onStatus(
-				{ httpStatus -> httpStatus.is4xxClientError || httpStatus.is5xxServerError },
-				{ response -> response.bodyToMono(String::class.java).map {
-					if (response.statusCode() == HttpStatus.CONFLICT) {
-						ApplicationAlreadyArchivedException("Got ${response.statusCode()} when requesting $method $uri - response body: '$it'")
+
+			.onStatus(HttpStatusCode::is4xxClientError ) { _, response ->
+				run {
+					val msg = "$key: Got ${response.statusCode} when requesting $method $uri"  + "Body response: ${response.body}"
+					if (response.statusCode == HttpStatus.CONFLICT) {
+						logger.warn(msg)
+						throw ApplicationAlreadyArchivedException(msg)
 					} else {
-						Exception("$key: Got ${response.statusCode()} when requesting $method $uri - response body: '$it'")
+						logger.error("$key: Got ${response.statusCode} when requesting $method $uri")
+						throw RuntimeException(msg)
 					}
 				}
-				})
-			.bodyToMono(OpprettJournalpostResponse::class.java)
-			.log()
-			.block()
+			}
+			.onStatus(HttpStatusCode::is5xxServerError ) { _, response ->
+				run {
+					val msg = "$key: Got ${response.statusCode} when requesting $method $uri." + "Body response: ${response.body}"
+					logger.error(msg)
+					throw RuntimeException(msg)
+				}
+			}
+			.body(OpprettJournalpostResponse::class.java)
 	}
 }
