@@ -57,7 +57,7 @@
 		<testcontainers.version>1.19.3</testcontainers.version>
 		<mockk.version>1.13.8</mockk.version>
 		<springmockk.version>4.0.2</springmockk.version>
-		<wiremock.version>3.0.1</wiremock.version>
+		<wiremock.version>2.27.2</wiremock.version>
 
 		<!--Plugins-->
 		<versions-maven-plugin.version>2.16.2</versions-maven-plugin.version>
