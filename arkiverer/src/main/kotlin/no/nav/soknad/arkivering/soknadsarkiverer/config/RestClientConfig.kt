@@ -57,8 +57,9 @@ class RestClientConfig {
 
 	private fun timeouts(readTimeoutMinutes: Long, connectTimeoutSeconds: Long): ReactorNettyClientRequestFactory {
 		val factory = ReactorNettyClientRequestFactory()
-		factory.setReadTimeout(Duration.ofMinutes(4 * 60L))
-		factory.setConnectTimeout(Duration.ofSeconds(2L))
+		factory.setReadTimeout(Duration.ofMinutes(readTimeoutMinutes))
+		factory.setConnectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
+		factory.setExchangeTimeout(Duration.ofMinutes(readTimeoutMinutes))
 		return factory
 	}
 
@@ -75,7 +76,7 @@ class RestClientConfig {
 
 		return restClientOAuth2Client(
 			baseUrl = innsendingApiProperties.host,
-			timeouts = timeouts(fileFetchTimeoutProperties.readTimeout.toLong(), fileFetchTimeoutProperties.connectTimeout.toLong()),
+			timeouts = timeouts(readTimeoutMinutes = fileFetchTimeoutProperties.readTimeout.toLong(), connectTimeoutSeconds = fileFetchTimeoutProperties.connectTimeout.toLong()),
 			clientAccessProperties = clientConfigProperties.registration["innsendingApi"]!!,
 			oAuth2AccessTokenService = oAuth2AccessTokenService
 		)
@@ -133,7 +134,6 @@ class RestClientConfig {
 
 	@Bean
 	fun healthApi(filestorageProperties: FilestorageProperties) = HealthApi(filestorageProperties.host)
-
 
 
 	private fun restClientOAuth2Client(
