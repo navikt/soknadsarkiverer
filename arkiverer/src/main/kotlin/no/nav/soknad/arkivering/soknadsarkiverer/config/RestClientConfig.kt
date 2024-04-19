@@ -76,7 +76,7 @@ class RestClientConfig {
 		return restClientOAuth2Client(
 			baseUrl = innsendingApiProperties.host,
 			timeouts = timeouts(fileFetchTimeoutProperties.readTimeout.toLong(), fileFetchTimeoutProperties.connectTimeout.toLong()),
-			clientAccessProperties = clientConfigProperties.registration["innsendingApiRestClient"]!!,
+			clientAccessProperties = clientConfigProperties.registration["innsendingApi"]!!,
 			oAuth2AccessTokenService = oAuth2AccessTokenService
 		)
 
