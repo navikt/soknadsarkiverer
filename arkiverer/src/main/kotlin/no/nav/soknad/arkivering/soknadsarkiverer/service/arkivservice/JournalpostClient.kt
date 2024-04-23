@@ -30,6 +30,7 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
+	// Joark skal kjøre egen behandling ved oppretting av journalpost for søknader på tema BID. Dette markeres ved å sette header: NAV_CONSUMER_ID, "dialogstyring-bidrag"
 	val bidClient: RestClient = restClient.mutate().defaultHeader(NAV_CONSUMER_ID, "dialogstyring-bidrag").build()
 
 	override fun opprettJournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FileInfo>): String {

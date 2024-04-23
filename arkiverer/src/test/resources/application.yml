@@ -58,4 +58,9 @@ filefetchtimeouts:
   callTimeout: 62
   readTimeout: 1
   writeTimeout: 1
+archivingtimeouts:
+  connectTimeout: 2
+  readTimeout: 4
+  exchangeTimeout: 4
+
 status_log_url: "https://logs.adeo.no"

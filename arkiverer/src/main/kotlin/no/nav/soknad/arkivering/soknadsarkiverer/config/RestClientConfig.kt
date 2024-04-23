@@ -5,6 +5,7 @@ import no.nav.security.token.support.client.core.ClientProperties
 import no.nav.security.token.support.client.core.oauth2.OAuth2AccessTokenService
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.Constants
+import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.ArchivingTimeoutProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileFetchTimeoutProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.InnsendingApiProperties
@@ -38,12 +39,16 @@ class RestClientConfig {
 	fun archiveWebClient(
 		@Value("\${joark.host}") joarkHost: String,
 		oAuth2AccessTokenService: OAuth2AccessTokenService,
-		clientConfigurationProperties: ClientConfigurationProperties
+		clientConfigurationProperties: ClientConfigurationProperties,
+		archivingTimeoutProperties: ArchivingTimeoutProperties
 	): RestClient {
 
 		return restClientOAuth2Client(
 			baseUrl = joarkHost,
-			timeouts = timeouts(readTimeoutMinutes = 4 * 60L, connectTimeoutSeconds = 2L),
+			timeouts = timeouts(
+				readTimeoutMinutes = archivingTimeoutProperties.readTimeout,
+				connectTimeoutSeconds = archivingTimeoutProperties.connectTimeout,
+				exchangeTimeoutMinutes = archivingTimeoutProperties.exchangeTimeout),
 			clientAccessProperties = clientConfigurationProperties.registration["arkiv"]!!,
 			oAuth2AccessTokenService = oAuth2AccessTokenService )
 	}
@@ -55,11 +60,11 @@ class RestClientConfig {
 
 
 
-	private fun timeouts(readTimeoutMinutes: Long, connectTimeoutSeconds: Long): ReactorNettyClientRequestFactory {
+	private fun timeouts(readTimeoutMinutes: Long, connectTimeoutSeconds: Long, exchangeTimeoutMinutes: Long? = null): ReactorNettyClientRequestFactory {
 		val factory = ReactorNettyClientRequestFactory()
 		factory.setReadTimeout(Duration.ofMinutes(readTimeoutMinutes))
 		factory.setConnectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
-		factory.setExchangeTimeout(Duration.ofMinutes(readTimeoutMinutes))
+		factory.setExchangeTimeout(Duration.ofMinutes(exchangeTimeoutMinutes ?: readTimeoutMinutes))
 		return factory
 	}
 
@@ -93,7 +98,7 @@ class RestClientConfig {
 	fun hentInnsendteFilerApi(
 		innsendingApiProperties: InnsendingApiProperties,
 		@Qualifier("innsendingApiRestClient") innsendingApiClient: RestClient): HentInnsendteFilerApi {
-		Serializer.jacksonObjectMapper.registerModule(JavaTimeModule())
+		//Serializer.jacksonObjectMapper.registerModule(JavaTimeModule())
 		return HentInnsendteFilerApi(innsendingApiClient)
 	}
 
@@ -128,7 +133,7 @@ class RestClientConfig {
 		filestorageProperties: FilestorageProperties,
 		@Qualifier("filestorageRestClient") filestorageClient: RestClient
 	): FilesApi {
-		Serializer.jacksonObjectMapper.registerModule(JavaTimeModule())
+		//Serializer.jacksonObjectMapper.registerModule(JavaTimeModule())
 		return FilesApi(filestorageClient)
 	}
 
