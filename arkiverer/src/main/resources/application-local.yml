@@ -61,6 +61,11 @@ filefetchtimeouts:
   readTimeout: 1
   writeTimeout: 1
 
+archivingtimeouts:
+  connectTimeout: 2
+  readTimeout: 4
+  exchangeTimeout: 4
+
 no.nav.security:
   jwt:
     issuer:

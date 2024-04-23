@@ -11,6 +11,11 @@ filefetchtimeouts:
   readTimeout: 5
   writeTimeout: 5
 
+archivingtimeouts:
+  connectTimeout: 2
+  readTimeout: 4
+  exchangeTimeout: 4
+
 management:
   endpoint:
     health:
@@ -90,7 +95,6 @@ no.nav.security:
     issuer.azuread:
         discoveryurl: ${AZURE_APP_WELL_KNOWN_URL}
         accepted_audience: ${AZURE_APP_CLIENT_ID}
-        cookie_name: azure_token
     client:
       registration:
         soknadsfillager:
