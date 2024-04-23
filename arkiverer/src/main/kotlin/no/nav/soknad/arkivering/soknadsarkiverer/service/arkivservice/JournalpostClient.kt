@@ -30,9 +30,6 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	// Joark skal kjøre egen behandling ved oppretting av journalpost for søknader på tema BID. Dette markeres ved å sette header: NAV_CONSUMER_ID, "dialogstyring-bidrag"
-	val bidClient: RestClient = restClient.mutate().defaultHeader(NAV_CONSUMER_ID, "dialogstyring-bidrag").build()
-
 	override fun opprettJournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FileInfo>): String {
 		val timer = metrics.startJoarkLatency()
 		try {
@@ -44,8 +41,7 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 				logger.warn("$key: Mottatte flere varianter av hovedskjema med samme variantfomat.  ${mainDocVariantFormats.filter { it.value.size > 1 }.map { it.key }}")
 			}
 
-			val client = if (soknadarkivschema.arkivtema == "BID") bidClient else restClient
-			val response = sendDataToJoark(key, request, client, journalPostUrl)
+			val response = sendDataToJoark(key, request, restClient, journalPostUrl)
 			val journalpostId = response?.journalpostId ?: "-1"
 
 			logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.behandlingsid}', " +
