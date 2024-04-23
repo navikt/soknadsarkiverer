@@ -83,9 +83,7 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 			.header("Nav-Callid", key)
 			.body(data)
 			.retrieve()
-
 			.onStatus(HttpStatusCode::is4xxClientError ) { _, response ->
-				run {
 					val msg = "$key: Got ${response.statusCode} when requesting $method $uri"  + "Body response: ${response.body}"
 					if (response.statusCode == HttpStatus.CONFLICT) {
 						logger.warn(msg)
@@ -94,14 +92,11 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 						logger.error("$key: Got ${response.statusCode} when requesting $method $uri")
 						throw RuntimeException(msg)
 					}
-				}
 			}
 			.onStatus(HttpStatusCode::is5xxServerError ) { _, response ->
-				run {
 					val msg = "$key: Got ${response.statusCode} when requesting $method $uri." + "Body response: ${response.body}"
 					logger.error(msg)
 					throw RuntimeException(msg)
-				}
 			}
 			.body(OpprettJournalpostResponse::class.java)
 	}
