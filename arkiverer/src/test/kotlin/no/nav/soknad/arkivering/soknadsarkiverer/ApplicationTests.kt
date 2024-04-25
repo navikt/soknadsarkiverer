@@ -142,6 +142,25 @@ class ApplicationTests : ContainerizedKafka() {
 	}
 
 	@Test
+	fun `Happy case - Several events on Kafka will cause rest calls to Joark`() {
+		mockJoarkIsWorking()
+		val noOfApplications = 1000
+		repeat(noOfApplications) {
+			val key = UUID.randomUUID().toString()
+			mockFilestorageIsWorking(fileUuid)
+			val soknadsarkivschema = createSoknadarkivschema(key)
+			mockSafRequest_notFound(innsendingsId= soknadsarkivschema.behandlingsid)
+			putDataOnKafkaTopic(key, soknadsarkivschema)
+		}
+		verifyMockedPostRequests(noOfApplications, safUrl)
+		verifyMockedPostRequests(noOfApplications, journalPostUrl)
+		val requests = verifyPostRequest(journalPostUrl)
+		assertEquals(noOfApplications, requests.size)
+
+	}
+
+
+	@Test
 	fun `Happy case - Putting events on Kafka with duplicate variantFormats for main document will cause filtered rest call to Joark`() {
 		val key = UUID.randomUUID().toString()
 		val fileIds = listOf(UUID.randomUUID().toString(),UUID.randomUUID().toString())

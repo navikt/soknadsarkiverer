@@ -27,6 +27,7 @@ import org.springframework.http.client.ClientHttpRequestExecution
 import org.springframework.http.client.ClientHttpRequestInterceptor
 import org.springframework.http.client.ClientHttpResponse
 import org.springframework.http.client.ReactorNettyClientRequestFactory
+import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.web.client.RestClient
 import java.time.Duration
 
@@ -60,11 +61,11 @@ class RestClientConfig {
 
 
 
-	private fun timeouts(readTimeoutMinutes: Long, connectTimeoutSeconds: Long, exchangeTimeoutMinutes: Long? = null): ReactorNettyClientRequestFactory {
-		val factory = ReactorNettyClientRequestFactory()
+	private fun timeouts(readTimeoutMinutes: Long, connectTimeoutSeconds: Long, exchangeTimeoutMinutes: Long? = null): SimpleClientHttpRequestFactory {
+		val factory = SimpleClientHttpRequestFactory()
 		factory.setReadTimeout(Duration.ofMinutes(readTimeoutMinutes))
 		factory.setConnectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
-		factory.setExchangeTimeout(Duration.ofMinutes(exchangeTimeoutMinutes ?: readTimeoutMinutes))
+		//factory.setExchangeTimeout(Duration.ofMinutes(exchangeTimeoutMinutes ?: readTimeoutMinutes))
 		return factory
 	}
 
@@ -143,7 +144,7 @@ class RestClientConfig {
 
 	private fun restClientOAuth2Client(
 		baseUrl: String,
-		timeouts: ReactorNettyClientRequestFactory,
+		timeouts: SimpleClientHttpRequestFactory,
 		clientAccessProperties: ClientProperties,
 		oAuth2AccessTokenService: OAuth2AccessTokenService
 	): RestClient {
