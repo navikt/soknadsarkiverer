@@ -28,6 +28,17 @@
 			<artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
 			<version>${springdoc-openapi.version}</version>
 		</dependency>
+
+		<dependency>
+			<groupId>io.kotlintest</groupId>
+			<artifactId>kotlintest-runner-junit5</artifactId>
+			<version>${kotlintest.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.kotlintest</groupId>
+			<artifactId>kotlintest-assertions</artifactId>
+			<version>${kotlintest.version}</version>
+		</dependency>
 	</dependencies>
 
 
@@ -122,6 +133,19 @@
 				<configuration>
 					<jvmTarget>${java.version}</jvmTarget>
 				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>${maven-surefire.version}</version>
+				<dependencies>
+					<dependency>
+						<groupId>org.junit.platform</groupId>
+						<artifactId>junit-platform-surefire-provider</artifactId>
+						<version>${junit-platform.version}</version>
+					</dependency>
+				</dependencies>
 			</plugin>
 		</plugins>
 	</build>

@@ -35,6 +35,7 @@
 		<jakarta-validation-api.version>3.0.2</jakarta-validation-api.version>
 		<jakarta-annotation.version>2.1.1</jakarta-annotation.version>
 		<graphql-kotlin.version>7.1.1</graphql-kotlin.version>
+		<commons-codec.version>1.17.0</commons-codec.version>
 
 		<!-- OpenAPI -->
 		<springdoc-openapi.version>2.5.0</springdoc-openapi.version>
@@ -58,6 +59,7 @@
 		<mockk.version>1.13.10</mockk.version>
 		<springmockk.version>4.0.2</springmockk.version>
 		<wiremock.version>2.27.2</wiremock.version>
+		<kotlintest.version>3.4.2</kotlintest.version>
 
 		<!--Plugins-->
 		<versions-maven-plugin.version>2.16.2</versions-maven-plugin.version>
@@ -65,6 +67,8 @@
 		<remote-comparer-maven-plugin.version>1.0.5</remote-comparer-maven-plugin.version>
 		<cyclonedx-maven-plugin.version>2.8.0</cyclonedx-maven-plugin.version>
 		<maven-enforcer.version>3.4.1</maven-enforcer.version>
+		<maven-surefire.version>2.22.1</maven-surefire.version>
+		<junit-platform.version>1.2.0</junit-platform.version>
 	</properties>
 
 
