@@ -4,7 +4,6 @@ import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.mockk.*
-import io.prometheus.client.CollectorRegistry
 import kotlinx.coroutines.runBlocking
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
@@ -22,7 +21,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
-import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafServiceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
@@ -34,6 +32,7 @@ import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.apache.kafka.streams.KafkaStreams
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -46,6 +45,7 @@ import org.springframework.test.annotation.DirtiesContext
 import java.util.*
 import java.util.concurrent.TimeUnit
 
+
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
@@ -55,8 +55,10 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
+
 	@Value("\${joark.journal-post}")
 	private lateinit var journalPostUrl: String
+
 	@Value("\${saf.path}")
 	private lateinit var safUrl: String
 
@@ -64,9 +66,6 @@ class StateRecreationTests : ContainerizedKafka() {
 	@MockkBean(relaxed = true)
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
 
-	@Suppress("unused")
-	@MockkBean(relaxed = true)
-	private lateinit var collectorRegistry: CollectorRegistry
 
 	@Suppress("unused")
 	@MockkBean(relaxed = true)
@@ -74,8 +73,10 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	@Autowired
 	private lateinit var filestorageProperties: FilestorageProperties
+
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
+
 	@Autowired
 	private lateinit var kafkaPublisher: KafkaPublisher
 
@@ -83,15 +84,22 @@ class StateRecreationTests : ContainerizedKafka() {
 	private lateinit var kafkaProcessingEventProducer: KafkaProducer<String, ProcessingEvent>
 	private lateinit var kafkaBootstrapConsumer: KafkaBootstrapConsumer
 
-	private val metrics: ArchivingMetrics = ArchivingMetrics(CollectorRegistry.defaultRegistry)
+	@Autowired
+	private lateinit var metrics: ArchivingMetrics
 
 	private val safService = mockk<SafServiceInterface>()
-	private	val scheduler = mockk<Scheduler>().also {
-		every{it.schedule(any(), any())} just Runs
-		every{it.scheduleSingleTask(any(), any())} just Runs
+	private val scheduler = mockk<Scheduler>().also {
+		every { it.schedule(any(), any()) } just Runs
+		every { it.scheduleSingleTask(any(), any()) } just Runs
 	}
-	private val	archiverService = mockk<ArchiverService>().also {
-		every {	runBlocking{it.fetchFiles(any(), any())} } returns listOf(FileInfo("id", "content".toByteArray(), ResponseStatus.Ok))
+	private val archiverService = mockk<ArchiverService>().also {
+		every { runBlocking { it.fetchFiles(any(), any()) } } returns listOf(
+			FileInfo(
+				"id",
+				"content".toByteArray(),
+				ResponseStatus.Ok
+			)
+		)
 		every { it.archive(any(), any(), any()) } just Runs
 		every { it.deleteFiles(any(), any()) } just Runs
 	}
@@ -102,23 +110,27 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	private lateinit var kafkaSetup: KafkaSetupTest
 
-
 	private val soknadarkivschema = createSoknadarkivschema()
 	private val fileUuid = UUID.randomUUID().toString()
+
+	@AfterEach
+	fun tearDown() {
+		metrics.registry.clear()
+	}
 
 	@BeforeAll
 	fun setup() {
 		setupMockedNetworkServices(
-			portToExternalServices!!+1,
+			portToExternalServices!! + 1,
 			journalPostUrl,
 			filestorageProperties.files,
 			safUrl
-			)
+		)
 		kafkaMainTopicProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProcessingEventProducer = KafkaProducer(kafkaConfigMap())
 		kafkaBootstrapConsumer = KafkaBootstrapConsumer(taskListService, kafkaConfig)
 		kafkaSetup = KafkaSetupTest(
-			applicationState = ApplicationState(alive = true,ready = true),
+			applicationState = ApplicationState(alive = true, ready = true),
 			taskListService = taskListService,
 			kafkaPublisher = kafkaPublisher,
 			metrics = metrics,
@@ -144,7 +156,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		mockFilestorageIsWorking(fileUuid)
 		mockJoarkIsWorking()
 		val soknadsarkivschema = createSoknadarkivschema(key)
-		mockSafRequest_notFound(innsendingsId= soknadsarkivschema.behandlingsid)
+		mockSafRequest_notFound(innsendingsId = soknadsarkivschema.behandlingsid)
 
 		publishSoknadsarkivschemas(key)
 		publishProcessingEvents(key to RECEIVED)
@@ -381,7 +393,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		recreateState()
 
-		verifyThatTaskListService().wasCalled(size-countFinishedOrFailure)
+		verifyThatTaskListService().wasCalled(size - countFinishedOrFailure)
 	}
 
 
@@ -395,7 +407,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	private fun randomFailureOrFinishedOrStarted(key: String): Pair<String, EventTypes> {
 		val rand = (1..1000).random()
-		if (rand>300) countFinishedOrFailure+1 else countFinishedOrFailure
+		if (rand > 300) countFinishedOrFailure + 1 else countFinishedOrFailure
 		return if (rand > 400)
 			key to FAILURE
 		else if (rand > 300)
@@ -418,8 +430,10 @@ class StateRecreationTests : ContainerizedKafka() {
 		}
 	}
 
-	private fun <T> putDataOnTopic(key: String, value: T, headers: Headers, topic: String,
-																 kafkaProducer: KafkaProducer<String, T>): RecordMetadata {
+	private fun <T> putDataOnTopic(
+		key: String, value: T, headers: Headers, topic: String,
+		kafkaProducer: KafkaProducer<String, T>
+	): RecordMetadata {
 
 		val producerRecord = ProducerRecord(topic, key, value)
 		headers.add(MESSAGE_ID, UUID.randomUUID().toString().toByteArray())

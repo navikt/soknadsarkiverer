@@ -4,12 +4,12 @@ import com.github.tomakehurst.wiremock.http.RequestMethod
 import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
-import io.prometheus.client.CollectorRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageProperties
+import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -41,16 +41,15 @@ class IntegrationTests : ContainerizedKafka() {
 	@MockkBean(relaxed = true)
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
 
-	@Suppress("unused")
-	@MockkBean(relaxed = true)
-	private lateinit var collectorRegistry: CollectorRegistry
-
 	@Autowired
 	private lateinit var filestorageProperties: FilestorageProperties
+
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
+
 	@Value("\${joark.journal-post}")
 	private lateinit var journalPostUrl: String
+
 	@Value("\${saf.path}")
 	private lateinit var safUrl: String
 	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
@@ -58,18 +57,24 @@ class IntegrationTests : ContainerizedKafka() {
 
 	private val fileId = UUID.randomUUID().toString()
 
+	@Autowired
+	private lateinit var metrics: ArchivingMetrics
+
 
 	@BeforeEach
 	fun setup() {
-		setupMockedNetworkServices(portToExternalServices!!, journalPostUrl, filestorageProperties.files, safUrl )
+		setupMockedNetworkServices(portToExternalServices!!, journalPostUrl, filestorageProperties.files, safUrl)
 
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
-		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
+		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also {
+			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
+		})
 	}
 
 	@AfterEach
 	fun teardown() {
 		stopMockedNetworkServices()
+		metrics.registry.clear()
 	}
 
 	@Test
@@ -81,11 +86,11 @@ class IntegrationTests : ContainerizedKafka() {
 		val soknadarkivschema = createSoknadarkivschema()
 		mockSafRequest_notFound(innsendingsId = soknadarkivschema.behandlingsid)
 		putDataOnKafkaTopic(soknadarkivschema)
-		val soknadarkivschema2= createSoknadarkivschema()
+		val soknadarkivschema2 = createSoknadarkivschema()
 		mockSafRequest_notFound(innsendingsId = soknadarkivschema2.behandlingsid)
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
-		verifyMockedPostRequests(initialRequests+2, journalPostUrl)
+		verifyMockedPostRequests(initialRequests + 2, journalPostUrl)
 	}
 
 	@Test
@@ -147,7 +152,11 @@ class IntegrationTests : ContainerizedKafka() {
 		putDataOnTopic(UUID.randomUUID().toString(), badData)
 	}
 
-	private fun putDataOnTopic(key: String, value: Soknadarkivschema, headers: Headers = RecordHeaders()): RecordMetadata {
+	private fun putDataOnTopic(
+		key: String,
+		value: Soknadarkivschema,
+		headers: Headers = RecordHeaders()
+	): RecordMetadata {
 		val topic = kafkaConfig.topics.mainTopic
 		return putDataOnTopic(key, value, headers, topic, kafkaProducer)
 	}
@@ -157,8 +166,10 @@ class IntegrationTests : ContainerizedKafka() {
 		return putDataOnTopic(key, value, headers, topic, kafkaProducerForBadData)
 	}
 
-	private fun <T> putDataOnTopic(key: String, value: T, headers: Headers, topic: String,
-																 kafkaProducer: KafkaProducer<String, T>): RecordMetadata {
+	private fun <T> putDataOnTopic(
+		key: String, value: T, headers: Headers, topic: String,
+		kafkaProducer: KafkaProducer<String, T>
+	): RecordMetadata {
 
 		val producerRecord = ProducerRecord(topic, key, value)
 		headers.add(MESSAGE_ID, UUID.randomUUID().toString().toByteArray())

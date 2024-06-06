@@ -1,8 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import io.mockk.*
-import io.prometheus.client.CollectorRegistry
-import kotlinx.coroutines.*
+import kotlinx.coroutines.runBlocking
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
@@ -14,7 +13,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafServiceIn
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -22,40 +20,48 @@ import java.util.*
 
 class TaskListServiceTests {
 
-		private	val scheduler = mockk<Scheduler>().also {
-			every{it.schedule(any(), any())} just Runs
-			every{it.scheduleSingleTask(any(), any())} just Runs
-		}
-		private val	archiverService = mockk<ArchiverService>().also {
-			every {	runBlocking{it.fetchFiles(any(), any())}} returns listOf(FileInfo("id", "content".toByteArray(), ResponseStatus.Ok))
-			every { it.archive(any(), any(), any()) } just Runs
-			every { it.deleteFiles(any(), any()) } just Runs
-		}
-		private val	kafkaPublisher = mockk<KafkaPublisher>().also {
-			every { it.putProcessingEventOnTopic(any(), any(), any()) } just Runs
-		}
+	private lateinit var metrics: ArchivingMetrics
 
-		private val safService = mockk<SafServiceInterface>()
+	private val scheduler = mockk<Scheduler>().also {
+		every { it.schedule(any(), any()) } just Runs
+		every { it.scheduleSingleTask(any(), any()) } just Runs
+	}
+	private val archiverService = mockk<ArchiverService>().also {
+		every { runBlocking { it.fetchFiles(any(), any()) } } returns listOf(
+			FileInfo(
+				"id",
+				"content".toByteArray(),
+				ResponseStatus.Ok
+			)
+		)
+		every { it.archive(any(), any(), any()) } just Runs
+		every { it.deleteFiles(any(), any()) } just Runs
+	}
+	private val kafkaPublisher = mockk<KafkaPublisher>().also {
+		every { it.putProcessingEventOnTopic(any(), any(), any()) } just Runs
+	}
 
-		private val soknadarkivschema = createSoknadarkivschema()
+	private val safService = mockk<SafServiceInterface>()
 
-		private val metrics: ArchivingMetrics = ArchivingMetrics(CollectorRegistry())
+	private val soknadarkivschema = createSoknadarkivschema()
 
-		private val secondsBetweenRetries = listOf(0L, 0L, 0L, 0L, 0L, 0L)
-		private val taskListService = TaskListService(
-									archiverService,
-									safService,
-									0,
-									secondsBetweenRetries,
-									ApplicationState(),
-									scheduler,
-									metrics,
-									kafkaPublisher
-								)
+	private lateinit var taskListService: TaskListService
 
-	@AfterEach
-	fun teardown() {
-		metrics.unregister()
+	@BeforeEach
+	fun setup() {
+		metrics = ArchivingMetrics()
+		metrics.registry.clear()
+		val secondsBetweenRetries = listOf(0L, 0L, 0L, 0L, 0L, 0L)
+		taskListService = TaskListService(
+			archiverService,
+			safService,
+			0,
+			secondsBetweenRetries,
+			ApplicationState(),
+			scheduler,
+			metrics,
+			kafkaPublisher
+		)
 	}
 
 
@@ -68,7 +74,13 @@ class TaskListServiceTests {
 	fun `Can add task`() {
 		taskListService.addOrUpdateTask(UUID.randomUUID().toString(), soknadarkivschema, EventTypes.RECEIVED)
 
-		verify(atLeast = 1, timeout = 2_000) {kafkaPublisher.putProcessingEventOnTopic(any(), eq(ProcessingEvent(EventTypes.STARTED)), any())}
+		verify(atLeast = 1, timeout = 2_000) {
+			kafkaPublisher.putProcessingEventOnTopic(
+				any(),
+				eq(ProcessingEvent(EventTypes.STARTED)),
+				any()
+			)
+		}
 		assertEquals(1, taskListService.listTasks().size)
 	}
 
@@ -81,7 +93,13 @@ class TaskListServiceTests {
 		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.RECEIVED)
 		assertEquals(1, taskListService.listTasks().size)
 		assertEquals(originalCount, getTaskListCount(key))
-		verify(atLeast = 1, timeout = 2_000) {kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.STARTED)), any())}
+		verify(atLeast = 1, timeout = 2_000) {
+			kafkaPublisher.putProcessingEventOnTopic(
+				eq(key),
+				eq(ProcessingEvent(EventTypes.STARTED)),
+				any()
+			)
+		}
 
 		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.STARTED)
 		assertEquals(1, taskListService.listTasks().size)
@@ -121,7 +139,13 @@ class TaskListServiceTests {
 		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.STARTED)
 
 		verify(exactly = 1, timeout = 2_000) { archiverService.archive(eq(key), any(), any()) }
-		verify(atLeast = 1, timeout = 2_000) {kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.ARCHIVED)), any())}
+		verify(atLeast = 1, timeout = 2_000) {
+			kafkaPublisher.putProcessingEventOnTopic(
+				eq(key),
+				eq(ProcessingEvent(EventTypes.ARCHIVED)),
+				any()
+			)
+		}
 
 	}
 
@@ -135,7 +159,13 @@ class TaskListServiceTests {
 
 		verify(atLeast = 1, timeout = 2_000) { scheduler.schedule(any(), any()) }
 		verify(atLeast = 1, timeout = 2_000) { archiverService.archive(eq(key), any(), any()) }
-		verify(atLeast = 1, timeout = 2_000) {kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.STARTED)), any())}
+		verify(atLeast = 1, timeout = 2_000) {
+			kafkaPublisher.putProcessingEventOnTopic(
+				eq(key),
+				eq(ProcessingEvent(EventTypes.STARTED)),
+				any()
+			)
+		}
 		assertFalse(taskListService.listTasks().isEmpty())
 		loopAndVerify(1, { getTaskListCount(key) })
 		assertEquals(1, taskListService.getNumberOfAttempts(key))
@@ -151,9 +181,21 @@ class TaskListServiceTests {
 		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.RECEIVED)
 		//taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.STARTED)
 
-		verify(atLeast = 1, timeout = 2_000) {kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.STARTED)), any())}
+		verify(atLeast = 1, timeout = 2_000) {
+			kafkaPublisher.putProcessingEventOnTopic(
+				eq(key),
+				eq(ProcessingEvent(EventTypes.STARTED)),
+				any()
+			)
+		}
 		verify(exactly = 1, timeout = 2_000) { archiverService.archive(eq(key), any(), any()) }
-		verify(atLeast = 1, timeout = 2_000) { kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.ARCHIVED)), any()) }
+		verify(atLeast = 1, timeout = 2_000) {
+			kafkaPublisher.putProcessingEventOnTopic(
+				eq(key),
+				eq(ProcessingEvent(EventTypes.ARCHIVED)),
+				any()
+			)
+		}
 
 	}
 
@@ -177,11 +219,17 @@ class TaskListServiceTests {
 		val processing = slot<ProcessingEvent>()
 		// Run scheduled task on first invocation of scheduler.schedule(), do nothing on subsequent invocations
 		every { scheduler.schedule(capture(captor), any()) } answers { captor.captured.invoke() } andThenJust Runs
-		every { kafkaPublisher.putProcessingEventOnTopic(eq(key), capture(processing), any())} answers { taskListService.addOrUpdateTask(key, soknadarkivschema, processing.captured.type ) } andThenJust Runs
+		every {
+			kafkaPublisher.putProcessingEventOnTopic(
+				eq(key),
+				capture(processing),
+				any()
+			)
+		} answers { taskListService.addOrUpdateTask(key, soknadarkivschema, processing.captured.type) } andThenJust Runs
 	}
 
 
 	private fun getTaskListCount(key: String) = getTaskListPair(key).first
-	private fun getTaskListLock (key: String) = getTaskListPair(key).second
-	private fun getTaskListPair (key: String) = taskListService.listTasks()[key] ?: error("Expected to find $key in map")
+	private fun getTaskListLock(key: String) = getTaskListPair(key).second
+	private fun getTaskListPair(key: String) = taskListService.listTasks()[key] ?: error("Expected to find $key in map")
 }

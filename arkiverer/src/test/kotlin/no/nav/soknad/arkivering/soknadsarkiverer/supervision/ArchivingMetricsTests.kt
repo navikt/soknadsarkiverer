@@ -1,8 +1,8 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
-import io.prometheus.client.CollectorRegistry
 import io.prometheus.client.Histogram
 import io.prometheus.client.Summary
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -14,7 +14,12 @@ class ArchivingMetricsTests {
 
 	@BeforeEach
 	fun setup() {
-		metrics = ArchivingMetrics(CollectorRegistry())
+		metrics = ArchivingMetrics()
+	}
+
+	@AfterEach
+	fun tearDown() {
+		metrics.registry.clear()
 	}
 
 	@Test
@@ -66,14 +71,14 @@ class ArchivingMetricsTests {
 		val temaer = listOf("AAP", "TSO", "SYK")
 		val fileSizes = listOf(
 			1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, // 15
-			10*1024, 10*1024, 10*1024, 10*1024, 10*1024, // 5
-			100*1024, 100*1024, 100*1024, 100*1024, // 4
-			1024*1024, 1024*1024, 1024*1024, 1024*1024, 1024*1024, // 5
-			10*1024*1024, 10*1024*1024, 10*1024*1024, 10*1024*1024, // 4
-			50*1024*1024, 50*1024*1024, // 2
-			100*1024*1024, // 1
-			150*1024*1024, // 1
-			200*1024*1024
+			10 * 1024, 10 * 1024, 10 * 1024, 10 * 1024, 10 * 1024, // 5
+			100 * 1024, 100 * 1024, 100 * 1024, 100 * 1024, // 4
+			1024 * 1024, 1024 * 1024, 1024 * 1024, 1024 * 1024, 1024 * 1024, // 5
+			10 * 1024 * 1024, 10 * 1024 * 1024, 10 * 1024 * 1024, 10 * 1024 * 1024, // 4
+			50 * 1024 * 1024, 50 * 1024 * 1024, // 2
+			100 * 1024 * 1024, // 1
+			150 * 1024 * 1024, // 1
+			200 * 1024 * 1024
 		)
 		fileSizes.forEach { metrics.setFileFetchSizeHistogram(it.toDouble(), temaer.random()) }
 		val observations = mutableListOf<Histogram.Child.Value>()
@@ -114,20 +119,50 @@ class ArchivingMetricsTests {
 			1000L to 2, // 3
 			10000L to 1 // 1
 		)
-		val timers = mutableListOf<Summary.Timer> ()
-		latencies.keys.forEach { repeat(latencies[it]!!) {timers.add(metrics.startJoarkLatency()) }}
+		val timers = mutableListOf<Summary.Timer>()
+		latencies.keys.forEach { repeat(latencies[it]!!) { timers.add(metrics.startJoarkLatency()) } }
 
 		var nextTimer = 0
 		var sleepTime = 10L
-		nextTimer = sleepAndSetEndTimer(sleepTime = sleepTime, startIndex = nextTimer, latencyIndex = 10L, latencies = latencies, timers = timers)
-		sleepTime = 100L-sleepTime
-		nextTimer = sleepAndSetEndTimer(sleepTime = sleepTime, startIndex = nextTimer, latencyIndex = 100L, latencies = latencies, timers = timers)
-		sleepTime = 500L-sleepTime
-		nextTimer = sleepAndSetEndTimer(sleepTime = sleepTime, startIndex = nextTimer, latencyIndex = 500L, latencies = latencies, timers = timers)
-		sleepTime = 1000L-sleepTime
-		nextTimer = sleepAndSetEndTimer(sleepTime = sleepTime, startIndex = nextTimer, latencyIndex = 1000L, latencies = latencies, timers = timers)
-		sleepTime = 10000L-sleepTime
-		nextTimer = sleepAndSetEndTimer(sleepTime = sleepTime, startIndex = nextTimer, latencyIndex = 10000L, latencies = latencies, timers = timers)
+		nextTimer = sleepAndSetEndTimer(
+			sleepTime = sleepTime,
+			startIndex = nextTimer,
+			latencyIndex = 10L,
+			latencies = latencies,
+			timers = timers
+		)
+		sleepTime = 100L - sleepTime
+		nextTimer = sleepAndSetEndTimer(
+			sleepTime = sleepTime,
+			startIndex = nextTimer,
+			latencyIndex = 100L,
+			latencies = latencies,
+			timers = timers
+		)
+		sleepTime = 500L - sleepTime
+		nextTimer = sleepAndSetEndTimer(
+			sleepTime = sleepTime,
+			startIndex = nextTimer,
+			latencyIndex = 500L,
+			latencies = latencies,
+			timers = timers
+		)
+		sleepTime = 1000L - sleepTime
+		nextTimer = sleepAndSetEndTimer(
+			sleepTime = sleepTime,
+			startIndex = nextTimer,
+			latencyIndex = 1000L,
+			latencies = latencies,
+			timers = timers
+		)
+		sleepTime = 10000L - sleepTime
+		nextTimer = sleepAndSetEndTimer(
+			sleepTime = sleepTime,
+			startIndex = nextTimer,
+			latencyIndex = 10000L,
+			latencies = latencies,
+			timers = timers
+		)
 
 		val observations = metrics.getJoarkLatency()
 		assertEquals(latencies.values.sum().toDouble(), observations.count)
@@ -137,7 +172,13 @@ class ArchivingMetricsTests {
 
 	}
 
-	private fun sleepAndSetEndTimer(sleepTime: Long, startIndex: Int, latencyIndex: Long, latencies: Map<Long, Int>, timers: List<Summary.Timer> ): Int {
+	private fun sleepAndSetEndTimer(
+		sleepTime: Long,
+		startIndex: Int,
+		latencyIndex: Long,
+		latencies: Map<Long, Int>,
+		timers: List<Summary.Timer>
+	): Int {
 		Thread.sleep(sleepTime)
 		var nextTimer = startIndex
 		repeat(latencies[latencyIndex]!!) {

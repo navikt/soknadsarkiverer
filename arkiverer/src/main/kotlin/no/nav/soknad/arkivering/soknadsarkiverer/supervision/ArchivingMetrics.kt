@@ -8,10 +8,11 @@ import org.springframework.stereotype.Component
 
 @Scope(ConfigurableBeanFactory.SCOPE_SINGLETON)
 @Component
-class ArchivingMetrics(private val registry: CollectorRegistry) {
+class ArchivingMetrics {
+	val registry: CollectorRegistry = CollectorRegistry.defaultRegistry
 
 	init {
-		SimpleclientCollector.builder().register();
+		SimpleclientCollector.builder().register()
 	}
 
 	private val SOKNAD_NAMESPACE = "soknadinnsending"
@@ -71,22 +72,31 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 	private val tasksGivenUpOnGauge: Gauge = registerGauge(GAUGE_TASKS_GIVEN_UP_ON, GAUGE_TASKS_GIVEN_UP_ON_DESC)
 	private val upOrDownGauge: Gauge = registerGauge(GAUGE_UP_DOWN, GAUGE_UP_DOWN_DESC)
 	private val archivingLatencySummary = registerSummary(SUMMARY_ARCHIVING_LATENCY, SUMMARY_ARCHIVING_LATENCY_DESC)
-	private val filestorageGetSuccessCounter: Counter = registerCounter(COUNTER_FILESTORAGE_GET_SUCCESS, COUNTER_FILESTORAGE_GET_SUCCESS_DESC)
-	private val filestorageGetErrorCounter: Counter = registerCounter(COUNTER_FILESTORAGE_GET_ERROR, COUNTER_FILESTORAGE_GET_ERROR_DESC)
-	private val filestorageDelSuccessCounter: Counter = registerCounter(COUNTER_FILESTORAGE_DEL_SUCCESS, COUNTER_FILESTORAGE_DEL_SUCCESS_DESC)
-	private val filestorageDelErrorCounter: Counter = registerCounter(COUNTER_FILESTORAGE_DEL_ERROR, COUNTER_FILESTORAGE_DEL_ERROR_DESC)
-	private val filestorageGetLatencySummary = registerSummary(SUMMARY_FILESTORAGE_GET_LATENCY, SUMMARY_FILESTORAGE_GET_LATENCY_DESC)
-	private val filestorageDelLatencySummary = registerSummary(SUMMARY_FILESTORAGE_DEL_LATENCY, SUMMARY_FILESTORAGE_DEL_LATENCY_DESC)
+	private val filestorageGetSuccessCounter: Counter =
+		registerCounter(COUNTER_FILESTORAGE_GET_SUCCESS, COUNTER_FILESTORAGE_GET_SUCCESS_DESC)
+	private val filestorageGetErrorCounter: Counter =
+		registerCounter(COUNTER_FILESTORAGE_GET_ERROR, COUNTER_FILESTORAGE_GET_ERROR_DESC)
+	private val filestorageDelSuccessCounter: Counter =
+		registerCounter(COUNTER_FILESTORAGE_DEL_SUCCESS, COUNTER_FILESTORAGE_DEL_SUCCESS_DESC)
+	private val filestorageDelErrorCounter: Counter =
+		registerCounter(COUNTER_FILESTORAGE_DEL_ERROR, COUNTER_FILESTORAGE_DEL_ERROR_DESC)
+	private val filestorageGetLatencySummary =
+		registerSummary(SUMMARY_FILESTORAGE_GET_LATENCY, SUMMARY_FILESTORAGE_GET_LATENCY_DESC)
+	private val filestorageDelLatencySummary =
+		registerSummary(SUMMARY_FILESTORAGE_DEL_LATENCY, SUMMARY_FILESTORAGE_DEL_LATENCY_DESC)
 	private val filefetchSizeSummary = registerSummary(SUMMARY_FILE_FETCH_SIZE, SUMMARY_FILE_FETCH_SIZE_DESC)
-	private val filefetchSizeHistogram = registerFileSizeHistogram(HISTOGRAM_FILE_FETCH_SIZE, HISTOGRAM_FILE_FETCH_SIZE_DESC)
+	private val filefetchSizeHistogram =
+		registerFileSizeHistogram(HISTOGRAM_FILE_FETCH_SIZE, HISTOGRAM_FILE_FETCH_SIZE_DESC)
 	private val joarkSuccessCounter: Counter = registerCounter(COUNTER_JOARK_SUCCESS, COUNTER_JOARK_SUCCESS_DESC)
 	private val joarkErrorCounter: Counter = registerCounter(COUNTER_JOARK_ERROR, COUNTER_JOARK_ERROR_DESC)
 	private val joarkLatencySummary = registerSummary(SUMMARY_JOARK_LATENCY, SUMMARY_JOARK_LATENCY_DESC)
-	private val archivingLatencyHistogram = registerLatencyHistogram(HISTOGRAM_ARCHIVING_LATENCY, HISTORGRAM_ARCHIVING_LATENCY_DESC)
+	private val archivingLatencyHistogram =
+		registerLatencyHistogram(HISTOGRAM_ARCHIVING_LATENCY, HISTORGRAM_ARCHIVING_LATENCY_DESC)
 
 	private val HISTOGRAM_ATTACHMENT_NUMBER = "histogram_attachment_number"
 	private val HISTOGRAM_ATTACHMENT_NUMBER_DESC = "Histogram for number of attachment per application"
-	private val numberOfAttachmentHistogram = registerAttachmentNumberHistogram(HISTOGRAM_ATTACHMENT_NUMBER, HISTOGRAM_ATTACHMENT_NUMBER_DESC)
+	private val numberOfAttachmentHistogram =
+		registerAttachmentNumberHistogram(HISTOGRAM_ATTACHMENT_NUMBER, HISTOGRAM_ATTACHMENT_NUMBER_DESC)
 
 	private fun registerCounter(name: String, help: String): Counter =
 		Counter
@@ -195,8 +205,12 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 	fun filestorageDelLatencyStart(): Summary.Timer = filestorageDelLatencySummary.labels(APP).startTimer()
 	fun startJoarkLatency(): Summary.Timer = joarkLatencySummary.labels(APP).startTimer()
 	fun getJoarkLatency(): Summary.Child.Value = joarkLatencySummary.labels(APP).get()
-	fun archivingLatencyHistogramStart(tema: String): Histogram.Timer = archivingLatencyHistogram.labels(tema).startTimer()
-	fun setNumberOfAttachmentHistogram(number: Double, tema: String) = numberOfAttachmentHistogram.labels(tema).observe(number)
+	fun archivingLatencyHistogramStart(tema: String): Histogram.Timer =
+		archivingLatencyHistogram.labels(tema).startTimer()
+
+	fun setNumberOfAttachmentHistogram(number: Double, tema: String) =
+		numberOfAttachmentHistogram.labels(tema).observe(number)
+
 	fun getNumberOfAttachmentHistogram(tema: String) = numberOfAttachmentHistogram.labels(tema).get()
 	fun setFileFetchSize(size: Double) = filefetchSizeSummary.labels(APP).observe(size)
 	fun getFileFetchSize() = filefetchSizeSummary.labels(APP).get()
@@ -211,22 +225,4 @@ class ArchivingMetrics(private val registry: CollectorRegistry) {
 		timer.observeDuration()
 	}
 
-	fun unregister() {
-		registry.unregister(joarkErrorCounter)
-		registry.unregister(joarkSuccessCounter)
-		registry.unregister(filestorageDelErrorCounter)
-		registry.unregister(filestorageDelSuccessCounter)
-		registry.unregister(filestorageGetErrorCounter)
-		registry.unregister(filestorageGetSuccessCounter)
-		registry.unregister(joarkLatencySummary)
-		registry.unregister(filestorageDelLatencySummary)
-		registry.unregister(filestorageGetLatencySummary)
-		registry.unregister(archivingLatencySummary)
-		registry.unregister(archivingLatencyHistogram)
-		registry.unregister(tasksGivenUpOnGauge)
-		registry.unregister(taskGauge)
-		registry.unregister(upOrDownGauge)
-		registry.unregister(numberOfAttachmentHistogram)
-		registry.unregister(filefetchSizeSummary)
-	}
 }
