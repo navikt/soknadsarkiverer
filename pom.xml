@@ -21,7 +21,7 @@
 		<spring-boot.version>3.3.0</spring-boot.version>
 		<spring-web.version>6.1.8</spring-web.version>
 
-		<kotlin.version>1.9.23</kotlin.version>
+		<kotlin.version>2.0.0</kotlin.version>
 		<maven.version>3.8.8</maven.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
