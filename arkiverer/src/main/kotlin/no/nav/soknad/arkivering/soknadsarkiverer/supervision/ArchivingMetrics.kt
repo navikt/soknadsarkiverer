@@ -1,6 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
 import io.prometheus.client.*
+import io.prometheus.metrics.simpleclient.bridge.SimpleclientCollector
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
@@ -8,6 +9,10 @@ import org.springframework.stereotype.Component
 @Scope(ConfigurableBeanFactory.SCOPE_SINGLETON)
 @Component
 class ArchivingMetrics(private val registry: CollectorRegistry) {
+
+	init {
+		SimpleclientCollector.builder().register();
+	}
 
 	private val SOKNAD_NAMESPACE = "soknadinnsending"
 	private val APP_LABEL = "app"

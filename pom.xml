@@ -53,6 +53,7 @@
 		<!--Logging-->
 		<prometheus.client.version>0.16.0</prometheus.client.version>
 		<logstash.version>7.4</logstash.version>
+		<prometheus.version>1.3.1</prometheus.version>
 
 		<!--Test-->
 		<testcontainers.version>1.19.8</testcontainers.version>
