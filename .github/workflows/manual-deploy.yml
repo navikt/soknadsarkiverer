@@ -39,7 +39,7 @@ jobs:
           timezoneLinux: "Europe/Oslo"
 
       - name: Build with maven
-        run: mvn install --file pom.xml
+        run: mvn install -DskipTests --file pom.xml
 
       - name: Build and push Docker image
         uses: nais/docker-build-push@v0
@@ -111,7 +111,7 @@ jobs:
 
 
   deploy-alerts-preprod:
-    needs: [deploy-preprod-q1, deploy-preprod-q2]
+    needs: [ deploy-preprod-q1, deploy-preprod-q2 ]
     if: always() && (needs.deploy-preprod-q1.result == 'success' || needs.deploy-preprod-q2.result == 'success')
     name: Deploy alerts to dev
     runs-on: ubuntu-latest

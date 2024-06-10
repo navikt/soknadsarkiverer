@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
+import io.prometheus.client.CollectorRegistry
 import io.prometheus.client.Histogram
 import io.prometheus.client.Summary
 import org.junit.jupiter.api.AfterEach
@@ -14,7 +15,7 @@ class ArchivingMetricsTests {
 
 	@BeforeEach
 	fun setup() {
-		metrics = ArchivingMetrics()
+		metrics = ArchivingMetrics(CollectorRegistry.defaultRegistry)
 	}
 
 	@AfterEach

@@ -8,8 +8,7 @@ import org.springframework.stereotype.Component
 
 @Scope(ConfigurableBeanFactory.SCOPE_SINGLETON)
 @Component
-class ArchivingMetrics {
-	val registry: CollectorRegistry = CollectorRegistry.defaultRegistry
+class ArchivingMetrics(val registry: CollectorRegistry) {
 
 	init {
 		SimpleclientCollector.builder().register()

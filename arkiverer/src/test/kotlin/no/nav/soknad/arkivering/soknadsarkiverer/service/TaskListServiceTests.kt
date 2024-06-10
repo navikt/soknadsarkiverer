@@ -1,6 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import io.mockk.*
+import io.prometheus.client.CollectorRegistry
 import kotlinx.coroutines.runBlocking
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
@@ -49,7 +50,7 @@ class TaskListServiceTests {
 
 	@BeforeEach
 	fun setup() {
-		metrics = ArchivingMetrics()
+		metrics = ArchivingMetrics(CollectorRegistry.defaultRegistry)
 		metrics.registry.clear()
 		val secondsBetweenRetries = listOf(0L, 0L, 0L, 0L, 0L, 0L)
 		taskListService = TaskListService(

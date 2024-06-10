@@ -1,6 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import io.mockk.*
+import io.prometheus.client.CollectorRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -104,7 +105,7 @@ class ArchiverServiceTests {
 
 	@BeforeEach
 	fun setup() {
-		metrics = ArchivingMetrics()
+		metrics = ArchivingMetrics(CollectorRegistry.defaultRegistry)
 	}
 
 	@AfterEach
