@@ -50,7 +50,7 @@ class TaskListServiceTests {
 	@BeforeEach
 	fun setup() {
 		metrics = ArchivingMetrics()
-		metrics.registry.clear()
+		metrics.unregister()
 		val secondsBetweenRetries = listOf(0L, 0L, 0L, 0L, 0L, 0L)
 		taskListService = TaskListService(
 			archiverService,

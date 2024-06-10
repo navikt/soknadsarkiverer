@@ -109,7 +109,7 @@ class ArchiverServiceTests {
 
 	@AfterEach
 	fun tearDown() {
-		metrics.registry.clear()
+		metrics.unregister()
 	}
 
 	@Test
@@ -157,11 +157,10 @@ class ArchiverServiceTests {
 			archiverService.fetchFiles(key, soknadschema)
 
 			val fetchObservation = metrics.getFileFetchSize()
-			assertTrue(fetchObservation != null)
-			assertEquals(7.0, fetchObservation.quantiles[0.99]!!)
+			assertEquals(7.0, fetchObservation.collect().dataPoints[0].sum)
 			val fetchFileHistogram = metrics.getFileFetchSizeHistogram(tema)
 			assertTrue(fetchFileHistogram != null)
-			assertEquals("content".length.toDouble(), fetchFileHistogram.sum)
+			assertEquals("content".length.toDouble(), fetchFileHistogram?.sum)
 		}
 	}
 

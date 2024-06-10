@@ -74,7 +74,7 @@ class IntegrationTests : ContainerizedKafka() {
 	@AfterEach
 	fun teardown() {
 		stopMockedNetworkServices()
-		metrics.registry.clear()
+		metrics.unregister()
 	}
 
 	@Test

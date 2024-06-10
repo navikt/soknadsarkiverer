@@ -1,7 +1,12 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
-import io.prometheus.client.*
-import io.prometheus.metrics.simpleclient.bridge.SimpleclientCollector
+import io.prometheus.metrics.core.datapoints.DistributionDataPoint
+import io.prometheus.metrics.core.datapoints.Timer
+import io.prometheus.metrics.core.metrics.Counter
+import io.prometheus.metrics.core.metrics.Gauge
+import io.prometheus.metrics.core.metrics.Histogram
+import io.prometheus.metrics.core.metrics.Summary
+import io.prometheus.metrics.model.registry.PrometheusRegistry
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
@@ -9,11 +14,7 @@ import org.springframework.stereotype.Component
 @Scope(ConfigurableBeanFactory.SCOPE_SINGLETON)
 @Component
 class ArchivingMetrics {
-	val registry: CollectorRegistry = CollectorRegistry.defaultRegistry
-
-	init {
-		SimpleclientCollector.builder().register()
-	}
+	val registry: PrometheusRegistry = PrometheusRegistry.defaultRegistry
 
 	private val SOKNAD_NAMESPACE = "soknadinnsending"
 	private val APP_LABEL = "app"
@@ -100,28 +101,28 @@ class ArchivingMetrics {
 
 	private fun registerCounter(name: String, help: String): Counter =
 		Counter
-			.build()
-			.namespace(SOKNAD_NAMESPACE)
-			.name(name)
+			.builder()
+			.name("${SOKNAD_NAMESPACE}_$name")
 			.help(help)
+			.withoutExemplars()
 			.labelNames(APP_LABEL)
 			.register(registry)
 
 	private fun registerGauge(name: String, help: String): Gauge =
 		Gauge
-			.build()
-			.namespace(SOKNAD_NAMESPACE)
-			.name(name)
+			.builder()
+			.name("${SOKNAD_NAMESPACE}_$name")
 			.help(help)
+			.withoutExemplars()
 			.labelNames(APP_LABEL)
 			.register(registry)
 
 	private fun registerSummary(name: String, help: String): Summary =
 		Summary
-			.build()
-			.namespace(SOKNAD_NAMESPACE)
-			.name(name)
+			.builder()
+			.name("${SOKNAD_NAMESPACE}_$name")
 			.help(help)
+			.withoutExemplars()
 			.quantile(0.5, 0.05)
 			.quantile(0.9, 0.01)
 			.quantile(0.99, 0.001)
@@ -130,99 +131,146 @@ class ArchivingMetrics {
 
 	private fun registerLatencyHistogram(name: String, help: String): Histogram =
 		Histogram
-			.build()
-			.namespace(SOKNAD_NAMESPACE)
-			.name(name)
+			.builder()
+			.name("${SOKNAD_NAMESPACE}_$name")
 			.help(help)
-			.buckets(0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 12.8, 25.6, 51.2, 100.2, 240.0)
+			.withoutExemplars()
+			.classicExponentialUpperBounds(0.1, 2.0, 12)
 			.labelNames(TEMA_LABEL)
 			.register(registry)
 
 	private fun registerFileSizeHistogram(name: String, help: String): Histogram {
 		val kB = 1024.0
-		val mB = kB * kB
 		return Histogram
-			.build()
-			.namespace(SOKNAD_NAMESPACE)
-			.name(name)
+			.builder()
+			.name("${SOKNAD_NAMESPACE}_$name")
 			.help(help)
-			.buckets(
-				kB,
-				10 * kB,
-				50 * kB,
-				100 * kB,
-				500 * kB,
-				mB,
-				2 * mB,
-				5 * mB,
-				25 * mB,
-				50 * mB,
-				150 * mB
-			)
+			.withoutExemplars()
+			.classicExponentialUpperBounds(kB, 2.0, 12)
 			.labelNames(TEMA_LABEL)
 			.register(registry)
 	}
 
 	private fun registerAttachmentNumberHistogram(name: String, help: String): Histogram =
 		Histogram
-			.build()
-			.namespace(SOKNAD_NAMESPACE)
-			.name(name)
+			.builder()
+			.name("${SOKNAD_NAMESPACE}_$name")
 			.help(help)
-			.buckets(2.0, 3.0, 5.0, 8.0, 13.0, 21.0, 34.0)
+			.withoutExemplars()
+			.classicLinearUpperBounds(2.0, 1.0, 12)
 			.labelNames(TEMA_LABEL)
 			.register(registry)
 
-	fun incGetFilestorageSuccesses() = filestorageGetSuccessCounter.labels(APP).inc()
-	fun getGetFilestorageSuccesses() = filestorageGetSuccessCounter.labels(APP).get()
+	fun incGetFilestorageSuccesses() = filestorageGetSuccessCounter.labelValues(APP).inc()
+	fun getGetFilestorageSuccesses() = filestorageGetSuccessCounter.labelValues(APP).get()
 
-	fun incGetFilestorageErrors() = filestorageGetErrorCounter.labels(APP).inc()
-	fun getGetFilestorageErrors() = filestorageGetErrorCounter.labels(APP).get()
+	fun incGetFilestorageErrors() = filestorageGetErrorCounter.labelValues(APP).inc()
+	fun getGetFilestorageErrors() = filestorageGetErrorCounter.labelValues(APP).get()
 
-	fun incDelFilestorageSuccesses() = filestorageDelSuccessCounter.labels(APP).inc()
-	fun getDelFilestorageSuccesses() = filestorageDelSuccessCounter.labels(APP).get()
+	fun incDelFilestorageSuccesses() = filestorageDelSuccessCounter.labelValues(APP).inc()
+	fun getDelFilestorageSuccesses() = filestorageDelSuccessCounter.labelValues(APP).get()
 
-	fun incDelFilestorageErrors() = filestorageDelErrorCounter.labels(APP).inc()
-	fun getDelFilestorageErrors() = filestorageDelErrorCounter.labels(APP).get()
+	fun incDelFilestorageErrors() = filestorageDelErrorCounter.labelValues(APP).inc()
+	fun getDelFilestorageErrors() = filestorageDelErrorCounter.labelValues(APP).get()
 
-	fun incJoarkSuccesses() = joarkSuccessCounter.labels(APP).inc()
-	fun getJoarkSuccesses() = joarkSuccessCounter.labels(APP).get()
+	fun incJoarkSuccesses() = joarkSuccessCounter.labelValues(APP).inc()
+	fun getJoarkSuccesses() = joarkSuccessCounter.labelValues(APP).get()
 
-	fun incJoarkErrors() = joarkErrorCounter.labels(APP).inc()
-	fun getJoarkErrors() = joarkErrorCounter.labels(APP).get()
+	fun incJoarkErrors() = joarkErrorCounter.labelValues(APP).inc()
+	fun getJoarkErrors() = joarkErrorCounter.labelValues(APP).get()
 
-	fun addTask() = taskGauge.labels(APP).inc()
-	fun removeTask() = taskGauge.labels(APP).dec()
-	fun getTasks() = taskGauge.labels(APP).get()
+	fun addTask() = taskGauge.labelValues(APP).inc()
+	fun removeTask() = taskGauge.labelValues(APP).dec()
+	fun getTasks() = taskGauge.labelValues(APP).get()
 
-	fun setTasksGivenUpOn(value: Int) = tasksGivenUpOnGauge.labels(APP).set(value.toDouble())
-	fun getTasksGivenUpOn() = tasksGivenUpOnGauge.labels(APP).get()
+	fun setTasksGivenUpOn(value: Int) = tasksGivenUpOnGauge.labelValues(APP).set(value.toDouble())
+	fun getTasksGivenUpOn() = tasksGivenUpOnGauge.labelValues(APP).get()
 
-	fun setUpOrDown(value: Double) = upOrDownGauge.labels(APP).set(value)
+	fun setUpOrDown(value: Double) = upOrDownGauge.labelValues(APP).set(value)
 
-	fun archivingLatencyStart(): Summary.Timer = archivingLatencySummary.labels(APP).startTimer()
-	fun filestorageGetLatencyStart(): Summary.Timer = filestorageGetLatencySummary.labels(APP).startTimer()
-	fun filestorageDelLatencyStart(): Summary.Timer = filestorageDelLatencySummary.labels(APP).startTimer()
-	fun startJoarkLatency(): Summary.Timer = joarkLatencySummary.labels(APP).startTimer()
-	fun getJoarkLatency(): Summary.Child.Value = joarkLatencySummary.labels(APP).get()
-	fun archivingLatencyHistogramStart(tema: String): Histogram.Timer =
-		archivingLatencyHistogram.labels(tema).startTimer()
+	fun archivingLatencyStart(): Timer = archivingLatencySummary.labelValues(APP).startTimer()
+	fun filestorageGetLatencyStart(): Timer = filestorageGetLatencySummary.labelValues(APP).startTimer()
+	fun filestorageDelLatencyStart(): Timer = filestorageDelLatencySummary.labelValues(APP).startTimer()
+	fun startJoarkLatency(): Timer = joarkLatencySummary.labelValues(APP).startTimer()
+	fun getJoarkLatency(): DistributionDataPoint = joarkLatencySummary.labelValues(APP)
+	fun archivingLatencyHistogramStart(tema: String): Timer =
+		archivingLatencyHistogram.labelValues(tema).startTimer()
 
 	fun setNumberOfAttachmentHistogram(number: Double, tema: String) =
-		numberOfAttachmentHistogram.labels(tema).observe(number)
+		numberOfAttachmentHistogram.labelValues(tema).observe(number)
 
-	fun getNumberOfAttachmentHistogram(tema: String) = numberOfAttachmentHistogram.labels(tema).get()
-	fun setFileFetchSize(size: Double) = filefetchSizeSummary.labels(APP).observe(size)
-	fun getFileFetchSize() = filefetchSizeSummary.labels(APP).get()
-	fun setFileFetchSizeHistogram(size: Double, tema: String) = filefetchSizeHistogram.labels(tema).observe(size)
-	fun getFileFetchSizeHistogram(tema: String) = filefetchSizeHistogram.labels(tema).get()
+	fun getNumberOfAttachmentHistogram(tema: String) = numberOfAttachmentHistogram.labelValues(tema)
+	fun setFileFetchSize(size: Double) = filefetchSizeSummary.labelValues(APP).observe(size)
+	fun getFileFetchSize() = filefetchSizeSummary
+	fun setFileFetchSizeHistogram(size: Double, tema: String) = filefetchSizeHistogram.labelValues(tema).observe(size)
+	fun getFileFetchSizeHistogram(tema: String) =
+		filefetchSizeHistogram.collect().dataPoints.find { it.labels[TEMA_LABEL] == tema }
 
-	fun endTimer(timer: Summary.Timer) {
+	fun endTimer(timer: Timer) {
 		timer.observeDuration()
 	}
 
-	fun endHistogramTimer(timer: Histogram.Timer) {
+	fun endHistogramTimer(timer: Timer) {
 		timer.observeDuration()
 	}
+
+	fun register() {
+		registry.register(joarkErrorCounter)
+		registry.register(joarkSuccessCounter)
+		registry.register(filestorageDelErrorCounter)
+		registry.register(filestorageDelSuccessCounter)
+		registry.register(filestorageGetErrorCounter)
+		registry.register(filestorageGetSuccessCounter)
+		registry.register(joarkLatencySummary)
+		registry.register(filestorageDelLatencySummary)
+		registry.register(filestorageGetLatencySummary)
+		registry.register(archivingLatencySummary)
+		registry.register(archivingLatencyHistogram)
+		registry.register(tasksGivenUpOnGauge)
+		registry.register(taskGauge)
+		registry.register(upOrDownGauge)
+		registry.register(numberOfAttachmentHistogram)
+		registry.register(filefetchSizeSummary)
+	}
+
+	fun unregister() {
+		joarkErrorCounter.clear()
+		joarkSuccessCounter.clear()
+		filestorageDelErrorCounter.clear()
+		filestorageDelSuccessCounter.clear()
+		filestorageGetErrorCounter.clear()
+		filestorageGetSuccessCounter.clear()
+		joarkLatencySummary.clear()
+		filestorageDelLatencySummary.clear()
+		filestorageGetLatencySummary.clear()
+		archivingLatencySummary.clear()
+		archivingLatencyHistogram.clear()
+		tasksGivenUpOnGauge.clear()
+		setTasksGivenUpOn(0)
+		taskGauge.clear()
+		upOrDownGauge.clear()
+		setUpOrDown(0.0)
+		numberOfAttachmentHistogram.clear()
+		filefetchSizeSummary.clear()
+
+		registry.unregister(joarkErrorCounter)
+		registry.unregister(joarkSuccessCounter)
+		registry.unregister(filestorageDelErrorCounter)
+		registry.unregister(filestorageDelSuccessCounter)
+		registry.unregister(filestorageGetErrorCounter)
+		registry.unregister(filestorageGetSuccessCounter)
+		registry.unregister(joarkLatencySummary)
+		registry.unregister(filestorageDelLatencySummary)
+		registry.unregister(filestorageGetLatencySummary)
+		registry.unregister(archivingLatencySummary)
+		registry.unregister(archivingLatencyHistogram)
+		registry.unregister(tasksGivenUpOnGauge)
+		registry.unregister(taskGauge)
+		registry.unregister(upOrDownGauge)
+		registry.unregister(numberOfAttachmentHistogram)
+		registry.unregister(filefetchSizeSummary)
+		registry.unregister(filefetchSizeHistogram)
+	}
+
 
 }

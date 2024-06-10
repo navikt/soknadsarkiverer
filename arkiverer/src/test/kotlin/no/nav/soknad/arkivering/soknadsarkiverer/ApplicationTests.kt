@@ -110,7 +110,8 @@ class ApplicationTests : ContainerizedKafka() {
 	@AfterEach
 	fun teardown() {
 		stopMockedNetworkServices()
-		metrics.registry.clear()
+		metrics.unregister()
+		taskListService.clearLoggedTaskStates()
 	}
 
 	@AfterAll
@@ -402,6 +403,7 @@ class ApplicationTests : ContainerizedKafka() {
 			"Should not have given up on any task"
 		)
 	}
+
 
 	@Test
 	fun `Everything works, but Filestorage cannot delete files -- Message is nevertheless marked as finished`() {

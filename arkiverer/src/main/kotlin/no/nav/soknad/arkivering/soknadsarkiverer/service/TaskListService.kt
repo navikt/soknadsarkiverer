@@ -1,6 +1,8 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
@@ -32,12 +34,17 @@ open class TaskListService(
 	private val loggedTaskStates = hashMapOf<String, EventTypes>()
 	private val currentTaskStates = hashMapOf<String, EventTypes>()
 
-	private val processRun: Boolean = true // Hvis true så vil all behandling av ulike states på søknader initieres fra topology. Pt vil noen tester feile hvis  = false
+	private val processRun: Boolean =
+		true // Hvis true så vil all behandling av ulike states på søknader initieres fra topology. Pt vil noen tester feile hvis  = false
 
 	private val startUpEndTime = Instant.now().plusSeconds(startUpSeconds)
 
 	init {
 		logger.info("startUpEndTime=$startUpEndTime")
+	}
+
+	fun clearLoggedTaskStates() {
+		loggedTaskStates.clear()
 	}
 
 	@Synchronized
@@ -145,9 +152,9 @@ open class TaskListService(
 
 		when (currentTaskStates[key]) {
 			EventTypes.RECEIVED -> receivedState(key, soknadarkivschema, attempt)
-			EventTypes.STARTED  -> archiveState(key, soknadarkivschema, attempt)
+			EventTypes.STARTED -> archiveState(key, soknadarkivschema, attempt)
 			EventTypes.ARCHIVED -> deleteFilesState(key, soknadarkivschema, attempt)
-			EventTypes.FAILURE  -> failTask(key)
+			EventTypes.FAILURE -> failTask(key)
 			EventTypes.FINISHED -> finishTask(key)
 			else -> {
 				logger.error("$key: - Unexpected state ${currentTaskStates[key]} - Will assume it was ${EventTypes.RECEIVED}")
@@ -157,7 +164,7 @@ open class TaskListService(
 	}
 
 	fun receivedState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
-		if (tasks[key] != null && startUpEndTime.isAfter(Instant.now()) ) {
+		if (tasks[key] != null && startUpEndTime.isAfter(Instant.now())) {
 			// When recreating state, there could be more state updates in the processLoggTopic.
 			// Wait a little while to make sure we don't start before all queued states are read inorder to process the most recent state.
 			val task = { receivedState(key, soknadarkivschema, attempt) }
@@ -182,7 +189,7 @@ open class TaskListService(
 
 	private fun deleteFilesState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
 		logger.info("$key: state = ARCHIVED. About to delete files in attempt $attempt")
-		val task = {tryToDeleteFiles(key, soknadarkivschema)}
+		val task = { tryToDeleteFiles(key, soknadarkivschema) }
 		val scheduledTime = Instant.now().plusSeconds(0)
 		if (tasks[key]?.isBootstrappingTask == true)
 			scheduler.scheduleSingleTask(task, scheduledTime)
@@ -323,13 +330,14 @@ open class TaskListService(
 
 	private fun checkIfAlreadyArchived(key: String) {
 		val journalpost = try {
-			 safService.hentJournalpostGittInnsendingId(key)
+			safService.hentJournalpostGittInnsendingId(key)
 		} catch (ex: Exception) {
 			logger.warn("$key: Call to SAF service failed", ex)
 			return
 		}
 		if (journalpost != null) {
-			val archivingdetails = "Already archived journalpostId=${journalpost.journalpostId}, opprettet=${journalpost.datoOpprettet}"
+			val archivingdetails =
+				"Already archived journalpostId=${journalpost.journalpostId}, opprettet=${journalpost.datoOpprettet}"
 			logger.info("$key: $archivingdetails")
 			throw ApplicationAlreadyArchivedException("$key: $archivingdetails")
 		}

@@ -1,7 +1,8 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
 import io.mockk.*
-import io.prometheus.client.Summary
+import io.prometheus.metrics.core.datapoints.Timer
+import io.prometheus.metrics.core.metrics.Summary
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
@@ -79,7 +80,10 @@ class FilestorageServiceTests {
 	@Test
 	fun `getFilesFromFilestorage - Asking for 3 files - Filestorage is down - will throw exception`() {
 		val soknadarkivschema = createSoknadarkivschema(fileIdsAndResponses.take(3).map { it.first })
-		every { filesApi.findFilesByIds(any(), any(), any()) } throws ArchivingException("Mocked exception", RuntimeException("mocked exception"))
+		every { filesApi.findFilesByIds(any(), any(), any()) } throws ArchivingException(
+			"Mocked exception",
+			RuntimeException("mocked exception")
+		)
 
 		val response = filestorageService.getFilesFromFilestorage(key, soknadarkivschema)
 		assertEquals("error", response.status)
@@ -139,7 +143,7 @@ class FilestorageServiceTests {
 
 	private fun assertFileContentIsCorrect(fetchFileResponse: FetchFileResponse) {
 		val files = fetchFileResponse.files
-		assertTrue(files !=null)
+		assertTrue(files != null)
 		assertAll("All files should have the right content",
 			files!!.map { result ->
 				{
@@ -168,12 +172,12 @@ class FilestorageServiceTests {
 		return createSoknadarkivschema(fileIdsAndResponses.take(numberOfFiles).map { it.first })
 	}
 
-	private fun summaryTimer(): Summary.Timer {
+	private fun summaryTimer(): Timer {
 		val allowedChars = ('A'..'Z') + ('a'..'z')
 		val name = (1..10)
 			.map { allowedChars.random() }
 			.joinToString("")
 
-		return Summary.build().name(name).help(name).register().startTimer()
+		return Summary.builder().name(name).help(name).register().startTimer()
 	}
 }

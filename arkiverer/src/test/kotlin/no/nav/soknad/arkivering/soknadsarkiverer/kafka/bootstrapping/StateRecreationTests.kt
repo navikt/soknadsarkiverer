@@ -115,7 +115,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	@AfterEach
 	fun tearDown() {
-		metrics.registry.clear()
+		metrics.unregister()
 	}
 
 	@BeforeAll
