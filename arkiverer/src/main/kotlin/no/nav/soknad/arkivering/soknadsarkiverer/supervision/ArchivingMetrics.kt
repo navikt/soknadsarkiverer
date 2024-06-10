@@ -214,25 +214,6 @@ class ArchivingMetrics(private val registry: PrometheusRegistry) {
 		timer.observeDuration()
 	}
 
-	fun register() {
-		registry.register(joarkErrorCounter)
-		registry.register(joarkSuccessCounter)
-		registry.register(filestorageDelErrorCounter)
-		registry.register(filestorageDelSuccessCounter)
-		registry.register(filestorageGetErrorCounter)
-		registry.register(filestorageGetSuccessCounter)
-		registry.register(joarkLatencySummary)
-		registry.register(filestorageDelLatencySummary)
-		registry.register(filestorageGetLatencySummary)
-		registry.register(archivingLatencySummary)
-		registry.register(archivingLatencyHistogram)
-		registry.register(tasksGivenUpOnGauge)
-		registry.register(taskGauge)
-		registry.register(upOrDownGauge)
-		registry.register(numberOfAttachmentHistogram)
-		registry.register(filefetchSizeSummary)
-	}
-
 	fun unregister() {
 		joarkErrorCounter.clear()
 		joarkSuccessCounter.clear()
