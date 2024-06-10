@@ -1,6 +1,5 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
-import io.prometheus.metrics.core.datapoints.DistributionDataPoint
 import io.prometheus.metrics.core.datapoints.Timer
 import io.prometheus.metrics.core.metrics.Counter
 import io.prometheus.metrics.core.metrics.Gauge
@@ -13,8 +12,7 @@ import org.springframework.stereotype.Component
 
 @Scope(ConfigurableBeanFactory.SCOPE_SINGLETON)
 @Component
-class ArchivingMetrics {
-	val registry: PrometheusRegistry = PrometheusRegistry.defaultRegistry
+class ArchivingMetrics(private val registry: PrometheusRegistry) {
 
 	private val SOKNAD_NAMESPACE = "soknadinnsending"
 	private val APP_LABEL = "app"
@@ -146,7 +144,7 @@ class ArchivingMetrics {
 			.name("${SOKNAD_NAMESPACE}_$name")
 			.help(help)
 			.withoutExemplars()
-			.classicExponentialUpperBounds(kB, 2.0, 12)
+			.classicExponentialUpperBounds(kB, 2.0, 16)
 			.labelNames(TEMA_LABEL)
 			.register(registry)
 	}
@@ -192,16 +190,18 @@ class ArchivingMetrics {
 	fun filestorageGetLatencyStart(): Timer = filestorageGetLatencySummary.labelValues(APP).startTimer()
 	fun filestorageDelLatencyStart(): Timer = filestorageDelLatencySummary.labelValues(APP).startTimer()
 	fun startJoarkLatency(): Timer = joarkLatencySummary.labelValues(APP).startTimer()
-	fun getJoarkLatency(): DistributionDataPoint = joarkLatencySummary.labelValues(APP)
+	fun getJoarkLatency() = joarkLatencySummary.collect().dataPoints
 	fun archivingLatencyHistogramStart(tema: String): Timer =
 		archivingLatencyHistogram.labelValues(tema).startTimer()
 
 	fun setNumberOfAttachmentHistogram(number: Double, tema: String) =
 		numberOfAttachmentHistogram.labelValues(tema).observe(number)
 
-	fun getNumberOfAttachmentHistogram(tema: String) = numberOfAttachmentHistogram.labelValues(tema)
+	fun getNumberOfAttachmentHistogram(tema: String) =
+		numberOfAttachmentHistogram.collect().dataPoints.find { it.labels[TEMA_LABEL] == tema }
+
 	fun setFileFetchSize(size: Double) = filefetchSizeSummary.labelValues(APP).observe(size)
-	fun getFileFetchSize() = filefetchSizeSummary
+	fun getFileFetchSize() = filefetchSizeSummary.collect().dataPoints
 	fun setFileFetchSizeHistogram(size: Double, tema: String) = filefetchSizeHistogram.labelValues(tema).observe(size)
 	fun getFileFetchSizeHistogram(tema: String) =
 		filefetchSizeHistogram.collect().dataPoints.find { it.labels[TEMA_LABEL] == tema }

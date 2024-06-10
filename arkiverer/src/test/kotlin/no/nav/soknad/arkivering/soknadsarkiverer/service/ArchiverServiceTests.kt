@@ -1,6 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import io.mockk.*
+import io.prometheus.metrics.model.registry.PrometheusRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -104,7 +105,7 @@ class ArchiverServiceTests {
 
 	@BeforeEach
 	fun setup() {
-		metrics = ArchivingMetrics()
+		metrics = ArchivingMetrics(PrometheusRegistry.defaultRegistry)
 	}
 
 	@AfterEach
@@ -157,7 +158,7 @@ class ArchiverServiceTests {
 			archiverService.fetchFiles(key, soknadschema)
 
 			val fetchObservation = metrics.getFileFetchSize()
-			assertEquals(7.0, fetchObservation.collect().dataPoints[0].sum)
+			assertEquals(7.0, fetchObservation[0].sum)
 			val fetchFileHistogram = metrics.getFileFetchSizeHistogram(tema)
 			assertTrue(fetchFileHistogram != null)
 			assertEquals("content".length.toDouble(), fetchFileHistogram?.sum)

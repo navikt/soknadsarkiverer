@@ -4,6 +4,7 @@ import com.github.tomakehurst.wiremock.http.RequestMethod
 import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
+import io.prometheus.metrics.model.registry.PrometheusRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.util.*
@@ -33,6 +35,9 @@ import java.util.concurrent.TimeUnit
 @SpringBootTest
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class IntegrationTests : ContainerizedKafka() {
+
+	@MockBean
+	lateinit var prometheusRegistry: PrometheusRegistry
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null

@@ -4,6 +4,7 @@ import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.mockk.*
+import io.prometheus.metrics.model.registry.PrometheusRegistry
 import kotlinx.coroutines.runBlocking
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
@@ -41,6 +42,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.annotation.DirtiesContext
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -52,6 +54,9 @@ import java.util.concurrent.TimeUnit
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class, KafkaConfig::class)
 class StateRecreationTests : ContainerizedKafka() {
+
+	@MockBean
+	lateinit var prometheusRegistry: PrometheusRegistry
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
