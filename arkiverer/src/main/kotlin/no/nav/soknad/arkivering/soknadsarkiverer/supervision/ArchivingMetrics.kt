@@ -144,7 +144,7 @@ class ArchivingMetrics(private val registry: PrometheusRegistry) {
 			.name("${SOKNAD_NAMESPACE}_$name")
 			.help(help)
 			.withoutExemplars()
-			.classicExponentialUpperBounds(kB, 2.0, 16)
+			.classicExponentialUpperBounds(kB, 2.0, 20)
 			.labelNames(TEMA_LABEL)
 			.register(registry)
 	}
