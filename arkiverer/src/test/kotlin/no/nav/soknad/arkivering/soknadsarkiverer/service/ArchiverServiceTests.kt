@@ -1,25 +1,23 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import io.mockk.*
-import io.prometheus.client.CollectorRegistry
-import kotlinx.coroutines.*
-import no.nav.soknad.arkivering.soknadsarkiverer.SoknadsarkivererApplication
+import io.prometheus.metrics.model.registry.PrometheusRegistry
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.*
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
-import no.nav.soknad.arkivering.soknadsfillager.model.FileData
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.MockBean
-import java.time.OffsetDateTime.now
 import java.util.*
 
 class ArchiverServiceTests {
@@ -28,43 +26,67 @@ class ArchiverServiceTests {
 
 	private val filestorage = mockk<FilestorageService>().also {
 		every {
-		it.getFilesFromFilestorage(any(), any()) } returns FetchFileResponse(status = "ok",
-			listOf(FileInfo("id", "content".toByteArray(), ResponseStatus.Ok)), exception = null)
+			it.getFilesFromFilestorage(any(), any())
+		} returns FetchFileResponse(
+			status = "ok",
+			listOf(FileInfo("id", "content".toByteArray(), ResponseStatus.Ok)), exception = null
+		)
 	}
 	private val filestorageNotFound = mockk<FilestorageService>().also {
 		every {
-			it.getFilesFromFilestorage(any(), any()) } returns FetchFileResponse(status = "not-found",
-			files = null, exception = null)
+			it.getFilesFromFilestorage(any(), any())
+		} returns FetchFileResponse(
+			status = "not-found",
+			files = null, exception = null
+		)
 	}
 	private val filestorageDeleted = mockk<FilestorageService>().also {
 		every {
-			it.getFilesFromFilestorage(any(), any()) } returns FetchFileResponse(status = "deleted",
-			files = null, exception = null)
+			it.getFilesFromFilestorage(any(), any())
+		} returns FetchFileResponse(
+			status = "deleted",
+			files = null, exception = null
+		)
 	}
 	private val filestorageException = mockk<FilestorageService>().also {
 		every {
-			it.getFilesFromFilestorage(any(), any()) } returns FetchFileResponse(status = "exception",
-			files = null, exception = RuntimeException("En feil har oppstått"))
+			it.getFilesFromFilestorage(any(), any())
+		} returns FetchFileResponse(
+			status = "exception",
+			files = null, exception = RuntimeException("En feil har oppstått")
+		)
 	}
 	private val innsendingApi = mockk<InnsendingService>().also {
 		every {
-			it.getFilesFromFilestorage(any(), any()) } returns FetchFileResponse(status = "ok",
-			listOf(FileInfo("id", "content".toByteArray(),  ResponseStatus.Ok)), exception = null)
+			it.getFilesFromFilestorage(any(), any())
+		} returns FetchFileResponse(
+			status = "ok",
+			listOf(FileInfo("id", "content".toByteArray(), ResponseStatus.Ok)), exception = null
+		)
 	}
 	private val innsendingApiNotFound = mockk<InnsendingService>().also {
 		every {
-			it.getFilesFromFilestorage(any(), any()) } returns FetchFileResponse(status = "not-found",
-			files = null, exception = null)
+			it.getFilesFromFilestorage(any(), any())
+		} returns FetchFileResponse(
+			status = "not-found",
+			files = null, exception = null
+		)
 	}
 	private val innsendingApiDeleted = mockk<InnsendingService>().also {
 		every {
-			it.getFilesFromFilestorage(any(), any()) } returns FetchFileResponse(status = "deleted",
-			files = null, exception = null)
+			it.getFilesFromFilestorage(any(), any())
+		} returns FetchFileResponse(
+			status = "deleted",
+			files = null, exception = null
+		)
 	}
 	private val innsendingApiException = mockk<InnsendingService>().also {
 		every {
-			it.getFilesFromFilestorage(any(), any()) } returns FetchFileResponse(status = "exception",
-			files = null, exception = RuntimeException("En feil har oppstått"))
+			it.getFilesFromFilestorage(any(), any())
+		} returns FetchFileResponse(
+			status = "exception",
+			files = null, exception = RuntimeException("En feil har oppstått")
+		)
 	}
 
 
@@ -83,12 +105,17 @@ class ArchiverServiceTests {
 
 	@BeforeEach
 	fun setup() {
-		metrics = ArchivingMetrics(CollectorRegistry())
+		metrics = ArchivingMetrics(PrometheusRegistry.defaultRegistry)
+	}
+
+	@AfterEach
+	fun tearDown() {
+		metrics.unregister()
 	}
 
 	@Test
 	fun `Archiving already archived application throws exception`() {
-		archiverService = ArchiverService(filestorage, innsendingApiNotFound, journalpostClient, metrics,  kafkaPublisher)
+		archiverService = ArchiverService(filestorage, innsendingApiNotFound, journalpostClient, metrics, kafkaPublisher)
 
 		val key2 = UUID.randomUUID().toString()
 		mockAlreadyArchivedException(key2)
@@ -112,7 +139,8 @@ class ArchiverServiceTests {
 		val key = UUID.randomUUID().toString()
 		val tema = "AAP"
 		val soknadschema =
-			createSoknadarkivschema(behandlingsId = key,
+			createSoknadarkivschema(
+				behandlingsId = key,
 				tema = tema,
 				fileIds = listOf(
 					UUID.randomUUID().toString(),
@@ -123,17 +151,17 @@ class ArchiverServiceTests {
 					UUID.randomUUID().toString(),
 					UUID.randomUUID().toString(),
 					UUID.randomUUID().toString()
-					))
+				)
+			)
 
 		runBlocking {
 			archiverService.fetchFiles(key, soknadschema)
 
 			val fetchObservation = metrics.getFileFetchSize()
-			assertTrue(fetchObservation != null)
-			assertEquals(7.0, fetchObservation.quantiles[0.99]!!)
+			assertEquals(7.0, fetchObservation[0].sum)
 			val fetchFileHistogram = metrics.getFileFetchSizeHistogram(tema)
 			assertTrue(fetchFileHistogram != null)
-			assertEquals("content".length.toDouble(), fetchFileHistogram.sum)
+			assertEquals("content".length.toDouble(), fetchFileHistogram?.sum)
 		}
 	}
 
@@ -157,7 +185,8 @@ class ArchiverServiceTests {
 
 	@Test
 	fun `Archiving fails when no files is found`() {
-		archiverService = ArchiverService(filestorageNotFound, innsendingApiNotFound, journalpostClient, metrics, kafkaPublisher)
+		archiverService =
+			ArchiverService(filestorageNotFound, innsendingApiNotFound, journalpostClient, metrics, kafkaPublisher)
 
 		val key = UUID.randomUUID().toString()
 		val soknadschema = createSoknadarkivschema()
@@ -169,6 +198,12 @@ class ArchiverServiceTests {
 	}
 
 	private fun mockAlreadyArchivedException(key: String) {
-		every { journalpostClient.opprettJournalpost(eq(key), any(), any()) } throws ApplicationAlreadyArchivedException("Already archived")
+		every {
+			journalpostClient.opprettJournalpost(
+				eq(key),
+				any(),
+				any()
+			)
+		} throws ApplicationAlreadyArchivedException("Already archived")
 	}
 }
