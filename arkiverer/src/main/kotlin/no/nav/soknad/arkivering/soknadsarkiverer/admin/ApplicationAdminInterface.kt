@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Parameter
 import no.nav.security.token.support.core.api.ProtectedWithClaims
 import no.nav.soknad.arkivering.api.AdminApi
 import no.nav.soknad.arkivering.model.ArchivingStatus
+import no.nav.soknad.arkivering.model.Document
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafServiceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.util.konverterTilDateTime
@@ -44,5 +45,24 @@ class ApplicationAdminInterface(private val taskListService: TaskListService, pr
 
 	}
 
+	override fun hentDokumenter(key: String): ResponseEntity<List<Document>> {
+		val documents =  taskListService.applicationsAttachments(key)
+		if (documents.isEmpty() ) {
+			return ResponseEntity
+				.status(HttpStatus.NOT_FOUND)
+				.body(emptyList<Document>())
+		} else {
+			return ResponseEntity
+				.status(HttpStatus.OK)
+				.body(documents)
+		}
+	}
+
+	override fun arkiveringfeilet(): ResponseEntity<List<String>> {
+		val failedApplications = taskListService.getFailedTasks()
+		return ResponseEntity
+			.status(HttpStatus.OK)
+			.body(failedApplications)
+	}
 
 }

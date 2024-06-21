@@ -4,6 +4,7 @@ import kotlinx.coroutines.*
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
+import no.nav.soknad.arkivering.model.Document
 import no.nav.soknad.arkivering.soknadsarkiverer.Constants.MDC_INNSENDINGS_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.config.*
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
@@ -115,6 +116,18 @@ open class TaskListService(
 		createProcessingEvent(key, EventTypes.STARTED)
 	}
 
+	fun applicationsAttachments(key: String): List<Document> {
+		val task = tasks[key]
+		if (task == null) return emptyList()
+
+		return task.value.mottatteDokumenter.flatMap {dok -> dok.mottatteVarianter.map { Document(uuid = it.uuid, title = dok.tittel, filetype = it.filtype) } }
+
+	}
+
+	fun getFailedTasks(): List<String> {
+		return loggedTaskStates.filter { it.value == EventTypes.FAILURE }.map { it.key }
+	}
+
 
 	private fun incrementRetryCount(key: String): Int {
 		val task = tasks[key]
@@ -220,7 +233,7 @@ open class TaskListService(
 		MDC.clear()
 	}
 
-	internal fun getFailedTasks(): Set<String> {
+	internal fun getFailedApplications(): Set<String> {
 		return loggedTaskStates.filter { it.value == EventTypes.FAILURE }.keys
 	}
 

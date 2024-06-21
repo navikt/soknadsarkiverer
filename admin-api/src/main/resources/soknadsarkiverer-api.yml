@@ -64,6 +64,55 @@ paths:
       tags:
         - files
 
+
+  /admin/dokumenter/{key}:
+    get:
+      summary: Request list of sent inn document for a given innsendingsId.
+      description: Given identification of an application (innsendingsId) and the task is found a list of it documents is returned.
+      operationId: hentDokumenter
+
+      parameters:
+        - name: key
+          in: path
+          description: ie. identification, ie. identification of application for which re-run shall be triggered
+          required: true
+          schema:
+            type: string
+          style: simple
+
+      responses:
+        '200':
+          description: Document list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Document"
+        404:
+          description: No task found for Application.
+      tags:
+        - documents
+
+
+  /admin/failedinnsending:
+    get:
+      summary: Request list of applications for which archiving have failed.
+      description: Returns a list of applications identified by innsendingsId that the requested POD has failed to archive.
+      operationId: arkiveringfeilet
+
+      responses:
+        '200':
+          description: list of innsendingsIds.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+      tags:
+        - applications
+
   /internal/ping:
     get:
       summary: Pings the application to see if it responds
@@ -124,7 +173,6 @@ paths:
       tags:
         - health
 
-
 components:
   schemas:
     ApplicationStatus:
@@ -171,6 +219,26 @@ components:
           nullable: true
           description: Creation date and time in UTC
           example: 2021-12-03T14:10:00Z
+
+    Document:
+      type: object
+      required:
+        - uuid
+        - title
+      properties:
+        uuid:
+          type: string
+          description: Unique id of the attachment
+          example: 2f9b8d25-1056-4827-8ddd-cedab7fafbbf
+        title:
+          type: string
+          description: The attachment's title describing its content
+          example: Driving license
+        filetype:
+          type: string
+          description: Documenttype
+          example: PDF, Json, XML
+
 
 security: []
 
