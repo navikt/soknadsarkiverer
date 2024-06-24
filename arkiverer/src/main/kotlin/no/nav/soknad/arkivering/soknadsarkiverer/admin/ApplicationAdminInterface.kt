@@ -46,6 +46,7 @@ class ApplicationAdminInterface(private val taskListService: TaskListService, pr
 	}
 
 	override fun hentDokumenter(key: String): ResponseEntity<List<Document>> {
+		logger.info("$key: Admin hendokumenter")
 		val documents =  taskListService.applicationsAttachments(key)
 		if (documents.isEmpty() ) {
 			return ResponseEntity

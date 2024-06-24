@@ -68,3 +68,39 @@ fun createSoknadarkivschema(fileIds: List<String>, variantformat: String = "ARKI
 			)
 			.build())
 		.build()
+
+fun createSoknadarkivschema(skjemanummer: String = "NAV 11-12.15B", tittel: String = "Barnepass", behandlingsId: String = UUID.randomUUID().toString(), tema: String = "TSO", vedleggIds: List<String> = listOf("L7")): Soknadarkivschema {
+	val hovedDok = MottattDokumentBuilder()
+		.withTittel(tittel )
+		.withSkjemanummer(skjemanummer )
+		.withErHovedskjema(true)
+		.withMottatteVarianter( listOf(
+			MottattVariantBuilder()
+				.withfiltype("PDFA")
+				.withVariantformat("ARKIV")
+				.build(),
+			MottattVariantBuilder()
+				.withfiltype("JSON")
+				.withVariantformat("ORIGINAL")
+				.build(),
+		))
+		.build()
+	val vedlegg = vedleggIds.map{
+		MottattDokumentBuilder()
+			.withErHovedskjema(false)
+			.withTittel(it)
+			.withSkjemanummer(it)
+			.withMottatteVarianter(listOf(
+				MottattVariantBuilder()
+					.withfiltype("PDFA")
+					.withVariantformat("ARKIV")
+					.build()
+			))
+			.build()
+	}
+	return SoknadarkivschemaBuilder()
+		.withBehandlingsid(behandlingsId)
+		.withArkivtema(tema)
+		.withMottatteDokumenter(hovedDok, *vedlegg.map { it }.toTypedArray())
+		.build()
+}

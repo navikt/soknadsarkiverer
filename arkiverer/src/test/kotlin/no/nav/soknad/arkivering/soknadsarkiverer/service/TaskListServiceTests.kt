@@ -157,6 +157,25 @@ class TaskListServiceTests {
 
 	}
 
+
+	@Test
+	fun `List documents - after RECEIVED and STARTED processing event`() {
+		val key = UUID.randomUUID().toString()
+		val schema = createSoknadarkivschema( vedleggIds = listOf("X1", "X2", "X3"))
+		runScheduledTaskAndContinue(key)
+
+		taskListService.addOrUpdateTask(key, schema, EventTypes.RECEIVED)
+		//taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.STARTED)
+
+		val documents = taskListService.applicationsAttachments(key)
+		assertTrue(!documents.isEmpty())
+		assertEquals(5, documents.size)
+
+		verify(atLeast = 1, timeout = 2_000) {kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.STARTED)), any())}
+		verify(exactly = 1, timeout = 2_000) { archiverService.archive(eq(key), any(), any()) }
+		verify(atLeast = 1, timeout = 2_000) { kafkaPublisher.putProcessingEventOnTopic(eq(key), eq(ProcessingEvent(EventTypes.ARCHIVED)), any()) }
+	}
+
 	private fun verifyTaskIsRunning(key: String) {
 		val getCount = {
 			taskListService.listTasks()
