@@ -46,9 +46,10 @@ class ApplicationAdminInterface(private val taskListService: TaskListService, pr
 	}
 
 	override fun hentDokumenter(key: String): ResponseEntity<List<Document>> {
-		logger.info("$key: Admin hendokumenter")
+		logger.info("$key: Admin - hentdokumenter")
 		val documents =  taskListService.applicationsAttachments(key)
 		if (documents.isEmpty() ) {
+			logger.info("$key: Søknaden ikke funnet i denne PODen")
 			return ResponseEntity
 				.status(HttpStatus.NOT_FOUND)
 				.body(emptyList<Document>())
