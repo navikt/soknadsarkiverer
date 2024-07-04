@@ -25,6 +25,7 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) {
 
 	private val metricsReceived          = CopyOnWriteArrayList<Pair<Key, InnsendingMetrics>>()
 	private val messagesReceived         = CopyOnWriteArrayList<Pair<Key, String>>()
+	private val arkiveringstilbakemeldingerReceived         = CopyOnWriteArrayList<Pair<Key, String>>()
 	private val processingEventsReceived = CopyOnWriteArrayList<Pair<Key, ProcessingEvent>>()
 
 	private val kafkaStreams: KafkaStreams
@@ -47,6 +48,7 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) {
 		val metricsStream              = streamsBuilder.stream(kafkaConfig.topics.metricsTopic,    Consumed.with(stringSerde, createInnsendingMetricsSerde()))
 		val processingEventTopicStream = streamsBuilder.stream(kafkaConfig.topics.processingTopic, Consumed.with(stringSerde, createProcessingEventSerde()))
 		val messagesStream             = streamsBuilder.stream(kafkaConfig.topics.messageTopic,    Consumed.with(stringSerde, stringSerde))
+		val arkiveringstilbakemeldingerStream = streamsBuilder.stream(kafkaConfig.topics.arkiveringstilbakemeldingTopic,    Consumed.with(stringSerde, stringSerde))
 
 
 		metricsStream
@@ -54,6 +56,10 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) {
 			.foreach { key, metrics -> metricsReceived.add(key to metrics) }
 
 		messagesStream
+			.peek { key, message -> log("$key: Message received  - $message") }
+			.foreach { key, message -> messagesReceived.add(key to message) }
+
+		arkiveringstilbakemeldingerStream
 			.peek { key, message -> log("$key: Message received  - $message") }
 			.foreach { key, message -> messagesReceived.add(key to message) }
 
@@ -105,6 +111,7 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) {
 
 	fun getMetrics() = metricsReceived.map { Record(it.first, it.second) }
 	fun getMessages() = messagesReceived.map { Record(it.first, it.second) }
+	fun getArkiveringstilbakemeldinger() = arkiveringstilbakemeldingerReceived.map { Record(it.first, it.second) }
 	fun getProcessingEvents() = processingEventsReceived.map { Record(it.first, it.second) }
 
 	data class Record<T>(val key: Key, val value: T)

@@ -50,6 +50,7 @@ kafka:
     mainTopic: ${KAFKA_MAIN_TOPIC}
     processingTopic: ${KAFKA_PROCESSING_TOPIC}
     messageTopic: ${KAFKA_MESSAGE_TOPIC}
+    arkiveringstilbakemeldingTopic: ${KAFKA_ARKIVERINGSTILBAKEMELDING_TOPIC}
     metricsTopic: ${KAFKA_METRICS_TOPIC}
   schemaRegistry:
     url: ${KAFKA_SCHEMA_REGISTRY}

@@ -375,7 +375,9 @@ open class TaskListService(
 		val count = incrementRetryCount(key)
 		return if (count >= secondsBetweenRetries.size) {
 			logger.warn("$key: publiser meldingsvarsling til avsender")
+			// TODO remove createMessage after innsending-api reads from new topic
 			archiverService.createMessage(key, "**Archiving: FAILED")
+			archiverService.createArkiveringstilbakemelding(key, "**Archiving: FAILED")
 			EventTypes.FAILURE
 		} else {
 			EventTypes.STARTED

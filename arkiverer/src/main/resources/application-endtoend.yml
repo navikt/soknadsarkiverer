@@ -7,6 +7,7 @@ kafka:
     mainTopic: privat-soknadinnsending-v1-dev
     processingTopic: privat-soknadinnsending-processingeventlog-v1-dev
     messageTopic: privat-soknadinnsending-messages-v1-dev
+    arkiveringstilbakemeldingTopic: soknadinnsending-arkiveringstilbakemelding-dev
     metricsTopic: privat-soknadinnsending-metrics-v1-dev
 services:
   tasklist:

@@ -142,6 +142,7 @@ class ApplicationTests : ContainerizedKafka() {
 		)
 		verifyMockedPostRequests(1, safUrl)
 		verifyMockedPostRequests(1, journalPostUrl)
+		verifyArkiveringstilbakemeldingStartsWith(key, mapOf("**Archiving: OK" hasCount 1))
 		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 0))
 		verifyKafkaMetric(
 			key, mapOf(
@@ -193,6 +194,7 @@ class ApplicationTests : ContainerizedKafka() {
 		)
 		verifyMockedPostRequests(1, safUrl)
 		verifyMockedPostRequests(1, journalPostUrl)
+		verifyArkiveringstilbakemeldingStartsWith(key, mapOf("**Archiving: OK" hasCount 1))
 		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 0))
 		verifyKafkaMetric(
 			key, mapOf(
@@ -251,6 +253,7 @@ class ApplicationTests : ContainerizedKafka() {
 			)
 		)
 		verifyMockedPostRequests(maxNumberOfAttempts, safUrl)
+		verifyArkiveringstilbakemeldingStartsWith(key, mapOf("**Archiving: FAILED" hasCount 1))
 		verifyMessageStartsWith(
 			key,
 			mapOf("**Archiving: FAILED" hasCount 1, "ok" hasCount 0, "Exception" hasCount maxNumberOfAttempts)
@@ -431,6 +434,7 @@ class ApplicationTests : ContainerizedKafka() {
 			)
 		)
 		verifyMockedPostRequests(1, journalPostUrl)
+		verifyArkiveringstilbakemeldingStartsWith(key, mapOf("**Archiving: OK" hasCount 1))
 		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 0))
 		verifyKafkaMetric(
 			key, mapOf(
@@ -535,6 +539,7 @@ class ApplicationTests : ContainerizedKafka() {
 				RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
 			)
 		)
+		verifyArkiveringstilbakemeldingStartsWith(key, mapOf("**Archiving: OK" hasCount 1))
 		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 1))
 		verifyKafkaMetric(
 			key, mapOf(
@@ -753,6 +758,26 @@ class ApplicationTests : ContainerizedKafka() {
 
 			val seenMessages = {
 				kafkaListener.getMessages()
+					.filter { it.key == key }
+					.filter { it.value.startsWith(expectedMessage) }
+					.size
+			}
+
+			loopAndVerify(expectedCount, seenMessages)
+			{
+				assertEquals(
+					expectedCount, seenMessages.invoke(),
+					"Expected to see $expectedCount messages starting with '$expectedMessage'"
+				)
+			}
+		}
+	}
+
+	private fun verifyArkiveringstilbakemeldingStartsWith(key: Key, messageAndCount: Map<String, Int>) {
+		messageAndCount.forEach { (expectedMessage: String, expectedCount: Int) ->
+
+			val seenMessages = {
+				kafkaListener.getArkiveringstilbakemeldinger()
 					.filter { it.key == key }
 					.filter { it.value.startsWith(expectedMessage) }
 					.size

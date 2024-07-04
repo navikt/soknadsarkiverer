@@ -39,6 +39,12 @@ class KafkaPublisher(private val kafkaConfig: KafkaConfig) {
 		putDataOnTopic(key, value, headers, topic, kafkaProducer)
 	}
 
+	fun putArkiveringstilbakemeldingOnTopic(key: String?, value: String, headers: Headers = RecordHeaders()) {
+		val topic = kafkaConfig.topics.arkiveringstilbakemeldingTopic
+		val kafkaProducer = kafkaMessageProducer
+		putDataOnTopic(key, value, headers, topic, kafkaProducer)
+	}
+
 	fun putMetricOnTopic(key: String?, value: InnsendingMetrics, headers: Headers = RecordHeaders()) {
 		val topic = kafkaConfig.topics.metricsTopic
 		val kafkaProducer = kafkaMetricsProducer
