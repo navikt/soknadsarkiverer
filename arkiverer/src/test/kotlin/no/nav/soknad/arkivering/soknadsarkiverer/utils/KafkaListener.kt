@@ -61,7 +61,7 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) {
 
 		arkiveringstilbakemeldingerStream
 			.peek { key, message -> log("$key: Message received  - $message") }
-			.foreach { key, message -> messagesReceived.add(key to message) }
+			.foreach { key, message -> arkiveringstilbakemeldingerReceived.add(key to message) }
 
 		processingEventTopicStream
 			.peek { key, entity -> log("$key: Processing Events - $entity") }
