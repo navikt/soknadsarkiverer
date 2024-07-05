@@ -341,7 +341,7 @@ private fun kafkaConfig() = KafkaConfig(
 	delayBeforeKafkaInitialization = "0",
 	schemaRegistry = SchemaRegistry(url = "localhost:16868","dummy","dummy"),
 	security = SecurityConfig("FALSE","dummy","dummy","dummy","dummy","dummy","dummy"),
-	topics = Topics(topic,"processingTopic", messageTopic = "messageTopic",metricsTopic = "metricsTopic")
+	topics = Topics(topic, "processingTopic", messageTopic = "messageTopic",metricsTopic = "metricsTopic", arkiveringstilbakemeldingTopic = "arkiveringstilbakemeldingTopic")
 )
 
 private typealias Time = Long

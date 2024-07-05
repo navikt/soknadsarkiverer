@@ -143,6 +143,7 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyMockedPostRequests(1, safUrl)
 		verifyMockedPostRequests(1, journalPostUrl)
 		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 0))
+		verifyArkiveringstilbakemeldingStartsWith(key, mapOf("**Archiving: OK" hasCount 1))
 		verifyKafkaMetric(
 			key, mapOf(
 				"get files from filestorage" hasCount 1,
@@ -763,6 +764,26 @@ class ApplicationTests : ContainerizedKafka() {
 				assertEquals(
 					expectedCount, seenMessages.invoke(),
 					"Expected to see $expectedCount messages starting with '$expectedMessage'"
+				)
+			}
+		}
+	}
+
+	private fun verifyArkiveringstilbakemeldingStartsWith(key: Key, messageAndCount: Map<String, Int>) {
+		messageAndCount.forEach { (expectedMessage: String, expectedCount: Int) ->
+
+			val seenArkiveringstilbakemeldinger = {
+				kafkaListener.getArkiveringstilbakemeldinger()
+					.filter { it.key == key }
+					.filter { it.value.startsWith(expectedMessage) }
+					.size
+			}
+
+			loopAndVerify(expectedCount, seenArkiveringstilbakemeldinger)
+			{
+				assertEquals(
+					expectedCount, seenArkiveringstilbakemeldinger.invoke(),
+					"Expected to see $expectedCount arkiveringstilbakemeldinger starting with '$expectedMessage'"
 				)
 			}
 		}
