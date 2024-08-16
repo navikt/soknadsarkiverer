@@ -9,7 +9,6 @@ import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -47,9 +46,6 @@ class IntegrationTests : ContainerizedKafka() {
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
 
 	@Autowired
-	private lateinit var filestorageProperties: FilestorageProperties
-
-	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
 
 	@Value("\${joark.journal-post}")
@@ -68,7 +64,7 @@ class IntegrationTests : ContainerizedKafka() {
 
 	@BeforeEach
 	fun setup() {
-		setupMockedNetworkServices(portToExternalServices!!, journalPostUrl, filestorageProperties.files, safUrl)
+		setupMockedNetworkServices(portToExternalServices!!, journalPostUrl, "/innsendte/v1/files", safUrl)
 
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also {

@@ -70,9 +70,6 @@ joark:
   host: ${JOARK_HOST}
   sendToJoark: ${SEND_TO_JOARK}
   journal-post: /rest/journalpostapi/v1/journalpost
-filestorage:
-  host: ${FILESTORAGE_HOST}
-  files: /files/
 innsendingapi:
   host: ${INNSENDING_API_HOST}
 saf:

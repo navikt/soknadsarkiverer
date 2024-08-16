@@ -15,7 +15,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -57,9 +56,6 @@ class ApplicationTests : ContainerizedKafka() {
 	@Suppress("unused")
 	@MockkBean(relaxed = true)
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
-
-	@Autowired
-	private lateinit var filestorageProperties: FilestorageProperties
 
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
@@ -105,7 +101,7 @@ class ApplicationTests : ContainerizedKafka() {
 		setupMockedNetworkServices(
 			portToExternalServices!!,
 			journalPostUrl,
-			filestorageProperties.files,
+			"/innsendte/v1/files",
 			safUrl,
 		)
 
@@ -142,13 +138,12 @@ class ApplicationTests : ContainerizedKafka() {
 		)
 		verifyMockedPostRequests(1, safUrl)
 		verifyMockedPostRequests(1, journalPostUrl)
-		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 0))
+		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "Exception" hasCount 0))
 		verifyArkiveringstilbakemeldingStartsWith(key, mapOf("**Archiving: OK" hasCount 1))
 		verifyKafkaMetric(
 			key, mapOf(
 				"get files from filestorage" hasCount 1,
 				"send files to archive" hasCount 1,
-				"delete files from filestorage" hasCount 1
 			)
 		)
 		val requests = verifyPostRequest(journalPostUrl)
@@ -194,12 +189,12 @@ class ApplicationTests : ContainerizedKafka() {
 		)
 		verifyMockedPostRequests(1, safUrl)
 		verifyMockedPostRequests(1, journalPostUrl)
-		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 0))
+		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "Exception" hasCount 0))
+		verifyArkiveringstilbakemeldingStartsWith(key, mapOf("**Archiving: OK" hasCount 1))
 		verifyKafkaMetric(
 			key, mapOf(
 				"get files from filestorage" hasCount 1,
 				"send files to archive" hasCount 1,
-				"delete files from filestorage" hasCount 1
 			)
 		)
 		val requests = verifyPostRequest(journalPostUrl)
@@ -227,7 +222,6 @@ class ApplicationTests : ContainerizedKafka() {
 			key, mapOf(
 				"get files from filestorage" hasCount 0,
 				"send files to archive" hasCount 0,
-				"delete files from filestorage" hasCount 0
 			)
 		)
 	}
@@ -256,11 +250,11 @@ class ApplicationTests : ContainerizedKafka() {
 			key,
 			mapOf("**Archiving: FAILED" hasCount 1, "ok" hasCount 0, "Exception" hasCount maxNumberOfAttempts)
 		)
+		verifyArkiveringstilbakemeldingStartsWith(key, mapOf("**Archiving: FAILED" hasCount 1))
 		verifyKafkaMetric(
 			key, mapOf(
 				"get files from filestorage" hasCount maxNumberOfAttempts,
 				"send files to archive" hasCount 0,
-				"delete files from filestorage" hasCount 0
 			)
 		)
 		verifyArchivingMetrics(tasksGivenUpOnBefore + 1, { metrics.getTasksGivenUpOn() })
@@ -316,12 +310,11 @@ class ApplicationTests : ContainerizedKafka() {
 		)
 		verifyMockedPostRequests(1, safUrl)
 		verifyMockedPostRequests(1, journalPostUrl)
-		verifyMessageStartsWith(key, mapOf("ok" hasCount 1))
+		verifyArkiveringstilbakemeldingStartsWith(key, mapOf("**Archiving: OK" hasCount 1))
 		verifyKafkaMetric(
 			key, mapOf(
 				"get files from filestorage" hasCount 1,
 				"send files to archive" hasCount 1,
-				"delete files from filestorage" hasCount 1
 			)
 		)
 	}
@@ -353,12 +346,11 @@ class ApplicationTests : ContainerizedKafka() {
 		)
 		verifyMockedPostRequests(numberOfFailures + 1, safUrl)
 		verifyMockedPostRequests(numberOfFailures + 1, journalPostUrl)
-		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount 1))
+		verifyMessageStartsWith(key, mapOf("Exception" hasCount 1))
 		verifyKafkaMetric(
 			key, mapOf(
 				"get files from filestorage" hasCount numberOfFailures + 1,
 				"send files to archive" hasCount 1,
-				"delete files from filestorage" hasCount 1
 			)
 		)
 
@@ -400,7 +392,6 @@ class ApplicationTests : ContainerizedKafka() {
 			key, mapOf(
 				"get files from filestorage" hasCount attemptsToFail,
 				"send files to archive" hasCount 0,
-				"delete files from filestorage" hasCount 1
 			)
 		)
 		verifyArchivingMetrics(
@@ -432,12 +423,12 @@ class ApplicationTests : ContainerizedKafka() {
 			)
 		)
 		verifyMockedPostRequests(1, journalPostUrl)
-		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 0))
+		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "Exception" hasCount 0))
+		verifyArkiveringstilbakemeldingStartsWith(key, mapOf("**Archiving: OK" hasCount 1))
 		verifyKafkaMetric(
 			key, mapOf(
 				"get files from filestorage" hasCount 1,
 				"send files to archive" hasCount 1,
-				"delete files from filestorage" hasCount 1 // Metric succeeds even if the operation fails
 			)
 		)
 
@@ -466,12 +457,11 @@ class ApplicationTests : ContainerizedKafka() {
 			)
 		)
 		verifyMockedPostRequests(maxNumberOfAttempts, journalPostUrl)
-		verifyMessageStartsWith(key, mapOf("ok" hasCount 0, "Exception" hasCount maxNumberOfAttempts))
+		verifyMessageStartsWith(key, mapOf("Exception" hasCount maxNumberOfAttempts))
 		verifyKafkaMetric(
 			key, mapOf(
 				"get files from filestorage" hasCount maxNumberOfAttempts,
 				"send files to archive" hasCount 0,
-				"delete files from filestorage" hasCount 0
 			)
 		)
 	}
@@ -499,12 +489,11 @@ class ApplicationTests : ContainerizedKafka() {
 		)
 		verifyMockedPostRequests(attemptsToFail + 1, safUrl)
 		verifyMockedPostRequests(attemptsToFail + 1, journalPostUrl)
-		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount attemptsToFail))
+		verifyMessageStartsWith(key, mapOf("Exception" hasCount attemptsToFail))
 		verifyKafkaMetric(
 			key, mapOf(
 				"get files from filestorage" hasCount attemptsToFail + 1,
 				"send files to archive" hasCount 1,
-				"delete files from filestorage" hasCount 1
 			)
 		)
 		verifyArchivingMetrics(
@@ -536,12 +525,12 @@ class ApplicationTests : ContainerizedKafka() {
 				RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
 			)
 		)
-		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "ok" hasCount 1, "Exception" hasCount 1))
+		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "Exception" hasCount 1))
+		verifyArkiveringstilbakemeldingStartsWith(key, mapOf("**Archiving: OK" hasCount 1))
 		verifyKafkaMetric(
 			key, mapOf(
 				"get files from filestorage" hasCount 1,
 				"send files to archive" hasCount 0,
-				"delete files from filestorage" hasCount 1
 			)
 		)
 
@@ -578,7 +567,6 @@ class ApplicationTests : ContainerizedKafka() {
 			key, mapOf(
 				"get files from filestorage" hasCount 0,
 				"send files to archive" hasCount 0,
-				"delete files from filestorage" hasCount 1
 			)
 		)
 
@@ -617,12 +605,11 @@ class ApplicationTests : ContainerizedKafka() {
 				FAILURE hasCount 1
 			)
 		)
-		verifyMessageStartsWith(key, mapOf("ok" hasCount 0, "Exception" hasCount maxNumberOfAttempts))
+		verifyMessageStartsWith(key, mapOf("Exception" hasCount maxNumberOfAttempts))
 		verifyKafkaMetric(
 			key, mapOf(
 				"get files from filestorage" hasCount 0,
 				"send files to archive" hasCount 0,
-				"delete files from filestorage" hasCount 0
 			)
 		)
 
@@ -658,13 +645,12 @@ class ApplicationTests : ContainerizedKafka() {
 				RECEIVED hasCount 1, STARTED hasCount 2, ARCHIVED hasCount 0, FINISHED hasCount 1, FAILURE hasCount 0
 			)
 		)
-		verifyMessageStartsWith(key, mapOf("ok" hasCount 1, "Exception" hasCount 1))
+		verifyMessageStartsWith(key, mapOf("Exception" hasCount 1))
 
 		verifyKafkaMetric(
 			key, mapOf(
 				"get files from filestorage" hasCount 0,
 				"send files to archive" hasCount 0,
-				"delete files from filestorage" hasCount 1
 			)
 		)
 
@@ -710,7 +696,6 @@ class ApplicationTests : ContainerizedKafka() {
 			key, mapOf(
 				"get files from filestorage" hasCount 0,
 				"send files to archive" hasCount 0,
-				"delete files from filestorage" hasCount 0
 			)
 		)
 

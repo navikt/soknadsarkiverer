@@ -3,7 +3,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.utils
 import com.expediagroup.graphql.client.types.GraphQLClientError
 import com.expediagroup.graphql.client.types.GraphQLClientResponse
 import com.expediagroup.graphql.client.types.GraphQLClientSourceLocation
-import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.github.tomakehurst.wiremock.WireMockServer
@@ -19,7 +18,7 @@ import no.nav.soknad.arkiverer.saf.generated.hentjournalpostgitteksternreferanse
 import no.nav.soknad.arkiverer.saf.generated.hentjournalpostgitteksternreferanseid.Journalpost
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.Dokumenter
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.OpprettJournalpostResponse
-import no.nav.soknad.arkivering.soknadsfillager.model.FileData
+import no.nav.soknad.innsending.model.SoknadFile
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import java.time.LocalDateTime
@@ -32,12 +31,12 @@ import java.util.*
 const val filestorageContent = "filestoragecontent"
 private lateinit var wiremockServer: WireMockServer
 private lateinit var joarkUrl: String
-private lateinit var filestorageUrl: String
+private lateinit var innsendingApiPath: String
 private lateinit var safUrl: String
 
-fun setupMockedNetworkServices(port: Int, urlJoark: String, urlFilestorage: String, urlSaf: String) {
+fun setupMockedNetworkServices(port: Int, urlJoark: String, pathInnsendingApi: String, urlSaf: String) {
 	joarkUrl = urlJoark
-	filestorageUrl = urlFilestorage
+	innsendingApiPath = pathInnsendingApi
 	safUrl = urlSaf
 
 	wiremockServer = WireMockServer(port)
@@ -121,26 +120,26 @@ fun mockFilestorageIsWorking(id: String) = mockFilestorageIsWorking(listOf(id to
 fun mockFilestorageIsWorking(idsAndResponses: List<Pair<String, String?>>) {
 
 	idsAndResponses.forEach { (id, content) ->
-		val urlPattern = "$filestorageUrl$id\\?metadataOnly=false"
+		val urlPattern = "$innsendingApiPath/$id"
 
-		val response = createFilestorageResponse(Triple(id, content, "ok"))
-		mockFilestorageGetRequest(urlPattern, response)
+		val response = createInnsendingApiResponse(Triple(id, content, SoknadFile.FileStatus.ok))
+		mockInnsendingApiGetRequest(urlPattern, response)
 	}
 
 	mockFilestorageDeletionIsWorking(idsAndResponses.map { it.first })
 }
 
 fun mockRequestedFileIsGone() {
-	val response = createFilestorageResponse(Triple(UUID.randomUUID().toString(), null, "deleted"))
-	mockFilestorageGetRequest("$filestorageUrl.*", response)
+	val response = createInnsendingApiResponse(Triple(UUID.randomUUID().toString(), null, SoknadFile.FileStatus.deleted))
+	mockInnsendingApiGetRequest("$innsendingApiPath/.*", response)
 }
 
 fun mockRequestedFileIsNotFound() {
-	val response = createFilestorageResponse(Triple(UUID.randomUUID().toString(), null, "not-found"))
-	mockFilestorageGetRequest("$filestorageUrl.*", response)
+	val response = createInnsendingApiResponse(Triple(UUID.randomUUID().toString(), null, SoknadFile.FileStatus.notfound))
+	mockInnsendingApiGetRequest("$innsendingApiPath/.*", response)
 }
 
-private fun mockFilestorageGetRequest(url: String, response: String) {
+private fun mockInnsendingApiGetRequest(url: String, response: String) {
 	wiremockServer.stubFor(
 		get(urlMatching(url))
 			.willReturn(
@@ -154,7 +153,7 @@ private fun mockFilestorageGetRequest(url: String, response: String) {
 
 fun mockFilestorageDeletionIsWorking(uuids: List<String>) {
 	val ids = uuids.joinToString(",")
-	val urlPattern = urlMatching(filestorageUrl + ids)
+	val urlPattern = urlMatching(innsendingApiPath + ids)
 
 	wiremockServer.stubFor(
 		delete(urlPattern)
@@ -164,7 +163,7 @@ fun mockFilestorageDeletionIsWorking(uuids: List<String>) {
 
 fun mockFilestorageDeletionIsNotWorking() {
 	wiremockServer.stubFor(
-		delete(urlMatching("$filestorageUrl.*"))
+		delete(urlMatching("$innsendingApiPath.*"))
 			.willReturn(aResponse()
 				.withBody("Mocked exception for deletion")
 				.withStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())))
@@ -172,7 +171,7 @@ fun mockFilestorageDeletionIsNotWorking() {
 
 fun mockFilestorageIsDown() {
 	wiremockServer.stubFor(
-		get(urlMatching("$filestorageUrl.*"))
+		get(urlMatching("$innsendingApiPath.*"))
 			.willReturn(aResponse()
 				.withBody("Mocked exception for filestorage")
 				.withStatus(HttpStatus.SERVICE_UNAVAILABLE.value())))
@@ -185,12 +184,12 @@ fun mockFilestoragePingIsWorking() {
 				.withStatus(HttpStatus.OK.value())))
 }
 
-private fun createFilestorageResponse(idAndResponseAndStatus: Triple<String, String?, String>): String {
-	val (id, response, statues) = idAndResponseAndStatus
+private fun createInnsendingApiResponse(idAndResponseAndStatus: Triple<String, String?, SoknadFile.FileStatus>): String {
+	val (id, response, status) = idAndResponseAndStatus
 	val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
 	return ObjectMapper()
 		.registerModule(JavaTimeModule())
-		.writeValueAsString(listOf(FileData(id, response?.toByteArray(), createdAt, statues)))
+		.writeValueAsString(listOf(SoknadFile(id, status, response?.toByteArray(), createdAt)))
 }
 
 private fun createJoarkResponse(): String = ObjectMapper().writeValueAsString(

@@ -6,7 +6,6 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
-import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId

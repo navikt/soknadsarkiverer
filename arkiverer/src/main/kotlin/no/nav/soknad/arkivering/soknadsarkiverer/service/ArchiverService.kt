@@ -1,13 +1,15 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
-import kotlinx.coroutines.*
 import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ShuttingDownException
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.*
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlreadyDeletedException
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.InnsendingService
+import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -15,11 +17,12 @@ import java.io.PrintWriter
 import java.io.StringWriter
 
 @Service
-class ArchiverService(private val filestorageService: FileserviceInterface,
-											private val innsendingService: InnsendingService,
-											private val journalpostClient: JournalpostClientInterface,
-											private val metrics: ArchivingMetrics,
-											private val kafkaPublisher: KafkaPublisher) {
+class ArchiverService(
+	private val innsendingService: InnsendingService,
+	private val journalpostClient: JournalpostClientInterface,
+	private val metrics: ArchivingMetrics,
+	private val kafkaPublisher: KafkaPublisher
+) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	fun archive(key: String, data: Soknadarkivschema, files: List<FileInfo>) {
@@ -44,13 +47,23 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 		}
 	}
 
-	 suspend fun fetchFiles(key: String, data: Soknadarkivschema): List<FileInfo> {
+	suspend fun fetchFiles(key: String, data: Soknadarkivschema): List<FileInfo> {
 		return try {
 			val startTime = System.currentTimeMillis()
-			val files = makeParallelCallsToFetchFiles(key, data)
+			val response = innsendingService.getFilesFromFilestorage(key, data)
+			val files = when (response.status) {
+				ResponseStatus.Ok.value -> (response.files ?: emptyList()).also { metrics.incGetFilestorageSuccesses() }
+				ResponseStatus.Deleted.value -> throw FilesAlreadyDeletedException("$key: All the files are deleted.")
+				else -> {
+					throw ArchivingException(
+						"$key: Files not found",
+						response.exception ?: RuntimeException("$key: Files not found")
+					).also { metrics.incGetFilestorageErrors() }
+				}
+			}
 
 			createMetricAndPublishOnKafka(key, "get files from filestorage", startTime)
-			files.filter{it.content != null}.forEach {
+			files.filter { it.content != null }.forEach {
 				metrics.setFileFetchSizeHistogram(it.content!!.size.toDouble(), data.arkivtema)
 				metrics.setFileFetchSize(it.content.size.toDouble())
 			}
@@ -67,74 +80,10 @@ class ArchiverService(private val filestorageService: FileserviceInterface,
 		}
 	}
 
-	suspend fun makeParallelCallsToFetchFiles(key: String, data: Soknadarkivschema): List<FileInfo> {
-		return withContext(Dispatchers.IO) {
-			val innsendingApiResult = async { innsendingService.getFilesFromFilestorage(key, data) }
-			val fileStorageResult = async { filestorageService.getFilesFromFilestorage(key, data) }
-
-			val responses = listOf(fileStorageResult, innsendingApiResult).awaitAll()
-			logger.info("$key: respons fra filkilder ${responses.map { it.status }.toList()}")
-
-			selectAndReturnResponse(responses, key)
-		}
-	}
-
-	fun selectAndReturnResponse (
-		responses: List<FetchFileResponse>,
-		key: String
-	): List<FileInfo> {
-		val okResponse = responses.firstOrNull { it.status == ResponseStatus.Ok.value }
-		if (okResponse != null) {
-			metrics.incGetFilestorageSuccesses()
-			if (okResponse.files != null) {
-				return okResponse.files
-			} else {
-				return listOf()
-			}
-		}
-
-		val deletedResponse = responses.firstOrNull { it.status == "deleted" }
-		if (deletedResponse != null) {
-			throw FilesAlreadyDeletedException("$key: All the files are deleted.")
-		}
-
-		metrics.incGetFilestorageErrors()
-		val notFoundResponse = responses.firstOrNull { it.status == "not-found" }
-		if ((notFoundResponse?.files != null) && notFoundResponse.files.any { it.status == ResponseStatus.Ok })
-			throw ArchivingException(
-				"$key: Files had different statuses: ${notFoundResponse.files.map { "${it.uuid} - ${it.status}" }}",
-				RuntimeException("$key: Got some, but not all files")
-			)
-		val exceptionResponse = responses.firstOrNull { it.status == "error" }
-		throw ArchivingException(
-			"$key: Files not found",
-			if (exceptionResponse?.exception != null) exceptionResponse.exception
-			else RuntimeException("$key: Files not found")
-		)
-	}
-
-	fun deleteFiles(key: String, data: Soknadarkivschema) {
-		try {
-			val startTime = System.currentTimeMillis()
-			filestorageService.deleteFilesFromFilestorage(key, data)
-			createMetricAndPublishOnKafka(key, "delete files from filestorage", startTime)
-			createMessage(key, "ok")
-
-		} catch (e: ShuttingDownException) {
-			logger.warn("$key: Will not start to deleteFiles - application is shutting down.")
-
-		} catch (e: Exception) {
-			createMessage(key, createExceptionMessage(e))
-			throw e
-		}
-	}
-
-
 	fun createMessage(key: String, message: String) {
 		logger.info("$key: publiser meldingsvarsling til avsender")
 		kafkaPublisher.putMessageOnTopic(key, message)
 	}
-
 
 	fun createArkiveringstilbakemelding(key: String, message: String) {
 		logger.info("$key: publiser arkiveringstilbakemelding til avsender")

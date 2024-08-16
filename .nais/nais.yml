@@ -98,8 +98,6 @@ spec:
       value: {{kafka-arkiveringstilbakemeldinger-topic}}
     - name: KAFKA_METRICS_TOPIC
       value: {{kafka-metrics-topic}}
-    - name: FILESTORAGE_HOST
-      value: {{filestorage-host}}
     - name: INNSENDING_API_HOST
       value: {{innsending-api-host}}
     - name: JOARK_HOST
