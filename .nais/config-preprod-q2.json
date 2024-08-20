@@ -5,12 +5,10 @@
 	"replicas-max": "4",
 	"ingress": "https://soknadsarkiverer-gcp.intern.dev.nav.no",
 	"outboundRules": [
-		"soknadsfillager",
 		"innsending-api"
 	],
 	"outboundExternalHosts": [
 		"dokarkiv.dev-fss-pub.nais.io",
-		"soknadsfillager-gcp.intern.dev.nav.no",
 		"innsending-api-gcp.intern.dev.nav.no",
 		"saf-q2.dev-fss-pub.nais.io"
 	],
@@ -22,7 +20,6 @@
 	"innsending-api-host": "https://innsending-api-gcp.intern.dev.nav.no",
 	"joark-host": "https://dokarkiv-q2.dev-fss-pub.nais.io",
 	"dokarkiv-scope": "api://dev-fss.teamdokumenthandtering.dokarkiv/.default",
-	"soknadsfillager-scope": "api://dev-gcp.team-soknad.soknadsfillager/.default",
 	"innsending-api-scope": "api://dev-gcp.team-soknad.innsending-api/.default",
 	"send-to-joark": "true",
 	"kafka-pool": "nav-dev",

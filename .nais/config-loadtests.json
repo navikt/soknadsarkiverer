@@ -5,12 +5,10 @@
 	"replicas-max": "1",
 	"ingress": "https://soknadsarkiverer-loadtests.intern.dev.nav.no",
 	"outbound": [
-		"soknadsfillager-loadtests",
 		"arkiv-mock"
 	],
 	"outboundExternalHosts": [
-		"arkiv-mock-gcp.intern.dev.nav.no",
-		"soknadsfillager-gcp-loadtests.intern.dev.nav.no"
+		"arkiv-mock-gcp.intern.dev.nav.no"
 	],
 	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v1-loadtests",
 	"kafka-processingeventlog-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v1-loadtests",
@@ -20,7 +18,6 @@
 	"innsending-api-host": "https://arkiv-mock-gcp.intern.dev.nav.no",
 	"joark-host": "https://arkiv-mock-gcp.intern.dev.nav.no",
 	"dokarkiv-scope": "api://dev-gcp.team-soknad.arkiv-mock/.default",
-	"soknadsfillager-scope": "api://dev-gcp.team-soknad.soknadsfillager-loadtests/.default",
 	"innsending-api-scope": "api://dev-gcp.team-soknad.innsending-api-loadtests/.default",
 	"send-to-joark": "true",
 	"kafka-pool": "nav-dev",
