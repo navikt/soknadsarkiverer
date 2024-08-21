@@ -15,7 +15,7 @@
 	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v2-dev",
 	"kafka-processingeventlog-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v2-dev",
 	"kafka-message-topic": "team-soknad.privat-soknadinnsending-messages-v2-dev",
-	"kafka-arkiveringstilbakemeldinger-topic": "team-soknad.soknadinnsending-arkiveringstilbakemeldinger-v1-dev",
+	"kafka-arkiveringstilbakemeldinger-topic": "team-soknad.privat-soknadinnsending-arkiveringstilbakemeldinger-v1-dev",
 	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v2-dev",
 	"innsending-api-host": "https://innsending-api-gcp.intern.dev.nav.no",
 	"joark-host": "https://dokarkiv-q2.dev-fss-pub.nais.io",
