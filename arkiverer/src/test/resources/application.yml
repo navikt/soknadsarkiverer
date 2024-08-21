@@ -29,7 +29,7 @@ kafka:
     mainTopic: privat-soknadinnsending-v2-dev
     processingTopic: privat-soknadinnsending-processingeventlog-v2-dev
     messageTopic: privat-soknadinnsending-messages-v2-dev
-    arkiveringstilbakemeldingTopic: soknadinnsending-arkiveringstilbakemeldinger-v1-dev
+    arkiveringstilbakemeldingTopic: privat-soknadinnsending-arkiveringstilbakemeldinger-v1-dev
     metricsTopic: privat-soknadinnsending-metrics-v2-dev
   schemaRegistry:
     url: ${application.KAFKA_SCHEMA_REGISTRY}
