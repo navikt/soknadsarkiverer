@@ -94,6 +94,8 @@ spec:
       value: {{kafka-processingeventlog-topic}}
     - name: KAFKA_MESSAGE_TOPIC
       value: {{kafka-message-topic}}
+    - name: KAFKA_ARKIVERINGSTILBAKEMELDING_TOPIC
+      value: {{kafka-arkiveringstilbakemeldinger-topic}}
     - name: KAFKA_METRICS_TOPIC
       value: {{kafka-metrics-topic}}
     - name: FILESTORAGE_HOST

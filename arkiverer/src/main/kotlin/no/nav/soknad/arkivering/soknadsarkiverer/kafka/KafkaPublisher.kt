@@ -26,6 +26,9 @@ class KafkaPublisher(private val kafkaConfig: KafkaConfig) {
 	private val kafkaMessageProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
 		it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 	})
+	private val kafkaArkiveringstilbakemeldingProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
+		it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
+	})
 
 	fun putProcessingEventOnTopic(key: String, value: ProcessingEvent, headers: Headers = RecordHeaders()) {
 		val topic = kafkaConfig.topics.processingTopic
@@ -36,6 +39,12 @@ class KafkaPublisher(private val kafkaConfig: KafkaConfig) {
 	fun putMessageOnTopic(key: String?, value: String, headers: Headers = RecordHeaders()) {
 		val topic = kafkaConfig.topics.messageTopic
 		val kafkaProducer = kafkaMessageProducer
+		putDataOnTopic(key, value, headers, topic, kafkaProducer)
+	}
+
+	fun putArkiveringstilbakemeldingOnTopic(key: String?, value: String, headers: Headers = RecordHeaders()) {
+		val topic = kafkaConfig.topics.arkiveringstilbakemeldingTopic
+		val kafkaProducer = kafkaArkiveringstilbakemeldingProducer
 		putDataOnTopic(key, value, headers, topic, kafkaProducer)
 	}
 
