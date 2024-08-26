@@ -26,7 +26,6 @@ jobs:
         uses: navikt/archiving-infrastructure/.github/checkout-and-build@main
         with:
           component_name: innsending-api
-          branch: tech/endtoend # TODO switch to main when other PR is merged
 
       - name: 'Build the code for soknadsarkiverer (this PR)'
         uses: navikt/archiving-infrastructure/.github/checkout-and-build@main
