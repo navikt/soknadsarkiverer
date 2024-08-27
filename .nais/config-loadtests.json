@@ -4,7 +4,7 @@
 	"replicas-min": "1",
 	"replicas-max": "1",
 	"ingress": "https://soknadsarkiverer-loadtests.intern.dev.nav.no",
-	"outbound": [
+	"outboundRules": [
 		"arkiv-mock",
 		"innsending-api-loadtests"
 	],
