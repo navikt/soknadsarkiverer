@@ -37,7 +37,6 @@ jobs:
         uses: navikt/archiving-infrastructure/.github/checkout-and-build@main
         with:
           component_name: archiving-infrastructure
-          branch: fjern-soknadsfillager # TODO switch to main when other PR is merged
           sub_directory: system-tests
           skip_tests: false
           run_docker_build: false
