@@ -6,11 +6,8 @@ import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.Constants
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.ArchivingTimeoutProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileFetchTimeoutProperties
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.InnsendingApiProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.tokensupport.TokenService
-import no.nav.soknad.arkivering.soknadsfillager.api.FilesApi
-import no.nav.soknad.arkivering.soknadsfillager.api.HealthApi
 import no.nav.soknad.innsending.api.HentInnsendteFilerApi
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -99,41 +96,6 @@ class RestClientConfig {
 
 	@Bean
 	fun innsenderHealthApi(innsendingApiProperties: InnsendingApiProperties) = no.nav.soknad.innsending.api.HealthApi(innsendingApiProperties.host)
-
-	@Bean
-	@Profile("prod | dev")
-	@Qualifier("filestorageRestClient")
-	fun filestorageClient(
-		filestorageProperties: FilestorageProperties,
-		clientConfigProperties: ClientConfigurationProperties,
-		oAuth2AccessTokenService: OAuth2AccessTokenService,
-		fileFetchTimeoutProperties: FileFetchTimeoutProperties
-	): RestClient {
-
-		return restClientOAuth2Client(
-			baseUrl = filestorageProperties.host,
-			timeouts = timeouts(fileFetchTimeoutProperties.readTimeout.toLong(), fileFetchTimeoutProperties.connectTimeout.toLong()),
-			clientAccessProperties = clientConfigProperties.registration["soknadsfillager"]!!,
-			oAuth2AccessTokenService = oAuth2AccessTokenService )
-	}
-
-	@Bean
-	@Profile("!(prod | dev)")
-	@Qualifier("filestorageRestClient")
-	fun filestorageClientWithoutOAuth(filestorageProperties: FilestorageProperties)
-		= RestClient.builder().baseUrl(filestorageProperties.host).build()
-
-	@Bean
-	fun filesApi(
-		filestorageProperties: FilestorageProperties,
-		@Qualifier("filestorageRestClient") filestorageClient: RestClient
-	): FilesApi {
-		return FilesApi(filestorageClient)
-	}
-
-	@Bean
-	fun healthApi(filestorageProperties: FilestorageProperties) = HealthApi(filestorageProperties.host)
-
 
 	private fun restClientOAuth2Client(
 		baseUrl: String,

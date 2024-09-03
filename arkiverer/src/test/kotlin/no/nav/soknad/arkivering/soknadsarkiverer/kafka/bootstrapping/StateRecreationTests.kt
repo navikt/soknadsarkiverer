@@ -20,7 +20,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
-import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilestorageProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
 import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafServiceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
@@ -77,9 +76,6 @@ class StateRecreationTests : ContainerizedKafka() {
 	private lateinit var kafkaStreams: KafkaStreams // Mock this so that the real chain isn't run by the tests
 
 	@Autowired
-	private lateinit var filestorageProperties: FilestorageProperties
-
-	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
 
 	@Autowired
@@ -106,7 +102,6 @@ class StateRecreationTests : ContainerizedKafka() {
 			)
 		)
 		every { it.archive(any(), any(), any()) } just Runs
-		every { it.deleteFiles(any(), any()) } just Runs
 	}
 	private val taskListService = mockk<TaskListService>().also {
 		every { it.addOrUpdateTask(any(), any(), any(), any()) } just Runs
@@ -128,7 +123,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		setupMockedNetworkServices(
 			portToExternalServices!! + 1,
 			journalPostUrl,
-			filestorageProperties.files,
+			"/innsendte/v1/files",
 			safUrl
 		)
 		kafkaMainTopicProducer = KafkaProducer(kafkaConfigMap())
@@ -146,7 +141,6 @@ class StateRecreationTests : ContainerizedKafka() {
 		kafkaBootstrapConsumer.recreateState() // Other test classes could have left Kafka events on the topics. Consume them before running the tests in this class.
 
 	}
-
 
 	@Test
 	fun `Can read empty Event Log`() {

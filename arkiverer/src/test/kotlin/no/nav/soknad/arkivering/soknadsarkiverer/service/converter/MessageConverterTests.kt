@@ -9,13 +9,10 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseSta
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattDokumentBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattVariantBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.SoknadarkivschemaBuilder
-import no.nav.soknad.arkivering.soknadsfillager.model.FileData
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.LocalDateTime
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
 import java.util.*
 
 class MessageConverterTests {

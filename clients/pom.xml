@@ -55,28 +55,6 @@
 						<goals>
 							<goal>generate</goal>
 						</goals>
-						<id>fillager</id>
-						<configuration>
-							<inputSpec>${project.basedir}/src/main/resources/soknadsfillager-api.yml</inputSpec>
-							<generatorName>kotlin</generatorName>
-							<additionalProperties>useSpringBoot3</additionalProperties>
-							<library>jvm-spring-restclient</library>
-							<apiPackage>no.nav.soknad.arkivering.soknadsfillager.api</apiPackage>
-							<modelPackage>no.nav.soknad.arkivering.soknadsfillager.model</modelPackage>
-							<configOptions>
-								<useSpringBoot3>true</useSpringBoot3>
-								<serializationLibrary>jackson</serializationLibrary>
-								<omitGradlePluginVersions>true</omitGradlePluginVersions>
-								<groupId>no.nav.soknad.arkivering</groupId>
-								<artifactId>soknadsfillager-client</artifactId>
-								<packageName>no.nav.soknad.arkivering.soknadsfillager</packageName>
-							</configOptions>
-						</configuration>
-					</execution>
-					<execution>
-						<goals>
-							<goal>generate</goal>
-						</goals>
 						<id>innsending</id>
 						<configuration>
 							<inputSpec>${project.basedir}/src/main/resources/innsending-api.yml</inputSpec>
@@ -93,25 +71,6 @@
 								<artifactId>innsending-api-client</artifactId>
 								<packageName>no.nav.soknad.innsending</packageName>
 							</configOptions>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-
-			<plugin>
-				<groupId>com.github.sjoblomj</groupId>
-				<artifactId>remote-comparer-maven-plugin</artifactId>
-				<version>${remote-comparer-maven-plugin.version}</version>
-				<executions>
-					<execution>
-						<id>compare OpenAPI specs</id>
-						<goals>
-							<goal>remote-compare</goal>
-						</goals>
-						<configuration>
-							<localFilePath>src/main/resources/soknadsfillager-api.yml</localFilePath>
-							<remoteFileUri>https://raw.githubusercontent.com/navikt/soknadsfillager/main/api/src/main/resources/soknadsfillager-api.yml</remoteFileUri>
-							<timeoutMs>20000</timeoutMs>
 						</configuration>
 					</execution>
 				</executions>

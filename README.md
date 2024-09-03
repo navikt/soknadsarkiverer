@@ -5,7 +5,7 @@ For a description of the whole archiving system, see [the documentation](https:/
 
 ## Dependencies
 This component requires the following to work:
-* [soknadsfillager](https://github.com/navikt/soknadsfillager) (REST-endpoint for retrieving files)
+* [innsending-api](https://github.com/navikt/innsending-api) (REST-endpoint for retrieving files)
 * [soknadarkiv-schema](https://github.com/navikt/soknadarkiv-schema) (Avro schema definitions)
 * Joark (REST-endpoint for sending data)
 * Kafka broker (for providing input data)

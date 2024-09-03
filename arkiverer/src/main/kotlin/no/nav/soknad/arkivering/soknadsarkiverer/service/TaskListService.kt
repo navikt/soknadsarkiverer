@@ -188,13 +188,8 @@ open class TaskListService(
 	}
 
 	private fun deleteFilesState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
-		logger.info("$key: state = ARCHIVED. About to delete files in attempt $attempt")
-		val task = { tryToDeleteFiles(key, soknadarkivschema) }
-		val scheduledTime = Instant.now().plusSeconds(0)
-		if (tasks[key]?.isBootstrappingTask == true)
-			scheduler.scheduleSingleTask(task, scheduledTime)
-		else
-			scheduler.schedule(task, scheduledTime)
+		logger.info("$key: state = ARCHIVED. Will set state to FINISHED (attempt $attempt)")
+		setStateChange(key, EventTypes.FINISHED, soknadarkivschema, attempt)
 	}
 
 	// Remove task and cancel thread
@@ -340,31 +335,6 @@ open class TaskListService(
 				"Already archived journalpostId=${journalpost.journalpostId}, opprettet=${journalpost.datoOpprettet}"
 			logger.info("$key: $archivingdetails")
 			throw ApplicationAlreadyArchivedException("$key: $archivingdetails")
-		}
-	}
-
-	private fun tryToDeleteFiles(key: String, soknadarkivschema: Soknadarkivschema) {
-		try {
-			MDC.put(MDC_INNSENDINGS_ID, key)
-			logger.info("$key: Will now start to delete files")
-			archiverService.deleteFiles(key, soknadarkivschema)
-			logger.info("$key: Finished deleting files")
-
-		} catch (e: ArchivingException) {
-			// Log nothing, the Exceptions of this type are supposed to already have been logged
-
-		} catch (e: Exception) {
-			logger.error("$key: Error when performing scheduled task to delete files", e)
-
-		} catch (t: Throwable) {
-			logger.error("$key: Serious error when performing scheduled task to delete files", t)
-			throw t
-
-		} finally {
-			if (tasks[key] != null) {
-				setStateChange(key, EventTypes.FINISHED, soknadarkivschema, tasks[key]?.count!!)
-			}
-			MDC.clear()
 		}
 	}
 

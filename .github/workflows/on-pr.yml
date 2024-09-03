@@ -22,10 +22,10 @@ jobs:
         with:
           component_name: soknadsmottaker
 
-      - name: 'Build the code for soknadsfillager'
+      - name: 'Build the code for innsending-api'
         uses: navikt/archiving-infrastructure/.github/checkout-and-build@main
         with:
-          component_name: soknadsfillager
+          component_name: innsending-api
 
       - name: 'Build the code for soknadsarkiverer (this PR)'
         uses: navikt/archiving-infrastructure/.github/checkout-and-build@main

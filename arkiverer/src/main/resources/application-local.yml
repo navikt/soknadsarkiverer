@@ -45,9 +45,6 @@ joark:
   host: http://localhost:2908
   sendToJoark: true
   journal-post: /rest/journalpostapi/v1/journalpost
-filestorage:
-  host: http://localhost:2908
-  files: /files/
 innsendingapi:
   host: http://localhost:2908
 saf:
@@ -75,14 +72,6 @@ no.nav.security:
         accepted-audience: azuread-client-id
     client:
       registration:
-        soknadsfillager:
-          token-endpoint-url: http://localhost:6969/fake/token
-          grant-type: client_credentials
-          scope: ${SOKNADSFILLAGER_SCOPE}
-          authentication:
-            client-id: fake
-            client-secret: someSecret
-            client-auth-method: client_secret_basic
         innsendingApi:
           token-endpoint-url: http://localhost:6969/fake/token
           grant-type: client_credentials

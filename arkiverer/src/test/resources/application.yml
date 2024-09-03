@@ -45,9 +45,6 @@ joark:
   host: http://localhost:2908
   sendToJoark: true
   journal-post: /rest/journalpostapi/v1/journalpost
-filestorage:
-  host: http://localhost:2908
-  files: /files/
 innsendingapi:
   host: http://localhost:2908
 saf:

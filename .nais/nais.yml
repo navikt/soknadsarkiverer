@@ -60,11 +60,6 @@ spec:
     inbound:
       rules:
         - application: innsending-admin
-        - application: debug-dings
-          namespace: plattformsikkerhet
-          cluster: dev-gcp
-        - application: statuspoll
-          namespace: navdig
     outbound:
       rules:
       {{#each outboundRules}}
@@ -98,16 +93,12 @@ spec:
       value: {{kafka-arkiveringstilbakemeldinger-topic}}
     - name: KAFKA_METRICS_TOPIC
       value: {{kafka-metrics-topic}}
-    - name: FILESTORAGE_HOST
-      value: {{filestorage-host}}
     - name: INNSENDING_API_HOST
       value: {{innsending-api-host}}
     - name: JOARK_HOST
       value: {{joark-host}}
     - name: DOKARKIV_SCOPE
       value: {{dokarkiv-scope}}
-    - name: SOKNADSFILLAGER_SCOPE
-      value: {{soknadsfillager-scope}}
     - name: INNSENDING_API_SCOPE
       value: {{innsending-api-scope}}
     - name: SEND_TO_JOARK

@@ -36,7 +36,6 @@ class TaskListServiceTests {
 			)
 		)
 		every { it.archive(any(), any(), any()) } just Runs
-		every { it.deleteFiles(any(), any()) } just Runs
 	}
 	private val kafkaPublisher = mockk<KafkaPublisher>().also {
 		every { it.putProcessingEventOnTopic(any(), any(), any()) } just Runs

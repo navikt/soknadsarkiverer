@@ -5,12 +5,10 @@
 	"replicas-max": "4",
 	"ingress": "https://soknadsarkiverer-gcp.intern.nav.no",
 	"outboundRules": [
-		"soknadsfillager",
 		"innsending-api"
 	],
 	"outboundExternalHosts": [
 		"dokarkiv.prod-fss-pub.nais.io",
-		"soknadsfillager-gcp.intern.nav.no",
 		"innsending-api-gcp.intern.nav.no",
 		"saf.prod-fss-pub.nais.io"
 	],
@@ -19,11 +17,9 @@
 	"kafka-message-topic": "team-soknad.privat-soknadinnsending-messages-v2",
 	"kafka-arkiveringstilbakemeldinger-topic": "team-soknad.privat-soknadinnsending-arkiveringstilbakemeldinger-v1",
 	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v2",
-	"filestorage-host": "https://soknadsfillager-gcp.intern.nav.no",
 	"innsending-api-host": "https://innsending-api-gcp.intern.nav.no",
 	"joark-host": "https://dokarkiv.prod-fss-pub.nais.io",
 	"dokarkiv-scope": "api://prod-fss.teamdokumenthandtering.dokarkiv/.default",
-	"soknadsfillager-scope": "api://prod-gcp.team-soknad.soknadsfillager/.default",
 	"innsending-api-scope": "api://prod-gcp.team-soknad.innsending-api/.default",
 	"send-to-joark": "true",
 	"kafka-pool": "nav-prod",

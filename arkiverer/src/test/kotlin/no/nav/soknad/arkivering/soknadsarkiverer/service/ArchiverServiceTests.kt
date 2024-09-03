@@ -24,38 +24,6 @@ class ArchiverServiceTests {
 
 	private lateinit var metrics: ArchivingMetrics
 
-	private val filestorage = mockk<FilestorageService>().also {
-		every {
-			it.getFilesFromFilestorage(any(), any())
-		} returns FetchFileResponse(
-			status = "ok",
-			listOf(FileInfo("id", "content".toByteArray(), ResponseStatus.Ok)), exception = null
-		)
-	}
-	private val filestorageNotFound = mockk<FilestorageService>().also {
-		every {
-			it.getFilesFromFilestorage(any(), any())
-		} returns FetchFileResponse(
-			status = "not-found",
-			files = null, exception = null
-		)
-	}
-	private val filestorageDeleted = mockk<FilestorageService>().also {
-		every {
-			it.getFilesFromFilestorage(any(), any())
-		} returns FetchFileResponse(
-			status = "deleted",
-			files = null, exception = null
-		)
-	}
-	private val filestorageException = mockk<FilestorageService>().also {
-		every {
-			it.getFilesFromFilestorage(any(), any())
-		} returns FetchFileResponse(
-			status = "exception",
-			files = null, exception = RuntimeException("En feil har oppstått")
-		)
-	}
 	private val innsendingApi = mockk<InnsendingService>().also {
 		every {
 			it.getFilesFromFilestorage(any(), any())
@@ -72,23 +40,6 @@ class ArchiverServiceTests {
 			files = null, exception = null
 		)
 	}
-	private val innsendingApiDeleted = mockk<InnsendingService>().also {
-		every {
-			it.getFilesFromFilestorage(any(), any())
-		} returns FetchFileResponse(
-			status = "deleted",
-			files = null, exception = null
-		)
-	}
-	private val innsendingApiException = mockk<InnsendingService>().also {
-		every {
-			it.getFilesFromFilestorage(any(), any())
-		} returns FetchFileResponse(
-			status = "exception",
-			files = null, exception = RuntimeException("En feil har oppstått")
-		)
-	}
-
 
 	private val journalpostClient = mockk<JournalpostClientInterface>().also {
 		every { it.opprettJournalpost(any(), any(), any()) } returns UUID.randomUUID().toString()
@@ -115,7 +66,7 @@ class ArchiverServiceTests {
 
 	@Test
 	fun `Archiving already archived application throws exception`() {
-		archiverService = ArchiverService(filestorage, innsendingApiNotFound, journalpostClient, metrics, kafkaPublisher)
+		archiverService = ArchiverService(innsendingApiNotFound, journalpostClient, metrics, kafkaPublisher)
 
 		val key2 = UUID.randomUUID().toString()
 		mockAlreadyArchivedException(key2)
@@ -135,7 +86,7 @@ class ArchiverServiceTests {
 
 	@Test
 	fun `Fetch file metrics test`() {
-		archiverService = ArchiverService(filestorageNotFound, innsendingApi, journalpostClient2, metrics, kafkaPublisher)
+		archiverService = ArchiverService(innsendingApi, journalpostClient2, metrics, kafkaPublisher)
 		val key = UUID.randomUUID().toString()
 		val tema = "AAP"
 		val soknadschema =
@@ -167,14 +118,13 @@ class ArchiverServiceTests {
 
 	@Test
 	fun `Archiving succeeds when all is up and running`() {
-		archiverService = ArchiverService(filestorageNotFound, innsendingApi, journalpostClient2, metrics, kafkaPublisher)
+		archiverService = ArchiverService(innsendingApi, journalpostClient2, metrics, kafkaPublisher)
 		val key = UUID.randomUUID().toString()
 		val soknadschema = createSoknadarkivschema()
 
 		CoroutineScope(Dispatchers.Default).launch {
 			archiverService.archive(key, soknadschema, archiverService.fetchFiles(key, soknadschema))
 
-			verify(exactly = 1) { filestorageNotFound.getFilesFromFilestorage(eq(key), eq(soknadschema)) }
 			verify(exactly = 1) { innsendingApi.getFilesFromFilestorage(eq(key), eq(soknadschema)) }
 			verify(exactly = 1) { journalpostClient2.opprettJournalpost(eq(key), eq(soknadschema), any()) }
 			assertTrue(filer.isCaptured)
@@ -186,7 +136,7 @@ class ArchiverServiceTests {
 	@Test
 	fun `Archiving fails when no files is found`() {
 		archiverService =
-			ArchiverService(filestorageNotFound, innsendingApiNotFound, journalpostClient, metrics, kafkaPublisher)
+			ArchiverService(innsendingApiNotFound, journalpostClient, metrics, kafkaPublisher)
 
 		val key = UUID.randomUUID().toString()
 		val soknadschema = createSoknadarkivschema()
