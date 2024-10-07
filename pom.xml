@@ -19,7 +19,7 @@
 	<properties>
 		<java.version>21</java.version>
 		<spring-boot.version>3.3.4</spring-boot.version>
-		<spring-web.version>6.1.13</spring-web.version>
+		<spring-web.version>6.1.12</spring-web.version>
 
 		<kotlin.version>2.0.20</kotlin.version>
 		<maven.version>3.8.8</maven.version>
