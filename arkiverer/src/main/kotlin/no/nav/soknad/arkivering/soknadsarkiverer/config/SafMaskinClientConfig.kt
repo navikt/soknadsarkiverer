@@ -66,7 +66,7 @@ class SafMaskinClientConfig(
 				it.header(NAV_CONSUMER_ID, applicationName)
 				it.header(
 					HttpHeaders.AUTHORIZATION,
-					"$BEARER${oAuth2AccessTokenService.getAccessToken(getClientProperties(oauth2Config))?.accessToken}",
+					"$BEARER${oAuth2AccessTokenService.getAccessToken(getClientProperties(oauth2Config)).access_token}",
 				)
 			}
 
