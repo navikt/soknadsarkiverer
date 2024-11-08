@@ -67,11 +67,6 @@
 			<artifactId>kotlin-reflect</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.fasterxml.jackson.module</groupId>
-			<artifactId>jackson-module-kotlin</artifactId>
-			<version>${jackson-module-kotlin.version}</version>
-		</dependency>
-		<dependency>
 			<groupId>com.expediagroup</groupId>
 			<artifactId>graphql-kotlin-spring-client</artifactId>
 			<version>${graphql-kotlin.version}</version>

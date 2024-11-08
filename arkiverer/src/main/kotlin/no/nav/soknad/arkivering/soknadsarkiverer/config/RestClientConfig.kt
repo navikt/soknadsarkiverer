@@ -123,7 +123,7 @@ class RestClientConfig {
 			body: ByteArray,
 			execution: ClientHttpRequestExecution
 		): ClientHttpResponse {
-			val token = tokenService.getToken()?.accessToken
+			val token = tokenService.getToken()?.access_token
 			val callId = MDC.get(Constants.HEADER_CALL_ID)
 
 			logger.info("Kaller service med callId: $callId")
