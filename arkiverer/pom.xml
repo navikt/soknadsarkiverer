@@ -94,8 +94,8 @@
 			<version>${kafka-streams-avro-serde.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>com.github.navikt</groupId>
-			<artifactId>soknadarkiv-schema</artifactId>
+			<groupId>no.nav.soknad.arkivering</groupId>
+			<artifactId>avro-schemas</artifactId>
 			<version>${arkivering-schemas.version}</version>
 		</dependency>
 
@@ -256,16 +256,16 @@
 
 	<repositories>
 		<repository>
-			<id>jitpack.io</id>
-			<url>https://jitpack.io</url>
-		</repository>
-		<repository>
 			<id>central</id>
 			<url>https://repo1.maven.org/maven2</url>
 		</repository>
 		<repository>
 			<id>confluent</id>
 			<url>https://packages.confluent.io/maven</url>
+		</repository>
+		<repository>
+			<id>github</id>
+			<url>https://github-package-registry-mirror.gc.nav.no/cached/maven-release</url>
 		</repository>
 	</repositories>
 </project>
