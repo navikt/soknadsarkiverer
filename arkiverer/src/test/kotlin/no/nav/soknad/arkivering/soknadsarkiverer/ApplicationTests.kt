@@ -588,13 +588,13 @@ class ApplicationTests : ContainerizedKafka() {
 
 		val tasksBefore = metrics.getTasks()
 		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
-		val getFilestorageErrorsBefore = metrics.getGetFilestorageErrors()
 		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
 		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
 		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
 		val joarkErrorsBefore = metrics.getJoarkErrors()
 
 		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
+		val getFilestorageErrorsBefore = metrics.getGetFilestorageErrors()
 
 		verifyProcessingEvents(
 			key, mapOf(

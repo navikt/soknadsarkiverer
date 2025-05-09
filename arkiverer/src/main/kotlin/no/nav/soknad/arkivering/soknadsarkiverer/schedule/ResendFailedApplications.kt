@@ -1,6 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.schedule
 
-import com.nimbusds.jose.shaded.gson.Gson
+import com.google.gson.Gson
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
