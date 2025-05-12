@@ -46,7 +46,7 @@
 		<coroutines.version>1.10.2</coroutines.version>
 
 		<!--Kafka-->
-		<kafka.version>3.9.0</kafka.version>
+		<kafka.version>4.0.0</kafka.version>
 		<kafka-streams-avro-serde.version>7.9.0</kafka-streams-avro-serde.version>
 		<arkivering-schemas.version>1.4.4-bf301c4492e2</arkivering-schemas.version>
 
