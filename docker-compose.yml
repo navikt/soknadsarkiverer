@@ -39,7 +39,7 @@ services:
       - 22181:2181
 
   kafka:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:7.9.1
     depends_on:
       - zookeeper
     ports:

@@ -48,7 +48,15 @@ class RestClientConfig {
 	@Bean
 	@Profile("!(prod | dev)")
 	@Qualifier("archiveRestClient")
-	fun archiveTestWebClient(@Value("\${joark.host}") joarkHost: String): RestClient = RestClient.builder().baseUrl(joarkHost).build()
+	fun archiveTestWebClient(
+		@Value("\${joark.host}") joarkHost: String, archivingTimeoutProperties: ArchivingTimeoutProperties
+	): RestClient = RestClient.builder().baseUrl(joarkHost).requestFactory(
+			timeouts(
+				readTimeoutMinutes = archivingTimeoutProperties.readTimeout,
+				connectTimeoutSeconds = archivingTimeoutProperties.connectTimeout,
+				exchangeTimeoutMinutes = archivingTimeoutProperties.exchangeTimeout
+			)
+		).build()
 
 
 
@@ -83,8 +91,14 @@ class RestClientConfig {
 	@Bean
 	@Profile("!(prod | dev)")
 	@Qualifier("innsendingApiRestClient")
-	fun innsendingApiClientWithoutOAuth(innsendingApiProperties: InnsendingApiProperties)
-		= RestClient.builder().baseUrl(innsendingApiProperties.host).build()
+	fun innsendingApiClientWithoutOAuth(
+		innsendingApiProperties: InnsendingApiProperties, fileFetchTimeoutProperties: FileFetchTimeoutProperties
+	) = RestClient.builder().baseUrl(innsendingApiProperties.host).requestFactory(
+		timeouts(
+			readTimeoutMinutes = fileFetchTimeoutProperties.readTimeout.toLong(),
+			connectTimeoutSeconds = fileFetchTimeoutProperties.connectTimeout.toLong()
+		)
+	).build()
 
 	@Bean
 	fun hentInnsendteFilerApi(
