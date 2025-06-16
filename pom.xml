@@ -48,7 +48,7 @@
 		<!--Kafka-->
 		<kafka.version>3.9.0</kafka.version>
 		<kafka-streams-avro-serde.version>7.9.0</kafka-streams-avro-serde.version>
-		<arkivering-schemas.version>1.4.4-bf301c4492e2</arkivering-schemas.version>
+		<arkivering-schemas.version>29ee75ed</arkivering-schemas.version>
 
 		<!--Logging-->
 		<logstash.version>8.1</logstash.version>
