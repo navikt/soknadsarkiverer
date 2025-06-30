@@ -810,10 +810,10 @@ class ApplicationTests : ContainerizedKafka() {
 					"SOK",
 					listOf(
 						DokumentVariant(
-							soknadsarkivschema.mottatteDokumenter[0].mottatteVarianter[0].filnavn,
-							"PDFA",
-							filestorageContent.toByteArray(),
-							soknadsarkivschema.mottatteDokumenter[0].mottatteVarianter[0].variantformat
+							filnavn = soknadsarkivschema.mottatteDokumenter[0].mottatteVarianter[0].filnavn,
+							filtype = "PDFA",
+							fysiskDokument = 	filestorageContent.toByteArray(),
+							variantformat = soknadsarkivschema.mottatteDokumenter[0].mottatteVarianter[0].variantformat
 						)
 					)
 				)

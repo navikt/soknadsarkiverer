@@ -9,6 +9,7 @@ import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -75,7 +76,7 @@ class KafkaStreamsSetup(
 			.leftJoin(mainTopicTable, { state, soknadarkivschema -> soknadarkivschema to state }, joinDef) // Oppdatere state på tabell, archivingState, ved join av soknadarkivschema og state.
 			.filter { key, (soknadarkivschema, _) -> filterSoknadarkivschemaThatAreNull(key, soknadarkivschema) } // Ta bort alle innslag i tabell der soknadarkivschema er null.
 			.peek { key, (soknadarkivschema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state Soknadarkivschema: ${soknadarkivschema.print()}") }
-			.foreach { key, (soknadarkivschema, state) ->	taskListService.addOrUpdateTask(key, soknadarkivschema, state.type)	} // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
+			.foreach { key, (soknadarkivschema, state) ->	taskListService.addOrUpdateTask(key, translate(soknadarkivschema), state.type)	} // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
 	}
 
 	private fun isConsideredFinished(key: String, processingEvent: ProcessingEvent): Boolean {

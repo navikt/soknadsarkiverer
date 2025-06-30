@@ -23,6 +23,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
 import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafServiceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
+import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -482,7 +483,7 @@ class StateRecreationTests : ContainerizedKafka() {
 			if (key == null || timesCalled == 0)
 				verify(atLeast = timesCalled) { taskListService.addOrUpdateTask(any(), any(), any(), any()) }
 			else
-				verify(atLeast = timesCalled) { taskListService.addOrUpdateTask(eq(key), eq(soknadarkivschema), any(), any()) }
+				verify(atLeast = timesCalled) { taskListService.addOrUpdateTask(eq(key), eq(translate(soknadarkivschema)), any(), any()) }
 		}
 	}
 

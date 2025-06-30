@@ -6,6 +6,7 @@ import no.nav.soknad.arkivering.avroschemas.Soknadstyper
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.converter.createOpprettJournalpostRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
+import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattDokumentBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattVariantBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.SoknadarkivschemaBuilder
@@ -24,7 +25,7 @@ class MessageConverterTests {
 		val uuid = UUID.randomUUID().toString()
 		val files = listOf(FileInfo(uuid, "apa".toByteArray(), ResponseStatus.Ok))
 
-		val schema = SoknadarkivschemaBuilder()
+		val schema = translate(SoknadarkivschemaBuilder()
 			.withSoknadstype(Soknadstyper.SOKNAD)
 			.withMottatteDokumenter(
 				MottattDokumentBuilder()
@@ -38,6 +39,7 @@ class MessageConverterTests {
 					.build()
 			)
 			.build()
+		)
 
 		val arkivData = createOpprettJournalpostRequest(schema, files)
 
@@ -54,7 +56,7 @@ class MessageConverterTests {
 		val uuid = UUID.randomUUID().toString()
 		val files = listOf(FileInfo(uuid, "apa".toByteArray(), ResponseStatus.Ok))
 
-		val schema = SoknadarkivschemaBuilder()
+		val schema = translate(SoknadarkivschemaBuilder()
 			.withSoknadstype(Soknadstyper.ETTERSENDING)
 			.withMottatteDokumenter(
 				MottattDokumentBuilder()
@@ -68,6 +70,7 @@ class MessageConverterTests {
 					.build()
 			)
 			.build()
+		)
 
 		val arkivData = createOpprettJournalpostRequest(schema, files)
 
@@ -84,7 +87,7 @@ class MessageConverterTests {
 		val uuid = UUID.randomUUID().toString()
 		val files = listOf(FileInfo(uuid, "apa".toByteArray(), ResponseStatus.Ok))
 
-		val schema = SoknadarkivschemaBuilder()
+		val schema = translate(SoknadarkivschemaBuilder()
 			.withSoknadstype(Soknadstyper.ETTERSENDING)
 			.withMottatteDokumenter(
 				MottattDokumentBuilder()
@@ -103,6 +106,7 @@ class MessageConverterTests {
 					.build()
 			)
 			.build()
+		)
 
 		val arkivData = createOpprettJournalpostRequest(schema, files)
 
@@ -127,7 +131,7 @@ class MessageConverterTests {
 		)
 
 
-		val schema = SoknadarkivschemaBuilder()
+		val schema = translate(SoknadarkivschemaBuilder()
 			.withArkivtema("AAP")
 			.withFodselsnummer("09876543210")
 			.withInnsendtDato(innsendtDateTime)
@@ -144,6 +148,7 @@ class MessageConverterTests {
 							.withUuid(uuid0)
 							.withFilnavn("apa")
 							.withfiltype("PDFA")
+							.withVariantformat("ARKIV")
 							.build()
 					)
 					.build(),
@@ -177,54 +182,55 @@ class MessageConverterTests {
 					.build()
 			)
 			.build()
+		)
 
 		val arkivData = createOpprettJournalpostRequest(schema, files)
 
 		assertEquals("INNGAAENDE", arkivData.journalpostType)
 		assertEquals("NAV_NO", arkivData.kanal)
-		assertEquals("FNR", arkivData.bruker.idType)
-		assertEquals(schema.fodselsnummer, arkivData.bruker.id)
+		assertEquals("FNR", arkivData.bruker?.idType)
+		assertEquals(schema.brukerDto?.id, arkivData.bruker?.id)
 		assertEquals("2020-03-17T13:37:17+01:00", arkivData.datoMottatt)
-		assertEquals(schema.behandlingsid, arkivData.eksternReferanseId)
+		assertEquals(schema.innsendingsId, arkivData.eksternReferanseId)
 		assertEquals(schema.arkivtema, arkivData.tema)
 		assertEquals(arkivData.tittel, arkivData.dokumenter[0].tittel)
 
 		assertEquals(3, arkivData.dokumenter.size)
-		assertEquals(schema.mottatteDokumenter[0].tittel, arkivData.dokumenter[0].tittel)
-		assertEquals(schema.mottatteDokumenter[0].skjemanummer, arkivData.dokumenter[0].brevkode)
+		assertEquals(schema.dokumenter[0].tittel, arkivData.dokumenter[0].tittel)
+		assertEquals(schema.dokumenter[0].skjemanummer, arkivData.dokumenter[0].brevkode)
 		assertEquals("SOK", arkivData.dokumenter[0].dokumentKategori)
 
 		assertEquals(1, arkivData.dokumenter[0].dokumentvarianter.size)
-		assertEquals(schema.mottatteDokumenter[0].mottatteVarianter[0].filnavn, arkivData.dokumenter[0].dokumentvarianter[0].filnavn)
-		assertEquals(schema.mottatteDokumenter[0].mottatteVarianter[0].filtype, arkivData.dokumenter[0].dokumentvarianter[0].filtype)
-		assertEquals(schema.mottatteDokumenter[0].mottatteVarianter[0].variantformat, arkivData.dokumenter[0].dokumentvarianter[0].variantformat)
+		assertEquals(schema.dokumenter[0].varianter[0].filnavn, arkivData.dokumenter[0].dokumentvarianter[0].filnavn)
+		assertEquals(schema.dokumenter[0].varianter[0].filtype, arkivData.dokumenter[0].dokumentvarianter[0].filtype)
+		assertEquals(schema.dokumenter[0].varianter[0].variantFormat, arkivData.dokumenter[0].dokumentvarianter[0].variantformat)
 		assertEquals(files[0].content, arkivData.dokumenter[0].dokumentvarianter[0].fysiskDokument)
 
 
-		assertEquals(schema.mottatteDokumenter[1].tittel, arkivData.dokumenter[1].tittel)
-		assertEquals(schema.mottatteDokumenter[1].skjemanummer, arkivData.dokumenter[1].brevkode)
+		assertEquals(schema.dokumenter[1].tittel, arkivData.dokumenter[1].tittel)
+		assertEquals(schema.dokumenter[1].skjemanummer, arkivData.dokumenter[1].brevkode)
 		assertEquals("SOK", arkivData.dokumenter[1].dokumentKategori)
 
 		assertEquals(2, arkivData.dokumenter[1].dokumentvarianter.size)
-		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[0].filnavn, arkivData.dokumenter[1].dokumentvarianter[0].filnavn)
-		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[0].filtype.uppercase(), arkivData.dokumenter[1].dokumentvarianter[0].filtype)
-		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[0].variantformat, arkivData.dokumenter[1].dokumentvarianter[0].variantformat)
+		assertEquals(schema.dokumenter[1].varianter[0].filnavn, arkivData.dokumenter[1].dokumentvarianter[0].filnavn)
+		assertEquals(schema.dokumenter[1].varianter[0].filtype.uppercase(), arkivData.dokumenter[1].dokumentvarianter[0].filtype)
+		assertEquals(schema.dokumenter[1].varianter[0].variantFormat, arkivData.dokumenter[1].dokumentvarianter[0].variantformat)
 		assertEquals(files[1].content, arkivData.dokumenter[1].dokumentvarianter[0].fysiskDokument)
 
-		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[1].filnavn, arkivData.dokumenter[1].dokumentvarianter[1].filnavn)
-		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[1].filtype, arkivData.dokumenter[1].dokumentvarianter[1].filtype)
-		assertEquals(schema.mottatteDokumenter[1].mottatteVarianter[1].variantformat, arkivData.dokumenter[1].dokumentvarianter[1].variantformat)
+		assertEquals(schema.dokumenter[1].varianter[1].filnavn, arkivData.dokumenter[1].dokumentvarianter[1].filnavn)
+		assertEquals(schema.dokumenter[1].varianter[1].filtype, arkivData.dokumenter[1].dokumentvarianter[1].filtype)
+		assertEquals(schema.dokumenter[1].varianter[1].variantFormat, arkivData.dokumenter[1].dokumentvarianter[1].variantformat)
 		assertEquals(files[2].content, arkivData.dokumenter[1].dokumentvarianter[1].fysiskDokument)
 
 
-		assertEquals(schema.mottatteDokumenter[2].tittel, arkivData.dokumenter[2].tittel)
-		assertEquals(schema.mottatteDokumenter[2].skjemanummer, arkivData.dokumenter[2].brevkode)
+		assertEquals(schema.dokumenter[2].tittel, arkivData.dokumenter[2].tittel)
+		assertEquals(schema.dokumenter[2].skjemanummer, arkivData.dokumenter[2].brevkode)
 		assertEquals("SOK", arkivData.dokumenter[2].dokumentKategori)
 
 		assertEquals(1, arkivData.dokumenter[2].dokumentvarianter.size)
-		assertEquals(schema.mottatteDokumenter[2].mottatteVarianter[0].filnavn, arkivData.dokumenter[2].dokumentvarianter[0].filnavn)
-		assertEquals(schema.mottatteDokumenter[2].mottatteVarianter[0].filtype, arkivData.dokumenter[2].dokumentvarianter[0].filtype)
-		assertEquals(schema.mottatteDokumenter[2].mottatteVarianter[0].variantformat, arkivData.dokumenter[2].dokumentvarianter[0].variantformat)
+		assertEquals(schema.dokumenter[2].varianter[0].filnavn, arkivData.dokumenter[2].dokumentvarianter[0].filnavn)
+		assertEquals(schema.dokumenter[2].varianter[0].filtype, arkivData.dokumenter[2].dokumentvarianter[0].filtype)
+		assertEquals(schema.dokumenter[2].varianter[0].variantFormat, arkivData.dokumenter[2].dokumentvarianter[0].variantformat)
 		assertEquals(files[3].content, arkivData.dokumenter[2].dokumentvarianter[0].fysiskDokument)
 	}
 
@@ -235,7 +241,7 @@ class MessageConverterTests {
 		val uuid1 = UUID.randomUUID().toString()
 		val files = listOf(FileInfo(uuid0, "apa".toByteArray(), ResponseStatus.Ok), FileInfo(uuid1, "bepa".toByteArray(), ResponseStatus.Ok))
 
-		val schema = SoknadarkivschemaBuilder()
+		val schema = translate(SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
 
 				MottattDokumentBuilder()
@@ -249,6 +255,7 @@ class MessageConverterTests {
 					.build()
 			)
 			.build()
+		)
 
 
 		assertThrows<Exception> {
@@ -262,7 +269,7 @@ class MessageConverterTests {
 		val uuid1 = UUID.randomUUID().toString()
 		val files = listOf(FileInfo(uuid0, "apa".toByteArray(), ResponseStatus.Ok), FileInfo(uuid1, "bepa".toByteArray(), ResponseStatus.Ok))
 
-		val schema = SoknadarkivschemaBuilder()
+		val schema = translate(SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
 
 				MottattDokumentBuilder()
@@ -272,7 +279,7 @@ class MessageConverterTests {
 					.build(),
 				)
 			.build()
-
+		)
 
 		assertEquals(1, createOpprettJournalpostRequest(schema, files).dokumenter.first().dokumentvarianter.size)
 	}
@@ -283,7 +290,7 @@ class MessageConverterTests {
 		val uuid1 = UUID.randomUUID().toString()
 		val files = listOf(FileInfo(uuid0, "apa".toByteArray(), ResponseStatus.Ok), FileInfo(uuid1, "bepa".toByteArray(), ResponseStatus.Ok))
 
-		val schema = SoknadarkivschemaBuilder()
+		val schema = translate(SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
 
 				MottattDokumentBuilder()
@@ -297,6 +304,7 @@ class MessageConverterTests {
 					.build()
 			)
 			.build()
+		)
 
 
 		assertThrows<Exception> {
@@ -308,10 +316,8 @@ class MessageConverterTests {
 	fun `No MottatteDokumenter -- should throw exception`() {
 		val files = listOf(FileInfo(UUID.randomUUID().toString(), "apa".toByteArray()))
 
-		val schema = SoknadarkivschemaBuilder().build()
-
-
 		assertThrows<Exception> {
+			val schema = translate(SoknadarkivschemaBuilder().build())
 			createOpprettJournalpostRequest(schema, files)
 		}
 	}
@@ -320,12 +326,12 @@ class MessageConverterTests {
 	fun `No MottatteVarianter -- should throw exception`() {
 		val files = listOf(FileInfo(UUID.randomUUID().toString(), "apa".toByteArray()))
 
-		val schema = SoknadarkivschemaBuilder()
+		val schema = translate(SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
 				MottattDokumentBuilder().withErHovedskjema(true).build()
 			)
 			.build()
-
+		)
 
 		assertThrows<Exception> {
 			createOpprettJournalpostRequest(schema, files)
@@ -335,14 +341,14 @@ class MessageConverterTests {
 	@Test
 	fun `No files -- should throw exception`() {
 
-		val schema = SoknadarkivschemaBuilder()
+		val schema = translate(SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
 				MottattDokumentBuilder()
 					.withMottatteVarianter(MottattVariantBuilder().withUuid(UUID.randomUUID().toString()).build())
 					.build()
 			)
 			.build()
-
+		)
 
 		assertThrows<Exception> {
 			createOpprettJournalpostRequest(schema, emptyList())
@@ -356,13 +362,14 @@ class MessageConverterTests {
 		val uuidNotInFileList = UUID.randomUUID().toString()
 		val files = listOf(FileInfo(uuid0, "apa".toByteArray()), FileInfo(uuid1, "bepa".toByteArray()))
 
-		val schema = SoknadarkivschemaBuilder()
+		val schema = translate(SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
 				MottattDokumentBuilder()
 					.withMottatteVarianter(MottattVariantBuilder().withUuid(uuidNotInFileList).build())
 					.build()
 			)
 			.build()
+		)
 
 
 		assertThrows<Exception> {
@@ -375,14 +382,14 @@ class MessageConverterTests {
 		val uuid = UUID.randomUUID().toString()
 		val files = listOf(FileInfo(uuid, null))
 
-		val schema = SoknadarkivschemaBuilder()
+		val schema = translate(SoknadarkivschemaBuilder()
 			.withMottatteDokumenter(
 				MottattDokumentBuilder()
 					.withMottatteVarianter(MottattVariantBuilder().withUuid(uuid).build())
 					.build()
 			)
 			.build()
-
+		)
 
 		assertThrows<Exception> {
 			createOpprettJournalpostRequest(schema, files)
@@ -399,7 +406,7 @@ class MessageConverterTests {
 			FileInfo("7311e586-c424-4898-a6b1-a2085ecf461d", "apa".toByteArray(), ResponseStatus.Ok)
 		)
 
-		val schema = convertJsonTilInnsendtSoknad()
+		val schema = translate(convertJsonTilInnsendtSoknad())
 
 		val arkivData = createOpprettJournalpostRequest(schema, files)
 

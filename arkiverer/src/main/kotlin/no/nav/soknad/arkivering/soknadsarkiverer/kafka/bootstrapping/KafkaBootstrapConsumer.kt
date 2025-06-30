@@ -5,6 +5,7 @@ import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.*
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
+import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.Deserializer
 import org.slf4j.LoggerFactory
@@ -45,7 +46,7 @@ class KafkaBootstrapConsumer(
 			.forEach { (key, soknadsarkivschema) ->
 				val state = filteredUnfinishedProcessingEvents[key] ?: ProcessingEvent(EventTypes.RECEIVED)
 
-				taskListService.addOrUpdateTask(key, soknadsarkivschema, state.type, true)
+				taskListService.addOrUpdateTask(key, translate(soknadsarkivschema), state.type, true)
 			}
 	}
 

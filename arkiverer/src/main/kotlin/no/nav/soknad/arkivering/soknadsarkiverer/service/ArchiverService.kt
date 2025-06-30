@@ -1,7 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
 import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
-import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ShuttingDownException
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
@@ -11,6 +10,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FilesAlread
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.InnsendingService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
+import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.io.PrintWriter
@@ -25,12 +25,12 @@ class ArchiverService(
 ) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	fun archive(key: String, data: Soknadarkivschema, files: List<FileInfo>) {
+	fun archive(key: String, data: InnsendingTopicMsg, files: List<FileInfo>) {
 		try {
 			val startTime = System.currentTimeMillis()
 			val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
 			createMetricAndPublishOnKafka(key, "send files to archive", startTime)
-			logger.info("$key: Opprettet journalpostId=$journalpostId for behandlingsid=${data.behandlingsid}")
+			logger.info("$key: Opprettet journalpostId=$journalpostId for behandlingsid=${data.innsendingsId}")
 			// TODO fjern createMessage når innsending-api leser fra arkiveringstilbakemeldinger topic
 			createMessage(key, "**Archiving: OK.  journalpostId=$journalpostId")
 			createArkiveringstilbakemelding(key, "**Archiving: OK.  journalpostId=$journalpostId")
@@ -47,7 +47,7 @@ class ArchiverService(
 		}
 	}
 
-	suspend fun fetchFiles(key: String, data: Soknadarkivschema): List<FileInfo> {
+	suspend fun fetchFiles(key: String, data: InnsendingTopicMsg): List<FileInfo> {
 		return try {
 			val startTime = System.currentTimeMillis()
 			val response = innsendingService.getFilesFromFilestorage(key, data)

@@ -5,7 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
-import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
+import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import no.nav.soknad.arkivering.soknadsarkiverer.Constants.MDC_INNSENDINGS_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.config.*
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
@@ -50,7 +50,7 @@ open class TaskListService(
 	@Synchronized
 	open fun addOrUpdateTask(
 		key: String,
-		soknadarkivschema: Soknadarkivschema,
+		soknadarkivschema: InnsendingTopicMsg,
 		state: EventTypes,
 		isBootstrappingTask: Boolean = false
 	) {
@@ -65,7 +65,7 @@ open class TaskListService(
 
 	private fun newTask(
 		key: String,
-		soknadarkivschema: Soknadarkivschema,
+		soknadarkivschema: InnsendingTopicMsg,
 		state: EventTypes,
 		isBootstrappingTask: Boolean
 	) {
@@ -95,7 +95,7 @@ open class TaskListService(
 		}
 	}
 
-	private fun setStateChange(key: String, state: EventTypes, soknadarkivschema: Soknadarkivschema, attempt: Int) {
+	private fun setStateChange(key: String, state: EventTypes, soknadarkivschema: InnsendingTopicMsg, attempt: Int) {
 		MDC.put(MDC_INNSENDINGS_ID, key)
 		if (processRun) {
 			currentTaskStates[key] = state
@@ -146,7 +146,7 @@ open class TaskListService(
 
 	internal fun getNumberOfAttempts(key: String): Int? = tasks[key]?.count
 
-	private fun schedule(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
+	private fun schedule(key: String, soknadarkivschema: InnsendingTopicMsg, attempt: Int = 0) {
 
 		logger.debug("$key: In schedule. Attempts: ($attempt), loggedstate: ${loggedTaskStates[key]}, currentTaskState: ${currentTaskStates[key]}")
 
@@ -163,7 +163,7 @@ open class TaskListService(
 		}
 	}
 
-	fun receivedState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
+	fun receivedState(key: String, soknadarkivschema: InnsendingTopicMsg, attempt: Int = 0) {
 		if (tasks[key] != null && startUpEndTime.isAfter(Instant.now())) {
 			// When recreating state, there could be more state updates in the processLoggTopic.
 			// Wait a little while to make sure we don't start before all queued states are read inorder to process the most recent state.
@@ -175,7 +175,7 @@ open class TaskListService(
 		}
 	}
 
-	private fun archiveState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
+	private fun archiveState(key: String, soknadarkivschema: InnsendingTopicMsg, attempt: Int = 0) {
 		val secondsToWait = getSecondsToWait(attempt)
 		val scheduledTime = Instant.now().plusSeconds(secondsToWait)
 		val task = { tryToArchive(key, soknadarkivschema, attempt) }
@@ -187,7 +187,7 @@ open class TaskListService(
 			scheduler.schedule(task, scheduledTime)
 	}
 
-	private fun deleteFilesState(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int = 0) {
+	private fun deleteFilesState(key: String, soknadarkivschema: InnsendingTopicMsg, attempt: Int = 0) {
 		logger.info("$key: state = ARCHIVED. Will set state to FINISHED (attempt $attempt)")
 		setStateChange(key, EventTypes.FINISHED, soknadarkivschema, attempt)
 	}
@@ -240,7 +240,7 @@ open class TaskListService(
 		return secondsBetweenRetries[index]
 	}
 
-	private fun tryToArchive(key: String, soknadarkivschema: Soknadarkivschema, attempt: Int) {
+	private fun tryToArchive(key: String, soknadarkivschema: InnsendingTopicMsg, attempt: Int) {
 		CoroutineScope(Dispatchers.Default).launch {
 			MDC.put(MDC_INNSENDINGS_ID, key)
 			var nextState: EventTypes? = null
@@ -313,7 +313,7 @@ open class TaskListService(
 				metrics.endTimer(timer)
 				metrics.endHistogramTimer(histogram)
 				metrics.setNumberOfAttachmentHistogram(
-					soknadarkivschema.mottatteDokumenter.size.toDouble(),
+					soknadarkivschema.dokumenter.size.toDouble(),
 					soknadarkivschema.arkivtema
 				)
 				if (nextState != null && tasks[key] != null) {
@@ -361,7 +361,7 @@ open class TaskListService(
 
 
 	private class Task(
-		val value: Soknadarkivschema,
+		val value: InnsendingTopicMsg,
 		val count: Int,
 		val timeStarted: LocalDateTime,
 		val isRunningLock: Semaphore,
