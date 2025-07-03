@@ -7,13 +7,18 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.converter.
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
 import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.InnsendingTopicMsgBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattDokumentBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.MottattVariantBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.SoknadarkivschemaBuilder
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.TestDokument
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.TestDokumentBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.springframework.test.util.AssertionErrors.assertTrue
 import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.util.*
 
 class MessageConverterTests {
@@ -47,6 +52,91 @@ class MessageConverterTests {
 		assertEquals(1, arkivData.dokumenter.size)
 		assertEquals(arkivData.tittel, arkivData.dokumenter[0].tittel)
 		assertEquals(skjemanummer, arkivData.dokumenter[0].brevkode)
+		assertEquals(schema.innsendingsId, arkivData.eksternReferanseId)
+		assertEquals(schema.kanal, arkivData.kanal)
+	}
+
+	@Test
+	fun `Happy case - NoLoginSoknad - should convert correctly`() {
+		val innsendingsId = UUID.randomUUID().toString()
+		val innsendtDato = OffsetDateTime.now()
+		val tittel = "Apa bepa"
+		val skjemanummer = "NAV 11-13.06"
+		val tema = "AAP"
+
+		val files = mutableListOf (
+			TestDokument( skjemanummer = skjemanummer, erHovedskjema = true, tittel = tittel, uuids = listOf(UUID.randomUUID().toString(),	UUID.randomUUID().toString()) ),
+			TestDokument( skjemanummer = skjemanummer, erHovedskjema = false, tittel = "Kvittering", uuids = listOf(UUID.randomUUID().toString()) )
+		)
+
+		val uploadedfiles = files.map{vedlegg -> vedlegg.uuids}.flatten().map { uuid -> FileInfo(uuid, "apa".toByteArray(), ResponseStatus.Ok) }
+
+		val schema = InnsendingTopicMsgBuilder()
+			.withInnsendingsId(innsendingsId)
+			.withInnsendtDato(innsendtDato)
+			.withInnlogget(false)
+			.withTittel(tittel)
+			.withSkjemanr(skjemanummer)
+			.withArkivtema(tema)
+			.withTestDokumenter(files)
+//			.withDokumenter(mutableListOf(TestDokumentBuilder().withTestDokumenter(files).build()).flatten() )
+			.build()
+
+		val arkivData = createOpprettJournalpostRequest(schema, uploadedfiles)
+
+		assertEquals(tittel, arkivData.tittel)
+		assertEquals(2, arkivData.dokumenter.size)
+		assertEquals(arkivData.tittel, arkivData.dokumenter[0].tittel)
+		assertEquals(skjemanummer, arkivData.dokumenter[0].brevkode)
+		assertEquals(schema.innsendingsId, arkivData.eksternReferanseId)
+		assertEquals(schema.kanal, arkivData.kanal)
+		assertTrue("Expected kanal to be NAV_NO_UINNLOGGET when innlogget is false, but was ${arkivData.kanal}", !schema.innlogget && arkivData.kanal == "NAV_NO_UINNLOGGET",)
+	}
+
+
+	@Test
+	fun `Happy case - NoLoginSoknad - with no brukerDto should convert correctly`() {
+		val innsendingsId = UUID.randomUUID().toString()
+		val innsendtDato = OffsetDateTime.now()
+		val tittel = "Apa bepa"
+		val skjemanummer = "NAV 11-13.06"
+		val tema = "AAP"
+		val avsenderNavn = "Avsender Navn"
+
+		val files = mutableListOf (
+			TestDokument( skjemanummer = skjemanummer, erHovedskjema = true, tittel = tittel, uuids = listOf(UUID.randomUUID().toString(),	UUID.randomUUID().toString()) ),
+			TestDokument( skjemanummer = skjemanummer, erHovedskjema = false, tittel = "Kvittering", uuids = listOf(UUID.randomUUID().toString()) )
+		)
+
+		val uploadedfiles = files.map{vedlegg -> vedlegg.uuids}.flatten().map { uuid -> FileInfo(uuid, "apa".toByteArray(), ResponseStatus.Ok) }
+
+		val schema = InnsendingTopicMsgBuilder()
+			.withInnsendingsId(innsendingsId)
+			.withInnsendtDato(innsendtDato)
+			.withTittel(tittel)
+			.withSkjemanr(skjemanummer)
+			.withArkivtema(tema)
+			.withBrukerId(null)
+			.withAvsenderId(null)
+			.withAvsenderIdType(null)
+			.withAvsenderNavn(avsenderNavn)
+			.withTestDokumenter(files)
+//			.withDokumenter(mutableListOf(TestDokumentBuilder().withTestDokumenter(files).build()).flatten() )
+			.build()
+
+		val arkivData = createOpprettJournalpostRequest(schema, uploadedfiles)
+
+		assertEquals(tittel, arkivData.tittel)
+		assertEquals(2, arkivData.dokumenter.size)
+		assertEquals(arkivData.tittel, arkivData.dokumenter[0].tittel)
+		assertEquals(skjemanummer, arkivData.dokumenter[0].brevkode)
+		assertEquals(schema.innsendingsId, arkivData.eksternReferanseId)
+		assertEquals(schema.kanal, arkivData.kanal)
+		assertEquals(null, arkivData.bruker)
+		assertEquals(schema.avsenderDto.id, arkivData.avsenderMottaker.id)
+		assertEquals(null, arkivData.avsenderMottaker.idType)
+		assertEquals(schema.avsenderDto.navn, arkivData.avsenderMottaker.navn)
+
 	}
 
 	@Test

@@ -16,6 +16,8 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
+import no.nav.soknad.arkivering.soknadsarkiverer.util.serializeMsg
+import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -81,6 +83,7 @@ class ApplicationTests : ContainerizedKafka() {
 	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 	private lateinit var kafkaProducerForBadData: KafkaProducer<String, String>
 	private lateinit var kafkaListener: KafkaListener
+	private lateinit var kafkaNologinTopicProducer: KafkaProducer<String, String>
 
 
 	private var maxNumberOfAttempts by Delegates.notNull<Int>()
@@ -92,6 +95,9 @@ class ApplicationTests : ContainerizedKafka() {
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap()
 			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
+		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
+			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
+		})
 
 		kafkaListener = KafkaListener(kafkaConfig)
 	}
@@ -153,15 +159,19 @@ class ApplicationTests : ContainerizedKafka() {
 	}
 
 	@Test
-	fun `Happy case - Several events on Kafka will cause rest calls to Joark`() {
+	fun `Happy case - Several loggedIn and noLogin Events on Kafka will cause rest calls to Joark`() {
 		mockJoarkIsWorking()
 		val noOfApplications = 1000
-		repeat(noOfApplications) {
+		repeat(noOfApplications) { index ->
 			val key = UUID.randomUUID().toString()
 			mockFilestorageIsWorking(fileUuid)
 			val soknadsarkivschema = createSoknadarkivschema(key)
 			mockSafRequest_notFound(innsendingsId = soknadsarkivschema.behandlingsid)
-			putDataOnKafkaTopic(key, soknadsarkivschema)
+			if (index % 2 == 0) {
+				putDataOnKafkaTopic(key, soknadsarkivschema)
+			} else {
+				putDataOnKafkaTopic(key, serializeMsg(translate(soknadsarkivschema)))
+			}
 		}
 		verifyMockedPostRequests(noOfApplications, safUrl)
 		verifyMockedPostRequests(noOfApplications, journalPostUrl)
@@ -832,6 +842,12 @@ class ApplicationTests : ContainerizedKafka() {
 		val topic = kafkaConfig.topics.mainTopic
 		putDataOnTopic(key, soknadarkivschema, headers, topic, kafkaProducer)
 	}
+
+	private fun putDataOnKafkaTopic(key: Key, message: String) {
+		val topic = kafkaConfig.topics.nologinSubmissionTopic
+		putDataOnTopic(key = key, value = message, headers = RecordHeaders(), topic = topic,  kafkaNologinTopicProducer)
+	}
+
 
 	private fun putDataOnKafkaTopic(key: Key, badData: String, headers: Headers = RecordHeaders()) {
 		val topic = kafkaConfig.topics.mainTopic
