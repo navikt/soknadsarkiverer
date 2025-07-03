@@ -1,5 +1,10 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.util
 
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
 import no.nav.soknad.arkivering.soknadsmottaker.model.AvsenderDto
@@ -44,4 +49,20 @@ fun translate(soknadarkivschema: Soknadarkivschema): InnsendingTopicMsg {
 
 fun translate(time: Long): OffsetDateTime {
 	return OffsetDateTime.ofInstant(Instant.ofEpochSecond(time), ZoneId.of("Europe/Oslo"))
+}
+
+fun createUtcPreservingMapper(): ObjectMapper {
+	val mapper = jacksonObjectMapper()
+	mapper.registerModule(JavaTimeModule())
+	mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+	mapper.disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+	return mapper
+}
+
+fun deserializeMsg(msgString: String): InnsendingTopicMsg {
+	return createUtcPreservingMapper().readValue(msgString, InnsendingTopicMsg::class.java)
+}
+
+fun serializeMsg(msg: InnsendingTopicMsg): String {
+	return createUtcPreservingMapper().writeValueAsString(msg)
 }

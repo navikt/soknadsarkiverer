@@ -48,6 +48,7 @@ class KafkaStreamsSetup(
 		val materialized = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("processingeventdtos").withValueSerde(mutableListSerde)
 		val mainTopicStream = streamsBuilder.stream(kafkaConfig.topics.mainTopic, Consumed.with(stringSerde, soknadarkivschemaSerde))
 		val processingTopicStream = streamsBuilder.stream(kafkaConfig.topics.processingTopic , Consumed.with(stringSerde, processingEventSerde))
+		val noLoginStream = streamsBuilder.stream(kafkaConfig.topics.nologinSubmissionTopic, Consumed.with(stringSerde, stringSerde))
 
 		val mainTopicTable = mainTopicStream.toTable()
 

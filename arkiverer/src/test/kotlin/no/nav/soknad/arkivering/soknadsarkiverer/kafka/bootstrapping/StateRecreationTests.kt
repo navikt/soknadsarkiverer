@@ -23,6 +23,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
 import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafServiceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
+import no.nav.soknad.arkivering.soknadsarkiverer.util.serializeMsg
 import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -85,6 +86,7 @@ class StateRecreationTests : ContainerizedKafka() {
 	private lateinit var kafkaMainTopicProducer: KafkaProducer<String, Soknadarkivschema>
 	private lateinit var kafkaProcessingEventProducer: KafkaProducer<String, ProcessingEvent>
 	private lateinit var kafkaBootstrapConsumer: KafkaBootstrapConsumer
+	private lateinit var kafkaNologinTopicProducer: KafkaProducer<String, String>
 
 	@Autowired
 	private lateinit var metrics: ArchivingMetrics
@@ -130,6 +132,9 @@ class StateRecreationTests : ContainerizedKafka() {
 		kafkaMainTopicProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProcessingEventProducer = KafkaProducer(kafkaConfigMap())
 		kafkaBootstrapConsumer = KafkaBootstrapConsumer(taskListService, kafkaConfig)
+		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
+			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
+		})
 		kafkaSetup = KafkaSetupTest(
 			applicationState = ApplicationState(alive = true, ready = true),
 			taskListService = taskListService,
@@ -166,6 +171,24 @@ class StateRecreationTests : ContainerizedKafka() {
 		verifyThatTaskListService().wasCalled(1).forKey(key)
 	}
 
+
+	@Test
+	fun `Can read new Msg from not logged in user that was never started`() {
+		val key = UUID.randomUUID().toString()
+		mockFilestorageIsWorking(fileUuid)
+		mockJoarkIsWorking()
+		val soknadsarkivschema = translate(createSoknadarkivschema(key))
+		mockSafRequest_notFound(innsendingsId = soknadsarkivschema.innsendingsId)
+
+		publishNoLoginMessage(key)
+
+		publishProcessingEvents(key to RECEIVED)
+
+		recreateState()
+
+		verifyThatTaskListService().wasCalled(1).forKey(key)
+	}
+
 	@Test
 	fun `Can read Event Log with Event that was started once`() {
 		val key = UUID.randomUUID().toString()
@@ -179,6 +202,25 @@ class StateRecreationTests : ContainerizedKafka() {
 		recreateState()
 
 		verifyThatTaskListService().wasCalled(1).forKey(key)
+	}
+
+	@Test
+	fun `Can read both Logged in and not Logged in Msgs with Events that was started once`() {
+		val key = UUID.randomUUID().toString()
+
+		publishSoknadsarkivschemas(key)
+		publishProcessingEvents(
+			key to RECEIVED,
+			key to STARTED
+		)
+		val key2 = UUID.randomUUID().toString()
+
+		publishNoLoginMessage(key2)
+
+		recreateState()
+
+		verifyThatTaskListService().wasCalled(1).forKey(key)
+		verifyThatTaskListService().wasCalled(1).forKey(key2)
 	}
 
 	@Test
@@ -420,6 +462,14 @@ class StateRecreationTests : ContainerizedKafka() {
 		keys.forEach {
 			val topic = kafkaConfig.topics.mainTopic
 			putDataOnTopic(it, soknadarkivschema, RecordHeaders(), topic, kafkaMainTopicProducer)
+		}
+	}
+
+
+	private fun publishNoLoginMessage(vararg keys: String) {
+		keys.forEach {
+			val topic = kafkaConfig.topics.nologinSubmissionTopic
+			putDataOnTopic(it,  serializeMsg( translate(soknadarkivschema)), RecordHeaders(), topic, kafkaNologinTopicProducer)
 		}
 	}
 

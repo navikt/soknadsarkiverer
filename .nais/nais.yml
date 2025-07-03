@@ -97,6 +97,8 @@ spec:
       value: {{kafka-arkiveringstilbakemeldinger-topic}}
     - name: KAFKA_METRICS_TOPIC
       value: {{kafka-metrics-topic}}
+    - name: KAFKA_NOLOGIN_SUBMISSION_TOPIC
+      value: {{kafka-nologin-submission-topic}}
     - name: INNSENDING_API_HOST
       value: {{innsending-api-host}}
     - name: JOARK_HOST

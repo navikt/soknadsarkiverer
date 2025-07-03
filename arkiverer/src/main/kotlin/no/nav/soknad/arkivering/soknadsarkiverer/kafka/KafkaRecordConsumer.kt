@@ -1,8 +1,10 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClientConfig
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroDeserializer
+import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -177,6 +179,28 @@ class PoisonSwallowingAvroDeserializer<T : SpecificRecord> : SpecificAvroDeseria
 			logger.error(
 				"Unable to deserialize event on topic $topic\nByte Array: ${bytes.asList()}\n" +
 					"String representation: '${String(bytes)}'", e
+			)
+			null
+		}
+	}
+}
+
+class PoisonSwallowingJsonDeserializer<T>(
+	private val targetClass: Class<T> = InnsendingTopicMsg::class.java as Class<T>,
+	private val objectMapper: ObjectMapper = ObjectMapper()
+) : Deserializer<T> {
+
+	private val logger = LoggerFactory.getLogger(this::class.java)
+
+	override fun deserialize(topic: String, data: ByteArray?): T? {
+		if (data == null) return null
+
+		return try {
+			objectMapper.readValue(data, targetClass)
+		} catch (e: Exception) {
+			logger.error(
+				"Unable to deserialize JSON message on topic $topic\nByte Array: ${data.asList()}\n" +
+					"String representation: '${String(data)}'", e
 			)
 			null
 		}
