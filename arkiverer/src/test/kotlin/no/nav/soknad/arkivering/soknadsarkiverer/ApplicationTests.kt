@@ -218,7 +218,7 @@ class ApplicationTests : ContainerizedKafka() {
 		val key = UUID.randomUUID().toString()
 		val invalidData = "this string is not deserializable"
 
-		putDataOnKafkaTopic(key, invalidData)
+		putDataOnKafkaTopic(key, invalidData, RecordHeaders())
 		mockSafRequest_notFound(innsendingsId = key)
 
 		TimeUnit.MILLISECONDS.sleep(500)
@@ -310,7 +310,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId = key)
 
-		putDataOnKafkaTopic(keyForPoisonPill, "this is not deserializable")
+		putDataOnKafkaTopic(keyForPoisonPill, "this is not deserializable", RecordHeaders())
 		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 
 		verifyProcessingEvents(
