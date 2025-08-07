@@ -60,24 +60,27 @@ class KafkaStreamsSetup(
 			.peek { key, value ->	logger.info("$key: Processing MainTopic. InnsendingsId: ${value.behandlingsid}") }
 			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
 
-		processingTopicStream
-			.peek { key, value -> logger.info("$key: ProcessingTopic - ${value.type}") }
-			// Aggregere state slik at RECEIVED kan erstattes av alle etterfølgende states: STARTED, ARCHIVED, FAILED, FINISHED
-			.mapValues { processingEvent -> processingEvent.type.name }
-			.groupByKey()
-			.aggregate(  // Returnerer en tabell <Key, Value> der value er en Liste av eventtype
-				{ mutableListOf() }, // Initiator
-				{ _, value, aggregate ->  // aggregator
-					aggregate.add(value)
-					aggregate
-				},
-				materialized // Materialisert som KeyValue store
-			)
-			.mapValues { processingEvents -> ProcessingEventDto(processingEvents) } // mapper eventtype til ProcessingEventDto
-			.mapValues { processingEvents -> processingEvents.getNewestState() }
-			.toStream()
-			.peek { key, state -> logger.debug("$key: ProcessingTopic in state $state") }
-			.filter { key, state -> !(isConsideredFinished(key, state)) }
+		val processingTopicContent =
+			processingTopicStream
+				.peek { key, value -> logger.info("$key: ProcessingTopic - ${value.type}") }
+				// Aggregere state slik at RECEIVED kan erstattes av alle etterfølgende states: STARTED, ARCHIVED, FAILED, FINISHED
+				.mapValues { processingEvent -> processingEvent.type.name }
+				.groupByKey()
+				.aggregate(  // Returnerer en tabell <Key, Value> der value er en Liste av eventtype
+					{ mutableListOf() }, // Initiator
+					{ _, value, aggregate ->  // aggregator
+						aggregate.add(value)
+						aggregate
+					},
+					materialized // Materialisert som KeyValue store
+				)
+				.mapValues { processingEvents -> ProcessingEventDto(processingEvents) } // mapper eventtype til ProcessingEventDto
+				.mapValues { processingEvents -> processingEvents.getNewestState() }
+				.toStream()
+				.peek { key, state -> logger.debug("$key: ProcessingTopic in state $state") }
+				.filter { key, state -> !(isConsideredFinished(key, state)) }
+
+		processingTopicContent
 			.leftJoin(mainTopicTable, { state, soknadarkivschema -> soknadarkivschema to state }, joinDef) // Oppdatere state på tabell, archivingState, ved join av soknadarkivschema og state.
 			.filter { key, (soknadarkivschema, _) -> filterSoknadarkivschemaThatAreNull(key, soknadarkivschema) } // Ta bort alle innslag i tabell der soknadarkivschema er null.
 			.peek { key, (soknadarkivschema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state Soknadarkivschema: ${soknadarkivschema.print()}") }
@@ -89,26 +92,9 @@ class KafkaStreamsSetup(
 
 		val noLoginTopicTable = noLoginStream.toTable()
 
-		processingTopicStream
-			.peek { key, value -> logger.info("$key: ProcessingTopic - ${value.type}") }
-			// Aggregere state slik at RECEIVED kan erstattes av alle etterfølgende states: STARTED, ARCHIVED, FAILED, FINISHED
-			.mapValues { processingEvent -> processingEvent.type.name }
-			.groupByKey()
-			.aggregate(  // Returnerer en tabell <Key, Value> der value er en Liste av eventtype
-				{ mutableListOf() }, // Initiator
-				{ _, value, aggregate ->  // aggregator
-					aggregate.add(value)
-					aggregate
-				},
-				materializedNoLogin // Materialisert som KeyValue store
-			)
-			.mapValues { processingEvents -> ProcessingEventDto(processingEvents) } // mapper eventtype til ProcessingEventDto
-			.mapValues { processingEvents -> processingEvents.getNewestState() }
-			.toStream()
-			.peek { key, state -> logger.debug("$key: ProcessingTopic in state $state for noLogin") }
-			.filter { key, state -> !(isConsideredFinished(key, state)) }
+		processingTopicContent
 			.leftJoin(noLoginTopicTable, { state, noLoginSchema -> noLoginSchema to state }, joinDefNoLogin) // Oppdatere state på tabell, noLoginArchivingState, ved join av soknadarkivschema og state.
-			.filter { key, (noLoginSchema, _) -> filterNoLoginSchemaThatAreNull(key, noLoginSchema) } // Ta bort alle innslag i tabell der soknadarkivschema er null.
+			.filter { key, (noLoginSchema, _) -> filterNoLoginSchemaThatAreNull(key, noLoginSchema) } // Ta bort alle innslag i tabell der noLoginSchema er null.
 			.peek { key, (noLoginSchema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state noLoginSchema") }
 			.foreach { key, (noLoginSchema, state) ->	taskListService.addOrUpdateTask(key, deserializeMsg(noLoginSchema), state.type)	} // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
 

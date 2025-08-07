@@ -603,8 +603,8 @@ class ApplicationTests : ContainerizedKafka() {
 		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
 		val joarkErrorsBefore = metrics.getJoarkErrors()
 
-		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 		val getFilestorageErrorsBefore = metrics.getGetFilestorageErrors()
+		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
 
 		verifyProcessingEvents(
 			key, mapOf(

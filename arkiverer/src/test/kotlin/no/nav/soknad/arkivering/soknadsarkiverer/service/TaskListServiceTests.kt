@@ -15,6 +15,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -65,6 +66,10 @@ class TaskListServiceTests {
 		)
 	}
 
+	@AfterEach
+	fun tearDown() {
+		metrics.unregister()
+	}
 
 	@Test
 	fun `No tasks, can list`() {

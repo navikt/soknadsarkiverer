@@ -44,6 +44,9 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 			logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.innsendingsId}', " +
 				"got the following journalpostId: '$journalpostId'")
 			metrics.incJoarkSuccesses()
+			if (!soknadarkivschema.innlogget) {
+				metrics.incNoLoginJoarkSuccesses()
+			}
 			return journalpostId
 
 		} catch (e: ApplicationAlreadyArchivedException) {
@@ -51,6 +54,9 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 			throw e
 		} catch (e: Exception) {
 			metrics.incJoarkErrors()
+			if (!soknadarkivschema.innlogget) {
+				metrics.incNoLoginJoarkErrors()
+			}
 			val message = "$key: Error sending to Joark"
 			logger.warn(message, e)
 			throw ArchivingException(message, e)
