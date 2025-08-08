@@ -52,6 +52,7 @@ class KafkaBootstrapConsumer(
 			}
 
 		val unfinishedNoLoginRecords = getUnfinishedNoLoginRecords(finishedKeys)
+		logger.info("Recreating state, found a total of ${unfinishedNoLoginRecords.size} unfinished noLogin records")
 
 		// For all not finished tasks with found received soknadsarkivschema trigger processing by adding to taskListService
 		unfinishedNoLoginRecords
