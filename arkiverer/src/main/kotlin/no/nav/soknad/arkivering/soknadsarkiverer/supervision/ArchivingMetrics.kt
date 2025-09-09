@@ -56,9 +56,11 @@ class ArchivingMetrics(private val registry: PrometheusRegistry) {
 	private val HISTOGRAM_FILE_FETCH_SIZE_DESC = "Distribution of sizes of fetched files"
 
 	private val COUNTER_JOARK_SUCCESS = "counter_joark_success"
+	private val COUNTER_NOLOGIN_JOARK_SUCCESS = "counter_nologin_joark_success"
 	private val COUNTER_JOARK_SUCCESS_DESC = "Number of successes when sending to Joark"
 
 	private val COUNTER_JOARK_ERROR = "counter_joark_error"
+	private val COUNTER_NOLOGIN_JOARK_ERROR = "counter_nologin_joark_error"
 	private val COUNTER_JOARK_ERROR_DESC = "Number of errors when sending to Joark"
 
 	private val SUMMARY_JOARK_LATENCY = "latency_joark_operations"
@@ -88,6 +90,8 @@ class ArchivingMetrics(private val registry: PrometheusRegistry) {
 		registerFileSizeHistogram(HISTOGRAM_FILE_FETCH_SIZE, HISTOGRAM_FILE_FETCH_SIZE_DESC)
 	private val joarkSuccessCounter: Counter = registerCounter(COUNTER_JOARK_SUCCESS, COUNTER_JOARK_SUCCESS_DESC)
 	private val joarkErrorCounter: Counter = registerCounter(COUNTER_JOARK_ERROR, COUNTER_JOARK_ERROR_DESC)
+	private val joarkNoLoginSuccessCounter: Counter = registerCounter(COUNTER_NOLOGIN_JOARK_SUCCESS, COUNTER_JOARK_SUCCESS_DESC)
+	private val joarkNoLoginErrorCounter: Counter = registerCounter(COUNTER_NOLOGIN_JOARK_ERROR, COUNTER_JOARK_ERROR_DESC)
 	private val joarkLatencySummary = registerSummary(SUMMARY_JOARK_LATENCY, SUMMARY_JOARK_LATENCY_DESC)
 	private val archivingLatencyHistogram =
 		registerLatencyHistogram(HISTOGRAM_ARCHIVING_LATENCY, HISTORGRAM_ARCHIVING_LATENCY_DESC)
@@ -174,8 +178,14 @@ class ArchivingMetrics(private val registry: PrometheusRegistry) {
 	fun incJoarkSuccesses() = joarkSuccessCounter.labelValues(APP).inc()
 	fun getJoarkSuccesses() = joarkSuccessCounter.labelValues(APP).get()
 
+	fun incNoLoginJoarkSuccesses() = joarkNoLoginSuccessCounter.labelValues(APP).inc()
+	fun getNoLoginJoarkSuccesses() = joarkNoLoginSuccessCounter.labelValues(APP).get()
+
 	fun incJoarkErrors() = joarkErrorCounter.labelValues(APP).inc()
 	fun getJoarkErrors() = joarkErrorCounter.labelValues(APP).get()
+
+	fun incNoLoginJoarkErrors() = joarkNoLoginErrorCounter.labelValues(APP).inc()
+	fun getNoLoginJoarkErrors() = joarkNoLoginErrorCounter.labelValues(APP).get()
 
 	fun addTask() = taskGauge.labelValues(APP).inc()
 	fun removeTask() = taskGauge.labelValues(APP).dec()
@@ -236,6 +246,8 @@ class ArchivingMetrics(private val registry: PrometheusRegistry) {
 
 		registry.unregister(joarkErrorCounter)
 		registry.unregister(joarkSuccessCounter)
+		registry.unregister(joarkNoLoginErrorCounter)
+		registry.unregister(joarkNoLoginSuccessCounter)
 		registry.unregister(filestorageDelErrorCounter)
 		registry.unregister(filestorageDelSuccessCounter)
 		registry.unregister(filestorageGetErrorCounter)

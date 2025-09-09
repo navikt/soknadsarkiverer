@@ -10,6 +10,8 @@ import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
+import no.nav.soknad.arkivering.soknadsarkiverer.util.serializeMsg
+import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -54,6 +56,7 @@ class IntegrationTests : ContainerizedKafka() {
 	@Value("\${saf.path}")
 	private lateinit var safUrl: String
 	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
+	private lateinit var kafkaNologinTopicProducer: KafkaProducer<String, String>
 	private lateinit var kafkaProducerForBadData: KafkaProducer<String, String>
 
 	private val fileId = UUID.randomUUID().toString()
@@ -68,6 +71,9 @@ class IntegrationTests : ContainerizedKafka() {
 
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also {
+			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
+		})
+		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 		})
 	}
@@ -92,6 +98,48 @@ class IntegrationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		verifyMockedPostRequests(initialRequests + 2, journalPostUrl)
+	}
+
+	@Test
+	fun `Happy case - Putting noLoginevents on Kafka will cause rest calls to Joark`() {
+		mockFilestorageIsWorking(fileId)
+		mockJoarkIsWorking()
+
+		val initialRequests = countRequests(journalPostUrl, RequestMethod.POST)
+		val soknadarkivschema = createSoknadarkivschema()
+		mockSafRequest_notFound(innsendingsId = soknadarkivschema.behandlingsid)
+		putDataOnKafkaTopic(key = soknadarkivschema.behandlingsid, value = serializeMsg(translate(soknadarkivschema)))
+		val soknadarkivschema2 = createSoknadarkivschema()
+		mockSafRequest_notFound(innsendingsId = soknadarkivschema2.behandlingsid)
+		putDataOnKafkaTopic(key = soknadarkivschema2.behandlingsid, value = serializeMsg(translate(soknadarkivschema2)))
+
+		verifyMockedPostRequests(initialRequests + 2, journalPostUrl)
+	}
+
+	@Test
+	fun `Happy case - Putting loggedIn and noLoginevents on Kafka will cause rest calls to Joark`() {
+		mockFilestorageIsWorking(fileId)
+		mockJoarkIsWorking()
+
+		val initialRequests = countRequests(journalPostUrl, RequestMethod.POST)
+
+		val loggedInMsg = createSoknadarkivschema()
+		mockSafRequest_notFound(innsendingsId = loggedInMsg.behandlingsid)
+		putDataOnKafkaTopic(loggedInMsg)
+
+		val noLogInMsg = translate(createSoknadarkivschema())
+		mockSafRequest_notFound(innsendingsId = noLogInMsg.innsendingsId)
+		putDataOnKafkaTopic(key = noLogInMsg.innsendingsId, value = serializeMsg(noLogInMsg))
+		val noLogInMsg2 = translate(createSoknadarkivschema())
+		mockSafRequest_notFound(innsendingsId = noLogInMsg2.innsendingsId)
+		putDataOnKafkaTopic(key = noLogInMsg2.innsendingsId, value = serializeMsg(noLogInMsg2))
+
+		val loggedInMsg2 = createSoknadarkivschema()
+		mockSafRequest_notFound(innsendingsId = loggedInMsg2.behandlingsid)
+		putDataOnKafkaTopic(loggedInMsg2)
+
+
+		verifyMockedPostRequests(initialRequests + 4, journalPostUrl)
 	}
 
 	@Test
@@ -165,6 +213,14 @@ class IntegrationTests : ContainerizedKafka() {
 	private fun putDataOnTopic(key: String, value: String, headers: Headers = RecordHeaders()): RecordMetadata {
 		val topic = kafkaConfig.topics.mainTopic
 		return putDataOnTopic(key, value, headers, topic, kafkaProducerForBadData)
+	}
+
+	private fun putDataOnKafkaTopic(
+		key: String,
+		value: String,
+	): RecordMetadata {
+		val topic = kafkaConfig.topics.nologinSubmissionTopic
+		return putDataOnTopic(key, value, RecordHeaders(), topic, kafkaNologinTopicProducer)
 	}
 
 	private fun <T> putDataOnTopic(

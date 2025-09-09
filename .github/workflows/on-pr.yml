@@ -26,6 +26,9 @@ jobs:
         uses: navikt/archiving-infrastructure/.github/checkout-and-build@main
         with:
           component_name: innsending-api
+          skip_tests: true
+        env:
+          GITHUB_NAV_TOKEN: ${{ secrets.READER_TOKEN }}
 
       - name: 'Build the code for soknadsarkiverer (this PR)'
         uses: navikt/archiving-infrastructure/.github/checkout-and-build@main

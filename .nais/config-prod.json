@@ -17,6 +17,7 @@
 	"kafka-message-topic": "team-soknad.privat-soknadinnsending-messages-v2",
 	"kafka-arkiveringstilbakemeldinger-topic": "team-soknad.privat-soknadinnsending-arkiveringstilbakemeldinger-v1",
 	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v2",
+	"kafka-nologin-submission-topic": "team-soknad.privat-nologinsubmission-v1",
 	"innsending-api-host": "https://innsending-api-gcp.intern.nav.no",
 	"joark-host": "https://dokarkiv.prod-fss-pub.nais.io",
 	"dokarkiv-scope": "api://prod-fss.teamdokumenthandtering.dokarkiv/.default",

@@ -1,9 +1,8 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice
 
-import kotlinx.coroutines.*
-import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.Constants
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
+import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import no.nav.soknad.innsending.api.HealthApi
 import no.nav.soknad.innsending.api.HentInnsendteFilerApi
 import no.nav.soknad.innsending.model.SoknadFile
@@ -25,7 +24,7 @@ class InnsendingService(
 		return "pong"
 	}
 
-	override fun getFilesFromFilestorage(key: String, data: Soknadarkivschema): FetchFileResponse {
+	override fun getFilesFromFilestorage(key: String, data: InnsendingTopicMsg): FetchFileResponse {
 		val timer = metrics.filestorageGetLatencyStart()
 		MDC.put(Constants.MDC_INNSENDINGS_ID, key)
 		try {
@@ -42,7 +41,7 @@ class InnsendingService(
 		}
 	}
 
-	override fun deleteFilesFromFilestorage(key: String, data: Soknadarkivschema) {
+	override fun deleteFilesFromFilestorage(key: String, data: InnsendingTopicMsg) {
 	}
 
 	private fun getFiles(key: String, fileIds: List<String>) =
@@ -80,9 +79,9 @@ class InnsendingService(
 		}
 	}
 
-	private fun getFileIds(data: Soknadarkivschema) =
-		data.mottatteDokumenter
-			.flatMap { it.mottatteVarianter.map { variant -> variant.uuid } }
+	private fun getFileIds(data: InnsendingTopicMsg) =
+		data.dokumenter
+			.flatMap { it.varianter.map { variant -> variant.uuid } }
 }
 
 
