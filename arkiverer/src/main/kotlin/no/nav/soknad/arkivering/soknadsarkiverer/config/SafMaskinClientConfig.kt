@@ -1,5 +1,8 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
+import io.netty.channel.ChannelOption
+import io.netty.handler.timeout.ReadTimeoutHandler
+import io.netty.handler.timeout.WriteTimeoutHandler
 import no.nav.security.token.support.client.core.oauth2.OAuth2AccessTokenService
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.Constants.BEARER
@@ -17,17 +20,18 @@ import org.springframework.web.reactive.function.client.WebClient
 import reactor.netty.http.client.HttpClient
 import reactor.netty.http.client.HttpClientRequest
 import reactor.netty.http.client.HttpClientResponse
-import java.util.*
+import java.util.concurrent.TimeUnit
 
 @Configuration
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 class SafMaskinClientConfig(
-	@Value("\${applicationName}") private val applicationName: String,
-	@Value("\${saf.url}") private val safUrl: String,
-	@Value("\${saf.path}") private val queryPath: String
+	@param:Value("\${applicationName}") private val applicationName: String
 ) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
+	private val connectionTimeoutSeconds = 10
+	private val readTimeoutSeconds = 15
+	private val writeTimeoutSeconds = 30
 
 	@Bean
 	@Profile("!(prod | dev)")
@@ -48,6 +52,12 @@ class SafMaskinClientConfig(
 			.clientConnector(
 				ReactorClientHttpConnector(
 					HttpClient.create()
+						.keepAlive(false)
+						.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (connectionTimeoutSeconds * 1000))
+						.doOnConnected { conn ->
+							conn.addHandlerLast(ReadTimeoutHandler(readTimeoutSeconds.toLong(), TimeUnit.SECONDS))
+							conn.addHandlerLast(WriteTimeoutHandler(writeTimeoutSeconds.toLong(), TimeUnit.SECONDS))
+						}
 						.doOnRequest { request: HttpClientRequest, _ ->
 							logger.info("{} {} {}", request.version(), request.method(), request.resourceUrl())
 						}
