@@ -28,7 +28,8 @@ data class Topics(
 	val processingTopic : String,
 	val messageTopic : String,
 	val arkiveringstilbakemeldingTopic : String,
-	val metricsTopic : String
+	val metricsTopic : String,
+	val nologinSubmissionTopic : String
 )
 
 data class SchemaRegistry(

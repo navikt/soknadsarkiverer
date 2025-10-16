@@ -27,6 +27,7 @@
 
 		<springdoc.version>1.8.0</springdoc.version>
 		<token-support.version>5.0.34</token-support.version>
+		<jackson.version>2.18.3</jackson.version>
 		<jackson-coreutils.version>2.0</jackson-coreutils.version>
 		<jackson-databind-nullable.version>0.2.6</jackson-databind-nullable.version>
 		<jackson-module-kotlin.version>2.19.1</jackson-module-kotlin.version>
@@ -75,6 +76,7 @@
 		<module>clients</module>
 		<module>arkiverer</module>
 		<module>admin-api</module>
+		<module>external-api</module>
 	</modules>
 
 	<build>

@@ -1,7 +1,5 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice
 
-import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
-import no.nav.soknad.arkivering.soknadsarkiverer.Constants.NAV_CONSUMER_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ArchivingException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.ApplicationAlreadyArchivedException
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.OpprettJournalpostRequest
@@ -9,6 +7,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.Oppret
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.converter.createOpprettJournalpostRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
+import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
@@ -18,8 +17,6 @@ import org.springframework.http.HttpStatusCode
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestClient
-import org.springframework.web.reactive.function.BodyInserters
-import org.springframework.web.reactive.function.client.WebClient
 
 @Service
 class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
@@ -30,13 +27,13 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	override fun opprettJournalpost(key: String, soknadarkivschema: Soknadarkivschema, attachedFiles: List<FileInfo>): String {
+	override fun opprettJournalpost(key: String, soknadarkivschema: InnsendingTopicMsg, attachedFiles: List<FileInfo>): String {
 		val timer = metrics.startJoarkLatency()
 		try {
-			logger.info("$key: About to create journalpost for behandlingsId: '${soknadarkivschema.behandlingsid}'")
+			logger.info("$key: About to create journalpost for behandlingsId: '${soknadarkivschema.innsendingsId}'")
 			val request = createOpprettJournalpostRequest(soknadarkivschema, attachedFiles)
 
-			val mainDocVariantFormats = soknadarkivschema.mottatteDokumenter.filter { it.erHovedskjema }.flatMap { it.mottatteVarianter }.groupBy { it.variantformat }
+			val mainDocVariantFormats = soknadarkivschema.dokumenter.filter { it.erHovedskjema }.flatMap { it.varianter }.groupBy { it.filtype }
 			if (mainDocVariantFormats.any { it.value.size > 1} ) {
 				logger.warn("$key: Mottatte flere varianter av hovedskjema med samme variantfomat.  ${mainDocVariantFormats.filter { it.value.size > 1 }.map { it.key }}")
 			}
@@ -44,16 +41,22 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 			val response = sendDataToJoark(key, request, restClient, journalPostUrl)
 			val journalpostId = response?.journalpostId ?: "-1"
 
-			logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.behandlingsid}', " +
+			logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.innsendingsId}', " +
 				"got the following journalpostId: '$journalpostId'")
 			metrics.incJoarkSuccesses()
+			if (!soknadarkivschema.innlogget) {
+				metrics.incNoLoginJoarkSuccesses()
+			}
 			return journalpostId
 
 		} catch (e: ApplicationAlreadyArchivedException) {
-			logger.warn("$key: Application's eksternReferanseId ${soknadarkivschema.behandlingsid} already exists in the archive", e)
+			logger.warn("$key: Application's eksternReferanseId ${soknadarkivschema.innsendingsId} already exists in the archive", e)
 			throw e
 		} catch (e: Exception) {
 			metrics.incJoarkErrors()
+			if (!soknadarkivschema.innlogget) {
+				metrics.incNoLoginJoarkErrors()
+			}
 			val message = "$key: Error sending to Joark"
 			logger.warn(message, e)
 			throw ArchivingException(message, e)

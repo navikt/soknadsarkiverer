@@ -119,6 +119,14 @@
 			<artifactId>jakarta.annotation-api</artifactId>
 			<version>${jakarta-annotation.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.module</groupId>
+			<artifactId>jackson-module-kotlin</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-jsr310</artifactId>
+		</dependency>
 
 		<dependency>
 			<groupId>no.nav.security</groupId>
@@ -195,6 +203,12 @@
 			<artifactId>mockk-jvm</artifactId>
 			<version>${mockk.version}</version>
 			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>no.nav.soknad.arkivering</groupId>
+			<artifactId>external-api</artifactId>
+			<version>1.1.0</version>
+			<scope>compile</scope>
 		</dependency>
 	</dependencies>
 

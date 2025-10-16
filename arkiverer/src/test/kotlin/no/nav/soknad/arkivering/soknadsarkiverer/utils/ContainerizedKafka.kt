@@ -5,14 +5,12 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.fail
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean
 import org.springframework.boot.context.properties.bind.Binder
-import org.springframework.boot.context.properties.source.ConfigurationPropertySource
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource
 import org.springframework.core.io.ClassPathResource
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.KafkaContainer
 import org.testcontainers.utility.DockerImageName
-import java.util.*
 
 
 open class ContainerizedKafka {
@@ -55,7 +53,8 @@ open class ContainerizedKafka {
 				kafkaConfig.topics.processingTopic,
 				kafkaConfig.topics.messageTopic,
 				kafkaConfig.topics.arkiveringstilbakemeldingTopic,
-				kafkaConfig.topics.metricsTopic
+				kafkaConfig.topics.metricsTopic,
+				kafkaConfig.topics.nologinSubmissionTopic
 			)
 				.forEach { createTopic(it) }
 		}

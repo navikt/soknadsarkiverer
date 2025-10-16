@@ -1,0 +1,29 @@
+{
+  "apiVersion": "kafka.nais.io/v1",
+  "kind": "Topic",
+  "metadata": {
+    "name": "privat-soknadinnsending-messages-v2-dev",
+    "namespace": "team-soknad",
+    "labels": {
+      "team": "team-soknad"
+     }
+  },
+  "spec": {
+    "config": {
+      "partitions": 12
+    },
+    "acl": [
+      {
+        "application": "soknadsarkiverer",
+        "team": "team-soknad",
+        "access": "readwrite"
+      },
+      {
+        "application": "innsending-api",
+        "team": "team-soknad",
+        "access": "read"
+      }
+    ],
+	"pool": "nav-dev"
+  }
+}

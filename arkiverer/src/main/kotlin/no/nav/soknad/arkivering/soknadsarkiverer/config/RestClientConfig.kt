@@ -138,7 +138,7 @@ class RestClientConfig {
 			execution: ClientHttpRequestExecution
 		): ClientHttpResponse {
 			val token = tokenService.getToken()?.access_token
-			val callId = MDC.get(Constants.HEADER_CALL_ID)
+			val callId = MDC.get(Constants.HEADER_CALL_ID) ?: MDC.get(Constants.MDC_INNSENDINGS_ID) ?: ""
 
 			logger.info("Kaller service med callId: $callId")
 
