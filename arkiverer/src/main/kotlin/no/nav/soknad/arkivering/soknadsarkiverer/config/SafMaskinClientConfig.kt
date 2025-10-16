@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
+import com.expediagroup.graphql.client.spring.GraphQLWebClient
 import io.netty.channel.ChannelOption
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
@@ -25,7 +26,9 @@ import java.util.concurrent.TimeUnit
 @Configuration
 @EnableConfigurationProperties(ClientConfigurationProperties::class)
 class SafMaskinClientConfig(
-	@param:Value("\${applicationName}") private val applicationName: String
+	@param:Value("\${applicationName}") private val applicationName: String,
+	@param:Value("\${saf.url}") private val safUrl: String,
+	@param:Value("\${saf.path}") private val queryPath: String
 ) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -35,51 +38,59 @@ class SafMaskinClientConfig(
 
 	@Bean
 	@Profile("!(prod | dev)")
-	@Qualifier("safWebClientBuilder")
-	fun safTestWebClientBuilder(): WebClient.Builder =
-		WebClient.builder()
+	@Qualifier("safWebClient")
+	fun safTestWebClient(): GraphQLWebClient {
+		return  GraphQLWebClient(
+			url = "${safUrl}${queryPath}",
+			builder = WebClient.builder()
 				.defaultRequest {
 					it.header(NAV_CONSUMER_ID, applicationName)
 				}
+		)
+	}
 
 	@Bean
 	@Profile("prod | dev")
-	@Qualifier("safWebClientBuilder")
-	fun safWebClientBuilder(
+	@Qualifier("safWebClient")
+	fun safWebClient(
 		oauth2Config: ClientConfigurationProperties,
 		oAuth2AccessTokenService: OAuth2AccessTokenService
-	) = WebClient.builder()
-			.clientConnector(
-				ReactorClientHttpConnector(
-					HttpClient.create()
-						.keepAlive(false)
-						.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (connectionTimeoutSeconds * 1000))
-						.doOnConnected { conn ->
-							conn.addHandlerLast(ReadTimeoutHandler(readTimeoutSeconds.toLong(), TimeUnit.SECONDS))
-							conn.addHandlerLast(WriteTimeoutHandler(writeTimeoutSeconds.toLong(), TimeUnit.SECONDS))
-						}
-						.doOnRequest { request: HttpClientRequest, _ ->
-							logger.info("{} {} {}", request.version(), request.method(), request.resourceUrl())
-						}
-						.doOnResponse { response: HttpClientResponse, _ ->
-							logger.info(
-								"{} - {} {} {}",
-								response.status().toString(),
-								response.version(),
-								response.method(),
-								response.resourceUrl()
-							)
-						}
+	): GraphQLWebClient {
+		return GraphQLWebClient(
+			url = "${safUrl}${queryPath}",
+			builder = WebClient.builder()
+				.clientConnector(
+					ReactorClientHttpConnector(
+						HttpClient.create()
+							.keepAlive(false)
+							.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (connectionTimeoutSeconds * 1000))
+							.doOnConnected { conn ->
+								conn.addHandlerLast(ReadTimeoutHandler(readTimeoutSeconds.toLong(), TimeUnit.SECONDS))
+								conn.addHandlerLast(WriteTimeoutHandler(writeTimeoutSeconds.toLong(), TimeUnit.SECONDS))
+							}
+							.doOnRequest { request: HttpClientRequest, _ ->
+								logger.info("{} {} {}", request.version(), request.method(), request.resourceUrl())
+							}
+							.doOnResponse { response: HttpClientResponse, _ ->
+								logger.info(
+									"{} - {} {} {}",
+									response.status().toString(),
+									response.version(),
+									response.method(),
+									response.resourceUrl()
+								)
+							}
+					)
 				)
-			)
-			.defaultRequest {
-				it.header(NAV_CONSUMER_ID, applicationName)
-				it.header(
-					HttpHeaders.AUTHORIZATION,
-					"$BEARER${oAuth2AccessTokenService.getAccessToken(getClientProperties(oauth2Config)).access_token}",
-				)
-			}
-
+				.defaultRequest {
+					it.header(NAV_CONSUMER_ID, applicationName)
+					it.header(
+						HttpHeaders.AUTHORIZATION,
+						"$BEARER${oAuth2AccessTokenService.getAccessToken(getClientProperties(oauth2Config)).access_token}",
+					)
+				}
+		)
+	}
 
 	private val safMaskintilmaskin = "saf-maskintilmaskin"
 
