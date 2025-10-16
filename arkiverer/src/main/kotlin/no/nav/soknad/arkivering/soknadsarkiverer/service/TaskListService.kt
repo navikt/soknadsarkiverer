@@ -259,7 +259,7 @@ open class TaskListService(
 
 				logger.info("$key: Finished sending to the archive")
 
-			} catch (e: ApplicationAlreadyArchivedException) {
+			} catch (_: ApplicationAlreadyArchivedException) {
 				// Log nothing, the Exceptions of this type are supposed to already have been logged
 				nextState = EventTypes.ARCHIVED
 
@@ -269,8 +269,12 @@ open class TaskListService(
 					logger.error(e.message, e)
 				}
 				nextState = retry(key)
-			} catch (e: FilesAlreadyDeletedException) {
 
+			} catch (_: ShuttingDownException) {
+				logger.warn("$key: Will not start to archive - application is shutting down.")
+				nextState = null
+
+			} catch (_: FilesAlreadyDeletedException) {
 				logger.warn(
 					"$key: Files deleted, indicating that the application is already archived. " +
 						"Will check if application is archived and re-try if not"
