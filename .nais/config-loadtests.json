@@ -9,8 +9,7 @@
 		"innsending-api-loadtests"
 	],
 	"outboundExternalHosts": [
-		"arkiv-mock-gcp.intern.dev.nav.no",
-		"innsending-api-loadtests.intern.dev.nav.no"
+		"arkiv-mock-gcp.intern.dev.nav.no"
 	],
 	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v1-loadtests",
 	"kafka-processingeventlog-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v1-loadtests",

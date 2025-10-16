@@ -9,7 +9,6 @@
 	],
 	"outboundExternalHosts": [
 		"dokarkiv.dev-fss-pub.nais.io",
-		"innsending-api-gcp.intern.dev.nav.no",
 		"saf.dev-fss-pub.nais.io"
 	],
 	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v2-dev",
@@ -18,7 +17,7 @@
 	"kafka-arkiveringstilbakemeldinger-topic": "team-soknad.privat-soknadinnsending-arkiveringstilbakemeldinger-v1-dev",
 	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v2-dev",
 	"kafka-nologin-submission-topic": "team-soknad.privat-nologinsubmission-v1-dev",
-	"innsending-api-host": "https://innsending-api-gcp.intern.dev.nav.no",
+	"innsending-api-host": "http://innsending-api",
 	"joark-host": "https://dokarkiv.dev-fss-pub.nais.io",
 	"dokarkiv-scope": "api://dev-fss.teamdokumenthandtering.dokarkiv-q1/.default",
 	"innsending-api-scope": "api://dev-gcp.team-soknad.innsending-api/.default",
