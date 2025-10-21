@@ -93,7 +93,7 @@ class KafkaBootstrapConsumer(
 		return BootstrapConsumer.Builder<String>()
 			.withFilter(keepUnfinishedRecordsFilter)
 			.withKafkaConfig(kafkaConfig)
-			.withKafkaGroupId("soknadsarkiverer-bootstrapping-main-$uuid")
+			.withKafkaGroupId("soknadsarkiverer-bootstrapping-nologin-$uuid")
 			.withValueDeserializer(StringDeserializer())
 			.forTopic(noLoginTopic)
 			.getAllKafkaRecords()
