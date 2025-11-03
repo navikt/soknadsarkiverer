@@ -69,14 +69,14 @@ spec:
       {{#each outboundRules}}
         - application: "{{this}}"
       {{/each}}
+      {{#each accessPolicyOutbound.other-namespace}}
+         - application: "{{this.application}}"
+             namespace: "{{this.namespace}}"
+             {{/each}}
       external:
       {{#each outboundExternalHosts}}
         - host: "{{this}}"
       {{/each}}
-      {{#each accessPolicyOutbound.other-namespace}}
-        - application: "{{this.application}}"
-          namespace: "{{this.namespace}}"
-       {{/each}}
   envFrom:
     - secret: archiving-failed
 
