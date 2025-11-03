@@ -6,6 +6,24 @@
 			<encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
 		</appender>
 
+		<appender name="team-logs" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+			<destination>team-logs.nais-system:5170</destination>
+			<encoder class="net.logstash.logback.encoder.LogstashEncoder">
+				<customFields>{"google_cloud_project":"${GOOGLE_CLOUD_PROJECT}","nais_namespace_name":"${NAIS_NAMESPACE}","nais_pod_name":"${NAIS_POD_NAME}","nais_container_name":"${NAIS_APP_NAME}"}</customFields>
+				<includeContext>false</includeContext>
+			</encoder>
+			<filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+				<evaluator class="ch.qos.logback.classic.boolex.OnMarkerEvaluator">
+					<marker>TEAM_LOGS</marker>
+				</evaluator>
+				<OnMatch>ACCEPT</OnMatch>
+				<OnMismatch>DENY</OnMismatch>
+			</filter>
+		</appender>
+		<logger name="team-logs-logger" level="INFO" additivity="false">
+			<appender-ref ref="team-logs" />
+		</logger>
+
 		<logger name="org.apache" level="${log.level.org.apache:-INFO}"/>
 		<logger name="org.apache.kafka" level="${log.level.org.apache.kafka:-INFO}"/>
 		<logger name="ch.qos.logback" level="${log.level.ch.qos.logback:-INFO}"/>
@@ -19,6 +37,7 @@
 
 		<root level="INFO">
 			<appender-ref ref="STDOUT_JSON"/>
+			<appender-ref ref="team-logs" />
 		</root>
 	</springProfile>
 

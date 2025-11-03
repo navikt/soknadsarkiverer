@@ -9,6 +9,8 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import org.slf4j.LoggerFactory
+import org.slf4j.Marker
+import org.slf4j.MarkerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpMethod
@@ -17,6 +19,7 @@ import org.springframework.http.HttpStatusCode
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestClient
+import java.time.format.DateTimeFormatter
 
 @Service
 class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
@@ -26,6 +29,8 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 												private val metrics: ArchivingMetrics): JournalpostClientInterface {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
+	private val secureLogsMarker: Marker = MarkerFactory.getMarker("TEAM_LOGS")
+
 
 	override fun opprettJournalpost(key: String, soknadarkivschema: InnsendingTopicMsg, attachedFiles: List<FileInfo>): String {
 		val timer = metrics.startJoarkLatency()
@@ -41,8 +46,19 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 			val response = sendDataToJoark(key, request, restClient, journalPostUrl)
 			val journalpostId = response?.journalpostId ?: "-1"
 
-			logger.info("$key: Created journalpost for behandlingsId:'${soknadarkivschema.innsendingsId}', " +
-				"got the following journalpostId: '$journalpostId'")
+			val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS XXX")
+
+			val message = "$key: journalpostId:$journalpostId, innsendingsId:$key, skjemaNr:${soknadarkivschema.skjemanr}, " +
+				"tema:${soknadarkivschema.arkivtema}, kanal:${soknadarkivschema.kanal}, " +
+				"ettersendelsetilId:${soknadarkivschema.ettersendelseTilId}, " +
+				"innsendtDato:${formatter.format(soknadarkivschema.innsendtDato)}"
+			logger.info(message)
+			logger.info(secureLogsMarker,
+				"brukerId:${soknadarkivschema.brukerDto?.id}, " +
+				"avsenderId:${soknadarkivschema.avsenderDto.id}, " +
+				"avsenderNavn:${soknadarkivschema.avsenderDto.navn}, " +
+				"$message")
+
 			metrics.incJoarkSuccesses()
 			if (!soknadarkivschema.innlogget) {
 				metrics.incNoLoginJoarkSuccesses()

@@ -30,7 +30,6 @@ class ArchiverService(
 			val startTime = System.currentTimeMillis()
 			val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
 			createMetricAndPublishOnKafka(key, "send files to archive", startTime)
-			logger.info("$key: Opprettet journalpostId=$journalpostId for behandlingsid=${data.innsendingsId}")
 			// TODO fjern createMessage når innsending-api leser fra arkiveringstilbakemeldinger topic
 			createMessage(key, "**Archiving: OK.  journalpostId=$journalpostId")
 			createArkiveringstilbakemelding(key, "**Archiving: OK.  journalpostId=$journalpostId")
@@ -81,12 +80,12 @@ class ArchiverService(
 	}
 
 	fun createMessage(key: String, message: String) {
-		logger.info("$key: publiser meldingsvarsling til avsender")
+		logger.debug("$key: publiser meldingsvarsling til avsender")
 		kafkaPublisher.putMessageOnTopic(key, message)
 	}
 
 	fun createArkiveringstilbakemelding(key: String, message: String) {
-		logger.info("$key: publiser arkiveringstilbakemelding til avsender")
+		logger.debug("$key: publiser arkiveringstilbakemelding til avsender")
 		kafkaPublisher.putArkiveringstilbakemeldingOnTopic(key, message)
 	}
 

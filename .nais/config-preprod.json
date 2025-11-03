@@ -11,6 +11,15 @@
 		"dokarkiv.dev-fss-pub.nais.io",
 		"saf.dev-fss-pub.nais.io"
 	],
+	"accessPolicyOutbound": {
+		"other-namespace": [
+			{
+				"application": "logging",
+				"namespace": "nais-system"
+			}
+		]
+	},
+
 	"kafka-main-topic": "team-soknad.privat-soknadinnsending-v2-dev",
 	"kafka-processingeventlog-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v2-dev",
 	"kafka-message-topic": "team-soknad.privat-soknadinnsending-messages-v2-dev",
