@@ -57,7 +57,7 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 				"brukerId:${soknadarkivschema.brukerDto?.id}, " +
 				"avsenderId:${soknadarkivschema.avsenderDto.id}, " +
 				"avsenderNavn:${soknadarkivschema.avsenderDto.navn}, " +
-				"$message")
+				message)
 
 			metrics.incJoarkSuccesses()
 			if (!soknadarkivschema.innlogget) {
