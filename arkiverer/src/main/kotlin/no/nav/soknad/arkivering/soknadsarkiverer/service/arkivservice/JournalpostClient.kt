@@ -9,7 +9,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import org.slf4j.LoggerFactory
-import org.slf4j.Marker
 import org.slf4j.MarkerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
@@ -28,8 +27,10 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 												@Qualifier("archiveRestClient") private val restClient: RestClient,
 												private val metrics: ArchivingMetrics): JournalpostClientInterface {
 
-	private val logger = LoggerFactory.getLogger(javaClass)
-	private val secureLogsMarker: Marker = MarkerFactory.getMarker("TEAM_LOGS")
+	companion object {
+		private val logger = LoggerFactory.getLogger(javaClass)
+		private val secureLogsMarker = MarkerFactory.getMarker("TEAM_LOGS")
+	}
 
 
 	override fun opprettJournalpost(key: String, soknadarkivschema: InnsendingTopicMsg, attachedFiles: List<FileInfo>): String {
@@ -46,23 +47,13 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 			val response = sendDataToJoark(key, request, restClient, journalPostUrl)
 			val journalpostId = response?.journalpostId ?: "-1"
 
-			val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS XXX")
-
-			val message = "$key: journalpostId:$journalpostId, innsendingsId:$key, skjemaNr:${soknadarkivschema.skjemanr}, " +
-				"tema:${soknadarkivschema.arkivtema}, kanal:${soknadarkivschema.kanal}, " +
-				"ettersendelsetilId:${soknadarkivschema.ettersendelseTilId}, " +
-				"innsendtDato:${formatter.format(soknadarkivschema.innsendtDato)}"
-			logger.info(message)
-			logger.info(secureLogsMarker,
-				"brukerId:${soknadarkivschema.brukerDto?.id}, " +
-				"avsenderId:${soknadarkivschema.avsenderDto.id}, " +
-				"avsenderNavn:${soknadarkivschema.avsenderDto.navn}, " +
-				message)
-
 			metrics.incJoarkSuccesses()
 			if (!soknadarkivschema.innlogget) {
 				metrics.incNoLoginJoarkSuccesses()
 			}
+
+			loggArkivertInnsending(journalpostId, key, soknadarkivschema)
+
 			return journalpostId
 
 		} catch (e: ApplicationAlreadyArchivedException) {
@@ -78,6 +69,26 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 			throw ArchivingException(message, e)
 		} finally {
 			metrics.endTimer(timer)
+		}
+	}
+
+	private fun loggArkivertInnsending(journalpostId: String, key: String, soknadarkivschema: InnsendingTopicMsg) {
+
+		val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS XXX")
+		val message = "journalpostId:$journalpostId, innsendingsId:$key, skjemaNr:${soknadarkivschema.skjemanr}, " +
+			"tema:${soknadarkivschema.arkivtema}, kanal:${soknadarkivschema.kanal}, " +
+			"ettersendelsetilId:${soknadarkivschema.ettersendelseTilId}, " +
+			"innsendtDato:${formatter.format(soknadarkivschema.innsendtDato)}"
+
+		logger.info(message)
+		if (secureLogsMarker.hasReferences()) {
+			logger.info(
+				secureLogsMarker,
+				"brukerId:${soknadarkivschema.brukerDto?.id}, " +
+					"avsenderId:${soknadarkivschema.avsenderDto.id}, " +
+					"avsenderNavn:${soknadarkivschema.avsenderDto.navn}, " +
+					message
+			)
 		}
 	}
 
