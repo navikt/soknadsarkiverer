@@ -81,7 +81,7 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 			"innsendtDato:${formatter.format(soknadarkivschema.innsendtDato)}"
 
 		logger.info(message)
-		if (secureLogsMarker.hasReferences()) {
+		//if (secureLogsMarker.hasReferences()) {
 			logger.info(
 				secureLogsMarker,
 				"brukerId:${soknadarkivschema.brukerDto?.id}, " +
@@ -89,7 +89,7 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 					"avsenderNavn:${soknadarkivschema.avsenderDto.navn}, " +
 					message
 			)
-		}
+		//}
 	}
 
 	private fun sendDataToJoark(key: String, data: OpprettJournalpostRequest, client: RestClient, uri: String):
