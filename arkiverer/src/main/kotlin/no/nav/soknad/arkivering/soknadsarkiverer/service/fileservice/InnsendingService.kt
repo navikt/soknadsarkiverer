@@ -33,7 +33,7 @@ class InnsendingService(
 
 			val fetchFileResponse = getFiles(key, fileIds)
 
-			logger.info("$key: From innsending-api for filids ${fileIds} received status ${fetchFileResponse.status} with ${fetchFileResponse.files?.size} files with a sum of ${fetchFileResponse.files?.sumOf { it.content?.size ?: 0 }} bytes from innsending-api")
+			logger.info("$key: From innsending-api for attachments ${fileIds} received status ${fetchFileResponse.status} with ${fetchFileResponse.files?.size} files with a sum of ${fetchFileResponse.files?.sumOf { it.content?.size ?: 0 }} bytes from innsending-api")
 			return fetchFileResponse
 
 		} finally {
@@ -56,9 +56,9 @@ class InnsendingService(
 
 	private fun getOneFile(key: String, fileId: String): FetchFileResponse {
 		try {
-			logger.info("$key: Skal hente fil fra innsending-api $fileId")
+			logger.info("$key: Skal hente vedlegg $fileId")
 			val files = innsendingApi.hentInnsendteFiler(uuids = listOf(fileId), xInnsendingId = key)
-			logger.info("$key: Hentet fil fra innsending-api ${files.map{it.fileStatus}.toList()}")
+			logger.info("$key: Hentet vedlegg fra innsending-api ${files.map{it.fileStatus}.toList()}")
 
 			if (files.size > 1) {
 				logger.error("$key: Fetched more than on files for attachment $fileId, Only using the first")
@@ -72,7 +72,7 @@ class InnsendingService(
 			if (files.any{ it.fileStatus == SoknadFile.FileStatus.deleted }) {
 				return FetchFileResponse(status = ResponseStatus.Deleted.value, files = null, exception = null)
 			}
-			return FetchFileResponse(status = ResponseStatus.Error.value, files = null, exception = RuntimeException("$key: Feil ved henting av fil = $fileId"))
+			return FetchFileResponse(status = ResponseStatus.Error.value, files = null, exception = RuntimeException("$key: Feil ved henting av vedlegg = $fileId"))
 		} catch (ex: Exception) {
 			logger.error("$key: performGetCall", ex)
 			return FetchFileResponse(status = ResponseStatus.Error.value, files = null, exception = ex)

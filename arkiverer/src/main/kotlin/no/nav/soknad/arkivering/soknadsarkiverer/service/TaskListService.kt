@@ -170,7 +170,7 @@ open class TaskListService(
 			val task = { receivedState(key, soknadarkivschema, attempt) }
 			scheduler.scheduleSingleTask(task, Instant.now().plusSeconds(startUpSeconds))
 		} else {
-			logger.info("$key: state = RECEIVED. Ready for next state STARTED")
+			logger.debug("$key: state = RECEIVED. Ready for next state STARTED")
 			setStateChange(key, EventTypes.STARTED, soknadarkivschema, attempt)
 		}
 	}
@@ -179,7 +179,7 @@ open class TaskListService(
 		val secondsToWait = getSecondsToWait(attempt)
 		val scheduledTime = Instant.now().plusSeconds(secondsToWait)
 		val task = { tryToArchive(key, soknadarkivschema, attempt) }
-		logger.info("$key: state = STARTED. About to schedule attempt $attempt at job in $secondsToWait seconds")
+		logger.debug("$key: state = STARTED. About to schedule attempt $attempt at job in $secondsToWait seconds")
 
 		if (tasks[key]?.isBootstrappingTask == true)
 			scheduler.scheduleSingleTask(task, scheduledTime)
@@ -213,7 +213,7 @@ open class TaskListService(
 
 			loggedTaskStates[key] = EventTypes.FAILURE
 			updateNoOfFailedMetrics()
-			logger.info("$key: Failed task")
+			logger.warn("$key: Failed task")
 			tasks[key]?.isRunningLock?.release()
 
 		} else {
@@ -248,7 +248,7 @@ open class TaskListService(
 			val histogram = metrics.archivingLatencyHistogramStart(soknadarkivschema.arkivtema)
 			try {
 				checkIfAlreadyArchived(key)
-				logger.info("$key: Will now start to fetch files and send to the archive")
+				logger.debug("$key: Will now start to fetch attachments and send to the archive")
 				val files = archiverService.fetchFiles(key, soknadarkivschema)
 
 				protectFromShutdownInterruption(applicationState) {
@@ -256,8 +256,6 @@ open class TaskListService(
 					archiverService.archive(key, soknadarkivschema, files)
 					nextState = EventTypes.ARCHIVED
 				}
-
-				logger.info("$key: Finished sending to the archive")
 
 			} catch (_: ApplicationAlreadyArchivedException) {
 				// Log nothing, the Exceptions of this type are supposed to already have been logged
@@ -348,7 +346,7 @@ open class TaskListService(
 
 		val count = incrementRetryCount(key)
 		return if (count >= secondsBetweenRetries.size) {
-			logger.warn("$key: publiser meldingsvarsling til avsender")
+			logger.warn("$key: antall arkiveringsforsøk $count >= ${secondsBetweenRetries.size}.")
 			// TODO fjern createMessage når innsending-api leser fra arkiveringstilbakemeldinger topic
 			archiverService.createMessage(key, "**Archiving: FAILED")
 			archiverService.createArkiveringstilbakemelding(key, "**Archiving: FAILED")
