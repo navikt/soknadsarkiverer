@@ -140,8 +140,6 @@ class RestClientConfig {
 			val token = tokenService.getToken()?.access_token
 			val callId = MDC.get(Constants.HEADER_CALL_ID) ?: MDC.get(Constants.MDC_INNSENDINGS_ID) ?: ""
 
-			logger.info("Kaller service med callId: $callId")
-
 			request.headers.setBearerAuth(token ?: "")
 			request.headers.set(Constants.HEADER_CALL_ID, callId)
 			request.headers.set(Constants.MDC_INNSENDINGS_ID, MDC.get(Constants.MDC_INNSENDINGS_ID) ?: "")
