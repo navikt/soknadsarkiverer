@@ -3,8 +3,8 @@ package no.nav.soknad.arkivering.soknadsarkiverer.utils
 import com.expediagroup.graphql.client.types.GraphQLClientError
 import com.expediagroup.graphql.client.types.GraphQLClientResponse
 import com.expediagroup.graphql.client.types.GraphQLClientSourceLocation
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.datatype.jsr310.JavaTimeModule
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.http.RequestMethod
@@ -188,7 +188,7 @@ private fun createInnsendingApiResponse(idAndResponseAndStatus: Triple<String, S
 	val (id, response, status) = idAndResponseAndStatus
 	val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
 	return ObjectMapper()
-		.registerModule(JavaTimeModule())
+		//.registerModule(JavaTimeModule())
 		.writeValueAsString(listOf(SoknadFile(id, status, response?.toByteArray(), createdAt)))
 }
 

@@ -1,7 +1,5 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.schedule
 
-import com.google.gson.Gson
-import io.mockk.InternalPlatformDsl.toArray
 import io.mockk.every
 import io.mockk.mockk
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
@@ -9,6 +7,10 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import tools.jackson.core.type.TypeReference
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.io.File
 import java.util.*
 
@@ -18,6 +20,8 @@ class ReSendFailedApplicationsTests {
 	private val leaderSelectionUtility = mockk<LeaderSelectionUtility>()
 	private val sourceFile = "failedApplications"
 
+	@Autowired
+	private val objectMapper: ObjectMapper = jacksonObjectMapper()
 
 	fun lagInput(): ApplicationList {
 		val innsendingIds = listOf<String>("4aee359a-a6b7-472d-bc71-70df92a5642d","53a2b9d6-ae8b-4274-bfc2-d1d20e09278f")
@@ -35,9 +39,7 @@ class ReSendFailedApplicationsTests {
 		val failedApplications = lagInput()
 		val filePath = ""
 
-		val gson = Gson()
-
-		val jsonString = gson.toJson(failedApplications)
+		val jsonString = objectMapper.writeValueAsString(failedApplications)
 		val encodedJsonString: String = Base64.getEncoder().encodeToString(jsonString.toByteArray())
 
 		writeBytesToFile(jsonString.toByteArray(Charsets.UTF_8), filePath+sourceFile)
@@ -72,9 +74,8 @@ class ReSendFailedApplicationsTests {
 		val jsonByteArray = readeBytesFromFile("innsendingsIds.json")
 
 		val encodedString: String = Base64.getEncoder().encodeToString(jsonByteArray)
-		val gson = Gson()
 
-		val input = gson.fromJson(String(Base64.getDecoder().decode(encodedString)), ApplicationList::class.java)
+		val input = objectMapper.readValue(String(Base64.getDecoder().decode(encodedString)), object: TypeReference<ApplicationList>(){})
 
 		Assertions.assertTrue(input.innsendingIds.size > 0 )
 
