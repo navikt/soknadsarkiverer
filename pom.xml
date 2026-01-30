@@ -26,7 +26,7 @@
 		<maven.version>3.9.0</maven.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-		<springdoc-openapi.version>1.8.0</springdoc-openapi.version>
+		<springdoc-openapi.version>3.0.0</springdoc-openapi.version>
 		<springdoc-openapi-ui.version>1.8.0</springdoc-openapi-ui.version>
 		<springdoc-openapi-kotlin.version>1.8.0</springdoc-openapi-kotlin.version>
 		<token-support.version>6.0.1</token-support.version>
@@ -42,6 +42,7 @@
 		<jakarta-annotation.version>3.0.0</jakarta-annotation.version>
 		<graphql-kotlin.version>8.8.1</graphql-kotlin.version>
 		<commons-codec.version>1.18.0</commons-codec.version>
+		<okhttp3.version>5.3.2</okhttp3.version>
 
 		<!-- OpenAPI -->
 		<springdoc-openapi.version>3.0.0</springdoc-openapi.version>
@@ -74,7 +75,7 @@
 
 		<!--Plugins-->
 		<versions-maven-plugin.version>2.20.1</versions-maven-plugin.version>
-		<openapi-generator-maven-plugin.version>7.13.0</openapi-generator-maven-plugin.version>
+		<openapi-generator-maven-plugin.version>7.19.0</openapi-generator-maven-plugin.version>
 		<cyclonedx-maven-plugin.version>2.9.1</cyclonedx-maven-plugin.version>
 		<maven-enforcer.version>3.6.2</maven-enforcer.version>
 		<maven-surefire.version>3.5.4</maven-surefire.version>
