@@ -8,7 +8,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.ArchivingT
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileFetchTimeoutProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.InnsendingApiProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.tokensupport.TokenService
-import no.nav.soknad.innsending.api.HentInnsendteFilerApi
+import no.nav.soknad.innsending.api.InnsendteApi
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -103,9 +103,9 @@ class RestClientConfig {
 	@Bean
 	fun hentInnsendteFilerApi(
 		innsendingApiProperties: InnsendingApiProperties,
-		@Qualifier("innsendingApiRestClient") innsendingApiClient: RestClient): HentInnsendteFilerApi {
+		@Qualifier("innsendingApiRestClient") innsendingApiClient: RestClient): InnsendteApi {
 		//Serializer.jacksonObjectMapper.registerModule(JavaTimeModule())
-		return HentInnsendteFilerApi(innsendingApiClient)
+		return InnsendteApi(innsendingApiClient)
 	}
 
 	@Bean

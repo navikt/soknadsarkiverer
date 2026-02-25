@@ -24,6 +24,13 @@
 			<version>${jackson-module-kotlin.version}</version>
 		</dependency>
 		<dependency>
+			<groupId>no.nav.soknad.innsending</groupId>
+			<artifactId>innsending-api</artifactId>
+			<version>c21da5c-prod</version>
+			<classifier>openapi-spec</classifier>
+			<type>zip</type>
+		</dependency>
+		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
 			<version>${springdoc-openapi.version}</version>
@@ -47,6 +54,28 @@
 		<sourceDirectory>target/generated-sources/openapi</sourceDirectory>
 		<plugins>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>unpack-openapi-spec</id>
+						<phase>generate-sources</phase>
+						<goals><goal>unpack</goal></goals>
+						<configuration>
+							<artifactItems>
+								<artifactItem>
+									<groupId>no.nav.soknad.innsending</groupId>
+									<artifactId>innsending-api</artifactId>
+									<classifier>openapi-spec</classifier>
+									<type>zip</type>
+									<outputDirectory>${project.build.directory}/innsending-api-spec</outputDirectory>
+								</artifactItem>
+							</artifactItems>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
 				<groupId>org.openapitools</groupId>
 				<artifactId>openapi-generator-maven-plugin</artifactId>
 				<version>${openapi-generator-maven-plugin.version}</version>
@@ -57,7 +86,7 @@
 						</goals>
 						<id>innsending</id>
 						<configuration>
-							<inputSpec>${project.basedir}/src/main/resources/innsending-api.yml</inputSpec>
+							<inputSpec>${project.build.directory}/innsending-api-spec/innsending-api.yml</inputSpec>
 							<generatorName>kotlin</generatorName>
 							<additionalProperties>useSpringBoot3</additionalProperties>
 							<library>jvm-spring-restclient</library>

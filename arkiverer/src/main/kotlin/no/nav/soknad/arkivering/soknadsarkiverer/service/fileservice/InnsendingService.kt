@@ -4,7 +4,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.Constants
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import no.nav.soknad.innsending.api.HealthApi
-import no.nav.soknad.innsending.api.HentInnsendteFilerApi
+import no.nav.soknad.innsending.api.InnsendteApi
 import no.nav.soknad.innsending.model.SoknadFile
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service
 
 @Service
 class InnsendingService(
-	private val innsendingApi: HentInnsendteFilerApi,
+	private val innsendingApi: InnsendteApi,
 	private val healthApi: HealthApi,
 	private val metrics: ArchivingMetrics
 ) : FileserviceInterface  {
