@@ -1,6 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
-import tools.jackson.databind.ObjectMapper
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import tools.jackson.module.kotlin.readValue
 import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
@@ -29,12 +30,17 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.test.context.junit.jupiter.SpringExtension
+import tools.jackson.databind.ObjectMapper
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -44,7 +50,14 @@ import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
 @ActiveProfiles("test")
-@SpringBootTest
+@SpringBootTest(
+	webEnvironment = SpringBootTest.WebEnvironment.NONE,
+	properties = ["spring.main.allow-bean-definition-overriding=true"],
+	classes = [SoknadsarkivererApplication::class],
+	)
+@ExtendWith(
+	SpringExtension::class
+)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class ApplicationTests : ContainerizedKafka() {
@@ -53,7 +66,7 @@ class ApplicationTests : ContainerizedKafka() {
 	lateinit var prometheusRegistry: PrometheusRegistry
 
 	@Value("\${application.mocked-port-for-external-services}")
-	private val portToExternalServices: Int? = null
+	private val portToExternalServices: Int = 2908
 
 	@Suppress("unused")
 	@MockkBean(relaxed = true)
@@ -90,8 +103,30 @@ class ApplicationTests : ContainerizedKafka() {
 
 	private val fileUuid = UUID.randomUUID().toString()
 
-	@BeforeAll
+
+	companion object {
+
+	 	val wireMock: WireMockServer = WireMockServer(wireMockConfig().port(2908)).also { it.start() }
+
+		@JvmStatic
+		@AfterAll
+		fun stopWiremock() {
+			wireMock.stop()
+		}
+
+		@JvmStatic
+		@DynamicPropertySource
+		fun properties(reg: DynamicPropertyRegistry) {
+			val base = "http://localhost:${wireMock.port()}"
+			reg.add("innsendingsapi.path") { "/innsendte/v1/files/[0-9a-fA-F-]{36}" }
+			reg.add("joark.journal-post") { "/rest/journalpostapi/v1/journalpost" }
+			reg.add("saf.path") { "/graphql" }
+		}
+	}
+
+	@BeforeEach
 	fun setupKafkaProducersAndListeners() {
+
 		kafkaProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap()
 			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
@@ -103,8 +138,9 @@ class ApplicationTests : ContainerizedKafka() {
 	}
 
 	@BeforeEach
-	fun setup() {
+	fun beforeEach() {
 		setupMockedNetworkServices(
+			wireMock,
 			portToExternalServices!!,
 			journalPostUrl,
 			"/innsendte/v1/files",
@@ -116,7 +152,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@AfterEach
 	fun teardown() {
-		stopMockedNetworkServices()
+		//stopMockedNetworkServices()
 		metrics.unregister()
 		taskListService.clearLoggedTaskStates()
 	}

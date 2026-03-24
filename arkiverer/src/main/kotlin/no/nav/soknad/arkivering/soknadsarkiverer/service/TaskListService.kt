@@ -241,6 +241,7 @@ open class TaskListService(
 	}
 
 	private fun tryToArchive(key: String, soknadarkivschema: InnsendingTopicMsg, attempt: Int) {
+		logger.debug("$key: Start of tryToArchive. Attempt $attempt.")
 		CoroutineScope(Dispatchers.Default).launch {
 			MDC.put(MDC_INNSENDINGS_ID, key)
 			var nextState: EventTypes? = null
@@ -323,6 +324,7 @@ open class TaskListService(
 				}
 			}
 		}
+		logger.debug("$key: End of tryToArchive")
 	}
 
 	private fun checkIfAlreadyArchived(key: String) {

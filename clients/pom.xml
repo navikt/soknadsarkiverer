@@ -33,7 +33,6 @@
 			<artifactId>jackson-module-kotlin</artifactId>
 			<version>${old-jackson.version}</version>
 		</dependency>
-
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-web</artifactId>
@@ -61,29 +60,19 @@
 			<version>${swagger-annotations.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>com.squareup.okhttp3</groupId>
-			<artifactId>okhttp</artifactId>
-			<version>${okhttp3.version}</version>
-		</dependency>
-		<dependency>
 			<groupId>org.openapitools</groupId>
 			<artifactId>jackson-databind-nullable</artifactId>
 			<version>${jackson-databind-nullable.version}</version>
 		</dependency>
-
-<!--
-
 		<dependency>
-			<groupId>io.kotlintest</groupId>
-			<artifactId>kotlintest-runner-junit5</artifactId>
-			<version>${kotlintest.version}</version>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>io.kotlintest</groupId>
-			<artifactId>kotlintest-assertions</artifactId>
-			<version>${kotlintest.version}</version>
+			<groupId>tools.jackson.module</groupId>
+			<artifactId>jackson-module-kotlin</artifactId>
+			<version>${jackson-module-kotlin.version}</version>
 		</dependency>
--->
 	</dependencies>
 
 
@@ -103,23 +92,17 @@
 						<id>innsending</id>
 						<configuration>
 							<inputSpec>${project.basedir}/src/main/resources/innsending-api.yml</inputSpec>
-							<generatorName>kotlin-spring</generatorName>
-<!--
-							<additionalProperties>useSpringBoot3</additionalProperties>
+							<generatorName>kotlin</generatorName>
 							<library>jvm-spring-restclient</library>
--->
 							<apiPackage>no.nav.soknad.innsending.api</apiPackage>
 							<modelPackage>no.nav.soknad.innsending.model</modelPackage>
+							<generateApiTests>false</generateApiTests>
+							<generateModelTests>false</generateModelTests>
+							<additionalProperties>useSpringBoot3</additionalProperties>
 							<configOptions>
-<!--
-								<useJakartaEe>true</useJakartaEe>
--->
 								<useSpringBoot3>true</useSpringBoot3>
 								<gradleBuildFile>false</gradleBuildFile>
-<!--
 								<serializationLibrary>jackson</serializationLibrary>
--->
-								<omitGradlePluginVersions>true</omitGradlePluginVersions>
 								<groupId>no.nav.soknad.innsending</groupId>
 								<artifactId>innsending-api-client</artifactId>
 								<packageName>no.nav.soknad.innsending</packageName>

@@ -1,17 +1,12 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.util
 
-import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.ObjectMapper
-import tools.jackson.databind.SerializationFeature
-import tools.jackson.datatype.jsr310.JavaTimeModule
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
 import no.nav.soknad.arkivering.soknadsmottaker.model.AvsenderDto
 import no.nav.soknad.arkivering.soknadsmottaker.model.BrukerDto
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
-import tools.jackson.core.FormatFeature
-import tools.jackson.databind.cfg.DatatypeFeature
 import tools.jackson.databind.cfg.DateTimeFeature
 import java.time.Instant
 import java.time.OffsetDateTime

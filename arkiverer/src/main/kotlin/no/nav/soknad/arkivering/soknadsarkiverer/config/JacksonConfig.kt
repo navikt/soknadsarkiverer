@@ -14,6 +14,8 @@ class JacksonConfig : WebMvcConfigurer {
 
 	@Bean
 	fun objectMapper(): ObjectMapper {
-		return jacksonObjectMapper()
+		val mapper = jacksonObjectMapper()
+		//mapper.deserializationConfig().withoutFeatures(DateTimeFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+		return mapper
 	}
 }

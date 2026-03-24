@@ -2,15 +2,16 @@ package no.nav.soknad.arkivering.soknadsarkiverer.kafka
 
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.clients.consumer.ConsumerRecord.NULL_CHECKSUM
-import org.apache.kafka.clients.consumer.ConsumerRecord.NULL_SIZE
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.TopicPartition
+import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.record.TimestampType
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.util.*
@@ -251,10 +252,13 @@ private class MockKafkaConsumer(private val clock: TestClock) : KafkaConsumer<Ke
 			}
 		}
 
-		return ConsumerRecord(
-			topic, 0, offset, timestamp, TimestampType.CREATE_TIME, NULL_CHECKSUM.toLong(),
-			NULL_SIZE, NULL_SIZE, key, value
-		)
+		return ConsumerRecord(topic, 0, offset, timestamp, TimestampType.CREATE_TIME,
+			-1,
+			-1,
+			key,
+			value,
+			RecordHeaders(),
+			Optional.empty<Int?>())
 	}
 
 	/**

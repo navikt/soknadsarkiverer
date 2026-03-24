@@ -4,7 +4,6 @@ import com.expediagroup.graphql.client.types.GraphQLClientError
 import com.expediagroup.graphql.client.types.GraphQLClientResponse
 import com.expediagroup.graphql.client.types.GraphQLClientSourceLocation
 import tools.jackson.databind.ObjectMapper
-import tools.jackson.datatype.jsr310.JavaTimeModule
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.http.RequestMethod
@@ -21,6 +20,8 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.Oppret
 import no.nav.soknad.innsending.model.SoknadFile
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import tools.jackson.databind.cfg.DateTimeFeature
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -34,13 +35,12 @@ private lateinit var joarkUrl: String
 private lateinit var innsendingApiPath: String
 private lateinit var safUrl: String
 
-fun setupMockedNetworkServices(port: Int, urlJoark: String, pathInnsendingApi: String, urlSaf: String) {
+fun setupMockedNetworkServices(wireMock: WireMockServer,  port: Int, urlJoark: String, pathInnsendingApi: String, urlSaf: String) {
 	joarkUrl = urlJoark
 	innsendingApiPath = pathInnsendingApi
 	safUrl = urlSaf
 
-	wiremockServer = WireMockServer(port)
-	wiremockServer.start()
+	wiremockServer = wireMock
 }
 
 fun stopMockedNetworkServices() {
@@ -141,7 +141,7 @@ fun mockRequestedFileIsNotFound() {
 
 private fun mockInnsendingApiGetRequest(url: String, response: String) {
 	wiremockServer.stubFor(
-		get(urlMatching(url))
+		get(urlPathEqualTo(url))
 			.willReturn(
 				aResponse()
 					.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
@@ -149,6 +149,7 @@ private fun mockInnsendingApiGetRequest(url: String, response: String) {
 					.withStatus(HttpStatus.OK.value())
 			)
 	)
+
 }
 
 fun mockFilestorageDeletionIsWorking(uuids: List<String>) {
@@ -184,15 +185,16 @@ fun mockFilestoragePingIsWorking() {
 				.withStatus(HttpStatus.OK.value())))
 }
 
-private fun createInnsendingApiResponse(idAndResponseAndStatus: Triple<String, String?, SoknadFile.FileStatus>): String {
+fun createInnsendingApiResponse(idAndResponseAndStatus: Triple<String, String?, SoknadFile.FileStatus>): String {
 	val (id, response, status) = idAndResponseAndStatus
 	val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
-	return ObjectMapper()
-		//.registerModule(JavaTimeModule())
+	val objectMapper = jacksonObjectMapper()
+	objectMapper.deserializationConfig().with(DateTimeFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+	return objectMapper
 		.writeValueAsString(listOf(SoknadFile(id, status, response?.toByteArray(), createdAt)))
 }
 
-private fun createJoarkResponse(): String = ObjectMapper().writeValueAsString(
+fun createJoarkResponse(): String = ObjectMapper().writeValueAsString(
 	OpprettJournalpostResponse(listOf(Dokumenter("brevkode", "dokumentInfoId", "tittel")),
 		"journalpostId", false, "journalstatus", "null"))
 
@@ -284,25 +286,25 @@ fun mockSafRequest_foundAfterAttempt_ApplicationTest(url: String? = safUrl, inns
 			)
 	)
 }
-private fun createSafResponse_withJournalpost(innsendingsId: String): String {
+fun createSafResponse_withJournalpost(innsendingsId: String): String {
 	val objectMapper = ObjectMapper()
 	return objectMapper.writeValueAsString(
 		graphQlResponse(data = createSafJournalpostResponse(innsendingsId), errors = null, extensions = null)
 	)
 }
 
-private fun createSafResponse_withoutJournalpost(innsendingsId: String): String
+fun createSafResponse_withoutJournalpost(innsendingsId: String): String
 {
 	val objectMapper = ObjectMapper()
 	return objectMapper.writeValueAsString(
 		graphQlResponse(data = null, errors = null, extensions = null))
 }
 
-private fun createSafResponse_withError(innsendingsId: String): String =  ObjectMapper().writeValueAsString(
+fun createSafResponse_withError(innsendingsId: String): String =  ObjectMapper().writeValueAsString(
 	graphQlResponse(data = null, errors = createSafErrorResponse(innsendingsId), extensions = null)
 )
 
-private fun createSafJournalpostResponse(innsendingsId: String) =
+fun createSafJournalpostResponse(innsendingsId: String) =
 	HentJournalpostGittEksternReferanseId.Result(
 		Journalpost(
 			journalpostId = "12345", tittel = "Test søknad",

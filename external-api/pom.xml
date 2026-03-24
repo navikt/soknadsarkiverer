@@ -106,12 +106,6 @@
 						<configuration>
 							<inputSpec>${project.basedir}/src/main/resources/soknadsmottaker-api.yml</inputSpec>
 							<generatorName>kotlin-spring</generatorName>
-							<templateDirectory>${project.basedir}/src/openapi/templates</templateDirectory>
-
-							<!--
-														<additionalProperties>useSpringBoot3</additionalProperties>
-							-->
-							<library>jvm-spring-restclient</library>
 							<apiPackage>no.nav.soknad.arkivering.soknadsmottaker.api</apiPackage>
 							<modelPackage>no.nav.soknad.arkivering.soknadsmottaker.model</modelPackage>
 							<configOptions>
@@ -120,14 +114,6 @@
 								<enumPropertyNaming>original</enumPropertyNaming>
 								<serializationLibrary>jackson</serializationLibrary>
 								<omitNullableQuestionMarks>true</omitNullableQuestionMarks>
-<!--
-			 					<omitGradlePluginVersions>true</omitGradlePluginVersions>
--->
-<!--
-								<groupId>no.nav.soknad.arkivering</groupId>
-								<artifactId>soknadsmottaker-client</artifactId>
-								<packageName>no.nav.soknad.arkivering.soknadsmottaker</packageName>
--->
 							</configOptions>
 						</configuration>
 					</execution>
@@ -163,9 +149,6 @@
 				</executions>
 				<configuration>
 					<jvmTarget>${java.version}</jvmTarget>
-					<compilerPlugins>
-						<plugin>jspecify</plugin>
-					</compilerPlugins>
 				</configuration>
 			</plugin>
 		</plugins>

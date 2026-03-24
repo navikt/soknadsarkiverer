@@ -1,5 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka.bootstrapping
 
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
@@ -34,6 +36,7 @@ import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.apache.kafka.streams.KafkaStreams
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -43,8 +46,10 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.annotation.DirtiesContext
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -56,7 +61,7 @@ import java.util.concurrent.TimeUnit
 @EnableConfigurationProperties(ClientConfigurationProperties::class, KafkaConfig::class)
 class StateRecreationTests : ContainerizedKafka() {
 
-	@MockBean
+	@MockitoBean
 	lateinit var prometheusRegistry: PrometheusRegistry
 
 	@Value("\${application.mocked-port-for-external-services}")
@@ -116,6 +121,27 @@ class StateRecreationTests : ContainerizedKafka() {
 	private val soknadarkivschema = createSoknadarkivschema()
 	private val fileUuid = UUID.randomUUID().toString()
 
+
+	companion object {
+
+		val wireMock: WireMockServer = WireMockServer(wireMockConfig().port(2902)).also { it.start() }
+
+		@JvmStatic
+		@AfterAll
+		fun stopWiremock() {
+			wireMock.stop()
+		}
+
+		@JvmStatic
+		@DynamicPropertySource
+		fun properties(reg: DynamicPropertyRegistry) {
+			val base = "http://localhost:${wireMock.port()}"
+			reg.add("innsendingsapi.path") { "/innsendte/v1/files/[0-9a-fA-F-]{36}" }
+			reg.add("joark.journal-post") { "/rest/journalpostapi/v1/journalpost" }
+			reg.add("saf.path") { "/graphql" }
+		}
+	}
+
 	@AfterEach
 	fun tearDown() {
 		metrics.unregister()
@@ -124,6 +150,7 @@ class StateRecreationTests : ContainerizedKafka() {
 	@BeforeAll
 	fun setup() {
 		setupMockedNetworkServices(
+			wireMock,
 			portToExternalServices!! + 1,
 			journalPostUrl,
 			"/innsendte/v1/files",

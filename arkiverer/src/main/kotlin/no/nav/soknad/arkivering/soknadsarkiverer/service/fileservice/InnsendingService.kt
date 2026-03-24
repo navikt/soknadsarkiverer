@@ -4,7 +4,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.Constants
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import no.nav.soknad.innsending.api.HealthApi
-import no.nav.soknad.innsending.api.HentInnsendteFilerApi
 import no.nav.soknad.innsending.model.SoknadFile
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -12,7 +11,7 @@ import org.springframework.stereotype.Service
 
 @Service
 class InnsendingService(
-	private val innsendingApi: HentInnsendteFilerApi,
+	private val innsendingApi: FetchFileApi,
 	private val healthApi: HealthApi,
 	private val metrics: ArchivingMetrics
 ) : FileserviceInterface  {
@@ -72,7 +71,7 @@ class InnsendingService(
 			if (files.any{ it.fileStatus == SoknadFile.FileStatus.deleted }) {
 				return FetchFileResponse(status = ResponseStatus.Deleted.value, files = null, exception = null)
 			}
-			return FetchFileResponse(status = ResponseStatus.Error.value, files = null, exception = RuntimeException("$key: Feil ved henting av vedlegg = $fileId"))
+			return FetchFileResponse(status = ResponseStatus.Error.value, files = null, exception = RuntimeException("$key: Error fetching attachment = $fileId"))
 		} catch (ex: Exception) {
 			logger.error("$key: performGetCall", ex)
 			return FetchFileResponse(status = ResponseStatus.Error.value, files = null, exception = ex)
