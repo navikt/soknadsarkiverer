@@ -35,6 +35,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
+import java.lang.Thread.sleep
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -156,6 +157,84 @@ class ApplicationTests : ContainerizedKafka() {
 		assertEquals(1, requests.size)
 		val request = objectMapper.readValue<OpprettJournalpostRequest>(requests[0].body)
 		verifyRequestDataToJoark(soknadsarkivschema, request)
+	}
+
+
+	@Test
+	fun `Happy case - File missing, new event event on Kafka for for key will cause rest calls to Joark`() {
+		val key = UUID.randomUUID().toString()
+		val fileId = UUID.randomUUID().toString()
+		mockFilestorageIsWorking(fileId)
+
+		mockJoarkIsWorking()
+		val soknadsarkivschema = createSoknadarkivschema(key)
+		mockSafRequest_notFound(innsendingsId = soknadsarkivschema.behandlingsid)
+
+		putDataOnKafkaTopic(key, soknadsarkivschema)
+		verifyProcessingEvents(
+			key, mapOf(
+				RECEIVED hasCount 1, STARTED hasCount 6, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
+			)
+		)
+
+		sleep(1000)
+
+		val updatedSchema = createSoknadarkivschema(fileId, key)
+		mockJoarkIsWorking()
+		mockSafRequest_notFound(innsendingsId = soknadsarkivschema.behandlingsid)
+		putDataOnKafkaTopic(key, updatedSchema)
+
+		verifyProcessingEvents(
+			key, mapOf(
+				RECEIVED hasCount 2, STARTED hasCount 7, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 1
+			)
+		)
+
+		val requests = verifyPostRequest(journalPostUrl)
+		assertEquals(1, requests.size)
+		val request = objectMapper.readValue<OpprettJournalpostRequest>(requests[0].body)
+		verifyRequestDataToJoark(updatedSchema, request)
+	}
+
+
+	@Test
+	fun `Reject updated application on kafka when already archieved`() {
+		val key = UUID.randomUUID().toString()
+		val fileId = UUID.randomUUID().toString()
+
+		val soknadsarkivschema = createSoknadarkivschema(fileId, key)
+
+		mockFilestorageIsWorking(fileId)
+		mockJoarkIsWorking()
+		mockSafRequest_notFound(innsendingsId = soknadsarkivschema.behandlingsid)
+
+		putDataOnKafkaTopic(key, soknadsarkivschema)
+		verifyProcessingEvents(
+			key, mapOf(
+				RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 0, FAILURE hasCount 0
+			)
+		)
+		val requests = verifyPostRequest(journalPostUrl)
+		assertEquals(1, requests.size)
+		val request = objectMapper.readValue<OpprettJournalpostRequest>(requests[0].body)
+		verifyRequestDataToJoark(soknadsarkivschema, request)
+
+		sleep(1000)
+
+		val updatedFileId = UUID.randomUUID().toString()
+		val updatedSchema = createSoknadarkivschema(updatedFileId, key)
+
+		mockFilestorageIsWorking(updatedFileId)
+		mockJoarkIsWorking()
+		mockSafRequest_found(innsendingsId = soknadsarkivschema.behandlingsid)
+
+		putDataOnKafkaTopic(key, updatedSchema)
+		verifyProcessingEvents(
+			key, mapOf(
+				RECEIVED hasCount 2, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
+			)
+		)
+
 	}
 
 	@Test

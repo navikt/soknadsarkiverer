@@ -59,6 +59,9 @@ open class TaskListService(
 		if (!tasks.containsKey(key)) {
 			newTask(key, soknadarkivschema, state, isBootstrappingTask)
 		} else {
+			if (state == EventTypes.RECEIVED && loggedTaskStates[key] == EventTypes.FAILURE) {
+				startPaNytt(key)
+			}
 			updateTaskState(key, state)
 		}
 	}
