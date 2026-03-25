@@ -53,6 +53,7 @@ kafka:
     arkiveringstilbakemeldingTopic: ${KAFKA_ARKIVERINGSTILBAKEMELDING_TOPIC}
     metricsTopic: ${KAFKA_METRICS_TOPIC}
     nologinSubmissionTopic: ${KAFKA_NOLOGIN_SUBMISSION_TOPIC}
+    loggedinSubmissionTopic: ${KAFKA_LOGGEDIN_SUBMISSION_TOPIC}
   schemaRegistry:
     url: ${KAFKA_SCHEMA_REGISTRY}
     username: ${KAFKA_SCHEMA_REGISTRY_USER}

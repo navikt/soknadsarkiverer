@@ -26,6 +26,7 @@
 	"kafka-arkiveringstilbakemeldinger-topic": "team-soknad.privat-soknadinnsending-arkiveringstilbakemeldinger-v1-loadtests",
 	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v1-loadtests",
 	"kafka-nologin-submission-topic": "team-soknad.privat-nologinsubmission-v1-loadtests",
+	"kafka-loggedin-submission-topic": "team-soknad.privat-loggedinsubmission-v1-loadtests",
 	"innsending-api-host": "http://innsending-api-loadtests",
 	"joark-host": "https://arkiv-mock-gcp.intern.dev.nav.no",
 	"dokarkiv-scope": "api://dev-gcp.team-soknad.arkiv-mock/.default",

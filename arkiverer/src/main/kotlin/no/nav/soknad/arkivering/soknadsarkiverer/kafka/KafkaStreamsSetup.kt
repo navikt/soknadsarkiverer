@@ -50,8 +50,12 @@ class KafkaStreamsSetup(
 		val mainTopicStream = streamsBuilder.stream(kafkaConfig.topics.mainTopic, Consumed.with(stringSerde, soknadarkivschemaSerde))
 		val processingTopicStream = streamsBuilder.stream(kafkaConfig.topics.processingTopic , Consumed.with(stringSerde, processingEventSerde))
 
+		val joinDefLoggedin = Joined.with(stringSerde, processingEventSerde, stringSerde, "loggedinArchivingState")
+		//val materializedLoggedin = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("loggedinPprocessingevents").withValueSerde(mutableListSerde)
+		val loggedinStream = streamsBuilder.stream(kafkaConfig.topics.loggedinSubmissionTopic, Consumed.with(stringSerde, stringSerde))
+
 		val joinDefNoLogin = Joined.with(stringSerde, processingEventSerde, stringSerde, "noLoginArchivingState")
-		val materializedNoLogin = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("noLoginPprocessingevents").withValueSerde(mutableListSerde)
+		//val materializedNoLogin = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("noLoginPprocessingevents").withValueSerde(mutableListSerde)
 		val noLoginStream = streamsBuilder.stream(kafkaConfig.topics.nologinSubmissionTopic, Consumed.with(stringSerde, stringSerde))
 
 		val mainTopicTable = mainTopicStream.toTable()
@@ -59,7 +63,6 @@ class KafkaStreamsSetup(
 		mainTopicStream
 			.peek { key, value ->	logger.info("$key: Processing MainTopic. InnsendingsId: ${value.behandlingsid}") }
 			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
-
 		val processingTopicContent =
 			processingTopicStream
 				.peek { key, value -> logger.info("$key: ProcessingTopic - ${value.type}") }
@@ -79,19 +82,26 @@ class KafkaStreamsSetup(
 				.toStream()
 				.peek { key, state -> logger.debug("$key: ProcessingTopic in state $state") }
 				.filter { key, state -> !(isConsideredFinished(key, state)) }
-
 		processingTopicContent
 			.leftJoin(mainTopicTable, { state, soknadarkivschema -> soknadarkivschema to state }, joinDef) // Oppdatere state på tabell, archivingState, ved join av soknadarkivschema og state.
 			.filter { key, (soknadarkivschema, _) -> filterSoknadarkivschemaThatAreNull(key, soknadarkivschema) } // Ta bort alle innslag i tabell der soknadarkivschema er null.
 			.peek { key, (soknadarkivschema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state Soknadarkivschema: ${soknadarkivschema.print()}") }
 			.foreach { key, (soknadarkivschema, state) ->	taskListService.addOrUpdateTask(key, translate(soknadarkivschema), state.type)	} // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
 
+		loggedinStream
+			.peek { key, value ->	logger.info("$key: Processing loggedinTopic. InnsendingsId: ${key}") }
+			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
+		val loggedinTopicTable = loggedinStream.toTable()
+		processingTopicContent
+			.leftJoin(loggedinTopicTable, { state, loggedinSchema -> loggedinSchema to state }, joinDefLoggedin) // Oppdatere state på tabell, loggedinArchivingState, ved join av soknadarkivschema og state.
+			.filter { key, (loggedinSchema, _) -> filterNoLoginSchemaThatAreNull(key, loggedinSchema) } // Ta bort alle innslag i tabell der loggedinSchema er null.
+			.peek { key, (loggedinSchema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state loggedinSchema") }
+			.foreach { key, (loggedinSchema, state) ->	taskListService.addOrUpdateTask(key, deserializeMsg(loggedinSchema), state.type)	} // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
+
 		noLoginStream
 			.peek { key, value ->	logger.info("$key: Processing NoLoginTopic. InnsendingsId: ${key}") }
 			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
-
 		val noLoginTopicTable = noLoginStream.toTable()
-
 		processingTopicContent
 			.leftJoin(noLoginTopicTable, { state, noLoginSchema -> noLoginSchema to state }, joinDefNoLogin) // Oppdatere state på tabell, noLoginArchivingState, ved join av soknadarkivschema og state.
 			.filter { key, (noLoginSchema, _) -> filterNoLoginSchemaThatAreNull(key, noLoginSchema) } // Ta bort alle innslag i tabell der noLoginSchema er null.

@@ -347,7 +347,8 @@ private fun kafkaConfig() = KafkaConfig(
 		messageTopic = "messageTopic",
 		metricsTopic = "metricsTopic",
 		arkiveringstilbakemeldingTopic = "arkiveringstilbakemeldingTopic",
-		nologinSubmissionTopic = "noLoginTopic"
+		nologinSubmissionTopic = "noLoginTopic",
+		loggedinSubmissionTopic = "loggedinTopic",
 	)
 )
 

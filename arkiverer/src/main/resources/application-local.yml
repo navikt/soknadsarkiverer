@@ -33,6 +33,8 @@ kafka:
     arkiveringstilbakemeldingTopic: privat-soknadinnsending-arkiveringstilbakemeldinger-v1-dev
     metricsTopic: privat-soknadinnsending-metrics-v1-dev
     nologinSubmissionTopic: privat-soknadinnsending-nologin-submission-v1-dev
+    loggedinSubmissionTopic: privat-soknadinnsending-loggedin-submission-v1-dev
+
   schemaRegistry:
     url: ${application.KAFKA_SCHEMA_REGISTRY}
     username: dummy
