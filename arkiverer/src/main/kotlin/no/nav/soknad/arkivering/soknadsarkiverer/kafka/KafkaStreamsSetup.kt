@@ -82,6 +82,7 @@ class KafkaStreamsSetup(
 				.toStream()
 				.peek { key, state -> logger.debug("$key: ProcessingTopic in state $state") }
 				.filter { key, state -> !(isConsideredFinished(key, state)) }
+
 		processingTopicContent
 			.leftJoin(mainTopicTable, { state, soknadarkivschema -> soknadarkivschema to state }, joinDef) // Oppdatere state på tabell, archivingState, ved join av soknadarkivschema og state.
 			.filter { key, (soknadarkivschema, _) -> filterSoknadarkivschemaThatAreNull(key, soknadarkivschema) } // Ta bort alle innslag i tabell der soknadarkivschema er null.
