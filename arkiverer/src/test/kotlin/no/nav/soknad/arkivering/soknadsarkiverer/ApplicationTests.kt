@@ -161,7 +161,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 
 	@Test
-	fun `Happy case - File missing, new event event on Kafka for for key will cause rest calls to Joark`() {
+	fun `Happy case - File missing, new event event on Kafka for key will cause rest calls to Joark`() {
 		val key = UUID.randomUUID().toString()
 		val fileId = UUID.randomUUID().toString()
 		mockFilestorageIsWorking(fileId)
@@ -173,7 +173,7 @@ class ApplicationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic(key, soknadsarkivschema)
 		verifyProcessingEvents(
 			key, mapOf(
-				RECEIVED hasCount 1, STARTED hasCount 6, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
+				RECEIVED hasCount 1, STARTED hasCount maxNumberOfAttempts, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
 			)
 		)
 
@@ -186,7 +186,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		verifyProcessingEvents(
 			key, mapOf(
-				RECEIVED hasCount 2, STARTED hasCount 7, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 1
+				RECEIVED hasCount 2, STARTED hasCount maxNumberOfAttempts+1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 1
 			)
 		)
 
@@ -198,7 +198,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 
 	@Test
-	fun `Reject updated application on kafka when already archieved`() {
+	fun `Reject updated application on kafka when already archived`() {
 		val key = UUID.randomUUID().toString()
 		val fileId = UUID.randomUUID().toString()
 
@@ -211,7 +211,7 @@ class ApplicationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic(key, soknadsarkivschema)
 		verifyProcessingEvents(
 			key, mapOf(
-				RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 0, FAILURE hasCount 0
+				RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
 			)
 		)
 		val requests = verifyPostRequest(journalPostUrl)
