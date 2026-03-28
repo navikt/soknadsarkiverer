@@ -4,6 +4,7 @@ import no.nav.soknad.arkivering.avroschemas.MottattDokument
 import no.nav.soknad.arkivering.avroschemas.MottattVariant
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
+import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.Dokument
 import no.nav.soknad.arkivering.soknadsmottaker.model.AvsenderDto
 import no.nav.soknad.arkivering.soknadsmottaker.model.BrukerDto
 import no.nav.soknad.arkivering.soknadsmottaker.model.DokumentData
@@ -63,14 +64,14 @@ class InnsendingTopicMsgBuilder {
 					uuid = UUID.randomUUID().toString(),
 					mediaType = "application/json",
 					filnavn = "filnavn.json",
-					filtype = "PDFA",
+					filtype = "json",
 					variantFormat = "ORIGINAL"
 				)
 			)
 		),
 		DokumentData(
 			skjemanummer = "N7",
-			erHovedskjema = true,
+			erHovedskjema = false,
 			tittel = "Kvittering",
 			varianter = listOf(
 				Variant(
@@ -197,3 +198,4 @@ fun createSoknadarkivschema(fileIds: List<String>, variantformat: String = "ARKI
 			)
 			.build())
 		.build()
+

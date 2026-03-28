@@ -11,6 +11,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.util.deserializeMsg
 import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
+import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -51,11 +52,9 @@ class KafkaStreamsSetup(
 		val processingTopicStream = streamsBuilder.stream(kafkaConfig.topics.processingTopic , Consumed.with(stringSerde, processingEventSerde))
 
 		val joinDefLoggedin = Joined.with(stringSerde, processingEventSerde, stringSerde, "loggedinArchivingState")
-		//val materializedLoggedin = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("loggedinPprocessingevents").withValueSerde(mutableListSerde)
 		val loggedinStream = streamsBuilder.stream(kafkaConfig.topics.loggedinSubmissionTopic, Consumed.with(stringSerde, stringSerde))
 
 		val joinDefNoLogin = Joined.with(stringSerde, processingEventSerde, stringSerde, "noLoginArchivingState")
-		//val materializedNoLogin = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("noLoginPprocessingevents").withValueSerde(mutableListSerde)
 		val noLoginStream = streamsBuilder.stream(kafkaConfig.topics.nologinSubmissionTopic, Consumed.with(stringSerde, stringSerde))
 
 		val mainTopicTable = mainTopicStream.toTable()
@@ -96,7 +95,7 @@ class KafkaStreamsSetup(
 		processingTopicContent
 			.leftJoin(loggedinTopicTable, { state, loggedinSchema -> loggedinSchema to state }, joinDefLoggedin) // Oppdatere state på tabell, loggedinArchivingState, ved join av soknadarkivschema og state.
 			.filter { key, (loggedinSchema, _) -> filterNoLoginSchemaThatAreNull(key, loggedinSchema) } // Ta bort alle innslag i tabell der loggedinSchema er null.
-			.peek { key, (loggedinSchema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state loggedinSchema") }
+			.peek { key, (loggedinSchema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state ${toStringMasked(deserializeMsg(loggedinSchema))}") }
 			.foreach { key, (loggedinSchema, state) ->	taskListService.addOrUpdateTask(key, deserializeMsg(loggedinSchema), state.type)	} // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
 
 		noLoginStream
@@ -106,7 +105,11 @@ class KafkaStreamsSetup(
 		processingTopicContent
 			.leftJoin(noLoginTopicTable, { state, noLoginSchema -> noLoginSchema to state }, joinDefNoLogin) // Oppdatere state på tabell, noLoginArchivingState, ved join av soknadarkivschema og state.
 			.filter { key, (noLoginSchema, _) -> filterNoLoginSchemaThatAreNull(key, noLoginSchema) } // Ta bort alle innslag i tabell der noLoginSchema er null.
-			.peek { key, (noLoginSchema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state noLoginSchema") }
+			.peek { key, (noLoginSchema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state ${
+				toStringMasked(
+					deserializeMsg(noLoginSchema)
+				)
+			}") }
 			.foreach { key, (noLoginSchema, state) ->	taskListService.addOrUpdateTask(key, deserializeMsg(noLoginSchema), state.type)	} // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
 
 	}
@@ -142,6 +145,15 @@ class KafkaStreamsSetup(
 		val fnr = "**fnr can be found in Soknadsmottaker's secure logs**"
 		return Soknadarkivschema(this.behandlingsid, fnr, this.arkivtema, this.innsendtDato, this.soknadstype,
 			mottatteDokumenterMaskert(this.mottatteDokumenter)).toString()
+	}
+
+	private fun toStringMasked(innsendingTopicMsg: InnsendingTopicMsg): String {
+		val id = "**id can be found in Soknadsmottaker's secure logs**"
+		return innsendingTopicMsg.copy(
+			brukerDto= innsendingTopicMsg.brukerDto?.copy(id = id),
+			avsenderDto= innsendingTopicMsg.avsenderDto.copy(id=id, navn= if (innsendingTopicMsg.avsenderDto.navn != null) "NN" else null),
+			dokumenter=innsendingTopicMsg.dokumenter.map{dokument -> dokument.copy(tittel = if (dokument.skjemanummer == "N6") "**Maskert**" else dokument.tittel)})
+		.toString()
 	}
 
 	private fun mottatteDokumenterMaskert(motattedokumenter: List<MottattDokument>): List<MottattDokument> {
