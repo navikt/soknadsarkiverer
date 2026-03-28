@@ -57,11 +57,6 @@ class KafkaStreamsSetup(
 		val joinDefNoLogin = Joined.with(stringSerde, processingEventSerde, stringSerde, "noLoginArchivingState")
 		val noLoginStream = streamsBuilder.stream(kafkaConfig.topics.nologinSubmissionTopic, Consumed.with(stringSerde, stringSerde))
 
-		val mainTopicTable = mainTopicStream.toTable()
-
-		mainTopicStream
-			.peek { key, value ->	logger.info("$key: Processing MainTopic. InnsendingsId: ${value.behandlingsid}") }
-			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
 		val processingTopicContent =
 			processingTopicStream
 				.peek { key, value -> logger.info("$key: ProcessingTopic - ${value.type}") }
@@ -82,6 +77,10 @@ class KafkaStreamsSetup(
 				.peek { key, state -> logger.debug("$key: ProcessingTopic in state $state") }
 				.filter { key, state -> !(isConsideredFinished(key, state)) }
 
+		mainTopicStream
+			.peek { key, value ->	logger.info("$key: Processing MainTopic. InnsendingsId: ${value.behandlingsid}") }
+			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
+		val mainTopicTable = mainTopicStream.toTable()
 		processingTopicContent
 			.leftJoin(mainTopicTable, { state, soknadarkivschema -> soknadarkivschema to state }, joinDef) // Oppdatere state på tabell, archivingState, ved join av soknadarkivschema og state.
 			.filter { key, (soknadarkivschema, _) -> filterSoknadarkivschemaThatAreNull(key, soknadarkivschema) } // Ta bort alle innslag i tabell der soknadarkivschema er null.
