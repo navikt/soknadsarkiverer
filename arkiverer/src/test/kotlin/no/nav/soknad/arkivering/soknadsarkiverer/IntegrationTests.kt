@@ -30,6 +30,9 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.time.ZoneOffset.UTC
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -108,23 +111,41 @@ class IntegrationTests : ContainerizedKafka() {
 
 	@Test
 	fun `Happy case - Putting noLoginevents on Kafka will cause rest calls to Joark`() {
+		// Given
 		mockFilestorageIsWorking(fileId)
 		mockJoarkIsWorking()
 
 		val initialRequests = countRequests(journalPostUrl, RequestMethod.POST)
-		val soknadarkivschema = createSoknadarkivschema()
-		mockSafRequest_notFound(innsendingsId = soknadarkivschema.behandlingsid)
-		putDataOnKafkaTopic(key = soknadarkivschema.behandlingsid, value = serializeMsg(translate(soknadarkivschema)), kanal ="NAV_NO_UINNLOGGET")
-		val soknadarkivschema2 = createSoknadarkivschema()
-		mockSafRequest_notFound(innsendingsId = soknadarkivschema2.behandlingsid)
-		putDataOnKafkaTopic(key = soknadarkivschema2.behandlingsid, value = serializeMsg(translate(soknadarkivschema2)), kanal ="NAV_NO_UINNLOGGET")
+		val soknadarkivschema = InnsendingTopicMsgBuilder()
+			.withTittel("Test dokument")
+			.withKanal("NAV_NO_UINNLOGGET")
+			.withTestDokumenter(mutableListOf(
+				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", listOf(fileId)),
+			))
+			.build()
+		val soknadarkivschema2 = InnsendingTopicMsgBuilder()
+			.withTittel("Test dokument")
+			.withKanal("NAV_NO_UINNLOGGET")
+			.withTestDokumenter(mutableListOf(
+				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", listOf(fileId)),
+			))
+			.build()
 
+		mockSafRequest_notFound(innsendingsId = soknadarkivschema.innsendingsId)
+		mockSafRequest_notFound(innsendingsId = soknadarkivschema2.innsendingsId)
+
+		// When
+		putDataOnKafkaTopic(key = soknadarkivschema.innsendingsId, value = serializeMsg(soknadarkivschema), kanal ="NAV_NO_UINNLOGGET")
+		putDataOnKafkaTopic(key = soknadarkivschema2.innsendingsId, value = serializeMsg(soknadarkivschema2), kanal ="NAV_NO_UINNLOGGET")
+
+		// Expect
 		verifyMockedPostRequests(initialRequests + 2, journalPostUrl)
 	}
 
 
 	@Test
 	fun `Happy case - Putting loggedin events on Kafka will cause rest calls to Joark`() {
+		// Given
 		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
 		val initialRequests = countRequests(journalPostUrl, RequestMethod.POST)
 		val soknadarkivschema = InnsendingTopicMsgBuilder()
@@ -138,13 +159,16 @@ class IntegrationTests : ContainerizedKafka() {
 		mockFilestorageIsWorking(fileIds.map { it to filestorageContent })
 		mockSafRequest_notFound(innsendingsId = soknadarkivschema.innsendingsId)
 
+		// When
 		putDataOnKafkaTopic(key = soknadarkivschema.innsendingsId, value = soknadarkivschema)
 
+		// Expect
 		verifyMockedPostRequests(initialRequests + 1, journalPostUrl)
 	}
 
 	@Test
 	fun `Happy case - Putting loggedIn and noLoginevents on Kafka will cause rest calls to Joark`() {
+		// When
 		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
 		mockFilestorageIsWorking((fileIds + listOf(fileId)).map { it to filestorageContent })
 		mockJoarkIsWorking()
@@ -153,7 +177,6 @@ class IntegrationTests : ContainerizedKafka() {
 
 		val loggedInMsg = createSoknadarkivschema()
 		mockSafRequest_notFound(innsendingsId = loggedInMsg.behandlingsid)
-		putDataOnKafkaTopic(loggedInMsg)
 
 		val loggedInMsg1 = InnsendingTopicMsgBuilder()
 			.withKanal("NAV_NO")
@@ -163,7 +186,6 @@ class IntegrationTests : ContainerizedKafka() {
 			.build()
 
 		mockSafRequest_notFound(innsendingsId = loggedInMsg1.innsendingsId)
-		putDataOnKafkaTopic(key = loggedInMsg1.innsendingsId, value = loggedInMsg1)
 		val loggedInMsg2 = InnsendingTopicMsgBuilder()
 			.withKanal("NAV_NO")
 			.withTestDokumenter(mutableListOf(
@@ -171,8 +193,6 @@ class IntegrationTests : ContainerizedKafka() {
 			))
 			.build()
 		mockSafRequest_notFound(innsendingsId = loggedInMsg2.innsendingsId)
-		putDataOnKafkaTopic(key = loggedInMsg2.innsendingsId, value = loggedInMsg2)
-
 
 		val noLogInMsg = InnsendingTopicMsgBuilder()
 			.withKanal("NAV_NO_UINNLOGGET")
@@ -181,7 +201,6 @@ class IntegrationTests : ContainerizedKafka() {
 			))
 			.build()
 		mockSafRequest_notFound(innsendingsId = noLogInMsg.innsendingsId)
-		putDataOnKafkaTopic(key = noLogInMsg.innsendingsId, value = noLogInMsg)
 		val noLogInMsg2 = InnsendingTopicMsgBuilder()
 			.withKanal("NAV_NO_UINNLOGGET")
 			.withTestDokumenter(mutableListOf(
@@ -189,8 +208,15 @@ class IntegrationTests : ContainerizedKafka() {
 			))
 			.build()
 		mockSafRequest_notFound(innsendingsId = noLogInMsg2.innsendingsId)
+
+		// When
+		putDataOnKafkaTopic(loggedInMsg)
+		putDataOnKafkaTopic(key = loggedInMsg1.innsendingsId, value = loggedInMsg1)
+		putDataOnKafkaTopic(key = loggedInMsg2.innsendingsId, value = loggedInMsg2)
+		putDataOnKafkaTopic(key = noLogInMsg.innsendingsId, value = noLogInMsg)
 		putDataOnKafkaTopic(key = noLogInMsg2.innsendingsId, value = noLogInMsg2)
 
+		// Expect
 		verifyMockedPostRequests(initialRequests + 5, journalPostUrl)
 	}
 
@@ -233,7 +259,12 @@ class IntegrationTests : ContainerizedKafka() {
 
 	@Test
 	fun `Application sent to Joark if error checking SAF`() {
-		val soknadarkivschema = InnsendingTopicMsgBuilder().withKanal("NAV_NO").build()
+		val soknadarkivschema = InnsendingTopicMsgBuilder()
+			.withInnsendtDato(
+				OffsetDateTime.of(2026, 3, 1, 12, 30,30, 500, UTC
+				))
+			.withKanal("NAV_NO")
+			.build()
 		val fileids = soknadarkivschema.dokumenter.map{it.varianter.map{it.uuid}}.flatten()
 
 		mockSafRequest_error(innsendingsId = soknadarkivschema.innsendingsId)

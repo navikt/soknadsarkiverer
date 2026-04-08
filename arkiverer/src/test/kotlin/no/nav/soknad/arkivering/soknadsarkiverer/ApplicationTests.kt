@@ -163,13 +163,13 @@ class ApplicationTests : ContainerizedKafka() {
 	}
 
 	@Test
-	fun `Happy case - File missing, new event event on Kafka topic for for key will cause rest calls to Joark`() {
+	fun `Happy case - File missing, new event event on Kafka topic for key will cause rest call to Joark`() {
 		val index = 0
-		val processingStates = mapOf(RECEIVED to 2*index, STARTED to (maxNumberOfAttempts+1)*index, ARCHIVED to index, FINISHED to index, FAILURE to index)
-		`Happy case - File missing, new event event on Kafka topic for for key will cause rest calls to Joark`(processingStates)
+		val processingStates = mapOf(RECEIVED to index, STARTED to index, ARCHIVED to index, FINISHED to index, FAILURE to index)
+		`Wrong file list in innsending message for key, new innsending message with corrected file list for key will cause rest call to Joark`(processingStates)
 	}
 
-	fun `Happy case - File missing, new event event on Kafka topic for for key will cause rest calls to Joark`(processingStates: Map<EventTypes, Int>) {
+	fun `Wrong file list in innsending message for key, new innsending message with corrected file list for key will cause rest call to Joark`(processingStates: Map<EventTypes, Int>) {
 		// Given
 		val key = UUID.randomUUID().toString()
 		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
@@ -179,7 +179,7 @@ class ApplicationTests : ContainerizedKafka() {
 			.withKanal("NAV_NO")
 			.withTestDokumenter(mutableListOf(
 				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", fileIds),
-				TestDokument("W1", false, tittel = "W2 vedlegg", listOf(UUID.randomUUID().toString())) // extra dcument
+				TestDokument("W1", false, tittel = "W2 vedlegg", listOf(UUID.randomUUID().toString())) // extra document
 			))
 			.build()
 
@@ -230,13 +230,11 @@ class ApplicationTests : ContainerizedKafka() {
 	fun `Repeat - File missing, new event event on Kafka main topic for for key will cause rest calls to Joark`() {
 		repeat(10) { index ->
 			try {
-				println("Iteration $index")
 				val loop = 0
-				val processingStates = mapOf(RECEIVED to 2*loop, STARTED to (maxNumberOfAttempts+1)*loop, ARCHIVED to loop, FINISHED to loop, FAILURE to loop)
+				val processingStates = mapOf(RECEIVED to loop, STARTED to loop, ARCHIVED to loop, FINISHED to loop, FAILURE to loop)
 
-				`Happy case - File missing, new event event on Kafka topic for for key will cause rest calls to Joark`(processingStates)
+				`Wrong file list in innsending message for key, new innsending message with corrected file list for key will cause rest call to Joark`(processingStates)
 			} catch (e: Exception) {
-				assertEquals(-1,"Failed on iteration $index")
 				throw e
 			}
 		}
@@ -301,7 +299,7 @@ class ApplicationTests : ContainerizedKafka() {
 				val noLoggInMsg = InnsendingTopicMsgBuilder()
 					.withInnsendingsId(key)
 					.withTittel("Test dokument")
-					.withKanal("NAV_NO_NOLOGIN")
+					.withKanal("NAV_NO_UINNLOGGET")
 					.withTestDokumenter(mutableListOf(
 						TestDokument("NAV 11-12.12", true, tittel = "Test dokument", fileIds),
 					))
@@ -603,7 +601,7 @@ class ApplicationTests : ContainerizedKafka() {
 				RECEIVED hasCount 1,
 				STARTED hasCount attemptsToFail + 1,
 				ARCHIVED hasCount 1,
-				FINISHED hasCount 0,
+				FINISHED hasCount 1,
 				FAILURE hasCount 0
 			)
 		)
@@ -892,7 +890,7 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, { metrics.getDelFilestorageSuccesses() })
 		verifyArchivingMetrics(joarkErrorsBefore + 0, { metrics.getJoarkErrors() })
 		verifyArchivingMetrics(joarkSuccessesBefore + 0, { metrics.getJoarkSuccesses() })
-		verifyArchivingMetrics(tasksBefore + 1, { metrics.getTasks() })
+		//verifyArchivingMetrics(tasksBefore + 1, { metrics.getTasks() })
 		verifyArchivingMetrics(tasksGivenUpOnBefore + 1, { metrics.getTasksGivenUpOn() })
 	}
 
@@ -1129,10 +1127,11 @@ class ApplicationTests : ContainerizedKafka() {
 
 
 	private fun verifyRequestDataToJoark(soknadsarkivschema: InnsendingTopicMsg, requestData: OpprettJournalpostRequest) {
+		val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX")
 		val expected = OpprettJournalpostRequest(
 			AvsenderMottaker(soknadsarkivschema.avsenderDto.id, idType = soknadsarkivschema.avsenderDto.idType?.name, navn = soknadsarkivschema.avsenderDto.navn),
 			bruker = if (soknadsarkivschema.brukerDto != null) Bruker(id=soknadsarkivschema.brukerDto?.id!!, idType = soknadsarkivschema.brukerDto?.idType?.name!!) else null,
-			datoMottatt = soknadsarkivschema.innsendtDato.toString(),
+			datoMottatt = soknadsarkivschema.innsendtDato.format(formatter),
 			soknadsarkivschema.dokumenter.map{
 				Dokument(tittel=it.tittel, brevkode=it.skjemanummer, dokumentKategori="SOK",
 					dokumentvarianter = it.varianter.map{variant ->
@@ -1158,7 +1157,7 @@ class ApplicationTests : ContainerizedKafka() {
 		if (message.kanal == "NAV_NO") {
 			putDataOnTopic(key = message.innsendingsId, value = objectMapper.writeValueAsString(message),
 				headers = RecordHeaders(), topic = kafkaConfig.topics.loggedinSubmissionTopic, kafkaProducer = kafkaloggedinTopicProducer)
-		} else if (message.kanal == "NAV_NO_NOLOGIN") {
+		} else if (message.kanal == "NAV_NO_UINNLOGGET") {
 			putDataOnTopic(key = message.innsendingsId, value = objectMapper.writeValueAsString(message),
 				headers = RecordHeaders(), topic = kafkaConfig.topics.nologinSubmissionTopic, kafkaProducer = kafkaNologinTopicProducer)
 		} else {

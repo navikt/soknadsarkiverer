@@ -93,7 +93,7 @@ class KafkaStreamsSetup(
 		val loggedinTopicTable = loggedinStream.toTable()
 		processingTopicContent
 			.leftJoin(loggedinTopicTable, { state, loggedinSchema -> loggedinSchema to state }, joinDefLoggedin) // Oppdatere state på tabell, loggedinArchivingState, ved join av soknadarkivschema og state.
-			.filter { key, (loggedinSchema, _) -> filterNoLoginSchemaThatAreNull(key, loggedinSchema) } // Ta bort alle innslag i tabell der loggedinSchema er null.
+			.filter { key, (loggedinSchema, _) -> filterSchemaThatAreNull(key, loggedinSchema) } // Ta bort alle innslag i tabell der loggedinSchema er null.
 			.peek { key, (loggedinSchema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state ${toStringMasked(deserializeMsg(loggedinSchema))}") }
 			.foreach { key, (loggedinSchema, state) ->	taskListService.addOrUpdateTask(key, deserializeMsg(loggedinSchema), state.type)	} // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
 
@@ -103,7 +103,7 @@ class KafkaStreamsSetup(
 		val noLoginTopicTable = noLoginStream.toTable()
 		processingTopicContent
 			.leftJoin(noLoginTopicTable, { state, noLoginSchema -> noLoginSchema to state }, joinDefNoLogin) // Oppdatere state på tabell, noLoginArchivingState, ved join av soknadarkivschema og state.
-			.filter { key, (noLoginSchema, _) -> filterNoLoginSchemaThatAreNull(key, noLoginSchema) } // Ta bort alle innslag i tabell der noLoginSchema er null.
+			.filter { key, (noLoginSchema, _) -> filterSchemaThatAreNull(key, noLoginSchema) } // Ta bort alle innslag i tabell der noLoginSchema er null.
 			.peek { key, (noLoginSchema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state ${
 				toStringMasked(
 					deserializeMsg(noLoginSchema)
@@ -134,10 +134,10 @@ class KafkaStreamsSetup(
 		return soknadarkivschema != null
 	}
 
-	private fun filterNoLoginSchemaThatAreNull(key: String, noLoginSchema: String?): Boolean {
-		if (noLoginSchema == null)
-			logger.debug("$key: NoLoginSchema is null!")
-		return noLoginSchema != null
+	private fun filterSchemaThatAreNull(key: String, schema: String?): Boolean {
+		if (schema == null)
+			logger.debug("$key: schema is null!")
+		return schema != null
 	}
 
 	private fun Soknadarkivschema.print(): String {
