@@ -241,7 +241,7 @@ class ApplicationTests : ContainerizedKafka() {
 	}
 
 	@Test
-	fun `Reject updated application on kafka when already archived`() {
+	fun rejectUpdatedApplicationOnKafkaWhenAlreadyArchived() {
 		val key = UUID.randomUUID().toString()
 		val fileId = UUID.randomUUID().toString()
 
