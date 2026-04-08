@@ -166,10 +166,10 @@ class ApplicationTests : ContainerizedKafka() {
 	fun `Happy case - File missing, new event event on Kafka topic for key will cause rest call to Joark`() {
 		val index = 0
 		val processingStates = mapOf(RECEIVED to index, STARTED to index, ARCHIVED to index, FINISHED to index, FAILURE to index)
-		`Wrong file list in innsending message for key, new innsending message with corrected file list for key will cause rest call to Joark`(processingStates)
+		wrongfileListInMessageThenNewInnsendingWithCorrectionAndArchiving(processingStates)
 	}
 
-	fun `Wrong file list in innsending message for key, new innsending message with corrected file list for key will cause rest call to Joark`(processingStates: Map<EventTypes, Int>) {
+	fun wrongfileListInMessageThenNewInnsendingWithCorrectionAndArchiving(processingStates: Map<EventTypes, Int>) {
 		// Given
 		val key = UUID.randomUUID().toString()
 		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
@@ -233,7 +233,7 @@ class ApplicationTests : ContainerizedKafka() {
 				val loop = 0
 				val processingStates = mapOf(RECEIVED to loop, STARTED to loop, ARCHIVED to loop, FINISHED to loop, FAILURE to loop)
 
-				`Wrong file list in innsending message for key, new innsending message with corrected file list for key will cause rest call to Joark`(processingStates)
+				wrongfileListInMessageThenNewInnsendingWithCorrectionAndArchiving(processingStates)
 			} catch (e: Exception) {
 				throw e
 			}
