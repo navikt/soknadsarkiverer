@@ -24,6 +24,7 @@ class KafkaBootstrapConsumer(
 	private val processingTopic = kafkaConfig.topics.processingTopic
 	private val uuid = UUID.randomUUID().toString()
 	private val noLoginTopic = kafkaConfig.topics.nologinSubmissionTopic
+	private val loggedinTopic = kafkaConfig.topics.loggedinSubmissionTopic
 
 	fun recreateState() {
 		val (finishedKeys, unfinishedProcessingRecords) = getProcessingRecords()
@@ -49,6 +50,21 @@ class KafkaBootstrapConsumer(
 				val state = filteredUnfinishedProcessingEvents[key] ?: ProcessingEvent(EventTypes.RECEIVED)
 
 				taskListService.addOrUpdateTask(key, translate(soknadsarkivschema), state.type, true)
+			}
+
+
+		val unfinishedLoggedinRecords = getUnfinishedLoggedinRecords(finishedKeys)
+		logger.info("Recreating state, found a total of ${unfinishedLoggedinRecords.size} unfinished loggedin records")
+
+		// For all not finished tasks with found received soknadsarkivschema trigger processing by adding to taskListService
+		unfinishedLoggedinRecords
+			.map { it.key() to it.value() }
+			.shuffled() // Only one event at a time will be processed while restarting. Shuffle in case several pods go down,
+			// so they don't process in the same order and can thus better parallelise.
+			.forEach { (key, soknadsarkivschema) ->
+				val state = filteredUnfinishedProcessingEvents[key] ?: ProcessingEvent(EventTypes.RECEIVED)
+
+				taskListService.addOrUpdateTask(key, deserializeMsg( soknadsarkivschema), state.type, true)
 			}
 
 		val unfinishedNoLoginRecords = getUnfinishedNoLoginRecords(finishedKeys)
@@ -83,6 +99,21 @@ class KafkaBootstrapConsumer(
 			.getAllKafkaRecords()
 	}
 
+
+	private fun getUnfinishedLoggedinRecords(finishedKeys: HashSet<Key>): List<ConsumerRecord<Key, String>> {
+
+		val keepUnfinishedRecordsFilter = { records: List<ConsumerRecord<Key, String>> ->
+			records.filter { !finishedKeys.contains(it.key()) }
+		}
+
+		return BootstrapConsumer.Builder<String>()
+			.withFilter(keepUnfinishedRecordsFilter)
+			.withKafkaConfig(kafkaConfig)
+			.withKafkaGroupId("soknadsarkiverer-bootstrapping-main-$uuid")
+			.withValueDeserializer(StringDeserializer())
+			.forTopic(loggedinTopic)
+			.getAllKafkaRecords()
+	}
 
 	private fun getUnfinishedNoLoginRecords(finishedKeys: HashSet<Key>): List<ConsumerRecord<Key, String>> {
 

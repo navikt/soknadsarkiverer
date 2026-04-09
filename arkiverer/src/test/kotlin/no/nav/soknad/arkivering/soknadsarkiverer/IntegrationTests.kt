@@ -13,6 +13,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.util.serializeMsg
 import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
+import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -29,6 +30,9 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.time.ZoneOffset.UTC
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -56,7 +60,9 @@ class IntegrationTests : ContainerizedKafka() {
 	@Value("\${saf.path}")
 	private lateinit var safUrl: String
 	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
+
 	private lateinit var kafkaNologinTopicProducer: KafkaProducer<String, String>
+	private lateinit var kafkaLoggedinTopicProducer: KafkaProducer<String, String>
 	private lateinit var kafkaProducerForBadData: KafkaProducer<String, String>
 
 	private val fileId = UUID.randomUUID().toString()
@@ -74,6 +80,9 @@ class IntegrationTests : ContainerizedKafka() {
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 		})
 		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
+			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
+		})
+		kafkaLoggedinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 		})
 	}
@@ -102,44 +111,113 @@ class IntegrationTests : ContainerizedKafka() {
 
 	@Test
 	fun `Happy case - Putting noLoginevents on Kafka will cause rest calls to Joark`() {
+		// Given
 		mockFilestorageIsWorking(fileId)
 		mockJoarkIsWorking()
 
 		val initialRequests = countRequests(journalPostUrl, RequestMethod.POST)
-		val soknadarkivschema = createSoknadarkivschema()
-		mockSafRequest_notFound(innsendingsId = soknadarkivschema.behandlingsid)
-		putDataOnKafkaTopic(key = soknadarkivschema.behandlingsid, value = serializeMsg(translate(soknadarkivschema)))
-		val soknadarkivschema2 = createSoknadarkivschema()
-		mockSafRequest_notFound(innsendingsId = soknadarkivschema2.behandlingsid)
-		putDataOnKafkaTopic(key = soknadarkivschema2.behandlingsid, value = serializeMsg(translate(soknadarkivschema2)))
+		val soknadarkivschema = InnsendingTopicMsgBuilder()
+			.withTittel("Test dokument")
+			.withKanal("NAV_NO_UINNLOGGET")
+			.withTestDokumenter(mutableListOf(
+				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", listOf(fileId)),
+			))
+			.build()
+		val soknadarkivschema2 = InnsendingTopicMsgBuilder()
+			.withTittel("Test dokument")
+			.withKanal("NAV_NO_UINNLOGGET")
+			.withTestDokumenter(mutableListOf(
+				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", listOf(fileId)),
+			))
+			.build()
 
+		mockSafRequest_notFound(innsendingsId = soknadarkivschema.innsendingsId)
+		mockSafRequest_notFound(innsendingsId = soknadarkivschema2.innsendingsId)
+
+		// When
+		putDataOnKafkaTopic(key = soknadarkivschema.innsendingsId, value = serializeMsg(soknadarkivschema), kanal ="NAV_NO_UINNLOGGET")
+		putDataOnKafkaTopic(key = soknadarkivschema2.innsendingsId, value = serializeMsg(soknadarkivschema2), kanal ="NAV_NO_UINNLOGGET")
+
+		// Expect
 		verifyMockedPostRequests(initialRequests + 2, journalPostUrl)
+	}
+
+
+	@Test
+	fun `Happy case - Putting loggedin events on Kafka will cause rest calls to Joark`() {
+		// Given
+		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
+		val initialRequests = countRequests(journalPostUrl, RequestMethod.POST)
+		val soknadarkivschema = InnsendingTopicMsgBuilder()
+			.withKanal("NAV_NO")
+			.withTestDokumenter(mutableListOf(
+				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", fileIds)
+			))
+			.build()
+
+		mockJoarkIsWorking()
+		mockFilestorageIsWorking(fileIds.map { it to filestorageContent })
+		mockSafRequest_notFound(innsendingsId = soknadarkivschema.innsendingsId)
+
+		// When
+		putDataOnKafkaTopic(key = soknadarkivschema.innsendingsId, value = soknadarkivschema)
+
+		// Expect
+		verifyMockedPostRequests(initialRequests + 1, journalPostUrl)
 	}
 
 	@Test
 	fun `Happy case - Putting loggedIn and noLoginevents on Kafka will cause rest calls to Joark`() {
-		mockFilestorageIsWorking(fileId)
+		// When
+		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
+		mockFilestorageIsWorking((fileIds + listOf(fileId)).map { it to filestorageContent })
 		mockJoarkIsWorking()
 
 		val initialRequests = countRequests(journalPostUrl, RequestMethod.POST)
 
 		val loggedInMsg = createSoknadarkivschema()
 		mockSafRequest_notFound(innsendingsId = loggedInMsg.behandlingsid)
-		putDataOnKafkaTopic(loggedInMsg)
 
-		val noLogInMsg = translate(createSoknadarkivschema())
+		val loggedInMsg1 = InnsendingTopicMsgBuilder()
+			.withKanal("NAV_NO")
+			.withTestDokumenter(mutableListOf(
+				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", fileIds)
+			))
+			.build()
+
+		mockSafRequest_notFound(innsendingsId = loggedInMsg1.innsendingsId)
+		val loggedInMsg2 = InnsendingTopicMsgBuilder()
+			.withKanal("NAV_NO")
+			.withTestDokumenter(mutableListOf(
+				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", fileIds)
+			))
+			.build()
+		mockSafRequest_notFound(innsendingsId = loggedInMsg2.innsendingsId)
+
+		val noLogInMsg = InnsendingTopicMsgBuilder()
+			.withKanal("NAV_NO_UINNLOGGET")
+			.withTestDokumenter(mutableListOf(
+				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", fileIds)
+			))
+			.build()
 		mockSafRequest_notFound(innsendingsId = noLogInMsg.innsendingsId)
-		putDataOnKafkaTopic(key = noLogInMsg.innsendingsId, value = serializeMsg(noLogInMsg))
-		val noLogInMsg2 = translate(createSoknadarkivschema())
+		val noLogInMsg2 = InnsendingTopicMsgBuilder()
+			.withKanal("NAV_NO_UINNLOGGET")
+			.withTestDokumenter(mutableListOf(
+				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", fileIds)
+			))
+			.build()
 		mockSafRequest_notFound(innsendingsId = noLogInMsg2.innsendingsId)
-		putDataOnKafkaTopic(key = noLogInMsg2.innsendingsId, value = serializeMsg(noLogInMsg2))
 
-		val loggedInMsg2 = createSoknadarkivschema()
-		mockSafRequest_notFound(innsendingsId = loggedInMsg2.behandlingsid)
-		putDataOnKafkaTopic(loggedInMsg2)
+		// When
+		putDataOnKafkaTopic(loggedInMsg)
+		putDataOnKafkaTopic(key = loggedInMsg1.innsendingsId, value = loggedInMsg1)
+		putDataOnKafkaTopic(key = loggedInMsg2.innsendingsId, value = loggedInMsg2)
+		putDataOnKafkaTopic(key = noLogInMsg.innsendingsId, value = noLogInMsg)
+		putDataOnKafkaTopic(key = noLogInMsg2.innsendingsId, value = noLogInMsg2)
 
-
-		verifyMockedPostRequests(initialRequests + 4, journalPostUrl)
+		// Expect
+		verifyMockedPostRequests(initialRequests + 5, journalPostUrl)
 	}
 
 	@Test
@@ -168,11 +246,12 @@ class IntegrationTests : ContainerizedKafka() {
 
 	@Test
 	fun `Application not sent to Joark if it is already archived`() {
-		mockFilestorageIsWorking(fileId)
-		mockJoarkIsWorking()
+		val soknadarkivschema = InnsendingTopicMsgBuilder().withKanal("NAV_NO").build()
+		val fileids = soknadarkivschema.dokumenter.map{it.varianter.map{it.uuid}}.flatten()
 
-		val soknadarkivschema = createSoknadarkivschema()
-		mockSafRequest_found(innsendingsId = soknadarkivschema.behandlingsid)
+		mockFilestorageIsWorking(fileids.map {it to filestorageContent})
+		mockSafRequest_found(innsendingsId = soknadarkivschema.innsendingsId)
+		mockJoarkIsWorking()
 		putDataOnKafkaTopic(soknadarkivschema)
 
 		verifyMockedPostRequests(0, journalPostUrl)
@@ -180,11 +259,17 @@ class IntegrationTests : ContainerizedKafka() {
 
 	@Test
 	fun `Application sent to Joark if error checking SAF`() {
-		mockFilestorageIsWorking(fileId)
-		mockJoarkIsWorking()
+		val soknadarkivschema = InnsendingTopicMsgBuilder()
+			.withInnsendtDato(
+				OffsetDateTime.of(2026, 3, 1, 12, 30,30, 500, UTC
+				))
+			.withKanal("NAV_NO")
+			.build()
+		val fileids = soknadarkivschema.dokumenter.map{it.varianter.map{it.uuid}}.flatten()
 
-		val soknadarkivschema = createSoknadarkivschema()
-		mockSafRequest_error(innsendingsId = soknadarkivschema.behandlingsid)
+		mockSafRequest_error(innsendingsId = soknadarkivschema.innsendingsId)
+		mockFilestorageIsWorking(fileids.map {it to filestorageContent})
+		mockJoarkIsWorking()
 		putDataOnKafkaTopic(soknadarkivschema)
 
 		verifyMockedPostRequests(1, journalPostUrl)
@@ -218,12 +303,32 @@ class IntegrationTests : ContainerizedKafka() {
 	private fun putDataOnKafkaTopic(
 		key: String,
 		value: String,
+		kanal: String = "NAV_NO",
 	): RecordMetadata {
-		val topic = kafkaConfig.topics.nologinSubmissionTopic
-		return putDataOnTopic(key, value, RecordHeaders(), topic, kafkaNologinTopicProducer)
+		return if (kanal == "NAV_NO") {
+			putDataOnTopic(key, value, RecordHeaders(), topic = kafkaConfig.topics.loggedinSubmissionTopic, kafkaLoggedinTopicProducer)
+		} else {
+			putDataOnTopic(key, value, RecordHeaders(), topic = kafkaConfig.topics.nologinSubmissionTopic, kafkaNologinTopicProducer)
+		}
 	}
 
-	private fun <T> putDataOnTopic(
+	private fun putDataOnKafkaTopic(
+		key: String,
+		value: InnsendingTopicMsg,
+	): RecordMetadata {
+		return if (value.kanal == "NAV_NO") {
+			putDataOnTopic(key, serializeMsg(value), RecordHeaders(), topic = kafkaConfig.topics.loggedinSubmissionTopic, kafkaLoggedinTopicProducer)
+		} else {
+			putDataOnTopic(key, serializeMsg(value), RecordHeaders(), topic = kafkaConfig.topics.nologinSubmissionTopic, kafkaNologinTopicProducer)
+		}
+	}
+
+	private fun putDataOnKafkaTopic(		value: InnsendingTopicMsg) : RecordMetadata {
+		return putDataOnKafkaTopic(value.innsendingsId, value)
+	}
+
+
+private fun <T> putDataOnTopic(
 		key: String, value: T, headers: Headers, topic: String,
 		kafkaProducer: KafkaProducer<String, T>
 	): RecordMetadata {

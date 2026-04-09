@@ -5,9 +5,11 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
 import no.nav.soknad.arkivering.soknadsmottaker.model.DokumentData
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import no.nav.soknad.arkivering.soknadsmottaker.model.Variant
+import java.time.format.DateTimeFormatter
 
 fun createOpprettJournalpostRequest(o: InnsendingTopicMsg, attachedFiles: List<FileInfo>): OpprettJournalpostRequest {
-	val timestamp = o.innsendtDato.toString()
+	val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX")
+	val timestamp = o.innsendtDato.format(formatter)
 
 	val documents = createDocuments(o.dokumenter, attachedFiles, o.ettersendelseTilId)
 	val tittel = getTitleFromMainDocument(documents)
