@@ -47,7 +47,6 @@ kafka:
     trustStorePath: ${KAFKA_TRUSTSTORE_PATH}
     trustStorePassword: ${KAFKA_CREDSTORE_PASSWORD}
   topics:
-    mainTopic: ${KAFKA_MAIN_TOPIC}
     processingTopic: ${KAFKA_PROCESSING_TOPIC}
     messageTopic: ${KAFKA_MESSAGE_TOPIC}
     arkiveringstilbakemeldingTopic: ${KAFKA_ARKIVERINGSTILBAKEMELDING_TOPIC}

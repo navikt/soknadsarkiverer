@@ -70,7 +70,7 @@ class InnsendingTopicMsgBuilder {
 			)
 		),
 		DokumentData(
-			skjemanummer = "N7",
+			skjemanummer = "L7",
 			erHovedskjema = false,
 			tittel = "Kvittering",
 			varianter = listOf(
@@ -185,7 +185,25 @@ class MottattVariantBuilder {
 	fun build() = MottattVariant(uuid, filnavn, filtype, variantformat)
 }
 
-fun createSoknadarkivschema(fileId: String = UUID.randomUUID().toString(), behandlingsId: String = UUID.randomUUID().toString()) = createSoknadarkivschema(listOf(fileId), behandlingsId)
+fun createSoknadarkivschema(fileId: String = UUID.randomUUID().toString(), behandlingsId: String = UUID.randomUUID().toString(), tema: String = "AAP") =
+	InnsendingTopicMsgBuilder()
+		.withSkjemanr("NAV 11-12.10")
+		.withTittel("Kjøreliste for godkjent bruk av egen bil")
+		.withInnsendingsId(behandlingsId)
+		.withArkivtema(tema)
+		.withTestDokumenter(
+			mutableListOf(
+				TestDokument(
+					skjemanummer = "NAV 11-12.10",
+					erHovedskjema = true,
+					tittel = "Kjøreliste for godkjent bruk av egen bil",
+					uuids = listOf(fileId)
+				)
+			)
+		)
+		.build()
+
+//fun createSoknadarkivschema(fileId: String = UUID.randomUUID().toString(), behandlingsId: String = UUID.randomUUID().toString()) = createSoknadarkivschema(listOf(fileId), behandlingsId)
 fun createSoknadarkivschema(behandlingsId: String = UUID.randomUUID().toString(), tema: String, fileIds: List<String> = listOf(UUID.randomUUID().toString()), ) = createSoknadarkivschema(fileIds, behandlingsId, tema)
 
 fun createSoknadarkivschema(fileIds: List<String>, variantformat: String = "ARKIV",behandlingsId: String = UUID.randomUUID().toString(), tema: String = "AAP") =

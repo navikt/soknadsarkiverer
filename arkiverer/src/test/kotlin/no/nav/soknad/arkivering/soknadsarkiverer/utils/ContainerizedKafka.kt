@@ -49,7 +49,6 @@ open class ContainerizedKafka {
 			kafkaContainer.start()
 
 			listOf(
-				kafkaConfig.topics.mainTopic,
 				kafkaConfig.topics.processingTopic,
 				kafkaConfig.topics.messageTopic,
 				kafkaConfig.topics.arkiveringstilbakemeldingTopic,

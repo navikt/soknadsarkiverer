@@ -9,7 +9,6 @@ import io.prometheus.metrics.model.registry.PrometheusRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
-import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
@@ -35,9 +34,6 @@ import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import java.lang.Thread.sleep
-import java.time.Instant
-import java.time.OffsetDateTime
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -80,7 +76,6 @@ class ApplicationTests : ContainerizedKafka() {
 	@Value("\${saf.path}")
 	private lateinit var safUrl: String
 
-	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 	private lateinit var kafkaProducerForBadData: KafkaProducer<String, String>
 	private lateinit var kafkaListener: KafkaListener
 	private lateinit var kafkaNologinTopicProducer: KafkaProducer<String, String>
@@ -93,7 +88,6 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@BeforeAll
 	fun setupKafkaProducersAndListeners() {
-		kafkaProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap()
 			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
@@ -133,13 +127,22 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@Test
 	fun `Happy case - Putting events on Kafka main topic will cause rest calls to Joark`() {
-		val key = UUID.randomUUID().toString()
-		mockFilestorageIsWorking(fileUuid)
-		mockJoarkIsWorking()
-		val soknadsarkivschema = createSoknadarkivschema(key)
-		mockSafRequest_notFound(innsendingsId = soknadsarkivschema.behandlingsid)
+		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
+		val mainDocumentTitle = "Test dokument"
+		val soknadsarkivschema = InnsendingTopicMsgBuilder()
+			.withTittel(mainDocumentTitle)
+			.withEttersendelseTilId(UUID.randomUUID().toString())
+			.withTestDokumenter(
+				mutableListOf(TestDokument("NAV 11-12.10", true, mainDocumentTitle, fileIds))
+			)
+			.build()
+		val key = soknadsarkivschema.innsendingsId
 
-		putDataOnKafkaTopic(key, soknadsarkivschema)
+		mockFilestorageIsWorking(fileIds.map { it to filestorageContent })
+		mockJoarkIsWorking()
+		mockSafRequest_notFound(innsendingsId = key)
+
+		putDataOnKafkaTopic(soknadsarkivschema)
 
 		verifyProcessingEvents(
 			key, mapOf(
@@ -165,15 +168,22 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@Test
 	fun `Happy case - File missing, new event event on Kafka for key will cause rest calls to Joark`() {
-		val key = UUID.randomUUID().toString()
 		val fileId = UUID.randomUUID().toString()
+		val mainDocumentTitle = "Test dokument"
 		mockFilestorageIsWorking(fileId)
 
 		mockJoarkIsWorking()
-		val soknadsarkivschema = createSoknadarkivschema(key)
-		mockSafRequest_notFound(innsendingsId = soknadsarkivschema.behandlingsid)
+		val soknadsarkivschema = InnsendingTopicMsgBuilder()
+			.withTittel(mainDocumentTitle)
+			.withEttersendelseTilId(UUID.randomUUID().toString())
+			.withTestDokumenter(
+				mutableListOf(TestDokument("NAV 11-12.10", true, mainDocumentTitle, listOf("non-existing-file-id")))
+			)
+			.build()
+		val key = soknadsarkivschema.innsendingsId
+		mockSafRequest_notFound(innsendingsId = key)
 
-		putDataOnKafkaTopic(key, soknadsarkivschema)
+		putDataOnKafkaTopic(soknadsarkivschema)
 		verifyProcessingEvents(
 			key, mapOf(
 				RECEIVED hasCount 1, STARTED hasCount maxNumberOfAttempts, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
@@ -182,10 +192,17 @@ class ApplicationTests : ContainerizedKafka() {
 
 		sleep(1000)
 
-		val updatedSchema = createSoknadarkivschema(fileId, key)
+		val updatedSchema = InnsendingTopicMsgBuilder()
+			.withInnsendingsId(key)
+			.withTittel(mainDocumentTitle)
+			.withEttersendelseTilId(UUID.randomUUID().toString())
+			.withTestDokumenter(
+				mutableListOf(TestDokument("NAV 11-12.10", true, mainDocumentTitle, listOf(fileId)))
+			)
+			.build()
 		mockJoarkIsWorking()
-		mockSafRequest_notFound(innsendingsId = soknadsarkivschema.behandlingsid)
-		putDataOnKafkaTopic(key, updatedSchema)
+		mockSafRequest_notFound(innsendingsId = key)
+		putDataOnKafkaTopic(updatedSchema)
 
 		verifyProcessingEvents(
 			key, mapOf(
@@ -202,16 +219,21 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@Test
 	fun `Reject updated application on kafka when already archived`() {
-		val key = UUID.randomUUID().toString()
 		val fileId = UUID.randomUUID().toString()
-
-		val soknadsarkivschema = createSoknadarkivschema(fileId, key)
+		val soknadsarkivschema = InnsendingTopicMsgBuilder()
+			.withTittel("Test dokument")
+			.withEttersendelseTilId(UUID.randomUUID().toString())
+			.withTestDokumenter(
+				mutableListOf(TestDokument("NAV 11-12.10", true, "Test dokument", listOf(fileId)))
+			)
+			.build()
+		val key = soknadsarkivschema.innsendingsId
 
 		mockFilestorageIsWorking(fileId)
 		mockJoarkIsWorking()
-		mockSafRequest_notFound(innsendingsId = soknadsarkivschema.behandlingsid)
+		mockSafRequest_notFound(innsendingsId = key)
 
-		putDataOnKafkaTopic(key, soknadsarkivschema)
+		putDataOnKafkaTopic(soknadsarkivschema)
 		verifyProcessingEvents(
 			key, mapOf(
 				RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
@@ -225,13 +247,16 @@ class ApplicationTests : ContainerizedKafka() {
 		sleep(1000)
 
 		val updatedFileId = UUID.randomUUID().toString()
-		val updatedSchema = createSoknadarkivschema(updatedFileId, key)
+		val dokument = soknadsarkivschema.dokumenter.first()
+		val variant = dokument.varianter.first().copy(uuid=updatedFileId)
+		val updatedDokument = dokument.copy(varianter = listOf(variant))
+		val updatedSchema = soknadsarkivschema.copy(dokumenter = listOf(updatedDokument))
 
 		mockFilestorageIsWorking(updatedFileId)
 		mockJoarkIsWorking()
-		mockSafRequest_found(innsendingsId = soknadsarkivschema.behandlingsid)
+		mockSafRequest_found(innsendingsId = key)
 
-		putDataOnKafkaTopic(key, updatedSchema)
+		putDataOnKafkaTopic(updatedSchema)
 		verifyProcessingEvents(
 			key, mapOf(
 				RECEIVED hasCount 2, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
@@ -299,14 +324,14 @@ class ApplicationTests : ContainerizedKafka() {
 		)
 
 		val requests = verifyPostRequest(journalPostUrl)
-		assertTrue(requests.size>=1)
+		assertTrue(requests.isNotEmpty())
 		val request = objectMapper.readValue<OpprettJournalpostRequest>(requests.last().body)
 		verifyRequestDataToJoark(updatedSoknadarkivschema, request)
 	}
 
 	@Test
 	fun `Repeat - File missing, new event event on Kafka main topic for for key will cause rest calls to Joark`() {
-		repeat(10) { index ->
+		repeat(10) {
 			try {
 				val loop = 0
 				val processingStates = mapOf(RECEIVED to loop, STARTED to loop, ARCHIVED to loop, FINISHED to loop, FAILURE to loop)
@@ -320,16 +345,22 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@Test
 	fun rejectUpdatedApplicationOnKafkaWhenAlreadyArchived() {
-		val key = UUID.randomUUID().toString()
-		val fileId = UUID.randomUUID().toString()
 
-		val soknadsarkivschema = createSoknadarkivschema(fileId, key)
+		val fileId = UUID.randomUUID().toString()
+		val soknadsarkivschema = InnsendingTopicMsgBuilder()
+			.withTittel("Test dokument")
+			.withEttersendelseTilId(UUID.randomUUID().toString())
+			.withTestDokumenter(
+				mutableListOf(TestDokument("NAV 11-12.10", true, "Test dokument", listOf(fileId)))
+			)
+			.build()
+		val key = soknadsarkivschema.innsendingsId
 
 		mockFilestorageIsWorking(fileId)
 		mockJoarkIsWorking()
-		mockSafRequest_notFound(innsendingsId = soknadsarkivschema.behandlingsid)
+		mockSafRequest_notFound(innsendingsId = key)
 
-		putDataOnKafkaTopic(key, soknadsarkivschema)
+		putDataOnKafkaTopic(soknadsarkivschema)
 		verifyProcessingEvents(
 			key, mapOf(
 				RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
@@ -342,14 +373,11 @@ class ApplicationTests : ContainerizedKafka() {
 
 		sleep(1000)
 
-		val updatedFileId = UUID.randomUUID().toString()
-		val updatedSchema = createSoknadarkivschema(updatedFileId, key)
-
-		mockFilestorageIsWorking(updatedFileId)
+		mockFilestorageIsWorking(fileId)
 		mockJoarkIsWorking()
-		mockSafRequest_found(innsendingsId = soknadsarkivschema.behandlingsid)
+		mockSafRequest_found(innsendingsId = key)
 
-		putDataOnKafkaTopic(key, updatedSchema)
+		putDataOnKafkaTopic(soknadsarkivschema)
 		verifyProcessingEvents(
 			key, mapOf(
 				RECEIVED hasCount 2, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
@@ -370,10 +398,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 			mockFilestorageIsWorking((listOf(fileUuid)+fileIds).map{ it to filestorageContent })
 			mockSafRequest_notFound(innsendingsId = key)
-			if (index % 3 == 0) {
-				val soknadsarkivschema = createSoknadarkivschema(key)
-				putDataOnKafkaTopic(key, soknadsarkivschema)
-			} else if (index % 2 == 0) {
+			if (index % 2 == 0) {
 				val noLoggInMsg = InnsendingTopicMsgBuilder()
 					.withInnsendingsId(key)
 					.withTittel("Test dokument")
@@ -440,7 +465,7 @@ class ApplicationTests : ContainerizedKafka() {
 		val requests = verifyPostRequest(journalPostUrl)
 		assertEquals(1, requests.size)
 		val request = objectMapper.readValue<OpprettJournalpostRequest>(requests[0].body)
-		assertEquals(loggedInMsg.dokumenter.filter{it.erHovedskjema}.first().varianter.size-1, request.dokumenter.first().dokumentvarianter.size)
+		assertEquals(loggedInMsg.dokumenter.first { it.erHovedskjema }.varianter.size-1, request.dokumenter.first().dokumentvarianter.size)
 	}
 
 	@Test
@@ -564,13 +589,23 @@ class ApplicationTests : ContainerizedKafka() {
 	@Test
 	fun `Poison pill followed by proper event -- Only proper one is sent to Joark`() {
 		val key = UUID.randomUUID().toString()
+		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
 		val keyForPoisonPill = UUID.randomUUID().toString()
-		mockFilestorageIsWorking(fileUuid)
+		mockFilestorageIsWorking(fileIds.map{it to filestorageContent})
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId = key)
+		val loggedInMsg = InnsendingTopicMsgBuilder()
+			.withInnsendingsId(key)
+			.withTittel("Test dokument")
+			.withKanal("NAV_NO")
+			.withTestDokumenter(mutableListOf(
+				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", fileIds),
+			))
+			.build()
 
-		putDataOnKafkaTopic(keyForPoisonPill, "this is not deserializable", RecordHeaders())
-		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
+		putDataOnTopic(keyForPoisonPill, "this is not deserializable", RecordHeaders(), topic= kafkaConfig.topics.loggedinSubmissionTopic,
+			kafkaProducer = kafkaloggedinTopicProducer)
+		putDataOnKafkaTopic(loggedInMsg)
 
 		verifyProcessingEvents(
 			key, mapOf(
@@ -699,51 +734,24 @@ class ApplicationTests : ContainerizedKafka() {
 	}
 
 
-	@Deprecated("Ikke lenger relevant at soknadsarkiverer skal slette filer")
-	@Test
-	fun `Everything works, but Filestorage cannot delete files -- Message is nevertheless marked as finished`() {
-		val key = UUID.randomUUID().toString()
-		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
-		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
-		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
-		val joarkErrorsBefore = metrics.getJoarkErrors()
-
-		mockFilestorageIsWorking(fileUuid)
-		mockFilestorageDeletionIsNotWorking()
-		mockJoarkIsWorking()
-		mockSafRequest_notFound(innsendingsId = key)
-
-		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
-
-		verifyProcessingEvents(
-			key, mapOf(
-				RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
-			)
-		)
-		verifyMockedPostRequests(1, journalPostUrl)
-		verifyMessageStartsWith(key, mapOf("**Archiving: OK" hasCount 1, "Exception" hasCount 0))
-		verifyArkiveringstilbakemeldingStartsWith(key, mapOf("**Archiving: OK" hasCount 1))
-		verifyKafkaMetric(
-			key, mapOf(
-				"get files from filestorage" hasCount 1,
-				"send files to archive" hasCount 1,
-			)
-		)
-
-		verifyArchivingMetrics(getFilestorageSuccessesBefore + 1, { metrics.getGetFilestorageSuccesses() })
-		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, { metrics.getDelFilestorageSuccesses() })
-		verifyArchivingMetrics(joarkErrorsBefore + 0, { metrics.getJoarkErrors() })
-		verifyArchivingMetrics(joarkSuccessesBefore + 1, { metrics.getJoarkSuccesses() })
-	}
-
 	@Test
 	fun `Joark responds with status OK but invalid body -- will retry`() {
 		val key = UUID.randomUUID().toString()
-		mockFilestorageIsWorking(fileUuid)
+		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
+		mockFilestorageIsWorking(fileIds.map{it to filestorageContent})
 		mockJoarkIsWorkingButGivesInvalidResponse()
 		mockSafRequest_notFound(innsendingsId = key)
 
-		putDataOnKafkaTopic(key, createSoknadarkivschema(key))
+		val loggedInMsg = InnsendingTopicMsgBuilder()
+			.withInnsendingsId(key)
+			.withTittel("Test dokument")
+			.withKanal("NAV_NO")
+			.withTestDokumenter(mutableListOf(
+				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", fileIds),
+			))
+			.build()
+
+		putDataOnKafkaTopic(loggedInMsg)
 
 		verifyProcessingEvents(
 			key, mapOf(
@@ -766,7 +774,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@Test
 	fun `First attempt to Joark fails, the fourth succeeds`() {
-		Thread.sleep(1000) // Får av og til feil i telling av metrics når alle testene kjøres da metrics endringer i andre tester kan påvirke denne
+		sleep(1000) // Får av og til feil i telling av metrics når alle testene kjøres da metrics endringer i andre tester kan påvirke denne
 		// Given
 		val key = UUID.randomUUID().toString()
 		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
@@ -933,7 +941,6 @@ class ApplicationTests : ContainerizedKafka() {
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId = key)
 
-		val tasksBefore = metrics.getTasks()
 		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
 		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
 		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
@@ -1028,7 +1035,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@Test
 	fun `Not all files fetched from Filestorage will cause failure`() {
-		Thread.sleep(1000) // Får av og til feil i telling av metrics når alle testene kjøres da metrics endringer i andre tester kan påvirke denne
+		sleep(1000) // Får av og til feil i telling av metrics når alle testene kjøres da metrics endringer i andre tester kan påvirke denne
 		// Given
 		val key = UUID.randomUUID().toString()
 		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
@@ -1166,92 +1173,69 @@ class ApplicationTests : ContainerizedKafka() {
 	}
 
 
-	private fun createSoknadarkivschema(behandlingsId: String) = createSoknadarkivschema(fileUuid, behandlingsId)
-
-
-	private fun verifyRequestDataToJoark(soknadsarkivschema: Soknadarkivschema, requestData: OpprettJournalpostRequest) {
-		val expected = OpprettJournalpostRequest(
-			AvsenderMottaker(soknadsarkivschema.fodselsnummer, "FNR"),
-			Bruker(soknadsarkivschema.fodselsnummer, "FNR"),
-			DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(
-				OffsetDateTime.ofInstant(
-					Instant.ofEpochSecond(soknadsarkivschema.innsendtDato),
-					ZoneId.of("Europe/Oslo")
-				)
-			),
-			listOf(
-				Dokument(
-					soknadsarkivschema.mottatteDokumenter[0].tittel,
-					soknadsarkivschema.mottatteDokumenter[0].skjemanummer,
-					"SOK",
-					listOf(
-						DokumentVariant(
-							filnavn = soknadsarkivschema.mottatteDokumenter[0].mottatteVarianter[0].filnavn,
-							filtype = "PDFA",
-							fysiskDokument = 	filestorageContent.toByteArray(),
-							variantformat = soknadsarkivschema.mottatteDokumenter[0].mottatteVarianter[0].variantformat
-						)
-					)
-				)
-			),
-			soknadsarkivschema.behandlingsid,
-			"INNGAAENDE",
-			"NAV_NO",
-			soknadsarkivschema.arkivtema,
-			soknadsarkivschema.mottatteDokumenter[0].tittel
-		)
-		assertEquals(expected, requestData)
-	}
-
-
 	private fun verifyRequestDataToJoark(soknadsarkivschema: InnsendingTopicMsg, requestData: OpprettJournalpostRequest) {
 		val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX")
+
+		val (mainDocumentTitle, brevkode) = getTitleAndBrevkode(soknadsarkivschema)
+
 		val expected = OpprettJournalpostRequest(
 			AvsenderMottaker(soknadsarkivschema.avsenderDto.id, idType = soknadsarkivschema.avsenderDto.idType?.name, navn = soknadsarkivschema.avsenderDto.navn),
 			bruker = if (soknadsarkivschema.brukerDto != null) Bruker(id=soknadsarkivschema.brukerDto?.id!!, idType = soknadsarkivschema.brukerDto?.idType?.name!!) else null,
 			datoMottatt = soknadsarkivschema.innsendtDato.format(formatter),
-			soknadsarkivschema.dokumenter.map{
-				Dokument(tittel=it.tittel, brevkode=it.skjemanummer, dokumentKategori="SOK",
-					dokumentvarianter = it.varianter.map{variant ->
+			dokumenter = soknadsarkivschema.dokumenter.mapIndexed{ index, doc ->
+				Dokument(
+					tittel=if (index == 0) mainDocumentTitle else doc.tittel, brevkode=if (index == 0) brevkode else doc.skjemanummer, dokumentKategori="SOK",
+					dokumentvarianter = doc.varianter.map{variant ->
 						DokumentVariant(filnavn=variant.filnavn, filtype=variant.filtype, fysiskDokument = filestorageContent.toByteArray(), variantformat = variant.variantFormat!!)
 					}
 				)},
 			eksternReferanseId = soknadsarkivschema.innsendingsId,
 			journalpostType = "INNGAAENDE",
 			kanal = soknadsarkivschema.kanal,
-			soknadsarkivschema.arkivtema,
-			soknadsarkivschema.tittel
+			tema = soknadsarkivschema.arkivtema,
+			tittel = mainDocumentTitle
 		)
 		assertEquals(expected, requestData)
 	}
 
-	private fun putDataOnKafkaTopic(key: Key, soknadarkivschema: Soknadarkivschema, headers: Headers = RecordHeaders()) {
-		val topic = kafkaConfig.topics.mainTopic
-		putDataOnTopic(key, soknadarkivschema, headers, topic, kafkaProducer)
+	private fun getTitleAndBrevkode(soknadsarkivschema: InnsendingTopicMsg): Pair<String, String> {
+		if (soknadsarkivschema.ettersendelseTilId != null) {
+			return Pair("Ettersendelse til " + soknadsarkivschema.tittel.replaceFirst(soknadsarkivschema.tittel[0], soknadsarkivschema.tittel[0].lowercaseChar()),
+				soknadsarkivschema.dokumenter.firstOrNull()?.skjemanummer?.replace("NAV ", "NAVe ")?: "")
+		} else {
+			return Pair(soknadsarkivschema.tittel,	soknadsarkivschema.dokumenter.firstOrNull()?.skjemanummer ?: "")
+		}
 	}
 
-
 	private fun putDataOnKafkaTopic(message: InnsendingTopicMsg) {
-		if (message.kanal == "NAV_NO") {
-			putDataOnTopic(key = message.innsendingsId, value = objectMapper.writeValueAsString(message),
-				headers = RecordHeaders(), topic = kafkaConfig.topics.loggedinSubmissionTopic, kafkaProducer = kafkaloggedinTopicProducer)
-		} else if (message.kanal == "NAV_NO_UINNLOGGET") {
-			putDataOnTopic(key = message.innsendingsId, value = objectMapper.writeValueAsString(message),
-				headers = RecordHeaders(), topic = kafkaConfig.topics.nologinSubmissionTopic, kafkaProducer = kafkaNologinTopicProducer)
-		} else {
-			throw RuntimeException("Ukjent kanal: ${message.kanal}")
+		when (message.kanal) {
+				"NAV_NO" -> {
+					putDataOnTopic(
+						key = message.innsendingsId,
+						value = objectMapper.writeValueAsString(message),
+						headers = RecordHeaders(),
+						topic = kafkaConfig.topics.loggedinSubmissionTopic,
+						kafkaProducer = kafkaloggedinTopicProducer
+					)
+				}
+				"NAV_NO_UINNLOGGET" -> {
+					putDataOnTopic(
+						key = message.innsendingsId,
+						value = objectMapper.writeValueAsString(message),
+						headers = RecordHeaders(),
+						topic = kafkaConfig.topics.nologinSubmissionTopic,
+						kafkaProducer = kafkaNologinTopicProducer
+					)
+				}
+				else -> {
+					throw RuntimeException("Ukjent kanal: ${message.kanal}")
+				}
 		}
 	}
 
 
-	private fun putDataOnKafkaTopic(key: Key, message: String) {
-		val topic = kafkaConfig.topics.nologinSubmissionTopic
-		putDataOnTopic(key = key, value = message, headers = RecordHeaders(), topic = topic,  kafkaNologinTopicProducer)
-	}
-
-
 	private fun putDataOnKafkaTopic(key: Key, badData: String, headers: Headers = RecordHeaders()) {
-		val topic = kafkaConfig.topics.mainTopic
+		val topic = kafkaConfig.topics.loggedinSubmissionTopic
 		putDataOnTopic(key, badData, headers, topic, kafkaProducerForBadData)
 	}
 
