@@ -9,10 +9,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.test.util.AssertionErrors.assertTrue
-import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
-import java.time.ZonedDateTime
 import java.util.*
 
 class MessageConverterTests {
@@ -22,8 +20,6 @@ class MessageConverterTests {
 		val tittel = "Apa bepa"
 		val skjemanummer = "NAV 11-13.06"
 		val uuid = UUID.randomUUID().toString()
-		val hovedDokumentVarianter = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
-		val kvitteringVariant = listOf(UUID.randomUUID().toString())
 		val files = mutableListOf (
 			TestDokument( skjemanummer = skjemanummer, erHovedskjema = true, tittel = tittel, uuids = listOf(UUID.randomUUID().toString(),	UUID.randomUUID().toString()) ),
 			TestDokument( skjemanummer = "L7", erHovedskjema = false, tittel = "Kvittering", uuids = listOf(UUID.randomUUID().toString()) )

@@ -6,7 +6,6 @@ import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
-import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
@@ -57,7 +56,6 @@ class IntegrationTests : ContainerizedKafka() {
 
 	@Value("\${saf.path}")
 	private lateinit var safUrl: String
-	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 
 	private lateinit var kafkaNologinTopicProducer: KafkaProducer<String, String>
 	private lateinit var kafkaLoggedinTopicProducer: KafkaProducer<String, String>
@@ -73,7 +71,6 @@ class IntegrationTests : ContainerizedKafka() {
 	fun setup() {
 		setupMockedNetworkServices(portToExternalServices!!, journalPostUrl, "/innsendte/v1/files", safUrl)
 
-		kafkaProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also {
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 		})
@@ -273,7 +270,7 @@ class IntegrationTests : ContainerizedKafka() {
 		verifyMockedPostRequests(1, journalPostUrl)
 	}
 
-	private fun createSoknadarkivschema() = createSoknadarkivschema(fileId)
+	private fun createSoknadarkivschema() = createInnsendingTopicMsg(fileId)
 
 
 	private fun putDataOnKafkaTopic(badData: String) {

@@ -2,11 +2,9 @@ package no.nav.soknad.arkivering.soknadsarkiverer.kafka.bootstrapping
 
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
-import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.*
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.util.deserializeMsg
-import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.Deserializer
 import org.apache.kafka.common.serialization.StringDeserializer
@@ -20,7 +18,6 @@ class KafkaBootstrapConsumer(
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	//private val mainTopic = kafkaConfig.topics.mainTopic
 	private val processingTopic = kafkaConfig.topics.processingTopic
 	private val uuid = UUID.randomUUID().toString()
 	private val noLoginTopic = kafkaConfig.topics.nologinSubmissionTopic

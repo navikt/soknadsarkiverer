@@ -1,6 +1,8 @@
 kafka:
   applicationId: end-to-end
   bootstrappingTimeout: 60
+  brokers: ${KAFKA_BROKERS}
+  delayBeforeKafkaInitialization: 5
   security:
     enabled: FALSE
   topics:
