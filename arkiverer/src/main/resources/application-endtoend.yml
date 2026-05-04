@@ -1,10 +1,11 @@
 kafka:
   applicationId: end-to-end
   bootstrappingTimeout: 60
+  brokers: ${KAFKA_BROKERS}
+  delayBeforeKafkaInitialization: 5
   security:
     enabled: FALSE
   topics:
-    mainTopic: privat-soknadinnsending-v1-dev
     processingTopic: privat-soknadinnsending-processingeventlog-v1-dev
     messageTopic: privat-soknadinnsending-messages-v1-dev
     arkiveringstilbakemeldingTopic: privat-soknadinnsending-arkiveringstilbakemeldinger-v1-dev

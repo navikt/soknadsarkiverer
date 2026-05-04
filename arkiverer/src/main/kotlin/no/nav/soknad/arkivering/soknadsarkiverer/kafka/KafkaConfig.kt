@@ -24,7 +24,6 @@ data class SecurityConfig(
 )
 
 data class Topics(
-	val mainTopic : String,
 	val processingTopic : String,
 	val messageTopic : String,
 	val arkiveringstilbakemeldingTopic : String,

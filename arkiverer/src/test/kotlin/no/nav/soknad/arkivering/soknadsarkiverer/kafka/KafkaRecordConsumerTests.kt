@@ -342,7 +342,6 @@ private fun kafkaConfig() = KafkaConfig(
 	schemaRegistry = SchemaRegistry(url = "localhost:16868","dummy","dummy"),
 	security = SecurityConfig("FALSE","dummy","dummy","dummy","dummy","dummy","dummy"),
 	topics = Topics(
-		mainTopic = topic,
 		processingTopic = "processingTopic",
 		messageTopic = "messageTopic",
 		metricsTopic = "metricsTopic",

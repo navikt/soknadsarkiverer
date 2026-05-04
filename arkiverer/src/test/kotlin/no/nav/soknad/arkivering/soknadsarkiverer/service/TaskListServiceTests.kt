@@ -12,8 +12,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
 import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafServiceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
-import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.InnsendingTopicMsgBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
@@ -45,7 +44,7 @@ class TaskListServiceTests {
 
 	private val safService = mockk<SafServiceInterface>()
 
-	private val soknadarkivschema = translate(createSoknadarkivschema())
+	private val soknadarkivschema = InnsendingTopicMsgBuilder().build()
 
 	private lateinit var taskListService: TaskListService
 

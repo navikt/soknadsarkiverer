@@ -6,12 +6,10 @@ import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
-import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.util.serializeMsg
-import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -31,7 +29,6 @@ import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.time.OffsetDateTime
-import java.time.ZoneOffset
 import java.time.ZoneOffset.UTC
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -59,7 +56,6 @@ class IntegrationTests : ContainerizedKafka() {
 
 	@Value("\${saf.path}")
 	private lateinit var safUrl: String
-	private lateinit var kafkaProducer: KafkaProducer<String, Soknadarkivschema>
 
 	private lateinit var kafkaNologinTopicProducer: KafkaProducer<String, String>
 	private lateinit var kafkaLoggedinTopicProducer: KafkaProducer<String, String>
@@ -75,7 +71,6 @@ class IntegrationTests : ContainerizedKafka() {
 	fun setup() {
 		setupMockedNetworkServices(portToExternalServices!!, journalPostUrl, "/innsendte/v1/files", safUrl)
 
-		kafkaProducer = KafkaProducer(kafkaConfigMap())
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also {
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 		})
@@ -100,10 +95,10 @@ class IntegrationTests : ContainerizedKafka() {
 
 		val initialRequests = countRequests(journalPostUrl, RequestMethod.POST)
 		val soknadarkivschema = createSoknadarkivschema()
-		mockSafRequest_notFound(innsendingsId = soknadarkivschema.behandlingsid)
+		mockSafRequest_notFound(innsendingsId = soknadarkivschema.innsendingsId)
 		putDataOnKafkaTopic(soknadarkivschema)
 		val soknadarkivschema2 = createSoknadarkivschema()
-		mockSafRequest_notFound(innsendingsId = soknadarkivschema2.behandlingsid)
+		mockSafRequest_notFound(innsendingsId = soknadarkivschema2.innsendingsId)
 		putDataOnKafkaTopic(createSoknadarkivschema())
 
 		verifyMockedPostRequests(initialRequests + 2, journalPostUrl)
@@ -176,7 +171,7 @@ class IntegrationTests : ContainerizedKafka() {
 		val initialRequests = countRequests(journalPostUrl, RequestMethod.POST)
 
 		val loggedInMsg = createSoknadarkivschema()
-		mockSafRequest_notFound(innsendingsId = loggedInMsg.behandlingsid)
+		mockSafRequest_notFound(innsendingsId = loggedInMsg.innsendingsId)
 
 		val loggedInMsg1 = InnsendingTopicMsgBuilder()
 			.withKanal("NAV_NO")
@@ -238,7 +233,7 @@ class IntegrationTests : ContainerizedKafka() {
 
 		putDataOnKafkaTopic("this is not deserializable")
 		val soknadarkivschema = createSoknadarkivschema()
-		mockSafRequest_notFound(innsendingsId = soknadarkivschema.behandlingsid)
+		mockSafRequest_notFound(innsendingsId = soknadarkivschema.innsendingsId)
 		putDataOnKafkaTopic(soknadarkivschema)
 
 		verifyMockedPostRequests(1, journalPostUrl)
@@ -275,29 +270,11 @@ class IntegrationTests : ContainerizedKafka() {
 		verifyMockedPostRequests(1, journalPostUrl)
 	}
 
-	private fun createSoknadarkivschema() = createSoknadarkivschema(fileId)
+	private fun createSoknadarkivschema() = createInnsendingTopicMsg(fileId)
 
-
-	private fun putDataOnKafkaTopic(soknadarkivschema: Soknadarkivschema) {
-		putDataOnTopic(UUID.randomUUID().toString(), soknadarkivschema)
-	}
 
 	private fun putDataOnKafkaTopic(badData: String) {
-		putDataOnTopic(UUID.randomUUID().toString(), badData)
-	}
-
-	private fun putDataOnTopic(
-		key: String,
-		value: Soknadarkivschema,
-		headers: Headers = RecordHeaders()
-	): RecordMetadata {
-		val topic = kafkaConfig.topics.mainTopic
-		return putDataOnTopic(key, value, headers, topic, kafkaProducer)
-	}
-
-	private fun putDataOnTopic(key: String, value: String, headers: Headers = RecordHeaders()): RecordMetadata {
-		val topic = kafkaConfig.topics.mainTopic
-		return putDataOnTopic(key, value, headers, topic, kafkaProducerForBadData)
+		putDataOnKafkaTopic(UUID.randomUUID().toString(), badData, kanal="NAV_NO")
 	}
 
 	private fun putDataOnKafkaTopic(
