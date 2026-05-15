@@ -23,6 +23,8 @@ class ProcessingEventDto(processingEventStrings: List<String>) {
 
 		if (values.contains(ProcessingEvent(EventTypes.ARCHIVED))) return ProcessingEvent(EventTypes.ARCHIVED)
 
+		if (values.last().type == EventTypes.RECEIVED) return ProcessingEvent(EventTypes.RECEIVED)
+
 		if (values.contains(ProcessingEvent(EventTypes.STARTED))) return ProcessingEvent(EventTypes.STARTED)
 
 		if (values.contains(ProcessingEvent(EventTypes.RECEIVED))) return ProcessingEvent(EventTypes.RECEIVED)

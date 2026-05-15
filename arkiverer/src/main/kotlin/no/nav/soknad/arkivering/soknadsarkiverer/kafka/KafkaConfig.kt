@@ -24,12 +24,12 @@ data class SecurityConfig(
 )
 
 data class Topics(
-	val mainTopic : String,
 	val processingTopic : String,
 	val messageTopic : String,
 	val arkiveringstilbakemeldingTopic : String,
 	val metricsTopic : String,
-	val nologinSubmissionTopic : String
+	val nologinSubmissionTopic : String,
+	val loggedinSubmissionTopic : String,
 )
 
 data class SchemaRegistry(

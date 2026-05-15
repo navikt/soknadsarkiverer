@@ -12,7 +12,6 @@ import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
-import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
@@ -26,8 +25,8 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseSta
 import no.nav.soknad.arkivering.soknadsarkiverer.service.safservice.SafServiceInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.util.serializeMsg
-import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
+import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -88,10 +87,10 @@ class StateRecreationTests : ContainerizedKafka() {
 	@Autowired
 	private lateinit var kafkaPublisher: KafkaPublisher
 
-	private lateinit var kafkaMainTopicProducer: KafkaProducer<String, Soknadarkivschema>
+	private lateinit var kafkaLoggedinTopicProducer: KafkaProducer<String, String>
+	private lateinit var kafkaNologinTopicProducer: KafkaProducer<String, String>
 	private lateinit var kafkaProcessingEventProducer: KafkaProducer<String, ProcessingEvent>
 	private lateinit var kafkaBootstrapConsumer: KafkaBootstrapConsumer
-	private lateinit var kafkaNologinTopicProducer: KafkaProducer<String, String>
 
 	@Autowired
 	private lateinit var metrics: ArchivingMetrics
@@ -118,9 +117,12 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	private lateinit var kafkaSetup: KafkaSetupTest
 
-	private val soknadarkivschema = createSoknadarkivschema()
+	private val loggedinSoknad = InnsendingTopicMsgBuilder().build()
+	private val notLoggedinSoknad = InnsendingTopicMsgBuilder().withKanal("NAV_NO_UINNLOGGET").build()
+
 	private val fileUuid = UUID.randomUUID().toString()
 
+	private val applications = mutableMapOf<String, InnsendingTopicMsg>()
 
 	companion object {
 
@@ -156,12 +158,12 @@ class StateRecreationTests : ContainerizedKafka() {
 			"/innsendte/v1/files",
 			safUrl
 		)
-		kafkaMainTopicProducer = KafkaProducer(kafkaConfigMap())
-		kafkaProcessingEventProducer = KafkaProducer(kafkaConfigMap())
+		kafkaLoggedinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap()
+			.also {it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java})
+		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap()
+			.also {it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java})
+		kafkaProcessingEventProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap())
 		kafkaBootstrapConsumer = KafkaBootstrapConsumer(taskListService, kafkaConfig)
-		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
-			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
-		})
 		kafkaSetup = KafkaSetupTest(
 			applicationState = ApplicationState(alive = true, ready = true),
 			taskListService = taskListService,
@@ -169,7 +171,6 @@ class StateRecreationTests : ContainerizedKafka() {
 			metrics = metrics,
 			kafkaConfig = kafkaConfig
 		)
-
 
 		kafkaBootstrapConsumer.recreateState() // Other test classes could have left Kafka events on the topics. Consume them before running the tests in this class.
 
@@ -185,12 +186,12 @@ class StateRecreationTests : ContainerizedKafka() {
 	@Test
 	fun `Can read Event Log with Event that was never started`() {
 		val key = UUID.randomUUID().toString()
+
 		mockFilestorageIsWorking(fileUuid)
 		mockJoarkIsWorking()
-		val soknadsarkivschema = createSoknadarkivschema(key)
-		mockSafRequest_notFound(innsendingsId = soknadsarkivschema.behandlingsid)
+		mockSafRequest_notFound(innsendingsId = key)
 
-		publishSoknadsarkivschemas(key)
+		publishLoggedinMessage(key)
 		publishProcessingEvents(key to RECEIVED)
 
 		recreateState()
@@ -202,10 +203,10 @@ class StateRecreationTests : ContainerizedKafka() {
 	@Test
 	fun `Can read new Msg from not logged in user that was never started`() {
 		val key = UUID.randomUUID().toString()
+
 		mockFilestorageIsWorking(fileUuid)
 		mockJoarkIsWorking()
-		val soknadsarkivschema = translate(createSoknadarkivschema(key))
-		mockSafRequest_notFound(innsendingsId = soknadsarkivschema.innsendingsId)
+		mockSafRequest_notFound(innsendingsId = key)
 
 		publishNoLoginMessage(key)
 
@@ -220,7 +221,7 @@ class StateRecreationTests : ContainerizedKafka() {
 	fun `Can read Event Log with Event that was started once`() {
 		val key = UUID.randomUUID().toString()
 
-		publishSoknadsarkivschemas(key)
+		publishLoggedinMessage(key)
 		publishProcessingEvents(
 			key to RECEIVED,
 			key to STARTED
@@ -234,15 +235,16 @@ class StateRecreationTests : ContainerizedKafka() {
 	@Test
 	fun `Can read both Logged in and not Logged in Msgs with Events that was started once`() {
 		val key = UUID.randomUUID().toString()
-
-		publishSoknadsarkivschemas(key)
-		publishProcessingEvents(
-			key to RECEIVED,
-			key to STARTED
-		)
 		val key2 = UUID.randomUUID().toString()
 
+		publishLoggedinMessage(key)
 		publishNoLoginMessage(key2)
+		publishProcessingEvents(
+			key to RECEIVED,
+			key to STARTED,
+			key2 to RECEIVED,
+			key2 to STARTED
+		)
 
 		recreateState()
 
@@ -254,7 +256,7 @@ class StateRecreationTests : ContainerizedKafka() {
 	fun `Can read Event Log with Finished Event - will not reattempt`() {
 		val key = UUID.randomUUID().toString()
 
-		publishSoknadsarkivschemas(key)
+		publishLoggedinMessage(key)
 		publishProcessingEvents(
 			key to RECEIVED,
 			key to STARTED,
@@ -272,7 +274,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		val key0 = UUID.randomUUID().toString()
 		val key1 = UUID.randomUUID().toString()
 
-		publishSoknadsarkivschemas(key0, key1)
+		publishLoggedinMessage(key0, key1)
 		publishProcessingEvents(
 			key0 to RECEIVED,
 			key0 to STARTED,
@@ -291,7 +293,7 @@ class StateRecreationTests : ContainerizedKafka() {
 	fun `Can read Event Log with Event that was started twice and finished`() {
 		val key = UUID.randomUUID().toString()
 
-		publishSoknadsarkivschemas(key)
+		publishLoggedinMessage(key)
 		publishProcessingEvents(
 			key to RECEIVED,
 			key to STARTED,
@@ -309,7 +311,7 @@ class StateRecreationTests : ContainerizedKafka() {
 	fun `Can read Event Log with Event that was started twice and finished, but in wrong order`() {
 		val key = UUID.randomUUID().toString()
 
-		publishSoknadsarkivschemas(key)
+		publishLoggedinMessage(key)
 		publishProcessingEvents(
 			key to RECEIVED,
 			key to STARTED,
@@ -328,7 +330,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		val key0 = UUID.randomUUID().toString()
 		val key1 = UUID.randomUUID().toString()
 
-		publishSoknadsarkivschemas(key0, key1)
+		publishLoggedinMessage(key0, key1)
 		publishProcessingEvents(
 			key0 to RECEIVED,
 			key0 to STARTED,
@@ -351,7 +353,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		val key1 = UUID.randomUUID().toString()
 		val key2 = UUID.randomUUID().toString()
 
-		publishSoknadsarkivschemas(key0, key1, key2)
+		publishLoggedinMessage(key0, key1, key2)
 		publishProcessingEvents(
 			key1 to RECEIVED,
 			key0 to RECEIVED,
@@ -387,7 +389,7 @@ class StateRecreationTests : ContainerizedKafka() {
 	fun `Process events, then another event comes in - only the first ones cause scheduling`() {
 		val key = UUID.randomUUID().toString()
 
-		publishSoknadsarkivschemas(key)
+		publishLoggedinMessage(key)
 		publishProcessingEvents(
 			key to RECEIVED,
 			key to STARTED
@@ -405,7 +407,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		val size = 50
 		val keyList = MutableList(size) { UUID.randomUUID().toString() }
 
-		keyList.forEach { key -> publishSoknadsarkivschemas(key) }
+		keyList.forEach { key -> publishLoggedinMessage(key) }
 
 		keyList.forEach { key ->
 			publishProcessingEvents(
@@ -426,7 +428,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		val size = 40
 		val keyList = MutableList(size) { UUID.randomUUID().toString() }
 
-		keyList.forEach { key -> publishSoknadsarkivschemas(key) }
+		keyList.forEach { key -> publishLoggedinMessage(key) }
 
 		keyList.forEach { key ->
 			publishProcessingEvents(
@@ -449,7 +451,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		val size = 40
 		val keyList = MutableList(size) { UUID.randomUUID().toString() }
 
-		keyList.forEach { key -> publishSoknadsarkivschemas(key) }
+		keyList.forEach { key -> publishLoggedinMessage(key) }
 
 		countFinishedOrFailure = 0
 		keyList.forEach { key ->
@@ -485,18 +487,19 @@ class StateRecreationTests : ContainerizedKafka() {
 			key to STARTED
 	}
 
-	private fun publishSoknadsarkivschemas(vararg keys: String) {
+	private fun publishLoggedinMessage(vararg keys: String) {
 		keys.forEach {
-			val topic = kafkaConfig.topics.mainTopic
-			putDataOnTopic(it, soknadarkivschema, RecordHeaders(), topic, kafkaMainTopicProducer)
+			applications.put(it, loggedinSoknad.copy(innsendingsId = it, kanal = "NAV_NO"))
+			val topic = kafkaConfig.topics.loggedinSubmissionTopic
+			putDataOnTopic(it,  serializeMsg( applications[it]!!), RecordHeaders(), topic, kafkaLoggedinTopicProducer)
 		}
 	}
 
-
 	private fun publishNoLoginMessage(vararg keys: String) {
 		keys.forEach {
+			applications.put(it, notLoggedinSoknad.copy(innsendingsId = it, kanal = "NAV_NO_UINNLOGGET"))
 			val topic = kafkaConfig.topics.nologinSubmissionTopic
-			putDataOnTopic(it,  serializeMsg( translate(soknadarkivschema)), RecordHeaders(), topic, kafkaNologinTopicProducer)
+			putDataOnTopic(it,  serializeMsg( notLoggedinSoknad.copy(innsendingsId = it)), RecordHeaders(), topic, kafkaNologinTopicProducer)
 		}
 	}
 
@@ -556,11 +559,12 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		private fun verify() {
 			val key = this.key
+			val application = applications[key] ?: loggedinSoknad
 
 			if (key == null || timesCalled == 0)
 				verify(atLeast = timesCalled) { taskListService.addOrUpdateTask(any(), any(), any(), any()) }
 			else
-				verify(atLeast = timesCalled) { taskListService.addOrUpdateTask(eq(key), eq(translate(soknadarkivschema)), any(), any()) }
+				verify(atLeast = timesCalled) { taskListService.addOrUpdateTask(eq(key), eq(application), any(), any()) }
 		}
 	}
 

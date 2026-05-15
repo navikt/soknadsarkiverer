@@ -11,8 +11,8 @@ import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.JournalpostClientInterface
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.*
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
-import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.createSoknadarkivschema
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.InnsendingTopicMsgBuilder
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.TestDokument
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -72,12 +72,11 @@ class ArchiverServiceTests {
 		val key2 = UUID.randomUUID().toString()
 		mockAlreadyArchivedException(key2)
 
-		val soknadschema = createSoknadarkivschema()
-		val translatedSoknadschema = translate(soknadschema)
+		val soknadschema = InnsendingTopicMsgBuilder().withInnsendingsId(key2).build()
 
 		CoroutineScope(Dispatchers.Default).launch {
 			assertThrows<ApplicationAlreadyArchivedException> {
-				archiverService.archive(key2, translatedSoknadschema, archiverService.fetchFiles(key, translatedSoknadschema))
+				archiverService.archive(key2, soknadschema, archiverService.fetchFiles(key, soknadschema))
 			}
 		}
 	}
@@ -91,32 +90,37 @@ class ArchiverServiceTests {
 	fun `Fetch file metrics test`() {
 		archiverService = ArchiverService(innsendingApi, journalpostClient2, metrics, kafkaPublisher)
 		val key = UUID.randomUUID().toString()
+		val skjemanummer = "NAV 11-12.12"
+		val tittel = "Apa bepa"
 		val tema = "AAP"
-		val soknadschema =
-			translate(createSoknadarkivschema(
-				behandlingsId = key,
-				tema = tema,
-				fileIds = listOf(
-					UUID.randomUUID().toString(),
-					UUID.randomUUID().toString(),
-					UUID.randomUUID().toString(),
-					UUID.randomUUID().toString(),
-					UUID.randomUUID().toString(),
-					UUID.randomUUID().toString(),
-					UUID.randomUUID().toString(),
-					UUID.randomUUID().toString()
+
+		val hovedDokumentVarianter = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
+		val kvitteringVariant = listOf(UUID.randomUUID().toString())
+		val attachmentVariant = listOf(UUID.randomUUID().toString())
+		val soknadschema = InnsendingTopicMsgBuilder()
+			.withTittel(tittel)
+			.withSkjemanr(skjemanummer)
+			.withInnsendingsId(key)
+			.withArkivtema(tema)
+			.withTestDokumenter(
+				mutableListOf(
+					TestDokument( skjemanummer = skjemanummer, erHovedskjema = true, tittel = tittel, uuids = hovedDokumentVarianter ),
+					TestDokument( skjemanummer = "L7", erHovedskjema = false, tittel = "Kvittering", uuids = kvitteringVariant ),
+					TestDokument( skjemanummer = "W1", erHovedskjema = false, tittel = "Attachment", uuids = attachmentVariant )
 				)
 			)
-			)
+			.build()
 
 		runBlocking {
 			archiverService.fetchFiles(key, soknadschema)
 
-			val fetchObservation = metrics.getFileFetchSize()
-			assertEquals(7.0, fetchObservation[0].sum)
+			val fetchSizeObservation = metrics.getFileFetchSize()
+			assertEquals(7.0, fetchSizeObservation[0].sum)
 			val fetchFileHistogram = metrics.getFileFetchSizeHistogram(tema)
 			assertTrue(fetchFileHistogram != null)
 			assertEquals("content".length.toDouble(), fetchFileHistogram?.sum)
+			val fetchFileCount = metrics.getGetFilestorageSuccesses()
+			assertEquals(1.0, fetchFileCount) // En gang pr vellykket forsøk på å hente en innsendings filer
 		}
 	}
 
@@ -124,7 +128,7 @@ class ArchiverServiceTests {
 	fun `Archiving succeeds when all is up and running`() {
 		archiverService = ArchiverService(innsendingApi, journalpostClient2, metrics, kafkaPublisher)
 		val key = UUID.randomUUID().toString()
-		val soknadschema = translate(createSoknadarkivschema())
+		val soknadschema = InnsendingTopicMsgBuilder().withInnsendingsId(key).build()
 
 		CoroutineScope(Dispatchers.Default).launch {
 			archiverService.archive(key, soknadschema, archiverService.fetchFiles(key, soknadschema))
@@ -143,7 +147,7 @@ class ArchiverServiceTests {
 			ArchiverService(innsendingApiNotFound, journalpostClient, metrics, kafkaPublisher)
 
 		val key = UUID.randomUUID().toString()
-		val soknadschema = translate(createSoknadarkivschema())
+		val soknadschema = InnsendingTopicMsgBuilder().withInnsendingsId(key).build()
 		CoroutineScope(Dispatchers.Default).launch {
 			assertThrows<ArchivingException> {
 				archiverService.archive(key, soknadschema, archiverService.fetchFiles(key, soknadschema))

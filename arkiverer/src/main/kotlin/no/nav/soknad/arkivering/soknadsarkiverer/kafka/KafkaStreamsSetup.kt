@@ -4,13 +4,11 @@ import io.confluent.kafka.schemaregistry.client.SchemaRegistryClientConfig
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
 import no.nav.soknad.arkivering.avroschemas.EventTypes
-import no.nav.soknad.arkivering.avroschemas.MottattDokument
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
-import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.util.deserializeMsg
-import no.nav.soknad.arkivering.soknadsarkiverer.util.translate
+import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import org.apache.avro.specific.SpecificRecord
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
@@ -40,25 +38,18 @@ class KafkaStreamsSetup(
 
 	private val stringSerde = Serdes.StringSerde()
 	private val processingEventSerde = createProcessingEventSerde()
-	private val soknadarkivschemaSerde = createSoknadarkivschemaSerde()
 	private val mutableListSerde: Serde<MutableList<String>> = MutableListSerde()
 
 
 	private fun kafkaStreams(streamsBuilder: StreamsBuilder) {
-		val joinDef = Joined.with(stringSerde, processingEventSerde, soknadarkivschemaSerde, "archivingState")
 		val materialized = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("processingeventdtos").withValueSerde(mutableListSerde)
-		val mainTopicStream = streamsBuilder.stream(kafkaConfig.topics.mainTopic, Consumed.with(stringSerde, soknadarkivschemaSerde))
 		val processingTopicStream = streamsBuilder.stream(kafkaConfig.topics.processingTopic , Consumed.with(stringSerde, processingEventSerde))
 
+		val joinDefLoggedin = Joined.with(stringSerde, processingEventSerde, stringSerde, "loggedinArchivingState")
+		val loggedinStream = streamsBuilder.stream(kafkaConfig.topics.loggedinSubmissionTopic, Consumed.with(stringSerde, stringSerde))
+
 		val joinDefNoLogin = Joined.with(stringSerde, processingEventSerde, stringSerde, "noLoginArchivingState")
-		val materializedNoLogin = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("noLoginPprocessingevents").withValueSerde(mutableListSerde)
 		val noLoginStream = streamsBuilder.stream(kafkaConfig.topics.nologinSubmissionTopic, Consumed.with(stringSerde, stringSerde))
-
-		val mainTopicTable = mainTopicStream.toTable()
-
-		mainTopicStream
-			.peek { key, value ->	logger.info("$key: Processing MainTopic. InnsendingsId: ${value.behandlingsid}") }
-			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
 
 		val processingTopicContent =
 			processingTopicStream
@@ -80,23 +71,31 @@ class KafkaStreamsSetup(
 				.peek { key, state -> logger.debug("$key: ProcessingTopic in state $state") }
 				.filter { key, state -> !(isConsideredFinished(key, state)) }
 
+		loggedinStream
+			.filter { key, value -> filterSchemaThatAreNullNotSerializable(key, value) }
+			.peek { key, value ->	logger.info("$key: Processing loggedinTopic. InnsendingsId: ${key}") }
+			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
+		val loggedinTopicTable = loggedinStream.toTable()
 		processingTopicContent
-			.leftJoin(mainTopicTable, { state, soknadarkivschema -> soknadarkivschema to state }, joinDef) // Oppdatere state på tabell, archivingState, ved join av soknadarkivschema og state.
-			.filter { key, (soknadarkivschema, _) -> filterSoknadarkivschemaThatAreNull(key, soknadarkivschema) } // Ta bort alle innslag i tabell der soknadarkivschema er null.
-			.peek { key, (soknadarkivschema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state Soknadarkivschema: ${soknadarkivschema.print()}") }
-			.foreach { key, (soknadarkivschema, state) ->	taskListService.addOrUpdateTask(key, translate(soknadarkivschema), state.type)	} // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
+			.leftJoin(loggedinTopicTable, { state, loggedinSchema -> loggedinSchema to state }, joinDefLoggedin) // Oppdatere state på tabell, loggedinArchivingState, ved join av loggedinSchema og state.
+			.filter { key, (loggedinSchema, _) -> filterSchemaThatAreNullNotSerializable(key, loggedinSchema) } // Ta bort alle innslag i tabell der loggedinSchema er null.
+			.peek { key, (loggedinSchema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state ${toStringMasked(deserializeMsg(loggedinSchema))}") }
+			.foreach { key, (loggedinSchema, state) ->	taskListService.addOrUpdateTask(key, deserializeMsg(loggedinSchema), state.type)	} // For hvert innslag i tabell (key, loggedinSchema, count), skeduler arkveringstask
 
 		noLoginStream
+			.filter { key, value -> filterSchemaThatAreNullNotSerializable(key, value) }
 			.peek { key, value ->	logger.info("$key: Processing NoLoginTopic. InnsendingsId: ${key}") }
 			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
-
 		val noLoginTopicTable = noLoginStream.toTable()
-
 		processingTopicContent
-			.leftJoin(noLoginTopicTable, { state, noLoginSchema -> noLoginSchema to state }, joinDefNoLogin) // Oppdatere state på tabell, noLoginArchivingState, ved join av soknadarkivschema og state.
-			.filter { key, (noLoginSchema, _) -> filterNoLoginSchemaThatAreNull(key, noLoginSchema) } // Ta bort alle innslag i tabell der noLoginSchema er null.
-			.peek { key, (noLoginSchema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state noLoginSchema") }
-			.foreach { key, (noLoginSchema, state) ->	taskListService.addOrUpdateTask(key, deserializeMsg(noLoginSchema), state.type)	} // For hvert innslag i tabell (key, soknadarkivschema, count), skeduler arkveringstask
+			.leftJoin(noLoginTopicTable, { state, noLoginSchema -> noLoginSchema to state }, joinDefNoLogin) // Oppdatere state på tabell, noLoginArchivingState, ved join av noLoginSchema og state.
+			.filter { key, (noLoginSchema, _) -> filterSchemaThatAreNullNotSerializable(key, noLoginSchema) } // Ta bort alle innslag i tabell der noLoginSchema er null.
+			.peek { key, (noLoginSchema, state) -> logger.debug("$key: ProcessingTopic will add/update task. State: $state ${
+				toStringMasked(
+					deserializeMsg(noLoginSchema)
+				)
+			}") }
+			.foreach { key, (noLoginSchema, state) ->	taskListService.addOrUpdateTask(key, deserializeMsg(noLoginSchema), state.type)	} // For hvert innslag i tabell (key, noLoginSchema, count), skeduler arkveringstask
 
 	}
 
@@ -114,28 +113,27 @@ class KafkaStreamsSetup(
 		}
 	}
 
-
-	private fun filterSoknadarkivschemaThatAreNull(key: String, soknadarkivschema: Soknadarkivschema?): Boolean {
-		if (soknadarkivschema == null)
-			logger.debug("$key: Soknadarkivschema is null!")
-		return soknadarkivschema != null
+	private fun filterSchemaThatAreNullNotSerializable(key: String, schema: String?): Boolean {
+		if (schema == null)
+			logger.debug("$key: schema is null!")
+		else {
+			try {
+				deserializeMsg(schema)
+			} catch (e: Exception) {
+				logger.error("$key: Error while deserializing schema, skipping: ${e.message}")
+				return false
+			}
+		}
+		return schema != null
 	}
 
-	private fun filterNoLoginSchemaThatAreNull(key: String, noLoginSchema: String?): Boolean {
-		if (noLoginSchema == null)
-			logger.debug("$key: NoLoginSchema is null!")
-		return noLoginSchema != null
-	}
-
-	private fun Soknadarkivschema.print(): String {
-		val fnr = "**fnr can be found in Soknadsmottaker's secure logs**"
-		return Soknadarkivschema(this.behandlingsid, fnr, this.arkivtema, this.innsendtDato, this.soknadstype,
-			mottatteDokumenterMaskert(this.mottatteDokumenter)).toString()
-	}
-
-	private fun mottatteDokumenterMaskert(motattedokumenter: List<MottattDokument>): List<MottattDokument> {
-		return motattedokumenter.map{MottattDokument(it.skjemanummer, it.erHovedskjema,
-			if (it.skjemanummer == "N6") "**Maskert**" else it.tittel, it.mottatteVarianter)}
+	private fun toStringMasked(innsendingTopicMsg: InnsendingTopicMsg): String {
+		val id = "**id can be found in Soknadsmottaker's secure logs**"
+		return innsendingTopicMsg.copy(
+			brukerDto= innsendingTopicMsg.brukerDto?.copy(id = id),
+			avsenderDto= innsendingTopicMsg.avsenderDto.copy(id=id, navn= if (innsendingTopicMsg.avsenderDto.navn != null) "NN" else null),
+			dokumenter=innsendingTopicMsg.dokumenter.map{dokument -> dokument.copy(tittel = if (dokument.skjemanummer == "N6") "**Maskert**" else dokument.tittel)})
+		.toString()
 	}
 
 	fun setupKafkaStreams(id: String): KafkaStreams {
@@ -192,7 +190,6 @@ class KafkaStreamsSetup(
 	}
 
 	private fun createProcessingEventSerde(): SpecificAvroSerde<ProcessingEvent> = createAvroSerde()
-	private fun createSoknadarkivschemaSerde(): SpecificAvroSerde<Soknadarkivschema> = createAvroSerde()
 
 	private fun <T : SpecificRecord> createAvroSerde(): SpecificAvroSerde<T> {
 		val serdeConfig = hashMapOf(

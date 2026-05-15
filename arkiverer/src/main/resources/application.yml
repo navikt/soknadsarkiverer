@@ -47,12 +47,12 @@ kafka:
     trustStorePath: ${KAFKA_TRUSTSTORE_PATH}
     trustStorePassword: ${KAFKA_CREDSTORE_PASSWORD}
   topics:
-    mainTopic: ${KAFKA_MAIN_TOPIC}
     processingTopic: ${KAFKA_PROCESSING_TOPIC}
     messageTopic: ${KAFKA_MESSAGE_TOPIC}
     arkiveringstilbakemeldingTopic: ${KAFKA_ARKIVERINGSTILBAKEMELDING_TOPIC}
     metricsTopic: ${KAFKA_METRICS_TOPIC}
     nologinSubmissionTopic: ${KAFKA_NOLOGIN_SUBMISSION_TOPIC}
+    loggedinSubmissionTopic: ${KAFKA_LOGGEDIN_SUBMISSION_TOPIC}
   schemaRegistry:
     url: ${KAFKA_SCHEMA_REGISTRY}
     username: ${KAFKA_SCHEMA_REGISTRY_USER}
@@ -78,6 +78,18 @@ saf:
   path: /graphql
 applicationName: "soknadsarkiverer"
 status_log_url: ${STATUS_LOG_URL}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+services:
+  tasklist:
+    scheduling:
+      startUpSeconds: 90
+      secondsBetweenRetries: [1, 5, 10, 15, 20, 25, 30]
 
 ---
 spring:

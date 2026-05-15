@@ -96,6 +96,7 @@
 		<module>external-api</module>
 	</modules>
 
+	<!-- Er denne overflødig? -->
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
