@@ -157,7 +157,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@AfterEach
 	fun teardown() {
-		//stopMockedNetworkServices()
+		stopMockedNetworkServices()
 		metrics.unregister()
 		taskListService.clearLoggedTaskStates()
 	}
