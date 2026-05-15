@@ -1,13 +1,15 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.util
 
-import tools.jackson.databind.ObjectMapper
-import tools.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
 import no.nav.soknad.arkivering.soknadsmottaker.model.AvsenderDto
 import no.nav.soknad.arkivering.soknadsmottaker.model.BrukerDto
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
-import tools.jackson.databind.cfg.DateTimeFeature
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -51,9 +53,9 @@ fun translate(time: Long): OffsetDateTime {
 
 fun createUtcPreservingMapper(): ObjectMapper {
 	val mapper = jacksonObjectMapper()
-	//mapper.registerModules().JavaTimeModule() TODO test dette
-	mapper.serializationConfig().withoutFeatures(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
-	mapper.deserializationConfig().withoutFeatures(DateTimeFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+	mapper.registerModule(JavaTimeModule())
+	mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+	mapper.disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
 	return mapper
 }
 

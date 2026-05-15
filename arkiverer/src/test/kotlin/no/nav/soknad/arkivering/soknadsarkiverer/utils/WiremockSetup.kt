@@ -3,7 +3,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer.utils
 import com.expediagroup.graphql.client.types.GraphQLClientError
 import com.expediagroup.graphql.client.types.GraphQLClientResponse
 import com.expediagroup.graphql.client.types.GraphQLClientSourceLocation
-import tools.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.http.RequestMethod
@@ -20,8 +20,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.Oppret
 import no.nav.soknad.innsending.model.SoknadFile
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
-import tools.jackson.databind.cfg.DateTimeFeature
-import tools.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -129,27 +128,38 @@ fun mockFilestorageIsWorking(idsAndResponses: List<Pair<String, String?>>) {
 	mockFilestorageDeletionIsWorking(idsAndResponses.map { it.first })
 }
 
-fun mockRequestedFileIsGone() {
+fun mockRequestedFileIsGone(fileId: String? = ".*") {
 	val response = createInnsendingApiResponse(Triple(UUID.randomUUID().toString(), null, SoknadFile.FileStatus.deleted))
-	mockInnsendingApiGetRequest("$innsendingApiPath/.*", response)
+	mockInnsendingApiGetRequest("$innsendingApiPath/$fileId", response)
 }
 
-fun mockRequestedFileIsNotFound() {
+fun mockRequestedFileIsNotFound(fileId: String? = ".*") {
 	val response = createInnsendingApiResponse(Triple(UUID.randomUUID().toString(), null, SoknadFile.FileStatus.notfound))
-	mockInnsendingApiGetRequest("$innsendingApiPath/.*", response)
+	mockInnsendingApiGetRequest("$innsendingApiPath/$fileId", response)
 }
 
 private fun mockInnsendingApiGetRequest(url: String, response: String) {
-	wiremockServer.stubFor(
-		get(urlPathEqualTo(url))
-			.willReturn(
-				aResponse()
-					.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-					.withBody(response)
-					.withStatus(HttpStatus.OK.value())
-			)
-	)
-
+	if (url.endsWith("/.*")) {
+		wiremockServer.stubFor(
+			get(urlMatching(url))
+				.willReturn(
+					aResponse()
+						.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+						.withBody(response)
+						.withStatus(HttpStatus.OK.value())
+				)
+		)
+	} else {
+		wiremockServer.stubFor(
+			get(urlPathEqualTo(url))
+				.willReturn(
+					aResponse()
+						.withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+						.withBody(response)
+						.withStatus(HttpStatus.OK.value())
+				)
+		)
+	}
 }
 
 fun mockFilestorageDeletionIsWorking(uuids: List<String>) {
@@ -189,12 +199,12 @@ fun createInnsendingApiResponse(idAndResponseAndStatus: Triple<String, String?, 
 	val (id, response, status) = idAndResponseAndStatus
 	val createdAt = OffsetDateTime.now(ZoneOffset.UTC)
 	val objectMapper = jacksonObjectMapper()
-	objectMapper.deserializationConfig().with(DateTimeFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+		.registerModule(JavaTimeModule())
 	return objectMapper
 		.writeValueAsString(listOf(SoknadFile(id, status, response?.toByteArray(), createdAt)))
 }
 
-fun createJoarkResponse(): String = ObjectMapper().writeValueAsString(
+fun createJoarkResponse(): String = jacksonObjectMapper().writeValueAsString(
 	OpprettJournalpostResponse(listOf(Dokumenter("brevkode", "dokumentInfoId", "tittel")),
 		"journalpostId", false, "journalstatus", "null"))
 
@@ -287,7 +297,8 @@ fun mockSafRequest_foundAfterAttempt_ApplicationTest(url: String? = safUrl, inns
 	)
 }
 fun createSafResponse_withJournalpost(innsendingsId: String): String {
-	val objectMapper = ObjectMapper()
+	val objectMapper = jacksonObjectMapper()
+		.registerModule(JavaTimeModule())
 	return objectMapper.writeValueAsString(
 		graphQlResponse(data = createSafJournalpostResponse(innsendingsId), errors = null, extensions = null)
 	)
@@ -295,12 +306,13 @@ fun createSafResponse_withJournalpost(innsendingsId: String): String {
 
 fun createSafResponse_withoutJournalpost(innsendingsId: String): String
 {
-	val objectMapper = ObjectMapper()
+	val objectMapper = jacksonObjectMapper()
+		.registerModule(JavaTimeModule())
 	return objectMapper.writeValueAsString(
 		graphQlResponse(data = null, errors = null, extensions = null))
 }
 
-fun createSafResponse_withError(innsendingsId: String): String =  ObjectMapper().writeValueAsString(
+fun createSafResponse_withError(innsendingsId: String): String =  jacksonObjectMapper().writeValueAsString(
 	graphQlResponse(data = null, errors = createSafErrorResponse(innsendingsId), extensions = null)
 )
 

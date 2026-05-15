@@ -2,6 +2,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
@@ -38,7 +39,7 @@ import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.junit.jupiter.SpringExtension
-import tools.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -144,6 +145,7 @@ class ApplicationTests : ContainerizedKafka() {
 	@BeforeEach
 	fun setup() {
 		setupMockedNetworkServices(
+			wireMock,
 			portToExternalServices!!,
 			journalPostUrl,
 			"/innsendte/v1/files",
