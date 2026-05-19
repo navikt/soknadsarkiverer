@@ -36,9 +36,6 @@
 		<jakarta-servlet-api.version>6.1.0</jakarta-servlet-api.version>
 		<jakarta-validation-api.version>4.0.0-M1</jakarta-validation-api.version>
 		<jakarta-annotation.version>3.0.0</jakarta-annotation.version>
-<!--
-		<graphql-kotlin.version>8.9.0</graphql-kotlin.version>
--->
 		<graphql-kotlin.version>9.2.0</graphql-kotlin.version>
 		<commons-codec.version>1.22.0</commons-codec.version>
 
@@ -55,14 +52,8 @@
 		<coroutines.version>1.11.0</coroutines.version>
 
 		<!--Kafka-->
-		<kafka.version>3.9.1</kafka.version>
-<!--
 		<kafka.version>4.2.0</kafka.version>
--->
-		<kafka-streams-avro-serde.version>7.9.5</kafka-streams-avro-serde.version>
-<!--
 		<kafka-streams-avro-serde.version>8.2.0</kafka-streams-avro-serde.version>
--->
 		<arkivering-schemas.version>1.4.4-bf301c4492e2</arkivering-schemas.version>
 
 		<!--Logging-->
