@@ -1,6 +1,5 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka.bootstrapping
 
-import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.common.ConsoleNotifier
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension
@@ -37,9 +36,8 @@ import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.apache.kafka.streams.KafkaStreams
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.extension.RegisterExtension
@@ -48,7 +46,6 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
@@ -58,7 +55,6 @@ import java.util.concurrent.TimeUnit
 
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
 @EnableConfigurationProperties(ClientConfigurationProperties::class, KafkaConfig::class)
 class StateRecreationTests : ContainerizedKafka() {
@@ -115,6 +111,7 @@ class StateRecreationTests : ContainerizedKafka() {
 	}
 	private val taskListService = mockk<TaskListService>().also {
 		every { it.addOrUpdateTask(any(), any(), any(), any()) } just Runs
+		every { it.clearLoggedTaskStates() } just Runs
 	}
 
 
@@ -129,7 +126,6 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	companion object {
 
-		//val wireMock: WireMockServer = WireMockServer(wireMockConfig().port(2902)).also { it.start() }
 		@JvmField
 		@RegisterExtension
 		val wireMock: WireMockExtension = WireMockExtension.newInstance()
@@ -143,31 +139,18 @@ class StateRecreationTests : ContainerizedKafka() {
 			)
 			.build()
 
-/*
-		@JvmStatic
-		@AfterAll
-		fun stopWiremock() {
-			wireMock.stop()
-		}
-*/
-
 		@JvmStatic
 		@DynamicPropertySource
 		fun properties(reg: DynamicPropertyRegistry) {
-			val base = "http://localhost:${wireMock.port}"
 			reg.add("innsendingsapi.path") { "/innsendte/v1/files/[0-9a-fA-F-]{36}" }
 			reg.add("joark.journal-post") { "/rest/journalpostapi/v1/journalpost" }
 			reg.add("saf.path") { "/graphql" }
 		}
 	}
 
-	@AfterEach
-	fun tearDown() {
-		metrics.unregister()
-	}
-
-	@BeforeAll
+	@BeforeEach
 	fun setup() {
+		wireMock.resetAll()
 		setupMockedNetworkServices(
 			wireMock,
 			portToExternalServices!! + 1,
@@ -192,6 +175,18 @@ class StateRecreationTests : ContainerizedKafka() {
 		kafkaBootstrapConsumer.recreateState() // Other test classes could have left Kafka events on the topics. Consume them before running the tests in this class.
 
 	}
+
+	@AfterEach
+	fun tearDown() {
+		wireMock.resetAll()
+
+		kafkaNologinTopicProducer.close()
+		kafkaProcessingEventProducer.close()
+
+		metrics.unregister()
+		taskListService.clearLoggedTaskStates()
+	}
+
 
 	@Test
 	fun `Can read empty Event Log`() {
