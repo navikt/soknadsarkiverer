@@ -1,8 +1,10 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
-import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.common.ConsoleNotifier
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.github.tomakehurst.wiremock.http.RequestMethod
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension
+
 import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
@@ -21,14 +23,13 @@ import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -40,7 +41,6 @@ import java.util.concurrent.TimeUnit
 
 @ActiveProfiles("test")
 @SpringBootTest
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class IntegrationTests : ContainerizedKafka() {
 
 	@MockitoBean
@@ -74,27 +74,33 @@ class IntegrationTests : ContainerizedKafka() {
 
 	companion object {
 
-		val wireMock: WireMockServer = WireMockServer(wireMockConfig().port(2902)).also { it.start() }
-
-		@JvmStatic
-		@AfterAll
-		fun stopWiremock() {
-			wireMock.stop()
-		}
+		@JvmField
+		@RegisterExtension
+		val wireMock: WireMockExtension = WireMockExtension.newInstance()
+			.configureStaticDsl(true)
+			.options(
+				wireMockConfig()
+					.port(2908)
+					.notifier(ConsoleNotifier(true))
+					.withRootDirectory("src/test/resources")
+					.asynchronousResponseEnabled(false)
+			)
+			.build()
 
 		@JvmStatic
 		@DynamicPropertySource
 		fun properties(reg: DynamicPropertyRegistry) {
-			val base = "http://localhost:${wireMock.port()}"
+			//val base = "http://localhost:${wireMock.port()}"
 			reg.add("innsendingsapi.path") { "/innsendte/v1/files/[0-9a-fA-F-]{36}" }
 			reg.add("joark.journal-post") { "/rest/journalpostapi/v1/journalpost" }
 			reg.add("saf.path") { "/graphql" }
 		}
-	}
 
+	}
 
 	@BeforeEach
 	fun setup() {
+		wireMock.resetAll()
 		setupMockedNetworkServices(wireMock, portToExternalServices!!, journalPostUrl, "/innsendte/v1/files", safUrl)
 
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap().also {
@@ -110,8 +116,11 @@ class IntegrationTests : ContainerizedKafka() {
 
 	@AfterEach
 	fun teardown() {
-		//stopMockedNetworkServices()
-		metrics.unregister()
+		kafkaProducerForBadData.close()
+		kafkaNologinTopicProducer.close()
+		kafkaLoggedinTopicProducer.close()
+
+		wireMock.resetRequests()
 	}
 
 	@Test

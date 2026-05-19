@@ -1,16 +1,15 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
-import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.ninjasquad.springmockk.MockkBean
+import com.ninjasquad.springmockk.clear
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
-import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
@@ -29,20 +28,18 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
-import org.springframework.test.context.junit.jupiter.SpringExtension
 import com.fasterxml.jackson.databind.ObjectMapper
-import java.time.Instant
-import java.time.OffsetDateTime
-import java.time.ZoneId
+import com.github.tomakehurst.wiremock.common.ConsoleNotifier
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension
+import com.ninjasquad.springmockk.MockkClear
+import org.junit.jupiter.api.extension.RegisterExtension
 import java.lang.Thread.sleep
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -50,21 +47,9 @@ import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
 
-/*
-@SpringBootTest(
-	webEnvironment = SpringBootTest.WebEnvironment.NONE,
-	properties = ["spring.main.allow-bean-definition-overriding=true"],
-	classes = [SoknadsarkivererApplication::class],
-	)
-ExtendWith(
-	SpringExtension::class
-)
-
- */
 @ActiveProfiles("test")
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class ApplicationTests : ContainerizedKafka() {
 
 	@MockitoBean
@@ -110,18 +95,23 @@ class ApplicationTests : ContainerizedKafka() {
 
 	companion object {
 
-		val wireMock: WireMockServer = WireMockServer(wireMockConfig().port(2908)).also { it.start() }
-
-		@JvmStatic
-		@AfterAll
-		fun stopWiremock() {
-			wireMock.stop()
-		}
+		@JvmField
+		@RegisterExtension
+		val wireMock: WireMockExtension = WireMockExtension.newInstance()
+			.configureStaticDsl(true)
+			.options(
+				wireMockConfig()
+					.port(2908)
+					.notifier(ConsoleNotifier(true))
+					.withRootDirectory("src/test/resources")
+					.asynchronousResponseEnabled(false)
+			)
+			.build()
 
 		@JvmStatic
 		@DynamicPropertySource
 		fun properties(reg: DynamicPropertyRegistry) {
-			val base = "http://localhost:${wireMock.port()}"
+			//val base = "http://localhost:${wireMock.port}"
 			reg.add("innsendingsapi.path") { "/innsendte/v1/files/[0-9a-fA-F-]{36}" }
 			reg.add("joark.journal-post") { "/rest/journalpostapi/v1/journalpost" }
 			reg.add("saf.path") { "/graphql" }
@@ -130,6 +120,25 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@BeforeAll
 	fun setupKafkaProducersAndListeners() {
+		kafkaListener = KafkaListener(kafkaConfig)
+	}
+
+
+	@AfterAll
+	fun teardownKafka() {
+		kafkaListener.close()
+	}
+
+	@BeforeEach
+	fun setup() {
+		wireMock.resetAll()
+		setupMockedNetworkServices(
+			wireMock,
+			portToExternalServices!!,
+			journalPostUrl,
+			"/innsendte/v1/files",
+			safUrl,
+		)
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap()
 			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
@@ -139,34 +148,23 @@ class ApplicationTests : ContainerizedKafka() {
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 		})
 
-		kafkaListener = KafkaListener(kafkaConfig)
-	}
-
-	@BeforeEach
-	fun setup() {
-		setupMockedNetworkServices(
-			wireMock,
-			portToExternalServices!!,
-			journalPostUrl,
-			"/innsendte/v1/files",
-			safUrl,
-		)
-
 		maxNumberOfAttempts = tasklistProperties.secondsBetweenRetries.size
 	}
 
 	@AfterEach
 	fun teardown() {
-		stopMockedNetworkServices()
+		//stopMockedNetworkServices()
+		//kafkaListener.clear(MockkClear())
+		wireMock.resetAll()
+
+		kafkaProducerForBadData.close()
+		kafkaNologinTopicProducer.close()
+		kafkaloggedinTopicProducer.close()
+
 		metrics.unregister()
 		taskListService.clearLoggedTaskStates()
-	}
 
-	@AfterAll
-	fun stopKafkaConsumers() {
-		kafkaListener.close()
 	}
-
 
 	@Test
 	fun `Happy case - Putting events on Kafka main topic will cause rest calls to Joark`() {

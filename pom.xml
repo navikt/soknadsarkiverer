@@ -74,6 +74,7 @@
 		<mockk.version>1.14.9</mockk.version>
 		<springmockk.version>5.0.1</springmockk.version>
 		<wiremock.version>4.0.0-beta.30</wiremock.version>
+		<wiremock-junit5.version>4.0.0-beta.30</wiremock-junit5.version>
 		<kotlintest.version>3.4.2</kotlintest.version>
 
 		<!--Plugins-->

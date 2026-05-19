@@ -10,6 +10,8 @@ import com.github.tomakehurst.wiremock.http.RequestMethod
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import com.github.tomakehurst.wiremock.stubbing.Scenario
 import com.github.tomakehurst.wiremock.verification.LoggedRequest
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension
+
 import no.nav.soknad.arkiverer.saf.generated.HentJournalpostGittEksternReferanseId
 import no.nav.soknad.arkiverer.saf.generated.enums.*
 import no.nav.soknad.arkiverer.saf.generated.hentjournalpostgitteksternreferanseid.AvsenderMottaker
@@ -29,12 +31,12 @@ import java.util.*
 
 
 const val filestorageContent = "filestoragecontent"
-private lateinit var wiremockServer: WireMockServer
+private lateinit var wiremockServer: WireMockExtension
 private lateinit var joarkUrl: String
 private lateinit var innsendingApiPath: String
 private lateinit var safUrl: String
 
-fun setupMockedNetworkServices(wireMock: WireMockServer,  port: Int, urlJoark: String, pathInnsendingApi: String, urlSaf: String) {
+fun setupMockedNetworkServices(wireMock: WireMockExtension,  port: Int, urlJoark: String, pathInnsendingApi: String, urlSaf: String) {
 	joarkUrl = urlJoark
 	innsendingApiPath = pathInnsendingApi
 	safUrl = urlSaf
@@ -42,9 +44,11 @@ fun setupMockedNetworkServices(wireMock: WireMockServer,  port: Int, urlJoark: S
 	wiremockServer = wireMock
 }
 
+/*
 fun stopMockedNetworkServices() {
 	wiremockServer.stop()
 }
+*/
 
 fun verifyMockedGetRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.GET)
 fun verifyMockedPostRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.POST)

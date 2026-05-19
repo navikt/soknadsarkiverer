@@ -1,7 +1,9 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka.bootstrapping
 
 import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.common.ConsoleNotifier
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension
 import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
@@ -40,6 +42,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.extension.RegisterExtension
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
@@ -126,18 +129,32 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	companion object {
 
-		val wireMock: WireMockServer = WireMockServer(wireMockConfig().port(2902)).also { it.start() }
+		//val wireMock: WireMockServer = WireMockServer(wireMockConfig().port(2902)).also { it.start() }
+		@JvmField
+		@RegisterExtension
+		val wireMock: WireMockExtension = WireMockExtension.newInstance()
+			.configureStaticDsl(true)
+			.options(
+				wireMockConfig()
+					.port(2902)
+					.notifier(ConsoleNotifier(true))
+					.withRootDirectory("src/test/resources")
+					.asynchronousResponseEnabled(false)
+			)
+			.build()
 
+/*
 		@JvmStatic
 		@AfterAll
 		fun stopWiremock() {
 			wireMock.stop()
 		}
+*/
 
 		@JvmStatic
 		@DynamicPropertySource
 		fun properties(reg: DynamicPropertyRegistry) {
-			val base = "http://localhost:${wireMock.port()}"
+			val base = "http://localhost:${wireMock.port}"
 			reg.add("innsendingsapi.path") { "/innsendte/v1/files/[0-9a-fA-F-]{36}" }
 			reg.add("joark.journal-post") { "/rest/journalpostapi/v1/journalpost" }
 			reg.add("saf.path") { "/graphql" }
