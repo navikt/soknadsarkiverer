@@ -980,6 +980,7 @@ class ApplicationTests : ContainerizedKafka() {
 	}
 
 	@Test
+	@Disabled("Files are fetched from innsending-api which never will return the file state gone")
 	fun `All files deleted from Filestorage will cause finishing archiving`() {
 		// Given
 		val key = UUID.randomUUID().toString()

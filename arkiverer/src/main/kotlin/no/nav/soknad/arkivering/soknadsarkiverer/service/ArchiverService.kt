@@ -28,16 +28,9 @@ class ArchiverService(
 	fun archive(key: String, data: InnsendingTopicMsg, files: List<FileInfo>) {
 		try {
 			val startTime = System.currentTimeMillis()
-			val journalpostId = journalpostClient.opprettJournalpost(key, data, files)
+			journalpostClient.opprettJournalpost(key, data, files)
 			createMetricAndPublishOnKafka(key, "send files to archive", startTime)
-			// TODO fjern createMessage når innsending-api leser fra arkiveringstilbakemeldinger topic
-			createMessage(key, "**Archiving: OK.  journalpostId=$journalpostId")
-			createArkiveringstilbakemelding(key, "**Archiving: OK.  journalpostId=$journalpostId")
-
 		} catch (e: ApplicationAlreadyArchivedException) {
-			// TODO fjern createMessage når innsending-api leser fra arkiveringstilbakemeldinger topic
-			createMessage(key, "**Archiving: OK. Already archived")
-			createArkiveringstilbakemelding(key, "**Archiving: OK. Already archived")
 			createMessage(key, createExceptionMessage(e))
 			throw e
 		} catch (e: Exception) {
@@ -86,6 +79,7 @@ class ArchiverService(
 
 	fun createArkiveringstilbakemelding(key: String, message: String) {
 		logger.debug("$key: publiser arkiveringstilbakemelding til avsender")
+		createMessage(key, message)
 		kafkaPublisher.putArkiveringstilbakemeldingOnTopic(key, message)
 	}
 

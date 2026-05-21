@@ -143,6 +143,14 @@ open class TaskListService(
 		}
 	}
 
+	@Synchronized
+	private fun resetCount(key: String) {
+		val task = tasks[key]
+		if (task != null ) {
+			tasks[key] = Task(task.value, 0, task.timeStarted, task.isRunningLock)
+		}
+	}
+
 	internal fun listTasks(key: String? = null) = tasks
 		.filter { if (key != null) it.key == key else true }
 		.mapValues { it.value.count to it.value.isRunningLock }
@@ -156,8 +164,8 @@ open class TaskListService(
 		when (currentTaskStates[key]) {
 			EventTypes.RECEIVED -> receivedState(key, soknadarkivschema, attempt)
 			EventTypes.STARTED -> archiveState(key, soknadarkivschema, attempt)
-			EventTypes.ARCHIVED -> deleteFilesState(key, soknadarkivschema, attempt)
-			EventTypes.FAILURE -> failTask(key)
+			EventTypes.ARCHIVED -> archivedState(key, soknadarkivschema, attempt)
+			EventTypes.FAILURE -> failTask(key, soknadarkivschema, attempt)
 			EventTypes.FINISHED -> finishTask(key)
 			else -> {
 				logger.error("$key: - Unexpected state ${currentTaskStates[key]} - Will assume it was ${EventTypes.RECEIVED}")
@@ -170,6 +178,7 @@ open class TaskListService(
 		if (tasks[key] != null && startUpEndTime.isAfter(Instant.now())) {
 			// When recreating state, there could be more state updates in the processLoggTopic.
 			// Wait a little while to make sure we don't start before all queued states are read inorder to process the most recent state.
+			logger.debug("$key: recreation state when processing state = RECEIVED. Ready for next state STARTED")
 			val task = { receivedState(key, soknadarkivschema, attempt) }
 			scheduler.scheduleSingleTask(task, Instant.now().plusSeconds(startUpSeconds))
 		} else {
@@ -190,9 +199,17 @@ open class TaskListService(
 			scheduler.schedule(task, scheduledTime)
 	}
 
-	private fun deleteFilesState(key: String, soknadarkivschema: InnsendingTopicMsg, attempt: Int = 0) {
-		logger.info("$key: state = ARCHIVED. Will set state to FINISHED (attempt $attempt)")
-		setStateChange(key, EventTypes.FINISHED, soknadarkivschema, attempt)
+	private fun archivedState(key: String, soknadarkivschema: InnsendingTopicMsg, attempt: Int = 0) {
+		logger.info("$key: state = ARCHIVED. Will send feedback to innsending-api (attempt $attempt)")
+		val secondsToWait = getSecondsToWait(attempt)
+		val scheduledTime = Instant.now().plusSeconds(secondsToWait)
+		val task = { sendOkFeedbackToInnsendingApi(key, soknadarkivschema, attempt) }
+		logger.debug("$key: state = ARCHIVED. About to schedule attempt $attempt at job in $secondsToWait seconds")
+
+		if (tasks[key]?.isBootstrappingTask == true)
+			scheduler.scheduleSingleTask(task, scheduledTime)
+		else
+			scheduler.schedule(task, scheduledTime)
 	}
 
 	// Remove task and cancel thread
@@ -211,13 +228,18 @@ open class TaskListService(
 	}
 
 	//  Keep task. Note that the thread is canceled and new coroutine must be started in order to resume processing
-	fun failTask(key: String) {
-		if (tasks.containsKey(key)) {
+	fun failTask(key: String, soknadarkivschema: InnsendingTopicMsg?, attempt: Int = 0) {
+		if (tasks.containsKey(key) && soknadarkivschema != null) {
+			logger.info("$key: state = FAILURE. Shall send feedback to innsending-api (attempt $attempt) ")
+			val secondsToWait = getSecondsToWait(attempt)
+			val scheduledTime = Instant.now().plusSeconds(secondsToWait)
+			val task = { sendNOkFeedbackToInnsendingApi(key, soknadarkivschema, attempt) }
+			logger.debug("$key: state = FAILURE. About to schedule attempt $attempt at job in $secondsToWait seconds")
 
-			loggedTaskStates[key] = EventTypes.FAILURE
-			updateNoOfFailedMetrics()
-			logger.warn("$key: Failed task")
-			tasks[key]?.isRunningLock?.release()
+			if (tasks[key]?.isBootstrappingTask == true)
+				scheduler.scheduleSingleTask(task, scheduledTime)
+			else
+				scheduler.schedule(task, scheduledTime)
 
 		} else {
 			logger.info("$key: Tried to fail task, but it is already finished")
@@ -269,7 +291,7 @@ open class TaskListService(
 					// Logging as Error will trigger alerts. Only log as Error after there has been a few failures.
 					logger.error(e.message, e)
 				}
-				nextState = retry(key)
+				nextState = retry(key, EventTypes.STARTED)
 
 			} catch (_: ShuttingDownException) {
 				logger.warn("$key: Will not start to archive - application is shutting down.")
@@ -280,7 +302,7 @@ open class TaskListService(
 					"$key: Files deleted, indicating that the application is already archived. " +
 						"Will check if application is archived and re-try if not"
 				)
-				nextState = retry(key)
+				nextState = retry(key, EventTypes.STARTED)
 
 			} catch (e: Exception) {
 				nextState = when (e.cause) {
@@ -289,7 +311,7 @@ open class TaskListService(
 							"$key: Files deleted, indicating that the application is already archived. " +
 								"Will check if application is archived and re-try if not"
 						)
-						retry(key)
+						retry(key, EventTypes.STARTED)
 					}
 
 					is ApplicationAlreadyArchivedException -> {
@@ -304,13 +326,13 @@ open class TaskListService(
 
 					else -> {
 						logger.error("$key: Error when performing scheduled task", e)
-						retry(key)
+						retry(key, EventTypes.STARTED)
 					}
 				}
 
 			} catch (t: Throwable) {
 				logger.error("$key: Serious error when performing scheduled task", t)
-				nextState = retry(key)
+				nextState = retry(key, EventTypes.STARTED)
 				throw t
 
 			} finally {
@@ -321,6 +343,70 @@ open class TaskListService(
 					soknadarkivschema.dokumenter.size.toDouble(),
 					soknadarkivschema.arkivtema
 				)
+				if (nextState != null && tasks[key] != null) {
+					if (nextState != EventTypes.STARTED) resetCount(key)
+					setStateChange(key, nextState!!, soknadarkivschema, tasks[key]?.count!!)
+				}
+			}
+		}
+	}
+
+	private fun sendOkFeedbackToInnsendingApi(key: String, soknadarkivschema: InnsendingTopicMsg, attempt: Int) {
+		CoroutineScope(Dispatchers.Default).launch {
+			MDC.put(MDC_INNSENDINGS_ID, key)
+			var nextState: EventTypes? = null
+			try {
+				archiverService.createArkiveringstilbakemelding(key, "**Archiving: OK.")
+				nextState = EventTypes.FINISHED
+
+			} catch (e: Exception) {
+				if (attempt >= 3 || attempt >= secondsBetweenRetries.size - 1) {
+					// Logging as Error will trigger alerts. Only log as Error after there has been a few failures.
+					logger.error("$key: In sendOkFeedbackToInnsendingApi. Error when performing scheduled task", e)
+				}
+				nextState = retry(key, EventTypes.ARCHIVED)
+
+			} catch (t: Throwable) {
+				logger.error("$key: Serious error when performing scheduled task", t)
+				nextState = retry(key, EventTypes.ARCHIVED)
+				throw t
+
+			} finally {
+				MDC.clear()
+				if (nextState != null && tasks[key] != null) {
+					setStateChange(key, nextState!!, soknadarkivschema, tasks[key]?.count!!)
+				}
+			}
+		}
+	}
+
+	private fun sendNOkFeedbackToInnsendingApi(key: String, soknadarkivschema: InnsendingTopicMsg, attempt: Int) {
+		CoroutineScope(Dispatchers.Default).launch {
+			MDC.put(MDC_INNSENDINGS_ID, key)
+			var nextState: EventTypes? = null
+			try {
+				logger.debug("$key: In sendNOkFeedbackToInnsendingApi. Shall publish feedback to innsending-api")
+				archiverService.createArkiveringstilbakemelding(key, "**Archiving: FAILED.")
+
+				loggedTaskStates[key] = EventTypes.FAILURE
+				updateNoOfFailedMetrics()
+				logger.warn("$key: Failed task")
+				tasks[key]?.isRunningLock?.release()
+				nextState = null
+
+			} catch (e: Exception) {
+				if (attempt >= 3 || attempt >= secondsBetweenRetries.size - 1) {
+					// Logging as Error will trigger alerts. Only log as Error after there has been a few failures.
+					logger.error("$key: In sendNOkFeedbackToInnsendingApi. Error when performing scheduled task", e)
+				}
+
+			} catch (t: Throwable) {
+				logger.error("$key: In sendNOkFeedbackToInnsendingApi. Serious error when performing scheduled task", t)
+				nextState = retry(key, EventTypes.FAILURE)
+				throw t
+
+			} finally {
+				MDC.clear()
 				if (nextState != null && tasks[key] != null) {
 					setStateChange(key, nextState!!, soknadarkivschema, tasks[key]?.count!!)
 				}
@@ -343,19 +429,37 @@ open class TaskListService(
 		}
 	}
 
-	private fun retry(key: String): EventTypes? {
+	private fun retry(key: String, currentState: EventTypes? = EventTypes.STARTED): EventTypes? {
 		if (tasks[key] == null)
 			return null
 
 		val count = incrementRetryCount(key)
-		return if (count >= secondsBetweenRetries.size) {
-			logger.warn("$key: antall arkiveringsforsøk $count >= ${secondsBetweenRetries.size}.")
-			// TODO fjern createMessage når innsending-api leser fra arkiveringstilbakemeldinger topic
-			archiverService.createMessage(key, "**Archiving: FAILED")
-			archiverService.createArkiveringstilbakemelding(key, "**Archiving: FAILED")
-			EventTypes.FAILURE
+		if (currentState != null && currentState == EventTypes.STARTED) {
+			return if (count >= secondsBetweenRetries.size) {
+				logger.warn("$key: antall arkiveringsforsøk $count >= ${secondsBetweenRetries.size}.")
+				EventTypes.FAILURE
+			} else {
+				EventTypes.STARTED
+			}
+		} else if (currentState != null && currentState == EventTypes.ARCHIVED) {
+			return if (count >= secondsBetweenRetries.size) {
+				logger.error("$key: number of feedback message attempts $count >= ${secondsBetweenRetries.size}. Set arkiveringsstatus='Arkivert' manually")
+				archiverService.createMessage(key, "**Feedback to innsending-api: FAILED")
+				EventTypes.FINISHED
+			} else {
+				EventTypes.ARCHIVED
+			}
+		} else if (currentState != null && currentState == EventTypes.FAILURE) {
+			return if (count >= secondsBetweenRetries.size) {
+				logger.error("$key: number of feedback message attempts $count >= ${secondsBetweenRetries.size}. Set arkiveringsstatus='ArkiveringFeilet' manually")
+				archiverService.createMessage(key, "**Feedback to innsending-api: FAILED")
+				null
+			} else {
+				EventTypes.FAILURE
+			}
 		} else {
-			EventTypes.STARTED
+			logger.debug("$key: In retry, unexpected state $currentState")
+			return currentState
 		}
 	}
 
