@@ -1,8 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka.bootstrapping
 
 import com.ninjasquad.springmockk.MockkBean
-import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
-import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.mockk.*
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import kotlinx.coroutines.runBlocking
@@ -15,7 +13,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaSetupTest
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
@@ -27,9 +24,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
-import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.clients.producer.RecordMetadata
-import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.apache.kafka.streams.KafkaStreams
@@ -45,7 +39,6 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.annotation.DirtiesContext
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 
 @SpringBootTest
@@ -132,11 +125,11 @@ class StateRecreationTests : ContainerizedKafka() {
 			"/innsendte/v1/files",
 			safUrl
 		)
-		kafkaLoggedinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap()
+		kafkaLoggedinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap(kafkaConfig)
 			.also {it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java})
-		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap()
+		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap(kafkaConfig)
 			.also {it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java})
-		kafkaProcessingEventProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap())
+		kafkaProcessingEventProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap(kafkaConfig))
 		kafkaBootstrapConsumer = KafkaBootstrapConsumer(taskListService, kafkaConfig)
 		kafkaSetup = KafkaSetupTest(
 			applicationState = ApplicationState(alive = true, ready = true),
@@ -484,21 +477,6 @@ class StateRecreationTests : ContainerizedKafka() {
 		}
 	}
 
-	private fun <T> putDataOnTopic(
-		key: String, value: T, headers: Headers, topic: String,
-		kafkaProducer: KafkaProducer<String, T>
-	): RecordMetadata {
-
-		val producerRecord = ProducerRecord(topic, key, value)
-		headers.add(MESSAGE_ID, UUID.randomUUID().toString().toByteArray())
-		headers.forEach { producerRecord.headers().add(it) }
-
-		return kafkaProducer
-			.send(producerRecord)
-			.get(1000, TimeUnit.MILLISECONDS) // Blocking call
-	}
-
-
 	private fun recreateState() {
 		kafkaBootstrapConsumer.recreateState()
 	}
@@ -542,12 +520,4 @@ class StateRecreationTests : ContainerizedKafka() {
 		}
 	}
 
-	private fun kafkaConfigMap(): MutableMap<String, Any> {
-		return HashMap<String, Any>().also {
-			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = "mock://mocked-scope"
-			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig.brokers
-			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
-			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java
-		}
-	}
 }

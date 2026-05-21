@@ -117,11 +117,12 @@ open class TaskListService(
 	fun startPaNytt(key: String) {
 		MDC.put(MDC_INNSENDINGS_ID, key)
 
-		logger.info("$key: state = FAILURE. Ready for next state STARTED")
 		val task = tasks[key]
 		if (task != null && (loggedTaskStates[key] == EventTypes.FAILURE || loggedTaskStates[key] == EventTypes.FINISHED || loggedTaskStates[key] == EventTypes.ARCHIVED)) {
+			logger.info("$key: logged state ${loggedTaskStates[key]} removing task in order to restart")
 			tasks.remove(key)
 		}
+		logger.info("$key: Set next state to STARTED")
 		createProcessingEvent(key, EventTypes.STARTED)
 	}
 

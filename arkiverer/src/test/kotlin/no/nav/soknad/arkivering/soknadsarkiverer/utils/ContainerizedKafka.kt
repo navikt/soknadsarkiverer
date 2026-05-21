@@ -1,6 +1,15 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.utils
 
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
+import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.clients.producer.RecordMetadata
+import org.apache.kafka.common.header.Headers
+import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.fail
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean
@@ -11,6 +20,9 @@ import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.KafkaContainer
 import org.testcontainers.utility.DockerImageName
+import java.util.HashMap
+import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 
 open class ContainerizedKafka {
@@ -83,6 +95,32 @@ open class ContainerizedKafka {
 			}
 		}
 	}
+
+
+	fun <T> putDataOnTopic(
+		key: String, value: T, headers: Headers, topic: String,
+		kafkaProducer: KafkaProducer<String, T>
+	): RecordMetadata {
+
+		val producerRecord = ProducerRecord(topic, key, value)
+		headers.add(MESSAGE_ID, UUID.randomUUID().toString().toByteArray())
+		headers.forEach { producerRecord.headers().add(it) }
+
+		return kafkaProducer
+			.send(producerRecord)
+			.get(1000, TimeUnit.MILLISECONDS) // Blocking call
+	}
+
+
+	fun kafkaConfigMap(kafkaConfig: KafkaConfig): MutableMap<String, Any> {
+		return HashMap<String, Any>().also {
+			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = "mock://mocked-scope"
+			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig.brokers
+			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
+			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java
+		}
+	}
+
 
 }
 

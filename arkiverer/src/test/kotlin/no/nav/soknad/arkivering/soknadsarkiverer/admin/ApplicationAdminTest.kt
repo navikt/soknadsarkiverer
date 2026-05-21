@@ -3,8 +3,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.admin
 import no.nav.security.mock.oauth2.MockOAuth2Server
 import no.nav.security.token.support.spring.test.EnableMockOAuth2Server
 import com.ninjasquad.springmockk.SpykBean
-import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
-import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.ARCHIVED
@@ -12,7 +10,6 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes.FAILURE
 import no.nav.soknad.arkivering.avroschemas.EventTypes.FINISHED
 import no.nav.soknad.arkivering.avroschemas.EventTypes.RECEIVED
 import no.nav.soknad.arkivering.avroschemas.EventTypes.STARTED
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.util.serializeMsg
@@ -27,9 +24,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.setupMockedNetworkService
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
-import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
-import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.BeforeEach
@@ -40,24 +35,22 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.client.TestRestTemplate
 import org.springframework.cloud.contract.wiremock.AutoConfigureWireMock
 import org.springframework.http.HttpEntity
-import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
-import java.util.HashMap
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 import java.lang.Thread.sleep
-import no.nav.soknad.arkivering.soknadsarkiverer.Constants.BEARER
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.ContainerizedKafka
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.KafkaListener
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.Key
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.createHeaders
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.stopMockedNetworkServices
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.hasCount
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -113,12 +106,12 @@ class ApplicationAdminTest : ContainerizedKafka() {
 
 	@BeforeAll
 	fun setupKafkaProducersAndListeners() {
-		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap()
+		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap(kafkaConfig)
 			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
-		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
+		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap(kafkaConfig).also {
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 		})
-		kafkaloggedinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
+		kafkaloggedinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap(kafkaConfig).also {
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 		})
 
@@ -156,7 +149,7 @@ class ApplicationAdminTest : ContainerizedKafka() {
 		val token = mockOAuth2Server.issueToken("test-client-id").serialize()
 
 		val innsendingsId = failArchiving()
-		sleep(2000)
+		sleep(1000)
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId = innsendingsId)
 
@@ -183,6 +176,39 @@ class ApplicationAdminTest : ContainerizedKafka() {
 
 	}
 
+	@Test
+	fun `happy case - retry on archieved application is ignored`() {
+
+		// Given
+		val token = mockOAuth2Server.issueToken("test-client-id").serialize()
+
+		val innsendingsId = successfullArchiving()
+		sleep(500)
+		mockJoarkIsWorking()
+		mockSafRequest_notFound(innsendingsId = innsendingsId)
+
+		// When
+		val response = restTemplate.exchange(
+			"http://localhost:8080/admin/rerun/$innsendingsId",
+			HttpMethod.POST,
+			HttpEntity(null, createHeaders(token, MediaType.APPLICATION_JSON )),
+			String::class.java
+		)
+
+		// Then
+		assert(response.statusCode.is2xxSuccessful())
+
+		verifyProcessingEvents(
+			innsendingsId, mapOf(
+				RECEIVED hasCount 1,
+				STARTED hasCount 2,
+				ARCHIVED hasCount 1,
+				FINISHED hasCount 1,
+				FAILURE hasCount 0
+			)
+		)
+
+	}
 
 	private fun failArchiving(): String {
 		val key = UUID.randomUUID().toString()
@@ -215,13 +241,35 @@ class ApplicationAdminTest : ContainerizedKafka() {
 		return key
 	}
 
-	fun createHeaders(token: String?, contentType: MediaType): HttpHeaders {
-		val headers = HttpHeaders()
-		headers.contentType = contentType
-		if (token != null) {
-			headers.add(HttpHeaders.AUTHORIZATION, "$BEARER$token")
-		}
-		return headers
+
+	private fun successfullArchiving(): String {
+		val key = UUID.randomUUID().toString()
+		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
+		val loggedInMsg = InnsendingTopicMsgBuilder()
+			.withInnsendingsId(key)
+			.withTittel("Test dokument")
+			.withKanal("NAV_NO")
+			.withTestDokumenter(mutableListOf(
+				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", fileIds),
+			))
+			.build()
+
+		mockFilestorageIsWorking(fileIds.map{it to filestorageContent})
+		mockJoarkIsWorking()
+		mockSafRequest_notFound(innsendingsId = key)
+
+		putDataOnKafkaTopic(loggedInMsg)
+
+		verifyProcessingEvents(
+			loggedInMsg.innsendingsId, mapOf(
+				RECEIVED hasCount 1,
+				STARTED hasCount 1,
+				ARCHIVED hasCount 1,
+				FINISHED hasCount 1,
+				FAILURE hasCount 0
+			)
+		)
+		return key
 	}
 
 	private fun putDataOnKafkaTopic(
@@ -235,32 +283,8 @@ class ApplicationAdminTest : ContainerizedKafka() {
 		}
 	}
 
-	private fun putDataOnKafkaTopic(		value: InnsendingTopicMsg) : RecordMetadata {
+	private fun putDataOnKafkaTopic(value: InnsendingTopicMsg) : RecordMetadata {
 		return putDataOnKafkaTopic(value.innsendingsId, value)
-	}
-
-
-	private fun <T> putDataOnTopic(
-		key: String, value: T, headers: Headers, topic: String,
-		kafkaProducer: KafkaProducer<String, T>
-	): RecordMetadata {
-
-		val producerRecord = ProducerRecord(topic, key, value)
-		headers.add(MESSAGE_ID, UUID.randomUUID().toString().toByteArray())
-		headers.forEach { producerRecord.headers().add(it) }
-
-		return kafkaProducer
-			.send(producerRecord)
-			.get(1000, TimeUnit.MILLISECONDS) // Blocking call
-	}
-
-	private fun kafkaConfigMap(): MutableMap<String, Any> {
-		return HashMap<String, Any>().also {
-			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = "mock://mocked-scope"
-			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig.brokers
-			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
-			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java
-		}
 	}
 
 
@@ -284,6 +308,5 @@ class ApplicationAdminTest : ContainerizedKafka() {
 		}
 	}
 
-	private infix fun <A> A.hasCount(count: Int) = this to count
 
 }
