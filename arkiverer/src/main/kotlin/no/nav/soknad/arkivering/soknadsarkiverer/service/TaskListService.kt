@@ -389,18 +389,16 @@ open class TaskListService(
 				logger.debug("$key: In sendNOkFeedbackToInnsendingApi. Shall publish feedback to innsending-api")
 				archiverService.createArkiveringstilbakemelding(key, "**Archiving: FAILED.")
 
-				loggedTaskStates[key] = EventTypes.FAILURE
-				updateNoOfFailedMetrics()
-				logger.warn("$key: Failed task")
-				tasks[key]?.isRunningLock?.release()
 				nextState = null
 
 			} catch (e: Exception) {
 				if (attempt >= 3 || attempt >= secondsBetweenRetries.size - 1) {
 					// Logging as Error will trigger alerts. Only log as Error after there has been a few failures.
-					logger.error("$key: In sendNOkFeedbackToInnsendingApi. Error when performing scheduled task", e)
+					logger.error("$key: attempt $attempt task sendNOkFeedback failed", e)
+				} else {
+					logger.debug("$key: attempt $attempt task sendNOkFeedback failed", e)
 				}
-
+				nextState = retry(key, EventTypes.FAILURE)
 			} catch (t: Throwable) {
 				logger.error("$key: In sendNOkFeedbackToInnsendingApi. Serious error when performing scheduled task", t)
 				nextState = retry(key, EventTypes.FAILURE)
@@ -410,6 +408,12 @@ open class TaskListService(
 				MDC.clear()
 				if (nextState != null && tasks[key] != null) {
 					setStateChange(key, nextState!!, soknadarkivschema, tasks[key]?.count!!)
+				} else {
+					/* Feedback sent or max number of retries exceeded */
+					loggedTaskStates[key] = EventTypes.FAILURE
+					updateNoOfFailedMetrics()
+					logger.warn("$key: Failed task")
+					tasks[key]?.isRunningLock?.release()
 				}
 			}
 		}

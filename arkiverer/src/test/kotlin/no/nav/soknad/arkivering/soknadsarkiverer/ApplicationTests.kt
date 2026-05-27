@@ -3,6 +3,7 @@ package no.nav.soknad.arkivering.soknadsarkiverer
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.ninjasquad.springmockk.MockkBean
+import org.mockito.kotlin.eq
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.metrics.model.registry.PrometheusRegistry
@@ -10,6 +11,8 @@ import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
@@ -24,12 +27,19 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.doThrow
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.lang.Thread.sleep
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -66,6 +76,12 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@Autowired
 	private lateinit var tasklistProperties: TaskListProperties
+
+	@MockitoSpyBean
+	private lateinit var kafkaPublisher: KafkaPublisher
+
+	@MockitoSpyBean
+	private lateinit var archiverService: ArchiverService
 
 	@Value("\${joark.journal-post}")
 	private lateinit var journalPostUrl: String
@@ -1094,6 +1110,47 @@ class ApplicationTests : ContainerizedKafka() {
 		loopAndVerify(expected.toInt(), { actual.invoke().toInt() },
 			{ assertEquals(expected.toInt(), actual.invoke().toInt(), message) })
 	}
+
+
+	@Test
+	fun `Failing to archive and failing to send feedback to innsender`() {
+		// Given
+		val key = UUID.randomUUID().toString()
+		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
+		val loggedInMsg = InnsendingTopicMsgBuilder()
+			.withInnsendingsId(key)
+			.withTittel("Test dokument")
+			.withKanal("NAV_NO")
+			.withTestDokumenter(mutableListOf(
+				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", fileIds),
+			))
+			.build()
+
+		mockFilestorageIsDown()
+		mockJoarkIsWorking()
+		mockSafRequest_notFound(innsendingsId = key)
+		doThrow(RuntimeException("Failed to send arkiveringstilbakemelding")).whenever(kafkaPublisher).putArkiveringstilbakemeldingOnTopic(any(), any(), any())
+		doNothing().whenever(kafkaPublisher).putMessageOnTopic(
+			eq(key), eq("**Archiving: FAILED."), any())
+
+		// When
+		putDataOnKafkaTopic(loggedInMsg)
+
+		// Expect
+		verifyProcessingEvents(
+			key, mapOf(
+				RECEIVED hasCount 1,
+				STARTED hasCount  maxNumberOfAttempts,
+				ARCHIVED hasCount 0,
+				FINISHED hasCount 0,
+				FAILURE hasCount 1
+			)
+		)
+		sleep(8000)
+		verify(archiverService, times(maxNumberOfAttempts)).createArkiveringstilbakemelding(eq(key), any())
+
+	}
+
 
 	private fun verifyProcessingEvents(key: Key, eventTypeAndCount: Map<EventTypes, Int>) {
 		eventTypeAndCount.forEach { (expectedEventType: EventTypes, expectedCount: Int) ->
