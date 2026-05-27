@@ -178,6 +178,45 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyRequestDataToJoark(soknadsarkivschema, request)
 	}
 
+	@Test
+	fun `Happy case - Received message archieved, but feedback to innsender fails state set to finished`() {
+		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
+		val mainDocumentTitle = "Test dokument"
+		val soknadsarkivschema = InnsendingTopicMsgBuilder()
+			.withTittel(mainDocumentTitle)
+			.withEttersendelseTilId(UUID.randomUUID().toString())
+			.withTestDokumenter(
+				mutableListOf(TestDokument("NAV 11-12.10", true, mainDocumentTitle, fileIds))
+			)
+			.build()
+		val key = soknadsarkivschema.innsendingsId
+
+		mockFilestorageIsWorking(fileIds.map { it to filestorageContent })
+		mockJoarkIsWorking()
+		mockSafRequest_notFound(innsendingsId = key)
+		doThrow(RuntimeException("Failed to send arkiveringstilbakemelding")).whenever(kafkaPublisher).putArkiveringstilbakemeldingOnTopic(any(), any(), any())
+		doNothing().whenever(kafkaPublisher).putMessageOnTopic(
+			eq(key), eq("**Archiving: OK."), any())
+		putDataOnKafkaTopic(soknadsarkivschema)
+
+		verifyProcessingEvents(
+			key, mapOf(
+				RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount maxNumberOfAttempts, FINISHED hasCount 1, FAILURE hasCount 0
+			)
+		)
+		verifyMockedPostRequests(1, safUrl)
+		verifyMockedPostRequests(1, journalPostUrl)
+		verifyKafkaMetric(
+			key, mapOf(
+				"get files from filestorage" hasCount 1,
+				"send files to archive" hasCount 1,
+			)
+		)
+		val requests = verifyPostRequest(journalPostUrl)
+		assertEquals(1, requests.size)
+		val request = objectMapper.readValue<OpprettJournalpostRequest>(requests[0].body)
+		verifyRequestDataToJoark(soknadsarkivschema, request)
+	}
 
 	@Test
 	fun `Happy case - File missing, new event event on Kafka for key will cause rest calls to Joark`() {
