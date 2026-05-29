@@ -1032,61 +1032,6 @@ class ApplicationTests : ContainerizedKafka() {
 	}
 
 	@Test
-	@Disabled("Files are fetched from innsending-api which never will return the file state gone")
-	fun `All files deleted from Filestorage will cause finishing archiving`() {
-		// Given
-		val key = UUID.randomUUID().toString()
-		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
-		val loggedInMsg = InnsendingTopicMsgBuilder()
-			.withInnsendingsId(key)
-			.withTittel("Test dokument")
-			.withKanal("NAV_NO")
-			.withTestDokumenter(mutableListOf(
-				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", fileIds),
-			))
-			.build()
-
-		val tasksBefore = metrics.getTasks()
-		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
-		val getFilestorageErrorsBefore = metrics.getGetFilestorageErrors()
-		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
-		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
-		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
-		val joarkErrorsBefore = metrics.getJoarkErrors()
-		val attemptsToFail = 1
-
-		mockRequestedFileIsGone()
-		mockJoarkIsWorking()
-		mockSafRequest_foundAfterAttempt_ApplicationTest(innsendingsId = key, attempts = attemptsToFail)
-
-		// When
-		putDataOnKafkaTopic(loggedInMsg)
-
-		// Expect
-		verifyProcessingEvents(
-			key, mapOf(
-				RECEIVED hasCount 1, STARTED hasCount 2, ARCHIVED hasCount 0, FINISHED hasCount 1, FAILURE hasCount 0
-			)
-		)
-		verifyMessageStartsWith(key, mapOf("Exception" hasCount 1))
-
-		verifyKafkaMetric(
-			key, mapOf(
-				"get files from filestorage" hasCount 0,
-				"send files to archive" hasCount 0,
-			)
-		)
-
-		verifyArchivingMetrics(getFilestorageErrorsBefore + 0, { metrics.getGetFilestorageErrors() })
-		verifyArchivingMetrics(getFilestorageSuccessesBefore + 0, { metrics.getGetFilestorageSuccesses() })
-		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, { metrics.getDelFilestorageSuccesses() })
-		verifyArchivingMetrics(joarkErrorsBefore + 0, { metrics.getJoarkErrors() })
-		verifyArchivingMetrics(joarkSuccessesBefore + 0, { metrics.getJoarkSuccesses() })
-		verifyArchivingMetrics(tasksBefore, { metrics.getTasks() })
-		verifyArchivingMetrics(tasksGivenUpOnBefore, { metrics.getTasksGivenUpOn() })
-	}
-
-	@Test
 	fun `Not all files fetched from Filestorage will cause failure`() {
 		sleep(1000) // Får av og til feil i telling av metrics når alle testene kjøres da metrics endringer i andre tester kan påvirke denne
 		// Given

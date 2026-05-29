@@ -107,7 +107,7 @@ class KafkaStreamsSetup(
 			}
 			EventTypes.FAILURE -> {
 				taskListService.failTask(key, null )
-				false
+				taskListService.isFailureStateFinished(key)
 			}
 			else -> false
 		}

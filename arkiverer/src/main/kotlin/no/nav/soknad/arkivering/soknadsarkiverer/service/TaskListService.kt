@@ -234,7 +234,7 @@ open class TaskListService(
 			logger.info("$key: state = FAILURE. Shall send feedback to innsending-api (attempt $attempt) ")
 			val secondsToWait = getSecondsToWait(attempt)
 			val scheduledTime = Instant.now().plusSeconds(secondsToWait)
-			val task = { sendNOkFeedbackToInnsendingApi(key, soknadarkivschema, attempt) }
+			val task = { sendNotOkFeedbackToInnsendingApi(key, soknadarkivschema, attempt) }
 			logger.debug("$key: state = FAILURE. About to schedule attempt $attempt at job in $secondsToWait seconds")
 
 			if (tasks[key]?.isBootstrappingTask == true)
@@ -381,12 +381,12 @@ open class TaskListService(
 		}
 	}
 
-	private fun sendNOkFeedbackToInnsendingApi(key: String, soknadarkivschema: InnsendingTopicMsg, attempt: Int) {
+	private fun sendNotOkFeedbackToInnsendingApi(key: String, soknadarkivschema: InnsendingTopicMsg, attempt: Int) {
 		CoroutineScope(Dispatchers.Default).launch {
 			MDC.put(MDC_INNSENDINGS_ID, key)
 			var nextState: EventTypes? = null
 			try {
-				logger.debug("$key: In sendNOkFeedbackToInnsendingApi. Shall publish feedback to innsending-api")
+				logger.debug("$key: In sendNotOkFeedbackToInnsendingApi. Shall publish feedback to innsending-api")
 				archiverService.createArkiveringstilbakemelding(key, "**Archiving: FAILED.")
 
 				nextState = null
@@ -400,19 +400,20 @@ open class TaskListService(
 				}
 				nextState = retry(key, EventTypes.FAILURE)
 			} catch (t: Throwable) {
-				logger.error("$key: In sendNOkFeedbackToInnsendingApi. Serious error when performing scheduled task", t)
+				logger.error("$key: In sendNotOkFeedbackToInnsendingApi. Serious error when performing scheduled task", t)
 				nextState = retry(key, EventTypes.FAILURE)
 				throw t
 
 			} finally {
 				MDC.clear()
 				if (nextState != null && tasks[key] != null) {
-					setStateChange(key, nextState!!, soknadarkivschema, tasks[key]?.count!!)
+					setStateChange(key, nextState, soknadarkivschema, tasks[key]?.count!!)
 				} else {
 					/* Feedback sent or max number of retries exceeded */
 					loggedTaskStates[key] = EventTypes.FAILURE
 					updateNoOfFailedMetrics()
 					logger.warn("$key: Failed task")
+					updateCount(key, 99) // Set to 99 to inidcate that either feedback sent or max retries reached
 					tasks[key]?.isRunningLock?.release()
 				}
 			}
@@ -473,6 +474,13 @@ open class TaskListService(
 		kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(type))
 	}
 
+	fun isFailureStateFinished(key: String): Boolean {
+		return if (tasks[key] != null && tasks[key]!!.count >  secondsBetweenRetries.size && loggedTaskStates[key] == EventTypes.FAILURE) {
+			true
+		} else {
+			false
+		}
+	}
 
 	private class Task(
 		val value: InnsendingTopicMsg,
