@@ -4,6 +4,45 @@ spring:
     activate:
       on-profile: local
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:${token.server.port}/azuread
+          audiences: aud-localhost
+          jwk-set-uri: http://localhost:${token.server.port}/azuread/.well-known/openid-configuration
+      client:
+        registration:
+          arkiv:
+            client-id: fake
+            client-secret: someSecret
+            provider: azuread
+            authorization-grant-type: client_credentials
+            scope: scope
+          saf-maskintilmaskin:
+            client-id: fake
+            client-secret: someSecret
+            provider: azuread
+            authorization-grant-type: client_credentials
+            scope: scope
+          innsending-api:
+            client-id: fake
+            client-secret: someSecret
+            provider: azuread
+            authorization-grant-type: client_credentials
+            scope: scope
+
+        provider:
+          azuread:
+            token-uri: http://localhost:6969/fake/token
+
+  auth:
+    issuers:
+      azuread:
+        issuer-uri: http://localhost:6969/azuread
+        jwk-set-uri: http://localhost:6969/azuread/.well-known/openid-configuration
+
+
 failedApplications: ""
 application:
   SPRING_PROFILES_ACTIVE: test
@@ -65,37 +104,3 @@ archivingtimeouts:
   connectTimeout: 2
   readTimeout: 4
   exchangeTimeout: 4
-
-no.nav.security:
-  jwt:
-    issuer:
-      azuread:
-        discovery-url: http://localhost:6969/azuread/.well-known/openid-configuration
-        accepted-audience: azuread-client-id
-    client:
-      registration:
-        innsendingApi:
-          token-endpoint-url: http://localhost:6969/fake/token
-          grant-type: client_credentials
-          scope: ${INNSENDING_API_SCOPE}
-          authentication:
-            client-id: fake
-            client-secret: someSecret
-            client-auth-method: client_secret_basic
-        arkiv:
-          token-endpoint-url: http://localhost:6969/fake/token
-          grant-type: client_credentials
-          scope: ${DOKARKIV_SCOPE}
-          authentication:
-            client-id: fake
-            client-secret: someSecret
-            client-auth-method: client_secret_basic
-
-        saf-maskintilmaskin:
-          token-endpoint-url: http://localhost:6969/fake/token
-          grant-type: client_credentials
-          scope: ${SAF_SCOPE}
-          authentication:
-            client-id: fakr
-            client-secret: someSecret
-            client-auth-method: client_secret_basic
