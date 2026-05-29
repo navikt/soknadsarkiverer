@@ -71,7 +71,7 @@
 
 		<!--Plugins-->
 		<versions-maven-plugin.version>2.21.0</versions-maven-plugin.version>
-		<openapi-generator-maven-plugin.version>7.19.0</openapi-generator-maven-plugin.version>
+		<openapi-generator-maven-plugin.version>7.21.0</openapi-generator-maven-plugin.version>
 		<cyclonedx-maven-plugin.version>2.9.1</cyclonedx-maven-plugin.version>
 		<maven-enforcer.version>3.6.2</maven-enforcer.version>
 		<maven-surefire.version>3.5.5</maven-surefire.version>
