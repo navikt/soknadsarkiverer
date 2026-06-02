@@ -49,7 +49,7 @@
 
 		<!--Kafka-->
 		<kafka.version>3.9.1</kafka.version>
-		<kafka-streams-avro-serde.version>7.9.5</kafka-streams-avro-serde.version>
+		<kafka-streams-avro-serde.version>8.2.1</kafka-streams-avro-serde.version>
 		<arkivering-schemas.version>1.4.4-bf301c4492e2</arkivering-schemas.version>
 
 		<!--Logging-->
