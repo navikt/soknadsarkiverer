@@ -60,7 +60,7 @@
 		<testcontainers.version>1.21.4</testcontainers.version>
 		<mockk.version>1.14.2</mockk.version>
 		<springmockk.version>4.0.2</springmockk.version>
-		<wiremock.version>2.27.2</wiremock.version>
+		<wiremock.version>3.0.1</wiremock.version>
 		<kotlintest.version>3.4.2</kotlintest.version>
 
 		<!--Plugins-->
