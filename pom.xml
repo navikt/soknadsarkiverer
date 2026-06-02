@@ -53,7 +53,7 @@
 		<arkivering-schemas.version>1.4.4-bf301c4492e2</arkivering-schemas.version>
 
 		<!--Logging-->
-		<logstash.version>8.1</logstash.version>
+		<logstash.version>9.0</logstash.version>
 		<prometheus.version>1.4.3</prometheus.version>
 
 		<!--Test-->
