@@ -60,7 +60,7 @@
 		<testcontainers.version>1.21.4</testcontainers.version>
 		<mockk.version>1.14.2</mockk.version>
 		<mockito.kotlin.version>6.3.0</mockito.kotlin.version>
-		<springmockk.version>4.0.2</springmockk.version>
+		<springmockk.version>5.0.1</springmockk.version>
 		<spring-cloud.version>4.3.1</spring-cloud.version>
 		<token-validation.version>5.0.40</token-validation.version>
 		<wiremock.version>2.35.0</wiremock.version>
