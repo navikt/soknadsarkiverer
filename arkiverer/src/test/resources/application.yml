@@ -38,6 +38,7 @@ token:
   server:
     port: 1888
 
+
 cron:
   startRetryOfFailedArchiving: 45 08 01 16 JAN ?
 failedApplications: ""
@@ -76,8 +77,8 @@ kafka:
 services:
   tasklist:
     scheduling:
-      startUpSeconds: 8
-      secondsBetweenRetries: [0,1,1,1,1,1]
+      startUpSeconds: 4
+      secondsBetweenRetries: [0,1,0,0,0,0]
 no.nav.security:
 joark:
   host: http://localhost:2908
@@ -100,3 +101,40 @@ archivingtimeouts:
   exchangeTimeout: 4
 
 status_log_url: "https://logs.adeo.no"
+
+no.nav.security.jwt.client:
+  registration:
+    arkiv:
+      client-id: fake
+      client-secret: someSecret
+      provider: azuread
+      grant-type: client_credentials
+      authentication:
+        client-id: fake
+        client-auth-method: client_secret_basic
+        client-secret: someSecret
+      scope: scope
+    saf-maskintilmaskin:
+      client-id: fake
+      client-secret: someSecret
+      provider: azuread
+      grant-type: client_credentials
+      authentication:
+        client-id: fake
+        client-auth-method: client_secret_basic
+        client-secret: someSecret
+      scope: scope
+    innsending-api:
+      client-id: fake
+      client-secret: someSecret
+      provider: azuread
+      grant-type: client_credentials
+      authentication:
+        client-id: fake
+        client-auth-method: client_secret_basic
+        client-secret: someSecret
+      scope: scope
+  provider:
+    azuread:
+      token-uri: http://localhost:6969/fake/token
+

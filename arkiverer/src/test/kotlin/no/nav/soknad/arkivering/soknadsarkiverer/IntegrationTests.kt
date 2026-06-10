@@ -172,7 +172,6 @@ class IntegrationTests : ContainerizedKafka() {
 		verifyMockedPostRequests(initialRequests + 2, journalPostUrl)
 	}
 
-
 	@Test
 	fun `Happy case - Putting loggedin events on Kafka will cause rest calls to Joark`() {
 		// Given

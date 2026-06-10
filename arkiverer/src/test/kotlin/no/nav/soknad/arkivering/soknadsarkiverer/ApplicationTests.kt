@@ -163,7 +163,6 @@ class ApplicationTests : ContainerizedKafka() {
 
 		metrics.unregister()
 		taskListService.clearLoggedTaskStates()
-
 	}
 
 	@Test
@@ -1293,6 +1292,7 @@ class ApplicationTests : ContainerizedKafka() {
 			.send(producerRecord)
 			.get(1000, TimeUnit.MILLISECONDS) // Blocking call
 	}
+
 
 	private fun kafkaConfigMap(): MutableMap<String, Any> {
 		return HashMap<String, Any>().also {

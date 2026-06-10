@@ -25,7 +25,6 @@ class KafkaRecordConsumerTests {
 		consumerBuilder.close()
 	}
 
-
 	@Test
 	fun `Polling throws exception - empty list is returned`() {
 		val result = consumerBuilder

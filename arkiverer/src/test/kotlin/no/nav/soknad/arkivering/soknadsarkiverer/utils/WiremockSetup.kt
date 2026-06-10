@@ -4,7 +4,6 @@ import com.expediagroup.graphql.client.types.GraphQLClientError
 import com.expediagroup.graphql.client.types.GraphQLClientResponse
 import com.expediagroup.graphql.client.types.GraphQLClientSourceLocation
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.http.RequestMethod
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
@@ -29,7 +28,6 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.*
 
-
 const val filestorageContent = "filestoragecontent"
 private lateinit var wiremockServer: WireMockExtension
 private lateinit var joarkUrl: String
@@ -44,11 +42,6 @@ fun setupMockedNetworkServices(wireMock: WireMockExtension,  port: Int, urlJoark
 	wiremockServer = wireMock
 }
 
-/*
-fun stopMockedNetworkServices() {
-	wiremockServer.stop()
-}
-*/
 
 fun verifyMockedGetRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.GET)
 fun verifyMockedPostRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.POST)

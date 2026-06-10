@@ -24,7 +24,6 @@ import reactor.netty.http.client.HttpClientResponse
 import java.util.concurrent.TimeUnit
 
 @Configuration
-@EnableConfigurationProperties(ClientConfigurationProperties::class)
 class SafMaskinClientConfig(
 	@param:Value("\${applicationName}") private val applicationName: String,
 	@param:Value("\${saf.url}") private val safUrl: String,
@@ -97,4 +96,10 @@ class SafMaskinClientConfig(
 	fun getClientProperties(oauth2Config: ClientConfigurationProperties) = oauth2Config.registration[safMaskintilmaskin]
 		?: throw RuntimeException("could not find oauth2 client config for $safMaskintilmaskin")
 }
+
+@Configuration
+@Profile("prod | dev")
+@EnableConfigurationProperties(ClientConfigurationProperties::class)
+class SafMaskinClientConfigProperties
+
 

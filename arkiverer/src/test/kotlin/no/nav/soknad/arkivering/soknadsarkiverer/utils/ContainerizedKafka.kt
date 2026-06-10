@@ -32,7 +32,6 @@ open class ContainerizedKafka {
 			kafkaConfig = binder.bind("kafka", KafkaConfig::class.java).get()
 		}
 
-
 		// @Container
 		val kafkaContainer: KafkaContainer = KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.9.1"))
 			.withNetworkAliases("kafka-broker")

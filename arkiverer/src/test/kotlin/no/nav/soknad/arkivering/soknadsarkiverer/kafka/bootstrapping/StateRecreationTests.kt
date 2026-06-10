@@ -187,7 +187,6 @@ class StateRecreationTests : ContainerizedKafka() {
 		taskListService.clearLoggedTaskStates()
 	}
 
-
 	@Test
 	fun `Can read empty Event Log`() {
 		recreateState()

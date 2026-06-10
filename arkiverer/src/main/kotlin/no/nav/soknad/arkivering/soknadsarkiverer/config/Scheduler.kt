@@ -5,6 +5,7 @@ import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
 import java.time.Instant
 import jakarta.annotation.PostConstruct
+import jakarta.annotation.PreDestroy
 
 @EnableScheduling
 @Configuration
@@ -16,6 +17,8 @@ class Scheduler {
 	private fun threadPoolTaskScheduler(poolSize: Int) = ThreadPoolTaskScheduler().also {
 		it.poolSize = poolSize
 		it.setThreadNamePrefix("ThreadPoolTaskSchedulerOfSize${poolSize}_")
+		it.setWaitForTasksToCompleteOnShutdown(true)
+		it.setAwaitTerminationSeconds(30)
 	}
 
 	@PostConstruct
@@ -31,5 +34,11 @@ class Scheduler {
 
 	fun scheduleSingleTask(task: () -> Unit, startTime: Instant) {
 		singleTaskScheduler.schedule(task, startTime)
+	}
+
+	@PreDestroy
+	fun shutdown() {
+		singleTaskScheduler.shutdown()
+		normalTaskScheduler.shutdown()
 	}
 }

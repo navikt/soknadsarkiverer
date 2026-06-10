@@ -27,7 +27,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
 		<springdoc.version>1.8.0</springdoc.version>
-		<token-support.version>5.0.40</token-support.version>
+		<token-support.version>6.0.8</token-support.version>
 		<jackson.version>2.21.3</jackson.version>
 		<jackson-coreutils.version>2.0</jackson-coreutils.version>
 		<jackson-databind-nullable.version>0.2.10</jackson-databind-nullable.version>
@@ -68,6 +68,7 @@
 		<wiremock.version>4.0.0-beta.30</wiremock.version>
 		<wiremock-junit5.version>4.0.0-beta.30</wiremock-junit5.version>
 		<kotlintest.version>3.4.2</kotlintest.version>
+		<mock-oauth2-server.version>4.0.0</mock-oauth2-server.version>
 
 		<!--Plugins-->
 		<versions-maven-plugin.version>2.21.0</versions-maven-plugin.version>
