@@ -44,16 +44,13 @@ import java.util.UUID
 import kotlin.properties.Delegates
 import java.lang.Thread.sleep
 import no.nav.security.token.support.spring.test.EnableMockOAuth2Server
-import no.nav.soknad.arkivering.soknadsarkiverer.ApplicationTests
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.ContainerizedKafka
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.KafkaListener
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.Key
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.TokenGenerator
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
-import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.header.Headers
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -67,7 +64,6 @@ import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 import java.time.Duration
 import java.util.HashMap
-import java.util.concurrent.TimeUnit
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.forEach
@@ -397,20 +393,6 @@ class ApplicationAdminTest : ContainerizedKafka() {
 	private fun putDataOnKafkaTopic(key: Key, badData: String, headers: Headers = RecordHeaders()) {
 		val topic = kafkaConfig.topics.loggedinSubmissionTopic
 		putDataOnTopic(key, badData, headers, topic, kafkaProducerForBadData)
-	}
-
-	private fun <T> putDataOnTopic(
-		key: Key, value: T, headers: Headers, topic: String,
-		kafkaProducer: KafkaProducer<String, T>
-	): RecordMetadata {
-
-		val producerRecord = ProducerRecord(topic, key, value)
-		headers.add(MESSAGE_ID, UUID.randomUUID().toString().toByteArray())
-		headers.forEach { producerRecord.headers().add(it) }
-
-		return kafkaProducer
-			.send(producerRecord)
-			.get(1000, TimeUnit.MILLISECONDS) // Blocking call
 	}
 
 	private fun kafkaConfigMap(): MutableMap<String, Any> {

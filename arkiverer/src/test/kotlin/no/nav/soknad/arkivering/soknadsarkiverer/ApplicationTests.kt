@@ -10,7 +10,6 @@ import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
@@ -19,8 +18,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
-import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
@@ -44,14 +41,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.tomakehurst.wiremock.common.ConsoleNotifier
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension
-import com.ninjasquad.springmockk.MockkClear
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import org.junit.jupiter.api.extension.RegisterExtension
-/*
-import org.mockito.Mockito.doNothing
-import org.mockito.Mockito.doThrow
-*/
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.lang.Thread.sleep
 import java.time.format.DateTimeFormatter
@@ -1324,20 +1316,6 @@ class ApplicationTests : ContainerizedKafka() {
 	private fun putDataOnKafkaTopic(key: Key, badData: String, headers: Headers = RecordHeaders()) {
 		val topic = kafkaConfig.topics.loggedinSubmissionTopic
 		putDataOnTopic(key, badData, headers, topic, kafkaProducerForBadData)
-	}
-
-	private fun <T> putDataOnTopic(
-		key: Key, value: T, headers: Headers, topic: String,
-		kafkaProducer: KafkaProducer<String, T>
-	): RecordMetadata {
-
-		val producerRecord = ProducerRecord(topic, key, value)
-		headers.add(MESSAGE_ID, UUID.randomUUID().toString().toByteArray())
-		headers.forEach { producerRecord.headers().add(it) }
-
-		return kafkaProducer
-			.send(producerRecord)
-			.get(1000, TimeUnit.MILLISECONDS) // Blocking call
 	}
 
 
