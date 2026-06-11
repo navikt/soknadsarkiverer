@@ -11,16 +11,13 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.MESSAGE_ID
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.util.serializeMsg
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
-import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
-import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.AfterEach
@@ -338,20 +335,6 @@ class IntegrationTests : ContainerizedKafka() {
 		return putDataOnKafkaTopic(value.innsendingsId, value)
 	}
 
-
-private fun <T> putDataOnTopic(
-		key: String, value: T, headers: Headers, topic: String,
-		kafkaProducer: KafkaProducer<String, T>
-	): RecordMetadata {
-
-		val producerRecord = ProducerRecord(topic, key, value)
-		headers.add(MESSAGE_ID, UUID.randomUUID().toString().toByteArray())
-		headers.forEach { producerRecord.headers().add(it) }
-
-		return kafkaProducer
-			.send(producerRecord)
-			.get(1000, TimeUnit.MILLISECONDS) // Blocking call
-	}
 
 	private fun kafkaConfigMap(): MutableMap<String, Any> {
 		return HashMap<String, Any>().also {

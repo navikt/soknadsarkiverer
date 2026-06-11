@@ -1,7 +1,10 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.utils
 
+import no.nav.soknad.arkivering.soknadsarkiverer.Constants.BEARER
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
 import java.util.concurrent.TimeUnit
 
 fun loopAndVerify(expectedCount: Int, getCount: () -> Int,
@@ -30,4 +33,15 @@ private fun loopAndVerify(getCount: () -> Int, expectedCount: Int, finalCheck: (
 	}
 	finalCheck.invoke()
 
+}
+
+infix fun <A> A.hasCount(count: Int) = this to count
+
+fun createHeaders(token: String?, contentType: MediaType): HttpHeaders {
+	val headers = HttpHeaders()
+	headers.contentType = contentType
+	if (token != null) {
+		headers.add(HttpHeaders.AUTHORIZATION, "$BEARER$token")
+	}
+	return headers
 }
