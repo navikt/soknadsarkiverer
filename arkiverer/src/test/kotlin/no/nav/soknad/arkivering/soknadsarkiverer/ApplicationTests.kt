@@ -3,7 +3,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.ninjasquad.springmockk.MockkBean
-import com.ninjasquad.springmockk.clear
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.metrics.model.registry.PrometheusRegistry
@@ -28,6 +27,13 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.doThrow
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import org.mockito.kotlin.eq
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
@@ -39,7 +45,14 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.tomakehurst.wiremock.common.ConsoleNotifier
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension
 import com.ninjasquad.springmockk.MockkClear
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import org.junit.jupiter.api.extension.RegisterExtension
+/*
+import org.mockito.Mockito.doNothing
+import org.mockito.Mockito.doThrow
+*/
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.lang.Thread.sleep
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -76,6 +89,12 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@Autowired
 	private lateinit var tasklistProperties: TaskListProperties
+
+	@MockitoSpyBean
+	private lateinit var kafkaPublisher: KafkaPublisher
+
+	@MockitoSpyBean
+	private lateinit var archiverService: ArchiverService
 
 	@Value("\${joark.journal-post}")
 	private lateinit var journalPostUrl: String
@@ -205,6 +224,47 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyRequestDataToJoark(soknadsarkivschema, request)
 	}
 
+	@Test
+	fun `Happy case - Received message archieved, but feedback to innsender fails state set to finished`() {
+		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
+		val mainDocumentTitle = "Test dokument"
+		val soknadsarkivschema = InnsendingTopicMsgBuilder()
+			.withTittel(mainDocumentTitle)
+			.withEttersendelseTilId(UUID.randomUUID().toString())
+			.withTestDokumenter(
+				mutableListOf(TestDokument("NAV 11-12.10", true, mainDocumentTitle, fileIds))
+			)
+			.build()
+		val key = soknadsarkivschema.innsendingsId
+
+		mockFilestorageIsWorking(fileIds.map { it to filestorageContent })
+		mockJoarkIsWorking()
+		mockSafRequest_notFound(innsendingsId = key)
+		doThrow(RuntimeException("Failed to send arkiveringstilbakemelding")).whenever(kafkaPublisher)
+			.putArkiveringstilbakemeldingOnTopic(any(), any(), any())
+		doNothing().whenever(kafkaPublisher)
+			.putMessageOnTopic(eq(key), eq("**Archiving: OK."), any())
+
+		putDataOnKafkaTopic(soknadsarkivschema)
+
+		verifyProcessingEvents(
+			key, mapOf(
+				RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount maxNumberOfAttempts, FINISHED hasCount 1, FAILURE hasCount 0
+			)
+		)
+		verifyMockedPostRequests(1, safUrl)
+		verifyMockedPostRequests(1, journalPostUrl)
+		verifyKafkaMetric(
+			key, mapOf(
+				"get files from filestorage" hasCount 1,
+				"send files to archive" hasCount 1,
+			)
+		)
+		val requests = verifyPostRequest(journalPostUrl)
+		assertEquals(1, requests.size)
+		val request = objectMapper.readValue<OpprettJournalpostRequest>(requests[0].body)
+		verifyRequestDataToJoark(soknadsarkivschema, request)
+	}
 
 	@Test
 	fun `Happy case - File missing, new event event on Kafka for key will cause rest calls to Joark`() {
@@ -1020,60 +1080,6 @@ class ApplicationTests : ContainerizedKafka() {
 	}
 
 	@Test
-	fun `All files deleted from Filestorage will cause finishing archiving`() {
-		// Given
-		val key = UUID.randomUUID().toString()
-		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
-		val loggedInMsg = InnsendingTopicMsgBuilder()
-			.withInnsendingsId(key)
-			.withTittel("Test dokument")
-			.withKanal("NAV_NO")
-			.withTestDokumenter(mutableListOf(
-				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", fileIds),
-			))
-			.build()
-
-		val tasksBefore = metrics.getTasks()
-		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
-		val getFilestorageErrorsBefore = metrics.getGetFilestorageErrors()
-		val getFilestorageSuccessesBefore = metrics.getGetFilestorageSuccesses()
-		val delFilestorageSuccessesBefore = metrics.getDelFilestorageSuccesses()
-		val joarkSuccessesBefore = metrics.getJoarkSuccesses()
-		val joarkErrorsBefore = metrics.getJoarkErrors()
-		val attemptsToFail = 1
-
-		mockRequestedFileIsGone()
-		mockJoarkIsWorking()
-		mockSafRequest_foundAfterAttempt_ApplicationTest(innsendingsId = key, attempts = attemptsToFail)
-
-		// When
-		putDataOnKafkaTopic(loggedInMsg)
-
-		// Expect
-		verifyProcessingEvents(
-			key, mapOf(
-				RECEIVED hasCount 1, STARTED hasCount 2, ARCHIVED hasCount 0, FINISHED hasCount 1, FAILURE hasCount 0
-			)
-		)
-		verifyMessageStartsWith(key, mapOf("Exception" hasCount 1))
-
-		verifyKafkaMetric(
-			key, mapOf(
-				"get files from filestorage" hasCount 0,
-				"send files to archive" hasCount 0,
-			)
-		)
-
-		verifyArchivingMetrics(getFilestorageErrorsBefore + 0, { metrics.getGetFilestorageErrors() })
-		verifyArchivingMetrics(getFilestorageSuccessesBefore + 0, { metrics.getGetFilestorageSuccesses() })
-		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, { metrics.getDelFilestorageSuccesses() })
-		verifyArchivingMetrics(joarkErrorsBefore + 0, { metrics.getJoarkErrors() })
-		verifyArchivingMetrics(joarkSuccessesBefore + 0, { metrics.getJoarkSuccesses() })
-		verifyArchivingMetrics(tasksBefore, { metrics.getTasks() })
-		verifyArchivingMetrics(tasksGivenUpOnBefore, { metrics.getTasksGivenUpOn() })
-	}
-
-	@Test
 	fun `Not all files fetched from Filestorage will cause failure`() {
 		sleep(1000) // Får av og til feil i telling av metrics når alle testene kjøres da metrics endringer i andre tester kan påvirke denne
 		// Given
@@ -1136,6 +1142,47 @@ class ApplicationTests : ContainerizedKafka() {
 		loopAndVerify(expected.toInt(), { actual.invoke().toInt() },
 			{ assertEquals(expected.toInt(), actual.invoke().toInt(), message) })
 	}
+
+
+	@Test
+	fun `Failing to archive and failing to send feedback to innsender`() {
+		// Given
+		val key = UUID.randomUUID().toString()
+		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
+		val loggedInMsg = InnsendingTopicMsgBuilder()
+			.withInnsendingsId(key)
+			.withTittel("Test dokument")
+			.withKanal("NAV_NO")
+			.withTestDokumenter(mutableListOf(
+				TestDokument("NAV 11-12.12", true, tittel = "Test dokument", fileIds),
+			))
+			.build()
+
+		mockFilestorageIsDown()
+		mockJoarkIsWorking()
+		mockSafRequest_notFound(innsendingsId = key)
+		doThrow(RuntimeException("Failed to send arkiveringstilbakemelding")).whenever(kafkaPublisher).putArkiveringstilbakemeldingOnTopic(any(), any(), any())
+		doNothing().whenever(kafkaPublisher).putMessageOnTopic(
+			eq(key), eq("**Archiving: FAILED."), any())
+
+		// When
+		putDataOnKafkaTopic(loggedInMsg)
+
+		// Expect
+		verifyProcessingEvents(
+			key, mapOf(
+				RECEIVED hasCount 1,
+				STARTED hasCount  maxNumberOfAttempts,
+				ARCHIVED hasCount 0,
+				FINISHED hasCount 0,
+				FAILURE hasCount 1
+			)
+		)
+		sleep(8000)
+		verify(archiverService, times(maxNumberOfAttempts)).createArkiveringstilbakemelding(eq(key), any())
+
+	}
+
 
 	private fun verifyProcessingEvents(key: Key, eventTypeAndCount: Map<EventTypes, Int>) {
 		eventTypeAndCount.forEach { (expectedEventType: EventTypes, expectedCount: Int) ->

@@ -275,6 +275,12 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
+			<groupId>org.mockito.kotlin</groupId>
+			<artifactId>mockito-kotlin</artifactId>
+			<version>${mockito.kotlin.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
 			<groupId>no.nav.soknad.arkivering</groupId>
 			<artifactId>external-api</artifactId>
 			<version>1.1.0</version>

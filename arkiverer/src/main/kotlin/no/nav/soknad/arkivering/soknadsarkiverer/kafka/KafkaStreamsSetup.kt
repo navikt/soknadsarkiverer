@@ -73,7 +73,7 @@ class KafkaStreamsSetup(
 
 		loggedinStream
 			.filter { key, value -> filterSchemaThatAreNullNotSerializable(key, value) }
-			.peek { key, value ->	logger.info("$key: Processing loggedinTopic. InnsendingsId: ${key}") }
+			.peek { key, _ ->	logger.info("$key: Processing loggedinTopic. InnsendingsId: ${key}") }
 			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
 		val loggedinTopicTable = loggedinStream.toTable()
 		processingTopicContent
@@ -84,7 +84,7 @@ class KafkaStreamsSetup(
 
 		noLoginStream
 			.filter { key, value -> filterSchemaThatAreNullNotSerializable(key, value) }
-			.peek { key, value ->	logger.info("$key: Processing NoLoginTopic. InnsendingsId: ${key}") }
+			.peek { key, _ ->	logger.info("$key: Processing NoLoginTopic. InnsendingsId: ${key}") }
 			.foreach { key, _ -> kafkaPublisher.putProcessingEventOnTopic(key, ProcessingEvent(EventTypes.RECEIVED)) }
 		val noLoginTopicTable = noLoginStream.toTable()
 		processingTopicContent
@@ -106,8 +106,8 @@ class KafkaStreamsSetup(
 				true
 			}
 			EventTypes.FAILURE -> {
-				taskListService.failTask(key)
-				true
+				taskListService.failTask(key, null )
+				taskListService.isFailureStateFinished(key)
 			}
 			else -> false
 		}

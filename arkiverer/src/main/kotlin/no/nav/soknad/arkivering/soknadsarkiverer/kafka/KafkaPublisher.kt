@@ -36,10 +36,10 @@ class KafkaPublisher(private val kafkaConfig: KafkaConfig) {
 		putDataOnTopic(key, value, headers, topic, kafkaProducer)
 	}
 
-	fun putMessageOnTopic(key: String?, value: String, headers: Headers = RecordHeaders()) {
+	fun putMessageOnTopic(key: String?, value: String?, headers: Headers = RecordHeaders()) {
 		val topic = kafkaConfig.topics.messageTopic
 		val kafkaProducer = kafkaMessageProducer
-		putDataOnTopic(key, value, headers, topic, kafkaProducer)
+		putDataOnTopic(key, value?: "Empty message", headers, topic, kafkaProducer)
 	}
 
 	fun putArkiveringstilbakemeldingOnTopic(key: String?, value: String, headers: Headers = RecordHeaders()) {

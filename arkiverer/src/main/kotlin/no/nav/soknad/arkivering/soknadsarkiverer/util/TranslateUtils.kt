@@ -3,13 +3,13 @@ package no.nav.soknad.arkivering.soknadsarkiverer.util
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import no.nav.soknad.arkivering.avroschemas.Soknadarkivschema
 import no.nav.soknad.arkivering.avroschemas.Soknadstyper
 import no.nav.soknad.arkivering.soknadsmottaker.model.AvsenderDto
 import no.nav.soknad.arkivering.soknadsmottaker.model.BrukerDto
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
