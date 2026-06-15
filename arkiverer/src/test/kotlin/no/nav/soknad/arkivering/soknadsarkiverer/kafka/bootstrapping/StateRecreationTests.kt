@@ -7,7 +7,7 @@ import com.ninjasquad.springmockk.MockkBean
 import io.mockk.*
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import kotlinx.coroutines.runBlocking
-import no.nav.security.token.support.client.spring.ClientConfigurationProperties
+//import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
@@ -38,7 +38,7 @@ import org.junit.jupiter.api.extension.RegisterExtension
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
-import org.springframework.boot.context.properties.EnableConfigurationProperties
+//import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -49,7 +49,7 @@ import java.util.*
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
-@EnableConfigurationProperties(ClientConfigurationProperties::class, KafkaConfig::class)
+//@EnableConfigurationProperties(ClientConfigurationProperties::class, KafkaConfig::class)
 class StateRecreationTests : ContainerizedKafka() {
 
 	@MockitoBean
@@ -64,9 +64,11 @@ class StateRecreationTests : ContainerizedKafka() {
 	@Value("\${saf.path}")
 	private lateinit var safUrl: String
 
+/*
 	@Suppress("unused")
 	@MockkBean(relaxed = true)
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
+*/
 
 
 	@Suppress("unused")

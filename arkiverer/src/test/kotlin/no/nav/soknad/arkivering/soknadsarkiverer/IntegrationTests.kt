@@ -5,11 +5,11 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.github.tomakehurst.wiremock.http.RequestMethod
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension
 
-import com.ninjasquad.springmockk.MockkBean
+//import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.metrics.model.registry.PrometheusRegistry
-import no.nav.security.token.support.client.spring.ClientConfigurationProperties
+//import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.util.serializeMsg
@@ -46,9 +46,11 @@ class IntegrationTests : ContainerizedKafka() {
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null
 
+/*
 	@Suppress("unused")
 	@MockkBean(relaxed = true)
 	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
+*/
 
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
