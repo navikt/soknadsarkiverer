@@ -1,48 +1,48 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
-import no.nav.security.token.support.client.core.ClientProperties
-import no.nav.security.token.support.client.core.oauth2.OAuth2AccessTokenService
-import no.nav.security.token.support.client.spring.ClientConfigurationProperties
-import no.nav.soknad.arkivering.soknadsarkiverer.Constants
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.ArchivingTimeoutProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileFetchTimeoutProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.InnsendingApiProperties
-import no.nav.soknad.arkivering.soknadsarkiverer.service.tokensupport.TokenService
 import no.nav.soknad.innsending.api.HentInnsendteFilerApi
-import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.slf4j.MDC
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
-import org.springframework.http.HttpRequest
 import org.springframework.http.client.*
+import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository
+import org.springframework.security.oauth2.core.AuthorizationGrantType
 import org.springframework.web.client.RestClient
 import java.time.Duration
 
 @Configuration
 class RestClientConfig {
 
+	private val logger = LoggerFactory.getLogger(javaClass)
+
+
 	@Bean
 	@Profile("prod | dev")
 	@Qualifier("archiveRestClient")
 	fun archiveWebClient(
 		@Value("\${joark.host}") joarkHost: String,
-		oAuth2AccessTokenService: OAuth2AccessTokenService,
-		clientConfigurationProperties: ClientConfigurationProperties,
+		authorizedClientManager: OAuth2AuthorizedClientManager,
+		clientRegistrationRepository: ClientRegistrationRepository,
 		archivingTimeoutProperties: ArchivingTimeoutProperties
 	): RestClient {
 
-		return restClientOAuth2Client(
-			baseUrl = joarkHost,
-			timeouts = timeouts(
-				readTimeoutMinutes = archivingTimeoutProperties.readTimeout,
-				connectTimeoutSeconds = archivingTimeoutProperties.connectTimeout,
-				exchangeTimeoutMinutes = archivingTimeoutProperties.exchangeTimeout),
-			clientAccessProperties = clientConfigurationProperties.registration["arkiv"]!!,
-			oAuth2AccessTokenService = oAuth2AccessTokenService )
+		val oauth2Interceptor = createOauth2Interceptor(authorizedClientManager, "arkiv", clientRegistrationRepository)
+		return RestClient.builder()
+			.baseUrl(joarkHost)
+			.requestFactory(
+				timeouts(archivingTimeoutProperties.readTimeout,archivingTimeoutProperties.connectTimeout, archivingTimeoutProperties.exchangeTimeout))
+			.requestInterceptor(oauth2Interceptor)
+			.build()
+
 	}
 
 	@Bean
@@ -59,7 +59,6 @@ class RestClientConfig {
 		).build()
 
 
-
 	private fun timeouts(readTimeoutMinutes: Long, connectTimeoutSeconds: Long, exchangeTimeoutMinutes: Long? = null): ClientHttpRequestFactory {
 		val factory = SimpleClientHttpRequestFactory()
 		factory.setReadTimeout(Duration.ofMinutes(readTimeoutMinutes))
@@ -74,17 +73,18 @@ class RestClientConfig {
 	@Qualifier("innsendingApiRestClient")
 	fun innsendingApiClient(
 		innsendingApiProperties: InnsendingApiProperties,
-		clientConfigProperties: ClientConfigurationProperties,
-		oAuth2AccessTokenService: OAuth2AccessTokenService,
+		authorizedClientManager: OAuth2AuthorizedClientManager,
+		clientRegistrationRepository: ClientRegistrationRepository,
 		fileFetchTimeoutProperties: FileFetchTimeoutProperties
 	): RestClient {
 
-		return restClientOAuth2Client(
-			baseUrl = innsendingApiProperties.host,
-			timeouts = timeouts(readTimeoutMinutes = fileFetchTimeoutProperties.readTimeout.toLong(), connectTimeoutSeconds = fileFetchTimeoutProperties.connectTimeout.toLong()),
-			clientAccessProperties = clientConfigProperties.registration["innsendingApi"]!!,
-			oAuth2AccessTokenService = oAuth2AccessTokenService
-		)
+		val oauth2Interceptor = createOauth2Interceptor(authorizedClientManager, "arkiv", clientRegistrationRepository)
+		return RestClient.builder()
+			.baseUrl(innsendingApiProperties.host)
+			.requestFactory(
+				timeouts(fileFetchTimeoutProperties.readTimeout.toLong(),fileFetchTimeoutProperties.connectTimeout.toLong()))
+			.requestInterceptor(oauth2Interceptor)
+			.build()
 
 	}
 
@@ -111,40 +111,45 @@ class RestClientConfig {
 	@Bean
 	fun innsenderHealthApi(innsendingApiProperties: InnsendingApiProperties) = no.nav.soknad.innsending.api.HealthApi(innsendingApiProperties.host)
 
-	private fun restClientOAuth2Client(
-		baseUrl: String,
-		timeouts: ClientHttpRequestFactory,
-		clientAccessProperties: ClientProperties,
-		oAuth2AccessTokenService: OAuth2AccessTokenService
-	): RestClient {
 
-		val tokenService = TokenService(clientAccessProperties, oAuth2AccessTokenService)
 
-		return RestClient.builder()
-			.baseUrl(baseUrl)
-			.requestFactory(timeouts)
-			.requestInterceptor(RequestHeaderInterceptor(tokenService))
-			.build()
-	}
+	/**
+	 * Privat hjelpemetode for å lage en gjenbrukbar interceptor.
+	 * Denne metoden fungerer for både 'jwt-bearer' (som krever en bruker-principal)
+	 * og 'client_credentials' (som ikke krever det).
+	 */
+	private fun createOauth2Interceptor(
+		authorizedClientManager: OAuth2AuthorizedClientManager,
+		clientRegistrationId: String,
+		clientRegistrationRepository: ClientRegistrationRepository
+	): ClientHttpRequestInterceptor {
+		return ClientHttpRequestInterceptor { request, body, execution ->
+			logger.info("createOauth2Interceptor for clientRegistrationId: $clientRegistrationId")
+			val clientRegistration = clientRegistrationRepository.findByRegistrationId(clientRegistrationId)
+				?: throw IllegalStateException("Fant ikke klient-registrering for '$clientRegistrationId'.")
 
-	class RequestHeaderInterceptor(val tokenService: TokenService) :
-		ClientHttpRequestInterceptor {
+			val authorizeRequestBuilder = OAuth2AuthorizeRequest.withClientRegistrationId(clientRegistrationId)
 
-		val logger: Logger = LoggerFactory.getLogger(javaClass)
+			if (clientRegistration.authorizationGrantType == AuthorizationGrantType.CLIENT_CREDENTIALS) {
+				// ✅ For machine-to-machine flow, just use a static principal name
+				authorizeRequestBuilder.principal("m2m-service-account")
+			} else {
+				// ✅ For OBO (JWT-bearer), forward the current authenticated user
+				val principal = SecurityContextHolder.getContext().authentication
+					?: throw IllegalStateException("Ingen SecurityContext Authentication funnet for OBO flyt.")
+				authorizeRequestBuilder.principal(principal)
+			}
 
-		override fun intercept(
-			request: HttpRequest,
-			body: ByteArray,
-			execution: ClientHttpRequestExecution
-		): ClientHttpResponse {
-			val token = tokenService.getToken()?.access_token
-			val callId = MDC.get(Constants.HEADER_CALL_ID) ?: MDC.get(Constants.MDC_INNSENDINGS_ID) ?: ""
+			val authorizeRequest = authorizeRequestBuilder.build()
 
-			request.headers.setBearerAuth(token ?: "")
-			request.headers.set(Constants.HEADER_CALL_ID, callId)
-			request.headers.set(Constants.MDC_INNSENDINGS_ID, MDC.get(Constants.MDC_INNSENDINGS_ID) ?: "")
+			val authorizedClient = authorizedClientManager.authorize(authorizeRequest)
+				?: throw IllegalStateException(
+					"Kunne ikke autorisere klienten '$clientRegistrationId'. " +
+						"Sjekk konfigurasjon og grant-type."
+				)
 
-			return execution.execute(request, body)
+			request.headers.setBearerAuth(authorizedClient.accessToken.tokenValue)
+			execution.execute(request, body)
 		}
 	}
 

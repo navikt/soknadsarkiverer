@@ -151,11 +151,13 @@
 			<groupId>no.nav.security</groupId>
 			<artifactId>token-validation-spring</artifactId>
 			<version>${token-support.version}</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>no.nav.security</groupId>
 			<artifactId>token-client-spring</artifactId>
 			<version>${token-support.version}</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>no.nav.security</groupId>
