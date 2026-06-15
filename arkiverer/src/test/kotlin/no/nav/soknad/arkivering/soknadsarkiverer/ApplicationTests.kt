@@ -2,11 +2,9 @@ package no.nav.soknad.arkivering.soknadsarkiverer
 
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.ninjasquad.springmockk.MockkBean
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.metrics.model.registry.PrometheusRegistry
-//import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
@@ -62,11 +60,6 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@Value("\${application.mocked-port-for-external-services}")
 	private val portToExternalServices: Int? = null // 2private lateinit var ... 908
-/*
-	@Suppress("unused")
-	@MockkBean(relaxed = true)
-	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
-*/
 
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
