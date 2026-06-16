@@ -44,20 +44,6 @@ jobs:
     outputs:
       image: ${{ steps.docker-build-push.outputs.image }}
 
-  deploy-loadtests:
-    name: Deploy to loadtests
-    needs: build-and-push
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: nais/deploy/actions/deploy@v2
-        env:
-          CLUSTER: dev-gcp
-          RESOURCE: .nais/nais.yml
-          VARS: .nais/config-loadtests.json
-          VAR: image=${{ needs.build-and-push.outputs.image }}
-
   deploy-prod:
     name: Deploy to prod
     needs: build-and-push
