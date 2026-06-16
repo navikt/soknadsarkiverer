@@ -98,7 +98,7 @@ private fun createDokumentVariant(variant: Variant, attachedFiles: List<FileInfo
 
 	val filtype = if (variant.filtype.equals("PDF/A",true) ) "PDFA" else variant.filtype.uppercase()
 	return DokumentVariant(
-		filnavn = variant.filnavn,
+		filnavn = variant.filnavn.take(200),
 		filtype = filtype,
 		fysiskDokument = attachedFile[0].content!!,
 		variantformat = variant.variantFormat ?: "ARKIV")
