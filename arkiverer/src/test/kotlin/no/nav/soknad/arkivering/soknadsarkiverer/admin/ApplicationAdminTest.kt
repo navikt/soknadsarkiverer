@@ -44,6 +44,7 @@ import java.util.UUID
 import kotlin.properties.Delegates
 import java.lang.Thread.sleep
 import no.nav.security.token.support.spring.test.EnableMockOAuth2Server
+import no.nav.soknad.arkivering.soknadsarkiverer.SoknadsarkivererApplication
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.ContainerizedKafka
@@ -70,7 +71,11 @@ import kotlin.collections.forEach
 
 
 @ActiveProfiles("test")
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,)
+@SpringBootTest(
+	webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
+	properties = ["spring.main.allow-bean-definition-overriding=true"],
+	classes = [SoknadsarkivererApplication::class]
+)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @EnableMockOAuth2Server(port = 1888)
 @AutoConfigureWebTestClient
@@ -194,7 +199,7 @@ class ApplicationAdminTest : ContainerizedKafka() {
 	fun `happy case - application is archieved in after retry`() {
 
 		// Given
-		val token = mockOAuth2Server.issueToken("test-client-id").serialize()
+		//val token = mockOAuth2Server.issueToken("test-client-id").serialize()
 
 		val innsendingsId = failArchiving()
 		sleep(1000)
@@ -233,7 +238,7 @@ class ApplicationAdminTest : ContainerizedKafka() {
 	fun `happy case - retry on archieved application is ignored`() {
 
 		// Given
-		val token = mockOAuth2Server.issueToken("test-client-id").serialize()
+		//val token = mockOAuth2Server.issueToken("test-client-id").serialize()
 
 		val innsendingsId = successfullArchiving()
 		sleep(500)
