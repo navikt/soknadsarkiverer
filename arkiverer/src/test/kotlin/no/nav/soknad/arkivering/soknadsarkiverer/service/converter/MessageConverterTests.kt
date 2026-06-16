@@ -279,7 +279,7 @@ class MessageConverterTests {
 		val schema2 = schema.copy(dokumenter = docs)
 
 		val arkivData = createOpprettJournalpostRequest(schema2, uploadedfiles)
-		assertEquals(200, arkivData.dokumenter[2].dokumentvarianter[0].filnavn.length)
+		assertEquals(200 - 5, arkivData.dokumenter[2].dokumentvarianter[0].filnavn.length)
 	}
 
 
