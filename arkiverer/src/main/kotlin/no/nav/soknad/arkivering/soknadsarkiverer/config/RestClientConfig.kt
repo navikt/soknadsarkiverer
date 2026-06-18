@@ -78,7 +78,7 @@ class RestClientConfig {
 		fileFetchTimeoutProperties: FileFetchTimeoutProperties
 	): RestClient {
 
-		val oauth2Interceptor = createOauth2Interceptor(authorizedClientManager, "arkiv", clientRegistrationRepository)
+		val oauth2Interceptor = createOauth2Interceptor(authorizedClientManager, "innsendingApi", clientRegistrationRepository)
 		return RestClient.builder()
 			.baseUrl(innsendingApiProperties.host)
 			.requestFactory(

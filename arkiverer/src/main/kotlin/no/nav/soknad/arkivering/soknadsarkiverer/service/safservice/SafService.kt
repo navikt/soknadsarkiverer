@@ -6,8 +6,10 @@ import kotlinx.coroutines.runBlocking
 import no.nav.soknad.arkiverer.saf.generated.HentJournalpostGittEksternReferanseId
 import no.nav.soknad.arkiverer.saf.generated.hentjournalpostgitteksternreferanseid.Journalpost
 import no.nav.soknad.arkivering.soknadsarkiverer.Constants
+import no.nav.soknad.arkivering.soknadsarkiverer.Constants.NAV_CONSUMER_ID
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 
 @Component
