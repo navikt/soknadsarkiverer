@@ -5,6 +5,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.InnsendingTopicMsgBuilder
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.TestDokument
+import no.nav.soknad.arkivering.soknadsmottaker.model.DokumentData
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -251,6 +252,34 @@ class MessageConverterTests {
 		assertEquals(schema.dokumenter[2].varianter[0].filtype, arkivData.dokumenter[2].dokumentvarianter[0].filtype)
 		assertEquals(schema.dokumenter[2].varianter[0].variantFormat, arkivData.dokumenter[2].dokumentvarianter[0].variantformat)
 		assertEquals(uploadedfiles[3].content, arkivData.dokumenter[2].dokumentvarianter[0].fysiskDokument)
+	}
+
+
+	@Test
+	fun `Should limit filnavn length`() {
+		val tittel = "Apa bepa"
+		val skjemanummer = "NAV 11-13.06"
+
+		val files = mutableListOf (
+			TestDokument( skjemanummer = skjemanummer, erHovedskjema = true, tittel = tittel, uuids = listOf(UUID.randomUUID().toString(),UUID.randomUUID().toString()) ),
+			TestDokument( skjemanummer = "L7", erHovedskjema = false, tittel = "Kvittering", uuids = listOf(UUID.randomUUID().toString()) ),
+			TestDokument( skjemanummer = "W2", erHovedskjema = false, tittel = "Attachment", uuids = listOf(UUID.randomUUID().toString()) )
+		)
+
+		val uploadedfiles = files.map{vedlegg -> vedlegg.uuids}.flatten().map { uuid -> FileInfo(uuid, "apa".toByteArray(), ResponseStatus.Ok) }
+
+		val schema = InnsendingTopicMsgBuilder()
+			.withTittel(tittel)
+			.withSkjemanr(skjemanummer)
+			.withTestDokumenter(files)
+			.build()
+
+		val docs = mutableListOf<DokumentData>()
+		schema.dokumenter.forEachIndexed { index, data ->   if (index < 2) docs.add(data) else docs.add (data.copy(varianter = (listOf(data.varianter.first().copy(filnavn="A".repeat(250)))))) }
+		val schema2 = schema.copy(dokumenter = docs)
+
+		val arkivData = createOpprettJournalpostRequest(schema2, uploadedfiles)
+		assertEquals(200 - 5, arkivData.dokumenter[2].dokumentvarianter[0].filnavn.length)
 	}
 
 
