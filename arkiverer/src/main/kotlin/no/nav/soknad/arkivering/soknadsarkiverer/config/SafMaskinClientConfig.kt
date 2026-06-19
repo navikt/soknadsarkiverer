@@ -1,14 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
 import com.expediagroup.graphql.client.spring.GraphQLWebClient
-import io.netty.channel.ChannelOption
-import io.netty.handler.timeout.ReadTimeoutHandler
-import io.netty.handler.timeout.WriteTimeoutHandler
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientProviderBuilder
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService
-import org.springframework.security.oauth2.client.web.reactive.function.client.ServletOAuth2AuthorizedClientExchangeFilterFunction
-import org.springframework.security.oauth2.client.AuthorizedClientServiceOAuth2AuthorizedClientManager
 import no.nav.soknad.arkivering.soknadsarkiverer.Constants.NAV_CONSUMER_ID
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
@@ -27,11 +20,7 @@ import org.springframework.web.reactive.function.client.ClientRequest
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.netty.http.client.HttpClient
-import reactor.netty.http.client.HttpClientRequest
-import reactor.netty.http.client.HttpClientResponse
-import java.net.http.HttpHeaders
 import java.time.Duration
-import java.util.concurrent.TimeUnit
 
 @Configuration
 class SafMaskinClientConfig(
@@ -41,10 +30,10 @@ class SafMaskinClientConfig(
 ) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
-	private val connectionTimeoutSeconds = 10
-	private val readTimeoutSeconds = 15
-	private val writeTimeoutSeconds = 30
-	private val maxBufferSize = 1024 * 1024 * 10 // 10MB
+	private val bufferSizeMb: Int = 10
+
+	private val responseTimeout = Duration.ofSeconds(15)
+	private val maxBufferSize = 1024 * 1024 * bufferSizeMb
 
 	@Bean
 	@Profile("!(prod | dev)")
@@ -59,88 +48,41 @@ class SafMaskinClientConfig(
 		)
 	}
 
+
+	@Bean
+	@Profile("prod | dev")
+	@Qualifier("safQlClient")
+	fun safGraphQlWebClient(@Qualifier("safWebClient") safWebClient: WebClient): GraphQLWebClient {
+		return GraphQLWebClient(
+			url = "${safUrl}${queryPath}",
+			builder = safWebClient.mutate()
+				.defaultRequest {
+					it.header(NAV_CONSUMER_ID, applicationName)
+				})
+	}
+
 	@Bean
 	@Profile("prod | dev")
 	@Qualifier("safWebClient")
 	fun safWebClient(
 		authorizedClientManager: OAuth2AuthorizedClientManager,
 		clientRegistrationRepository: ClientRegistrationRepository
-	): GraphQLWebClient {
-		val clientRegistrationId = "saf-maskintilmaskin"
+	): WebClient {
 
-		// ExchangeFilterFunction that authorizes using client_credentials (machine-to-machine)
-		val oauth2Filter = ExchangeFilterFunction.ofRequestProcessor { request ->
-			val authorizeRequest = OAuth2AuthorizeRequest.withClientRegistrationId(clientRegistrationId)
-				.principal("m2m-service-account")
-				.build()
-
-			val authorizedClient = authorizedClientManager.authorize(authorizeRequest)
-				?: throw IllegalStateException("Kunne ikke autorisere klienten '$clientRegistrationId'.")
-
-			val newRequest = ClientRequest.from(request)
-				.headers { it.setBearerAuth(authorizedClient.accessToken.tokenValue) }
-				.build()
-
-			reactor.core.publisher.Mono.just(newRequest)
-		}
-/*
-
-		val builder = WebClient.builder()
-			.clientConnector(
-				ReactorClientHttpConnector(
-				HttpClient.create()
-					.keepAlive(false)
-					.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (connectionTimeoutSeconds * 1000))
-					.doOnConnected { conn ->
-						conn.addHandlerLast(ReadTimeoutHandler(readTimeoutSeconds.toLong(), TimeUnit.SECONDS))
-						conn.addHandlerLast(WriteTimeoutHandler(writeTimeoutSeconds.toLong(), TimeUnit.SECONDS))
-					}
-					.doOnRequest { request: HttpClientRequest, _ ->
-						logger.info("{} {} {}", request.version(), request.method(), request.resourceUrl())
-					}
-					.doOnResponse { response: HttpClientResponse, _ ->
-						logger.info(
-							"{} - {} {} {}",
-								response.status().toString(),
-								response.version(),
-								response.method(),
-								response.resourceUrl()
-							)
-					}
-				)
-			)
-			.filter(oauth2Filter)
-			.defaultRequest {
-				it.header(NAV_CONSUMER_ID, applicationName)
-			}
-*/
-
-		val builder = webClientBuilder(authorizedClientManager, clientRegistrationRepository)
-			.defaultRequest {
-				it.header(NAV_CONSUMER_ID, applicationName)
-			}
-		return GraphQLWebClient(
-			url = "${safUrl}${queryPath}",
-			builder = builder
-		)
-	}
-
-	private fun webClientBuilder(
-		authorizedClientManager: OAuth2AuthorizedClientManager,
-		clientRegistrationRepository: ClientRegistrationRepository
-	): WebClient.Builder {
-		val oauth2Filter = oauth2ExchangeFilter(authorizedClientManager, clientRegistrationRepository, "saf-maskintilmaskin")
+		// ENDRET: Byttet fra "saf-obo" til "saf-cc" for å bruke maskin-token
+		val oauth2Filter = oauth2ExchangeFilter(authorizedClientManager, clientRegistrationRepository, "saf-cc")
 
 		val httpClient = HttpClient.create()
-			.responseTimeout(Duration.ofSeconds(connectionTimeoutSeconds.toLong()))
+			.responseTimeout(responseTimeout)
+
 		return WebClient.builder()
 			.clientConnector(ReactorClientHttpConnector(httpClient))
 			.codecs { configurer ->
 				configurer.defaultCodecs().maxInMemorySize(maxBufferSize)
 			}
 			.filter(oauth2Filter)
+			.build()
 	}
-
 
 	private fun oauth2ExchangeFilter(
 		authorizedClientManager: OAuth2AuthorizedClientManager,
@@ -152,12 +94,13 @@ class SafMaskinClientConfig(
 				clientRegistrationRepository.findByRegistrationId(clientRegistrationId)
 					?: throw IllegalStateException("Fant ikke client registration for '$clientRegistrationId'")
 
-			// Velg principal-verdien, men hold typen trygg
 			val principalString: String?
 			val principalAuth: Authentication?
 
 			when {
 				clientRegistration.authorizationGrantType == AuthorizationGrantType.CLIENT_CREDENTIALS -> {
+					// Siden vi nå bruker saf-cc, vil koden treffe her.
+					// Det kreves ingen innlogget bruker i SecurityContextHolder.
 					principalString = "system-service-account"
 					principalAuth = null
 				}
@@ -171,13 +114,10 @@ class SafMaskinClientConfig(
 				else -> throw IllegalStateException("Grant type '${clientRegistration.authorizationGrantType.value}' støttes ikke.")
 			}
 
-			// Bygg authorize-request med riktig overload (typetrygg)
 			val authorizeRequest = if (principalAuth != null) {
-				// OBO: bruk Authentication og sett subject_token som attribute om nødvendig
 				OAuth2AuthorizeRequest.withClientRegistrationId(clientRegistrationId)
 					.principal(principalAuth)
 					.attributes { attrs ->
-						// Legg på subject_token hvis din provider/authorizedClientProvider forventer det.
 						val jwt = (principalAuth as? JwtAuthenticationToken)?.token?.tokenValue
 						if (!jwt.isNullOrBlank()) {
 							attrs["subject_token"] = jwt
@@ -185,7 +125,7 @@ class SafMaskinClientConfig(
 					}
 					.build()
 			} else {
-				// client_credentials: bruk String principalName-overload
+				// Bygger forespørsel basert på den statiske system-strengen
 				OAuth2AuthorizeRequest.withClientRegistrationId(clientRegistrationId)
 					.principal(principalString!!)
 					.build()
