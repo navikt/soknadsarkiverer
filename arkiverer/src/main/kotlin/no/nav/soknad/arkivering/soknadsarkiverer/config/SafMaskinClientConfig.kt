@@ -63,16 +63,26 @@ class SafMaskinClientConfig(
 	@Profile("prod | dev")
 	@Qualifier("safWebClient")
 	fun safWebClient(
-		clientRegistrationRepository: ClientRegistrationRepository,
-		authorizedClientService: OAuth2AuthorizedClientService
+		authorizedClientManager: OAuth2AuthorizedClientManager,
+		clientRegistrationRepository: ClientRegistrationRepository
 	): GraphQLWebClient {
 		val clientRegistrationId = "saf-maskintilmaskin"
-		val provider = OAuth2AuthorizedClientProviderBuilder.builder().clientCredentials().build()
-		val authorizedClientManager = AuthorizedClientServiceOAuth2AuthorizedClientManager(clientRegistrationRepository, authorizedClientService)
-		authorizedClientManager.setAuthorizedClientProvider(provider)
 
-		val oauth2Filter = ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager)
-		oauth2Filter.setDefaultClientRegistrationId(clientRegistrationId)
+		// ExchangeFilterFunction that authorizes using client_credentials (machine-to-machine)
+		val oauth2Filter = ExchangeFilterFunction.ofRequestProcessor { request ->
+			val authorizeRequest = OAuth2AuthorizeRequest.withClientRegistrationId(clientRegistrationId)
+				.principal("m2m-service-account")
+				.build()
+
+			val authorizedClient = authorizedClientManager.authorize(authorizeRequest)
+				?: throw IllegalStateException("Kunne ikke autorisere klienten '$clientRegistrationId'.")
+
+			val newRequest = ClientRequest.from(request)
+				.headers { it.setBearerAuth(authorizedClient.accessToken.tokenValue) }
+				.build()
+
+			reactor.core.publisher.Mono.just(newRequest)
+		}
 /*
 
 		val builder = WebClient.builder()
