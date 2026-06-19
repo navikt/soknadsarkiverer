@@ -63,7 +63,7 @@ class SecurityConfig(
 			}
 			.authorizeHttpRequests { auth ->
 				// Authorize all HTTP requests
-				auth.requestMatchers( "/internal/health/**", "/health/**").permitAll()
+				auth.requestMatchers( "/internal/isAlive","/internal/isReady","/internal/health/**", "/health/**").permitAll()
 				auth.anyRequest().authenticated()
 			}
 			.oauth2ResourceServer { rs ->

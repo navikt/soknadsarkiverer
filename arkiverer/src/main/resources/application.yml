@@ -143,3 +143,10 @@ auth:
       jwk-set-uri: ${AZURE_OPENID_CONFIG_JWKS_URI}
       audiences: ${AZURE_APP_CLIENT_ID}
 
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+springdoc.api-docs.enabled: false
