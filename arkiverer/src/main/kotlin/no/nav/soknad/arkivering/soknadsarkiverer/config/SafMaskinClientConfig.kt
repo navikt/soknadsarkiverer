@@ -70,7 +70,7 @@ class SafMaskinClientConfig(
 	): WebClient {
 
 		// ENDRET: Byttet fra "saf-obo" til "saf-cc" for å bruke maskin-token
-		val oauth2Filter = oauth2ExchangeFilter(authorizedClientManager, clientRegistrationRepository, "saf-cc")
+		val oauth2Filter = oauth2ExchangeFilter(authorizedClientManager, clientRegistrationRepository, "saf-maskintilmaskin")
 
 		val httpClient = HttpClient.create()
 			.responseTimeout(responseTimeout)
@@ -107,7 +107,7 @@ class SafMaskinClientConfig(
 
 				clientRegistration.authorizationGrantType == AuthorizationGrantType("urn:ietf:params:oauth:grant-type:jwt-bearer") -> {
 					principalAuth = SecurityContextHolder.getContext().authentication
-						?: throw IllegalStateException("Ingen SecurityContext Authentication funnet for OBO-flyt.")
+						?: throw IllegalStateException("Ingen SecurityContext Authentication funnet.")
 					principalString = null
 				}
 
