@@ -101,7 +101,7 @@ class SafMaskinClientConfig(
 				clientRegistration.authorizationGrantType == AuthorizationGrantType.CLIENT_CREDENTIALS -> {
 					// Siden vi nå bruker saf-cc, vil koden treffe her.
 					// Det kreves ingen innlogget bruker i SecurityContextHolder.
-					principalString = "system-service-account"
+					principalString = clientRegistration.clientId
 					principalAuth = null
 				}
 
