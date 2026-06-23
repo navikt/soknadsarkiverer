@@ -69,7 +69,6 @@ class SafMaskinClientConfig(
 		clientRegistrationRepository: ClientRegistrationRepository
 	): WebClient {
 
-		// ENDRET: Byttet fra "saf-obo" til "saf-maskintilmaskin" for å bruke maskin-token
 		val oauth2Filter = oauth2ExchangeFilter(authorizedClientManager, clientRegistrationRepository, "saf-maskintilmaskin")
 
 		val httpClient = HttpClient.create()
@@ -99,8 +98,6 @@ class SafMaskinClientConfig(
 
 			when {
 				clientRegistration.authorizationGrantType == AuthorizationGrantType.CLIENT_CREDENTIALS -> {
-					// Siden vi nå bruker saf-cc, vil koden treffe her.
-					// Det kreves ingen innlogget bruker i SecurityContextHolder.
 					principalString = clientRegistration.clientId
 					principalAuth = null
 				}

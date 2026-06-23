@@ -104,7 +104,6 @@ class RestClientConfig {
 	fun hentInnsendteFilerApi(
 		innsendingApiProperties: InnsendingApiProperties,
 		@Qualifier("innsendingApiRestClient") innsendingApiClient: RestClient): HentInnsendteFilerApi {
-		//Serializer.jacksonObjectMapper.registerModule(JavaTimeModule())
 		return HentInnsendteFilerApi(innsendingApiClient)
 	}
 
