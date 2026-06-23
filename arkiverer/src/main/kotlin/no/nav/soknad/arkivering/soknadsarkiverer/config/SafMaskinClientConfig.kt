@@ -36,7 +36,7 @@ class SafMaskinClientConfig(
 	private val maxBufferSize = 1024 * 1024 * bufferSizeMb
 
 	@Bean
-	@Profile("!(prod | dev)")
+	@Profile("!prod & !dev")
 	@Qualifier("safWebClient")
 	fun safTestWebClient(): GraphQLWebClient {
 		return  GraphQLWebClient(
@@ -50,9 +50,9 @@ class SafMaskinClientConfig(
 
 
 	@Bean
-	@Profile("prod | dev")
-	@Qualifier("safQlClient")
-	fun safGraphQlWebClient(@Qualifier("safWebClient") safWebClient: WebClient): GraphQLWebClient {
+	@Profile("prod", "dev")
+	@Qualifier("safWebClient")
+	fun safGraphQlWebClient(@Qualifier("safHttpClient") safWebClient: WebClient): GraphQLWebClient {
 		return GraphQLWebClient(
 			url = "${safUrl}${queryPath}",
 			builder = safWebClient.mutate()
@@ -62,14 +62,14 @@ class SafMaskinClientConfig(
 	}
 
 	@Bean
-	@Profile("prod | dev")
-	@Qualifier("safWebClient")
+	@Profile("prod", "dev")
+	@Qualifier("safHttpClient")
 	fun safWebClient(
 		authorizedClientManager: OAuth2AuthorizedClientManager,
 		clientRegistrationRepository: ClientRegistrationRepository
 	): WebClient {
 
-		// ENDRET: Byttet fra "saf-obo" til "saf-cc" for å bruke maskin-token
+		// ENDRET: Byttet fra "saf-obo" til "saf-maskintilmaskin" for å bruke maskin-token
 		val oauth2Filter = oauth2ExchangeFilter(authorizedClientManager, clientRegistrationRepository, "saf-maskintilmaskin")
 
 		val httpClient = HttpClient.create()

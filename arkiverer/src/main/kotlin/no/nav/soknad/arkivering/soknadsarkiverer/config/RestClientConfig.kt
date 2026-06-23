@@ -26,7 +26,7 @@ class RestClientConfig {
 
 
 	@Bean
-	@Profile("prod | dev")
+	@Profile("prod", "dev")
 	@Qualifier("archiveRestClient")
 	fun archiveWebClient(
 		@Value("\${joark.host}") joarkHost: String,
@@ -46,7 +46,7 @@ class RestClientConfig {
 	}
 
 	@Bean
-	@Profile("!(prod | dev)")
+	@Profile("!prod & !dev")
 	@Qualifier("archiveRestClient")
 	fun archiveTestWebClient(
 		@Value("\${joark.host}") joarkHost: String, archivingTimeoutProperties: ArchivingTimeoutProperties
@@ -69,7 +69,7 @@ class RestClientConfig {
 
 
 	@Bean
-	@Profile("prod | dev")
+	@Profile("prod", "dev")
 	@Qualifier("innsendingApiRestClient")
 	fun innsendingApiClient(
 		innsendingApiProperties: InnsendingApiProperties,
@@ -89,7 +89,7 @@ class RestClientConfig {
 	}
 
 	@Bean
-	@Profile("!(prod | dev)")
+	@Profile("!prod & !dev")
 	@Qualifier("innsendingApiRestClient")
 	fun innsendingApiClientWithoutOAuth(
 		innsendingApiProperties: InnsendingApiProperties, fileFetchTimeoutProperties: FileFetchTimeoutProperties

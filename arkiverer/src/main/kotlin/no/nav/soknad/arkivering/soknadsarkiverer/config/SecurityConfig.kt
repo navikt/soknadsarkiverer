@@ -17,7 +17,7 @@ import org.springframework.security.web.SecurityFilterChain
 
 
 @Configuration
-@Profile("!(test | docker)")
+@Profile("!test & !docker")
 class SecurityConfig(
 	@Value("\${spring.security.oauth2.resourceserver.jwt.issuer-uri}") private val azureadIssuer: String,
 	@Value("\${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") private val azureadJwkUri: String,
