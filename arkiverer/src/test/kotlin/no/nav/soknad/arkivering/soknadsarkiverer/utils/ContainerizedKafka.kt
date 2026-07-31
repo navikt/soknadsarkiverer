@@ -66,7 +66,8 @@ open class ContainerizedKafka {
 				kafkaConfig.topics.arkiveringstilbakemeldingTopic,
 				kafkaConfig.topics.metricsTopic,
 				kafkaConfig.topics.nologinSubmissionTopic,
-				kafkaConfig.topics.loggedinSubmissionTopic
+				kafkaConfig.topics.loggedinSubmissionTopic,
+				kafkaConfig.topics.processingTopicV3
 			)
 				.forEach { createTopic(it) }
 		}

@@ -19,17 +19,33 @@ class KafkaBootstrapConsumer(
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	private val processingTopic = kafkaConfig.topics.processingTopic
+	private val processingTopicV3 = kafkaConfig.topics.processingTopicV3
 	private val uuid = UUID.randomUUID().toString()
 	private val noLoginTopic = kafkaConfig.topics.nologinSubmissionTopic
 	private val loggedinTopic = kafkaConfig.topics.loggedinSubmissionTopic
 
 	fun recreateState() {
 		logger.info("Start recreating state")
-		
-		val (finishedKeys, unfinishedProcessingRecords) = getProcessingRecords()
+		// Read both the retained v2 Avro processing-event history and the v3 JSON processing-event
+		// history (issue #264). Production writers still only emit to v2 (`processingTopic`); the v3
+		// topic has no writers yet, so this is safe to deploy on its own. Both histories are mapped to
+		// the shared Avro `ProcessingEvent` representation and merged before applying the existing
+		// highest-state-wins/finished-key filtering, so replay semantics stay identical regardless of
+		// which topic a given event came from.
+		val (finishedKeysV2, unfinishedProcessingRecordsV2) = getProcessingRecords()
+		val (finishedKeysV3, unfinishedProcessingRecordsV3) = getProcessingRecordsV3()
 
-		val filteredUnfinishedProcessingEvents = unfinishedProcessingRecords
-			.map { it.key() to it.value() }
+		val finishedKeys = HashSet(finishedKeysV2).also { it.addAll(finishedKeysV3) }
+
+		val filteredUnfinishedProcessingEvents = (
+			unfinishedProcessingRecordsV2.map { it.key() to it.value() } +
+				unfinishedProcessingRecordsV3.map { it.key() to it.value().toAvroProcessingEvent() }
+			)
+			// A key can be unfinished from one topic's own perspective but finished according to the
+			// other (e.g. RECEIVED/STARTED on v2, then ARCHIVED/FINISHED on v3 for the same task).
+			// Re-apply the merged finished-key filter so finished-key filtering semantics are the same
+			// as for a single-format history.
+			.filter { (key, _) -> !finishedKeys.contains(key) }
 			.fold(hashMapOf<Key, ProcessingEvent>()) { acc, (key, processingEvent) ->
 				getHighestProcessingEventState(key, acc, processingEvent)
 			}
@@ -115,6 +131,39 @@ class KafkaBootstrapConsumer(
 			.withKafkaGroupId("soknadsarkiverer-bootstrapping-processingevent-$uuid")
 			.withValueDeserializer(PoisonSwallowingAvroDeserializer())
 			.forTopic(processingTopic)
+			.getAllKafkaRecords()
+
+		return allFinishedKeys to kafkaRecords
+	}
+
+	/**
+	 * Same shape as [getProcessingRecords], but for the v3 JSON processing-event history (issue #263's
+	 * local [ProcessingEventJson] model). Kept as a separate topic read - rather than folded into
+	 * [getProcessingRecords] - because the two topics use different deserializers (Avro vs JSON), but
+	 * it mirrors the same finished-key/poison-message handling so both histories behave identically.
+	 * Malformed v3 payloads are dropped via [PoisonSwallowingProcessingEventJsonDeserializer] (which
+	 * wraps issue #263's [ProcessingEventJsonDeserializer]), the same way
+	 * [PoisonSwallowingAvroDeserializer] drops malformed legacy payloads.
+	 */
+	private fun getProcessingRecordsV3(): Pair<HashSet<Key>, List<ConsumerRecord<Key, ProcessingEventJson>>> {
+		val allFinishedKeys = hashSetOf<Key>()
+
+		val keepUnfinishedRecordsFilter = { records: List<ConsumerRecord<Key, ProcessingEventJson>> ->
+
+			val finishedKeys = records
+				.filter { it.value().type == ProcessingEventType.FINISHED || it.value().type == ProcessingEventType.FAILURE }
+				.map { it.key() }
+
+			allFinishedKeys.addAll(finishedKeys)
+			records.filter { !finishedKeys.contains(it.key()) }
+		}
+
+		val kafkaRecords = BootstrapConsumer.Builder<ProcessingEventJson>()
+			.withFilter(keepUnfinishedRecordsFilter)
+			.withKafkaConfig(kafkaConfig)
+			.withKafkaGroupId("soknadsarkiverer-bootstrapping-processingevent-v3-$uuid")
+			.withValueDeserializer(PoisonSwallowingProcessingEventJsonDeserializer())
+			.forTopic(processingTopicV3)
 			.getAllKafkaRecords()
 
 		return allFinishedKeys to kafkaRecords

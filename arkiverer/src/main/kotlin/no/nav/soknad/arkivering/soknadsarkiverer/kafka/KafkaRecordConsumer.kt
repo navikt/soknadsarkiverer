@@ -207,6 +207,35 @@ class PoisonSwallowingJsonDeserializer<T>(
 	}
 }
 
+/**
+ * Explicitly swallow exceptions to avoid poison-pills preventing the whole v3 processing-event topic
+ * from being read (issue #264), mirroring [PoisonSwallowingAvroDeserializer]'s behavior for the v2
+ * topic. Reuses issue #263's [ProcessingEventJsonDeserializer] rather than the generic
+ * [PoisonSwallowingJsonDeserializer]: Kafka's consumer instantiates deserializers reflectively from
+ * just a class name (see [KafkaRecordConsumer.kafkaConfig]), calling only their no-arg constructor,
+ * so a deserializer with a required type-parameter/constructor argument (like
+ * [PoisonSwallowingJsonDeserializer]) would silently fall back to its default target type instead of
+ * the one configured in code. Being a concrete, non-generic class avoids that pitfall.
+ */
+class PoisonSwallowingProcessingEventJsonDeserializer : Deserializer<ProcessingEventJson> {
+	private val delegate = ProcessingEventJsonDeserializer()
+	private val logger = LoggerFactory.getLogger(javaClass)
+
+	override fun deserialize(topic: String, data: ByteArray?): ProcessingEventJson? {
+		if (data == null) return null
+
+		return try {
+			delegate.deserialize(topic, data)
+		} catch (e: Exception) {
+			logger.error(
+				"Unable to deserialize v3 JSON processing event on topic $topic\nByte Array: ${data.asList()}\n" +
+					"String representation: '${String(data)}'", e
+			)
+			null
+		}
+	}
+}
+
 abstract class KafkaConsumerBuilder<T, R> {
 	var kafkaConfig: KafkaConfig? = null
 	var kafkaGroupId: String? = null

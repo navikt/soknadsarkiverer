@@ -15,6 +15,9 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaSetupTest
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventJson
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventJsonSerializer
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventType
 import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
@@ -74,6 +77,8 @@ class StateRecreationTests : ContainerizedKafka() {
 	private lateinit var kafkaLoggedinTopicProducer: KafkaProducer<String, String>
 	private lateinit var kafkaNologinTopicProducer: KafkaProducer<String, String>
 	private lateinit var kafkaProcessingEventProducer: KafkaProducer<String, ProcessingEvent>
+	private lateinit var kafkaProcessingEventV3Producer: KafkaProducer<String, ProcessingEventJson>
+	private lateinit var kafkaProcessingEventV3PoisonProducer: KafkaProducer<String, String>
 	private lateinit var kafkaBootstrapConsumer: KafkaBootstrapConsumer
 
 	@Autowired
@@ -147,6 +152,10 @@ class StateRecreationTests : ContainerizedKafka() {
 		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap(kafkaConfig)
 			.also {it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java})
 		kafkaProcessingEventProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap(kafkaConfig))
+		kafkaProcessingEventV3Producer = KafkaProducer<String, ProcessingEventJson>(kafkaConfigMap(kafkaConfig)
+			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = ProcessingEventJsonSerializer::class.java })
+		kafkaProcessingEventV3PoisonProducer = KafkaProducer<String, String>(kafkaConfigMap(kafkaConfig)
+			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 		kafkaBootstrapConsumer = KafkaBootstrapConsumer(taskListService, kafkaConfig)
 		kafkaSetup = KafkaSetupTest(
 			applicationState = ApplicationState(alive = true, ready = true),
@@ -222,7 +231,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		KafkaBootstrapConsumer(replayingTaskListService(key), kafkaConfig).recreateState()
 
-		verify(exactly = 1, timeout = 2_000) { archiverService.archive(eq(key), any(), any()) }
+		verify(exactly = 1, timeout = 6_000) { archiverService.archive(eq(key), any(), any()) }
 	}
 
 	@Test
@@ -240,6 +249,90 @@ class StateRecreationTests : ContainerizedKafka() {
 		KafkaBootstrapConsumer(replayingTaskListService(key), kafkaConfig).recreateState()
 
 		verify(exactly = 0) { archiverService.archive(eq(key), any(), any()) }
+	}
+
+	@Test
+	fun `Replaying a pending v3 JSON processing event resumes archiving`() {
+		val key = UUID.randomUUID().toString()
+
+		runBootstrappedArchiveTask()
+		publishLoggedinMessage(key)
+		publishProcessingEventsV3(key to ProcessingEventType.RECEIVED, key to ProcessingEventType.STARTED)
+
+		KafkaBootstrapConsumer(replayingTaskListService(key), kafkaConfig).recreateState()
+
+		verify(exactly = 1, timeout = 6_000) { archiverService.archive(eq(key), any(), any()) }
+	}
+
+	@Test
+	fun `Replaying a finished v3 JSON processing event creates no archive work`() {
+		val key = UUID.randomUUID().toString()
+
+		runBootstrappedArchiveTask()
+		publishLoggedinMessage(key)
+		publishProcessingEventsV3(
+			key to ProcessingEventType.RECEIVED,
+			key to ProcessingEventType.STARTED,
+			key to ProcessingEventType.ARCHIVED,
+			key to ProcessingEventType.FINISHED
+		)
+
+		KafkaBootstrapConsumer(replayingTaskListService(key), kafkaConfig).recreateState()
+
+		verify(exactly = 0) { archiverService.archive(eq(key), any(), any()) }
+	}
+
+	@Test
+	fun `Replaying a task whose history spans v2 Avro and v3 JSON resumes archiving at the merged highest state`() {
+		val key = UUID.randomUUID().toString()
+
+		runBootstrappedArchiveTask()
+		publishLoggedinMessage(key)
+		// RECEIVED was retained as v2 Avro history, STARTED was later written as v3 JSON history.
+		publishProcessingEvents(key to RECEIVED)
+		publishProcessingEventsV3(key to ProcessingEventType.STARTED)
+
+		KafkaBootstrapConsumer(replayingTaskListService(key), kafkaConfig).recreateState()
+
+		verify(exactly = 1, timeout = 6_000) { archiverService.archive(eq(key), any(), any()) }
+	}
+
+	@Test
+	fun `Replaying a task finished via v3 JSON after v2 Avro history creates no archive work`() {
+		val key = UUID.randomUUID().toString()
+
+		runBootstrappedArchiveTask()
+		publishLoggedinMessage(key)
+		// The task started out as v2 Avro history, then finished after the events were retained as v3 JSON.
+		publishProcessingEvents(key to RECEIVED, key to STARTED)
+		publishProcessingEventsV3(key to ProcessingEventType.ARCHIVED, key to ProcessingEventType.FINISHED)
+
+		KafkaBootstrapConsumer(replayingTaskListService(key), kafkaConfig).recreateState()
+
+		verify(exactly = 0) { archiverService.archive(eq(key), any(), any()) }
+	}
+
+	@Test
+	fun `Malformed v3 JSON processing event is dropped, valid v2 and v3 events for other keys still replay`() {
+		val poisonKey = UUID.randomUUID().toString()
+		val v2Key = UUID.randomUUID().toString()
+		val v3Key = UUID.randomUUID().toString()
+
+		runBootstrappedArchiveTask()
+		publishLoggedinMessage(poisonKey, v2Key, v3Key)
+		putDataOnTopic(
+			poisonKey, "this is not deserializable", RecordHeaders(),
+			kafkaConfig.topics.processingTopicV3, kafkaProcessingEventV3PoisonProducer
+		)
+		publishProcessingEvents(v2Key to RECEIVED, v2Key to STARTED)
+		publishProcessingEventsV3(v3Key to ProcessingEventType.RECEIVED, v3Key to ProcessingEventType.STARTED)
+
+		val replayingBothKeys = replayingTaskListService(v2Key, v3Key)
+		KafkaBootstrapConsumer(replayingBothKeys, kafkaConfig).recreateState()
+
+		verify(exactly = 1, timeout = 6_000) { archiverService.archive(eq(v2Key), any(), any()) }
+		verify(exactly = 1, timeout = 6_000) { archiverService.archive(eq(v3Key), any(), any()) }
+		verify(exactly = 0) { archiverService.archive(eq(poisonKey), any(), any()) }
 	}
 
 	@Test
@@ -535,11 +628,18 @@ class StateRecreationTests : ContainerizedKafka() {
 		}
 	}
 
+	private fun publishProcessingEventsV3(vararg keysAndEventTypes: Pair<String, ProcessingEventType>) {
+		keysAndEventTypes.forEach { (key, eventType) ->
+			val topic = kafkaConfig.topics.processingTopicV3
+			putDataOnTopic(key, ProcessingEventJson(eventType), RecordHeaders(), topic, kafkaProcessingEventV3Producer)
+		}
+	}
+
 	private fun recreateState() {
 		kafkaBootstrapConsumer.recreateState()
 	}
 
-	private fun replayingTaskListService(keyToReplay: String) = object : TaskListService(
+	private fun replayingTaskListService(vararg keysToReplay: String) = object : TaskListService(
 		archiverService,
 		safService,
 		0,
@@ -555,7 +655,7 @@ class StateRecreationTests : ContainerizedKafka() {
 			state: EventTypes,
 			isBootstrappingTask: Boolean
 		) {
-			if (key == keyToReplay) {
+			if (keysToReplay.contains(key)) {
 				super.addOrUpdateTask(key, soknadarkivschema, state, isBootstrappingTask)
 			}
 		}

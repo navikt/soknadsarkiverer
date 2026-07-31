@@ -30,6 +30,10 @@ data class Topics(
 	val metricsTopic : String,
 	val nologinSubmissionTopic : String,
 	val loggedinSubmissionTopic : String,
+	// v3 JSON processing-event topic (issue #264). Read-only during phase one: bootstrapping/replay
+	// also consumes this topic, but production writers remain v2 Avro (`processingTopic`) until the
+	// issue #265 cutover. Defaulted so existing deployments and tests keep working without a v3 topic.
+	val processingTopicV3 : String = "privat-soknadinnsending-processingeventlog-v3",
 )
 
 data class SchemaRegistry(
