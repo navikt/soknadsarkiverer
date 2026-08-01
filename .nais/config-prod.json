@@ -25,6 +25,8 @@
 	"kafka-message-topic": "team-soknad.privat-soknadinnsending-messages-v2",
 	"kafka-arkiveringstilbakemeldinger-topic": "team-soknad.privat-soknadinnsending-arkiveringstilbakemeldinger-v1",
 	"kafka-metrics-topic": "team-soknad.privat-soknadinnsending-metrics-v2",
+	"kafka-processingeventlog-v3-topic": "team-soknad.privat-soknadinnsending-processingeventlog-v3",
+	"kafka-metrics-v3-topic": "team-soknad.privat-soknadinnsending-metrics-v3",
 	"kafka-nologin-submission-topic": "team-soknad.privat-nologinsubmission-v1",
 	"kafka-loggedin-submission-topic": "team-soknad.privat-loggedinsubmission-v1",
 	"innsending-api-host": "http://innsending-api",

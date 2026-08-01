@@ -55,6 +55,21 @@ abstract class KafkaRecordConsumer<T, R>(
 
 		var timestampOfLastSuccessfulPoll = startTime
 		var hasReadRecords = false
+		// Whether at least one full poll cycle has already completed before the current iteration.
+		// A brand new consumer group's very first poll() call also performs the JoinGroup/SyncGroup
+		// rebalance handshake as part of that same call, which can - especially when several bootstrap
+		// scans join concurrently (issue #265) and contend for the same broker/coordinator resources -
+		// consume nearly the whole enforced-timeout budget by itself, even though it returns 0 records
+		// (no time left to also fetch). Without this guard, that single unlucky first poll could
+		// itself satisfy the enforced timeout and abort the scan before it ever got a real chance to
+		// fetch anything. Requiring at least one prior completed iteration guarantees the scan always
+		// gets a second poll cycle before the enforced timeout can apply - independent of the Kafka
+		// client's own assignment/rebalance state (which, e.g. under fully mocked consumers used in
+		// unit tests, may never reflect a "real" assignment at all, so gating on it directly would risk
+		// looping forever instead of safely falling through to a bounded timeout). The
+		// hasTimedOutWithoutRecords/-WithNoNewRecords ceilings (45s/30s) still apply unconditionally
+		// from the very first iteration, so a genuinely stuck/unreachable topic is always bounded.
+		var hasCompletedPreviousIteration = false
 
 		while (true) {
 			val newRecords = retrieveKafkaRecords(kafkaConsumer)
@@ -67,7 +82,7 @@ abstract class KafkaRecordConsumer<T, R>(
 
 			if (shouldStop(newRecords))
 				break
-			if (hasTimedOut(timestampOfLastSuccessfulPoll, hasReadRecords)) {
+			if (hasCompletedPreviousIteration && hasTimedOut(timestampOfLastSuccessfulPoll, hasReadRecords)) {
 				logger.warn(
 					"For topic ${kafkaConsumer.assignment()}: Was still consuming Kafka records " +
 						"${clock.currentTimeMillis() - startTime} ms after starting. Has read ${getRecords().size} records. " +
@@ -75,6 +90,7 @@ abstract class KafkaRecordConsumer<T, R>(
 				)
 				break
 			}
+			hasCompletedPreviousIteration = true
 			if (newRecords.isEmpty())
 				clock.sleep(sleepInMsBetweenFetches)
 		}

@@ -37,18 +37,24 @@ class KafkaStreamsSetup(
 	private val logger = LoggerFactory.getLogger(javaClass)
 
 	private val stringSerde = Serdes.StringSerde()
-	private val processingEventSerde = createProcessingEventSerde()
+	// Used to read the v3 JSON processing-event topic (issue #265's production cutover); no Schema
+	// Registry involved.
+	private val processingEventJsonSerde = ProcessingEventJsonSerde()
+	// Used only internally, for the (Avro-typed, in-memory-aggregated) `processingTopicContent` stream
+	// below and its joins - Kafka Streams may need to (de)serialize it to a repartition topic. This is
+	// unrelated to the v2 Avro `processingTopic`, which is no longer read here.
+	private val processingEventAvroSerde = createProcessingEventSerde()
 	private val mutableListSerde: Serde<MutableList<String>> = MutableListSerde()
 
 
 	private fun kafkaStreams(streamsBuilder: StreamsBuilder) {
 		val materialized = Materialized.`as`<String, MutableList<String>, KeyValueStore<Bytes, ByteArray>>("processingeventdtos").withValueSerde(mutableListSerde)
-		val processingTopicStream = streamsBuilder.stream(kafkaConfig.topics.processingTopic , Consumed.with(stringSerde, processingEventSerde))
+		val processingTopicStream = streamsBuilder.stream(kafkaConfig.topics.processingTopicV3, Consumed.with(stringSerde, processingEventJsonSerde))
 
-		val joinDefLoggedin = Joined.with(stringSerde, processingEventSerde, stringSerde, "loggedinArchivingState")
+		val joinDefLoggedin = Joined.with(stringSerde, processingEventAvroSerde, stringSerde, "loggedinArchivingState")
 		val loggedinStream = streamsBuilder.stream(kafkaConfig.topics.loggedinSubmissionTopic, Consumed.with(stringSerde, stringSerde))
 
-		val joinDefNoLogin = Joined.with(stringSerde, processingEventSerde, stringSerde, "noLoginArchivingState")
+		val joinDefNoLogin = Joined.with(stringSerde, processingEventAvroSerde, stringSerde, "noLoginArchivingState")
 		val noLoginStream = streamsBuilder.stream(kafkaConfig.topics.nologinSubmissionTopic, Consumed.with(stringSerde, stringSerde))
 
 		val processingTopicContent =

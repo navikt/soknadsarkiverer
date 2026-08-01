@@ -35,6 +35,7 @@ import org.apache.kafka.streams.KafkaStreams
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.springframework.beans.factory.annotation.Autowired
@@ -45,6 +46,8 @@ import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.util.*
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 
 @SpringBootTest
@@ -137,6 +140,19 @@ class StateRecreationTests : ContainerizedKafka() {
 		}
 	}
 
+	@AfterEach
+	fun tearDown() {
+		metrics.unregister()
+		// TaskListService.tryToArchive dispatches archiving via CoroutineScope(Dispatchers.Default).launch
+		// (fire-and-forget), so a test's archiving work can still be in flight when the test method
+		// returns. Since archiverService/taskListService are shared mockk instances across all tests in
+		// this class (@TestInstance(PER_CLASS)), clear their recorded call history (but keep the
+		// `every { ... }` stubs, hence answers = false) between tests so a straggling call from one test
+		// can't be mistaken for - or otherwise pollute the diagnostics of - a subsequent test's
+		// verify(...) on the same mocks.
+		clearMocks(archiverService, taskListService, answers = false)
+	}
+
 	@BeforeEach
 	fun setup() {
 		wireMock.resetAll()
@@ -226,12 +242,14 @@ class StateRecreationTests : ContainerizedKafka() {
 		val key = UUID.randomUUID().toString()
 
 		runBootstrappedArchiveTask()
+		val archived = archiveLatch(key)
 		publishLoggedinMessage(key)
 		publishProcessingEvents(key to RECEIVED, key to STARTED)
 
 		KafkaBootstrapConsumer(replayingTaskListService(key), kafkaConfig).recreateState()
 
-		verify(exactly = 1, timeout = 6_000) { archiverService.archive(eq(key), any(), any()) }
+		assertTrue(archived.await(10, TimeUnit.SECONDS), "Expected archiverService.archive(key=$key) within 10s")
+		verify(exactly = 1) { archiverService.archive(eq(key), any(), any()) }
 	}
 
 	@Test
@@ -256,12 +274,14 @@ class StateRecreationTests : ContainerizedKafka() {
 		val key = UUID.randomUUID().toString()
 
 		runBootstrappedArchiveTask()
+		val archived = archiveLatch(key)
 		publishLoggedinMessage(key)
 		publishProcessingEventsV3(key to ProcessingEventType.RECEIVED, key to ProcessingEventType.STARTED)
 
 		KafkaBootstrapConsumer(replayingTaskListService(key), kafkaConfig).recreateState()
 
-		verify(exactly = 1, timeout = 6_000) { archiverService.archive(eq(key), any(), any()) }
+		assertTrue(archived.await(10, TimeUnit.SECONDS), "Expected archiverService.archive(key=$key) within 10s")
+		verify(exactly = 1) { archiverService.archive(eq(key), any(), any()) }
 	}
 
 	@Test
@@ -287,6 +307,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		val key = UUID.randomUUID().toString()
 
 		runBootstrappedArchiveTask()
+		val archived = archiveLatch(key)
 		publishLoggedinMessage(key)
 		// RECEIVED was retained as v2 Avro history, STARTED was later written as v3 JSON history.
 		publishProcessingEvents(key to RECEIVED)
@@ -294,7 +315,8 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		KafkaBootstrapConsumer(replayingTaskListService(key), kafkaConfig).recreateState()
 
-		verify(exactly = 1, timeout = 6_000) { archiverService.archive(eq(key), any(), any()) }
+		assertTrue(archived.await(10, TimeUnit.SECONDS), "Expected archiverService.archive(key=$key) within 10s")
+		verify(exactly = 1) { archiverService.archive(eq(key), any(), any()) }
 	}
 
 	@Test
@@ -319,6 +341,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		val v3Key = UUID.randomUUID().toString()
 
 		runBootstrappedArchiveTask()
+		val archived = archiveLatch(v2Key, v3Key)
 		publishLoggedinMessage(poisonKey, v2Key, v3Key)
 		putDataOnTopic(
 			poisonKey, "this is not deserializable", RecordHeaders(),
@@ -330,8 +353,12 @@ class StateRecreationTests : ContainerizedKafka() {
 		val replayingBothKeys = replayingTaskListService(v2Key, v3Key)
 		KafkaBootstrapConsumer(replayingBothKeys, kafkaConfig).recreateState()
 
-		verify(exactly = 1, timeout = 6_000) { archiverService.archive(eq(v2Key), any(), any()) }
-		verify(exactly = 1, timeout = 6_000) { archiverService.archive(eq(v3Key), any(), any()) }
+		assertTrue(
+			archived.await(10, TimeUnit.SECONDS),
+			"Expected archiverService.archive(...) for both v2Key=$v2Key and v3Key=$v3Key within 10s"
+		)
+		verify(exactly = 1) { archiverService.archive(eq(v2Key), any(), any()) }
+		verify(exactly = 1) { archiverService.archive(eq(v3Key), any(), any()) }
 		verify(exactly = 0) { archiverService.archive(eq(poisonKey), any(), any()) }
 	}
 
@@ -665,6 +692,23 @@ class StateRecreationTests : ContainerizedKafka() {
 		val task = slot<() -> Unit>()
 		every { safService.hentJournalpostGittInnsendingId(any()) } returns null
 		every { scheduler.scheduleSingleTask(capture(task), any()) } answers { task.captured.invoke() }
+	}
+
+	// archiverService.archive(...) runs on TaskListService's fire-and-forget
+	// CoroutineScope(Dispatchers.Default).launch { ... } (see TaskListService.tryToArchive), so tests
+	// can't assert on it synchronously right after recreateState() returns. Rather than polling for it
+	// with MockK's verify(timeout = ...) - which races against, and can itself add CPU pressure that
+	// competes with, that same coroutine, making failures worse the longer the timeout is set to - each
+	// key gets its own CountDownLatch that is counted down the instant archive() is actually invoked for
+	// that key. This is a one-shot, event-driven wait: it returns as soon as the call happens rather than
+	// on a polling cadence, and - since the latch is a fresh local object per test - it can't be confused
+	// by a leftover call from a previous test the way shared-mock call-history-based verification can.
+	private fun archiveLatch(vararg keys: String): CountDownLatch {
+		val latch = CountDownLatch(keys.size)
+		keys.forEach { key ->
+			every { archiverService.archive(eq(key), any(), any()) } answers { latch.countDown() }
+		}
+		return latch
 	}
 
 

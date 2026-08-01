@@ -30,10 +30,14 @@ data class Topics(
 	val metricsTopic : String,
 	val nologinSubmissionTopic : String,
 	val loggedinSubmissionTopic : String,
-	// v3 JSON processing-event topic (issue #264). Read-only during phase one: bootstrapping/replay
-	// also consumes this topic, but production writers remain v2 Avro (`processingTopic`) until the
-	// issue #265 cutover. Defaulted so existing deployments and tests keep working without a v3 topic.
+	// v3 JSON processing-event topic (issue #264/#265). This is now the only topic production code
+	// writes processing events to (see KafkaPublisher); processingTopic (v2 Avro) is read-only,
+	// kept around solely so bootstrapping/replay can still recover state written before the cutover.
+	// Defaulted so existing deployments and tests keep working without an explicitly configured v3 topic.
 	val processingTopicV3 : String = "privat-soknadinnsending-processingeventlog-v3",
+	// v3 JSON metrics topic (issue #265). This is now the only topic production code writes metrics
+	// to (see KafkaPublisher); metricsTopic (v2 Avro) is no longer written to.
+	val metricsTopicV3 : String = "privat-soknadinnsending-metrics-v3",
 )
 
 data class SchemaRegistry(

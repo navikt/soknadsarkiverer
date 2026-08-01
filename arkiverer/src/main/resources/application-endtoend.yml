@@ -13,6 +13,7 @@ kafka:
     nologinSubmissionTopic: privat-soknadinnsending-nologin-submission-v1-dev
     loggedinSubmissionTopic: privat-soknadinnsending-loggedin-submission-v1-dev
     processingTopicV3: privat-soknadinnsending-processingeventlog-v3-dev
+    metricsTopicV3: privat-soknadinnsending-metrics-v3-dev
 services:
   tasklist:
     scheduling:
