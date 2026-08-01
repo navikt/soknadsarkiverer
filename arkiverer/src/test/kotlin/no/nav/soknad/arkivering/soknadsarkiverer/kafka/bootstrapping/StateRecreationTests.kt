@@ -8,8 +8,6 @@ import io.mockk.*
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import kotlinx.coroutines.runBlocking
 import no.nav.soknad.arkivering.avroschemas.EventTypes
-import no.nav.soknad.arkivering.avroschemas.EventTypes.*
-import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
@@ -18,6 +16,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaSetupTest
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventJson
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventJsonSerializer
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventType
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventType.*
 import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
@@ -50,6 +49,14 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 
+/**
+ * Default bootstrap/replay regression suite (issue #266). Exercises only the JSON v3
+ * processing-event contract (`processingTopicV3`) and never starts an Avro producer, so the
+ * default local/integration test path is genuinely Avro-free (issue #260, user story 12). The one
+ * narrowly scoped test that still starts/uses Avro and the mocked Schema Registry - proving replay
+ * recovery from retained v2 processing-event history - lives in [LegacyAvroReplayTest] instead.
+ * Do not add Avro producers or `EventTypes.*`/`ProcessingEvent` (Avro) usage back into this class.
+ */
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ConfigurationPropertiesScan("no.nav.soknad.arkivering")
@@ -79,7 +86,6 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	private lateinit var kafkaLoggedinTopicProducer: KafkaProducer<String, String>
 	private lateinit var kafkaNologinTopicProducer: KafkaProducer<String, String>
-	private lateinit var kafkaProcessingEventProducer: KafkaProducer<String, ProcessingEvent>
 	private lateinit var kafkaProcessingEventV3Producer: KafkaProducer<String, ProcessingEventJson>
 	private lateinit var kafkaProcessingEventV3PoisonProducer: KafkaProducer<String, String>
 	private lateinit var kafkaBootstrapConsumer: KafkaBootstrapConsumer
@@ -167,7 +173,6 @@ class StateRecreationTests : ContainerizedKafka() {
 			.also {it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java})
 		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap(kafkaConfig)
 			.also {it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java})
-		kafkaProcessingEventProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap(kafkaConfig))
 		kafkaProcessingEventV3Producer = KafkaProducer<String, ProcessingEventJson>(kafkaConfigMap(kafkaConfig)
 			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = ProcessingEventJsonSerializer::class.java })
 		kafkaProcessingEventV3PoisonProducer = KafkaProducer<String, String>(kafkaConfigMap(kafkaConfig)
@@ -212,7 +217,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		mockSafRequest_notFound(innsendingsId = key)
 
 		publishLoggedinMessage(key)
-		publishProcessingEvents(key to RECEIVED)
+		publishProcessingEventsV3(key to RECEIVED)
 
 		recreateState()
 
@@ -230,44 +235,18 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		publishNoLoginMessage(key)
 
-		publishProcessingEvents(key to RECEIVED)
+		publishProcessingEventsV3(key to RECEIVED)
 
 		recreateState()
 
 		verifyThatTaskListService().wasCalled(1).forKey(key)
 	}
 
-	@Test
-	fun `Replaying a pending v2 Avro processing event resumes archiving`() {
-		val key = UUID.randomUUID().toString()
-
-		runBootstrappedArchiveTask()
-		val archived = archiveLatch(key)
-		publishLoggedinMessage(key)
-		publishProcessingEvents(key to RECEIVED, key to STARTED)
-
-		KafkaBootstrapConsumer(replayingTaskListService(key), kafkaConfig).recreateState()
-
-		assertTrue(archived.await(10, TimeUnit.SECONDS), "Expected archiverService.archive(key=$key) within 10s")
-		verify(exactly = 1) { archiverService.archive(eq(key), any(), any()) }
-	}
-
-	@Test
-	fun `Replaying a finished v2 Avro processing event creates no archive work`() {
-		val key = UUID.randomUUID().toString()
-
-		runBootstrappedArchiveTask()
-		publishLoggedinMessage(key)
-		publishProcessingEvents(
-			key to RECEIVED,
-			key to STARTED,
-			key to ARCHIVED,
-			key to FINISHED
-		)
-		KafkaBootstrapConsumer(replayingTaskListService(key), kafkaConfig).recreateState()
-
-		verify(exactly = 0) { archiverService.archive(eq(key), any(), any()) }
-	}
+	// Note: the pure v2-Avro-only replay scenarios, and the dual v2 Avro + v3 JSON history-merge
+	// scenarios, are deliberately NOT tested here. Issue #266 confines all Avro/Schema-Registry test
+	// producer setup to the single, isolated `LegacyAvroReplayTest`, so that this default test class
+	// never starts an Avro producer and the default test path is genuinely Avro-free. See
+	// LegacyAvroReplayTest for that coverage.
 
 	@Test
 	fun `Replaying a pending v3 JSON processing event resumes archiving`() {
@@ -303,62 +282,30 @@ class StateRecreationTests : ContainerizedKafka() {
 	}
 
 	@Test
-	fun `Replaying a task whose history spans v2 Avro and v3 JSON resumes archiving at the merged highest state`() {
-		val key = UUID.randomUUID().toString()
-
-		runBootstrappedArchiveTask()
-		val archived = archiveLatch(key)
-		publishLoggedinMessage(key)
-		// RECEIVED was retained as v2 Avro history, STARTED was later written as v3 JSON history.
-		publishProcessingEvents(key to RECEIVED)
-		publishProcessingEventsV3(key to ProcessingEventType.STARTED)
-
-		KafkaBootstrapConsumer(replayingTaskListService(key), kafkaConfig).recreateState()
-
-		assertTrue(archived.await(10, TimeUnit.SECONDS), "Expected archiverService.archive(key=$key) within 10s")
-		verify(exactly = 1) { archiverService.archive(eq(key), any(), any()) }
-	}
-
-	@Test
-	fun `Replaying a task finished via v3 JSON after v2 Avro history creates no archive work`() {
-		val key = UUID.randomUUID().toString()
-
-		runBootstrappedArchiveTask()
-		publishLoggedinMessage(key)
-		// The task started out as v2 Avro history, then finished after the events were retained as v3 JSON.
-		publishProcessingEvents(key to RECEIVED, key to STARTED)
-		publishProcessingEventsV3(key to ProcessingEventType.ARCHIVED, key to ProcessingEventType.FINISHED)
-
-		KafkaBootstrapConsumer(replayingTaskListService(key), kafkaConfig).recreateState()
-
-		verify(exactly = 0) { archiverService.archive(eq(key), any(), any()) }
-	}
-
-	@Test
-	fun `Malformed v3 JSON processing event is dropped, valid v2 and v3 events for other keys still replay`() {
+	fun `Malformed v3 JSON processing event is dropped, valid v3 events for other keys still replay`() {
 		val poisonKey = UUID.randomUUID().toString()
-		val v2Key = UUID.randomUUID().toString()
-		val v3Key = UUID.randomUUID().toString()
+		val firstValidKey = UUID.randomUUID().toString()
+		val secondValidKey = UUID.randomUUID().toString()
 
 		runBootstrappedArchiveTask()
-		val archived = archiveLatch(v2Key, v3Key)
-		publishLoggedinMessage(poisonKey, v2Key, v3Key)
+		val archived = archiveLatch(firstValidKey, secondValidKey)
+		publishLoggedinMessage(poisonKey, firstValidKey, secondValidKey)
 		putDataOnTopic(
 			poisonKey, "this is not deserializable", RecordHeaders(),
 			kafkaConfig.topics.processingTopicV3, kafkaProcessingEventV3PoisonProducer
 		)
-		publishProcessingEvents(v2Key to RECEIVED, v2Key to STARTED)
-		publishProcessingEventsV3(v3Key to ProcessingEventType.RECEIVED, v3Key to ProcessingEventType.STARTED)
+		publishProcessingEventsV3(firstValidKey to ProcessingEventType.RECEIVED, firstValidKey to ProcessingEventType.STARTED)
+		publishProcessingEventsV3(secondValidKey to ProcessingEventType.RECEIVED, secondValidKey to ProcessingEventType.STARTED)
 
-		val replayingBothKeys = replayingTaskListService(v2Key, v3Key)
+		val replayingBothKeys = replayingTaskListService(firstValidKey, secondValidKey)
 		KafkaBootstrapConsumer(replayingBothKeys, kafkaConfig).recreateState()
 
 		assertTrue(
 			archived.await(10, TimeUnit.SECONDS),
-			"Expected archiverService.archive(...) for both v2Key=$v2Key and v3Key=$v3Key within 10s"
+			"Expected archiverService.archive(...) for both firstValidKey=$firstValidKey and secondValidKey=$secondValidKey within 10s"
 		)
-		verify(exactly = 1) { archiverService.archive(eq(v2Key), any(), any()) }
-		verify(exactly = 1) { archiverService.archive(eq(v3Key), any(), any()) }
+		verify(exactly = 1) { archiverService.archive(eq(firstValidKey), any(), any()) }
+		verify(exactly = 1) { archiverService.archive(eq(secondValidKey), any(), any()) }
 		verify(exactly = 0) { archiverService.archive(eq(poisonKey), any(), any()) }
 	}
 
@@ -367,7 +314,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		val key = UUID.randomUUID().toString()
 
 		publishLoggedinMessage(key)
-		publishProcessingEvents(
+		publishProcessingEventsV3(
 			key to RECEIVED,
 			key to STARTED
 		)
@@ -384,7 +331,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		publishLoggedinMessage(key)
 		publishNoLoginMessage(key2)
-		publishProcessingEvents(
+		publishProcessingEventsV3(
 			key to RECEIVED,
 			key to STARTED,
 			key2 to RECEIVED,
@@ -402,7 +349,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		val key = UUID.randomUUID().toString()
 
 		publishLoggedinMessage(key)
-		publishProcessingEvents(
+		publishProcessingEventsV3(
 			key to RECEIVED,
 			key to STARTED,
 			key to ARCHIVED,
@@ -420,7 +367,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		val key1 = UUID.randomUUID().toString()
 
 		publishLoggedinMessage(key0, key1)
-		publishProcessingEvents(
+		publishProcessingEventsV3(
 			key0 to RECEIVED,
 			key0 to STARTED,
 
@@ -439,7 +386,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		val key = UUID.randomUUID().toString()
 
 		publishLoggedinMessage(key)
-		publishProcessingEvents(
+		publishProcessingEventsV3(
 			key to RECEIVED,
 			key to STARTED,
 			key to STARTED,
@@ -457,7 +404,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		val key = UUID.randomUUID().toString()
 
 		publishLoggedinMessage(key)
-		publishProcessingEvents(
+		publishProcessingEventsV3(
 			key to RECEIVED,
 			key to STARTED,
 			key to ARCHIVED,
@@ -476,7 +423,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		val key1 = UUID.randomUUID().toString()
 
 		publishLoggedinMessage(key0, key1)
-		publishProcessingEvents(
+		publishProcessingEventsV3(
 			key0 to RECEIVED,
 			key0 to STARTED,
 
@@ -499,7 +446,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		val key2 = UUID.randomUUID().toString()
 
 		publishLoggedinMessage(key0, key1, key2)
-		publishProcessingEvents(
+		publishProcessingEventsV3(
 			key1 to RECEIVED,
 			key0 to RECEIVED,
 			key1 to STARTED,
@@ -523,7 +470,7 @@ class StateRecreationTests : ContainerizedKafka() {
 	fun `Can read Event Log where soknadsarkivschema is missing`() {
 		val key = UUID.randomUUID().toString()
 
-		publishProcessingEvents(key to RECEIVED, key to STARTED)
+		publishProcessingEventsV3(key to RECEIVED, key to STARTED)
 
 		recreateState()
 
@@ -535,14 +482,14 @@ class StateRecreationTests : ContainerizedKafka() {
 		val key = UUID.randomUUID().toString()
 
 		publishLoggedinMessage(key)
-		publishProcessingEvents(
+		publishProcessingEventsV3(
 			key to RECEIVED,
 			key to STARTED
 		)
 
 		recreateState()
 
-		publishProcessingEvents(key to STARTED)
+		publishProcessingEventsV3(key to STARTED)
 
 		verifyThatTaskListService().wasCalled(1).forKey(key)
 	}
@@ -555,7 +502,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		keyList.forEach { key -> publishLoggedinMessage(key) }
 
 		keyList.forEach { key ->
-			publishProcessingEvents(
+			publishProcessingEventsV3(
 				key to RECEIVED,
 				key to STARTED,
 				key to ARCHIVED,
@@ -576,7 +523,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		keyList.forEach { key -> publishLoggedinMessage(key) }
 
 		keyList.forEach { key ->
-			publishProcessingEvents(
+			publishProcessingEventsV3(
 				key to RECEIVED,
 				key to STARTED,
 				key to ARCHIVED,
@@ -600,7 +547,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		countFinishedOrFailure = 0
 		keyList.forEach { key ->
-			publishProcessingEvents(
+			publishProcessingEventsV3(
 				key to RECEIVED,
 				key to STARTED,
 				randomFailureOrFinishedOrStarted(key)
@@ -613,7 +560,7 @@ class StateRecreationTests : ContainerizedKafka() {
 	}
 
 
-	private fun randomFailureOrFinished(key: String): Pair<String, EventTypes> {
+	private fun randomFailureOrFinished(key: String): Pair<String, ProcessingEventType> {
 		val rand = (1..1000).random()
 		return if (rand > 600)
 			key to FAILURE
@@ -621,7 +568,7 @@ class StateRecreationTests : ContainerizedKafka() {
 			key to FINISHED
 	}
 
-	private fun randomFailureOrFinishedOrStarted(key: String): Pair<String, EventTypes> {
+	private fun randomFailureOrFinishedOrStarted(key: String): Pair<String, ProcessingEventType> {
 		val rand = (1..1000).random()
 		if (rand > 300) countFinishedOrFailure + 1 else countFinishedOrFailure
 		return if (rand > 400)
@@ -645,13 +592,6 @@ class StateRecreationTests : ContainerizedKafka() {
 			applications.put(it, notLoggedinSoknad.copy(innsendingsId = it, kanal = "NAV_NO_UINNLOGGET"))
 			val topic = kafkaConfig.topics.nologinSubmissionTopic
 			putDataOnTopic(it,  serializeMsg( notLoggedinSoknad.copy(innsendingsId = it)), RecordHeaders(), topic, kafkaNologinTopicProducer)
-		}
-	}
-
-	private fun publishProcessingEvents(vararg keysAndEventTypes: Pair<String, EventTypes>) {
-		keysAndEventTypes.forEach { (key, eventType) ->
-			val topic = kafkaConfig.topics.processingTopic
-			putDataOnTopic(key, ProcessingEvent(eventType), RecordHeaders(), topic, kafkaProcessingEventProducer)
 		}
 	}
 
