@@ -44,6 +44,7 @@ jobs:
         uses: navikt/archiving-infrastructure/.github/checkout-and-build@feature/json-v3-processing-events
         with:
           component_name: archiving-infrastructure
+          branch: feature/json-v3-processing-events # TEMPORARY: revert to main before merge
           sub_directory: system-tests
           skip_tests: false
           run_docker_build: false
