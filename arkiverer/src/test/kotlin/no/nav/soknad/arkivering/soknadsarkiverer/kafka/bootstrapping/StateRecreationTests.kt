@@ -353,7 +353,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		recreateState()
 
-		verifyThatTaskListService().wasNotCalled()
+		verifyThatTaskListService().wasNotCalledForKey(key)
 	}
 
 	@Test
@@ -391,7 +391,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		recreateState()
 
-		verifyThatTaskListService().wasNotCalled()
+		verifyThatTaskListService().wasNotCalledForKey(key)
 	}
 
 	@Test
@@ -409,7 +409,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		recreateState()
 
-		verifyThatTaskListService().wasNotCalled()
+		verifyThatTaskListService().wasNotCalledForKey(key)
 	}
 
 	@Test
@@ -469,7 +469,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		recreateState()
 
-		verifyThatTaskListService().wasNotCalled()
+		verifyThatTaskListService().wasNotCalledForKey(key)
 	}
 
 	@Test
@@ -507,7 +507,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		recreateState()
 
-		verifyThatTaskListService().wasNotCalled()
+		keyList.forEach { key -> verifyThatTaskListService().wasNotCalledForKey(key) }
 	}
 
 	@Test
@@ -528,7 +528,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		recreateState()
 
-		verifyThatTaskListService().wasNotCalled()
+		keyList.forEach { key -> verifyThatTaskListService().wasNotCalledForKey(key) }
 	}
 
 	var countFinishedOrFailure: Int = 0
@@ -659,12 +659,12 @@ class StateRecreationTests : ContainerizedKafka() {
 		}
 
 		fun wasNotCalled() {
-			verify()
+			verify(exactly = 0) { taskListService.addOrUpdateTask(any(), any(), any(), any()) }
 		}
 
 		fun wasNotCalledForKey(key: String) {
-			this.key = key
-			verify()
+			val application = applications[key] ?: loggedinSoknad
+			verify(exactly = 0) { taskListService.addOrUpdateTask(eq(key), eq(application), any(), any()) }
 		}
 
 		inner class KeyStep {
@@ -678,7 +678,7 @@ class StateRecreationTests : ContainerizedKafka() {
 			val key = this.key
 			val application = applications[key] ?: loggedinSoknad
 
-			if (key == null || timesCalled == 0)
+			if (key == null)
 				verify(atLeast = timesCalled) { taskListService.addOrUpdateTask(any(), any(), any(), any()) }
 			else
 				verify(atLeast = timesCalled) { taskListService.addOrUpdateTask(eq(key), eq(application), any(), any()) }
