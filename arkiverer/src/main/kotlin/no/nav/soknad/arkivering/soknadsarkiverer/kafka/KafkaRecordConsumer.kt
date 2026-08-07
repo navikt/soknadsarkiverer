@@ -47,7 +47,7 @@ abstract class KafkaRecordConsumer<T, R>(
 
 		} catch (e: Exception) {
 			logger.error("For topic $topic: Error getting records", e)
-			return emptyList()
+			throw e
 		}
 	}
 

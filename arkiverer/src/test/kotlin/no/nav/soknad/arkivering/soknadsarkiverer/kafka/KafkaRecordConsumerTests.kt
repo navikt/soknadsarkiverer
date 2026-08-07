@@ -26,12 +26,12 @@ class KafkaRecordConsumerTests {
 	}
 
 	@Test
-	fun `Polling throws exception - empty list is returned`() {
-		val result = consumerBuilder
-			.mockPollThrowsException()
-			.buildAndGetKafkaRecords()
-
-		assertTrue(result.isEmpty())
+	fun `Polling throws exception - exception is propagated`() {
+		assertThrows(Exception::class.java) {
+			consumerBuilder
+				.mockPollThrowsException()
+				.buildAndGetKafkaRecords()
+		}
 	}
 
 	@Test
