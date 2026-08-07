@@ -565,7 +565,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	private fun randomFailureOrFinishedOrStarted(key: String): Pair<String, ProcessingEventType> {
 		val rand = (1..1000).random()
-		if (rand > 300) countFinishedOrFailure + 1 else countFinishedOrFailure
+		if (rand > 300) countFinishedOrFailure += 1
 		return if (rand > 400)
 			key to FAILURE
 		else if (rand > 300)
