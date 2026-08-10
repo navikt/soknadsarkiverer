@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
 import org.springframework.security.authentication.BadCredentialsException
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator
 import org.springframework.security.oauth2.jwt.JwtAudienceValidator
@@ -18,6 +19,7 @@ import org.springframework.security.web.SecurityFilterChain
 
 @Configuration
 @Profile("!test & !docker")
+@EnableMethodSecurity
 class SecurityConfig(
 	@Value("\${spring.security.oauth2.resourceserver.jwt.issuer-uri}") private val azureadIssuer: String,
 	@Value("\${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") private val azureadJwkUri: String,
