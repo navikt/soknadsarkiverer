@@ -1,13 +1,16 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.core.Authentication
 import org.springframework.stereotype.Component
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
 
 
 @Component("issuerChecker")
-class IssuerChecker {
+class IssuerChecker(
+	@Value("\${auth.issuers.azuread.issuer-uri}") private val azureadIssuer: String
+) {
 
 	private val log = LoggerFactory.getLogger(javaClass)
 
@@ -17,9 +20,15 @@ class IssuerChecker {
 			return false
 		}
 
-		val issuer = authentication.token.issuer?.toString() ?: return false
+		val jwt = authentication.token
+		val issuer = jwt.issuer?.toString() ?: return false
+		if (!issuer.equals(azureadIssuer, ignoreCase = true)) {
+			log.info("Avvist: issuer $issuer er ikke konfigurert AzureAD issuer")
+			return false
+		}
+
 		log.debug("Issuer for token: $issuer")
 
-		return allowedIssuers.any { issuer.contains(it, ignoreCase = true) }
+		return true
 	}
 }

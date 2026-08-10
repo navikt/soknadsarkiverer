@@ -38,6 +38,13 @@ token:
   server:
     port: 1888
 
+auth:
+  issuers:
+    azuread:
+      issuer-uri: http://localhost:6969/azuread
+      jwk-set-uri: http://localhost:6969/azuread/.well-known/openid-configuration
+
+
 
 cron:
   startRetryOfFailedArchiving: 45 08 01 16 JAN ?
@@ -79,6 +86,7 @@ services:
     scheduling:
       startUpSeconds: 4
       secondsBetweenRetries: [0,1,0,0,0,0]
+
 no.nav.security:
   jwt:
     issuer.azuread:
