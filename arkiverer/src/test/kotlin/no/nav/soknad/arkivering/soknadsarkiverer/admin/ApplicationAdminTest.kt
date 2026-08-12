@@ -58,12 +58,19 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.extension.RegisterExtension
+import org.mockito.ArgumentMatchers.anyString
+import org.mockito.Mockito.`when`
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
 import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
+import org.springframework.security.oauth2.jwt.Jwt
+import org.springframework.security.oauth2.jwt.JwtDecoder
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
 import java.time.Duration
+import java.time.Instant
 import java.util.HashMap
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -79,7 +86,11 @@ import kotlin.collections.forEach
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @EnableMockOAuth2Server(port = 1888)
 @AutoConfigureWebTestClient
-class ApplicationAdminTest : ContainerizedKafka() {
+class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private val azureadIssuer: String)
+	: ContainerizedKafka() {
+
+	@MockitoBean
+	protected lateinit var azureJwtDecoder: JwtDecoder
 
 	@MockitoBean
 	lateinit var prometheusRegistry: PrometheusRegistry
@@ -199,12 +210,13 @@ class ApplicationAdminTest : ContainerizedKafka() {
 	fun `happy case - application is archieved in after retry`() {
 
 		// Given
-		//val token = mockOAuth2Server.issueToken("test-client-id").serialize()
-
 		val innsendingsId = failArchiving()
 		sleep(1000)
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId = innsendingsId)
+
+		val mockJwt = createJwtToken()
+		`when`(azureJwtDecoder.decode(anyString())).thenReturn(mockJwt.token)
 
 		// When
 		val response = webTestClient
@@ -238,12 +250,13 @@ class ApplicationAdminTest : ContainerizedKafka() {
 	fun `happy case - retry on archieved application is ignored`() {
 
 		// Given
-		//val token = mockOAuth2Server.issueToken("test-client-id").serialize()
-
 		val innsendingsId = successfullArchiving()
 		sleep(500)
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId = innsendingsId)
+
+		val mockJwt = createJwtToken()
+		`when`(azureJwtDecoder.decode(anyString())).thenReturn(mockJwt.token)
 
 		// When
 		val response = webTestClient
@@ -271,6 +284,70 @@ class ApplicationAdminTest : ContainerizedKafka() {
 				FAILURE hasCount 0
 			)
 		)
+
+	}
+
+
+	@Test
+	fun `fail case - call without token failes`() {
+
+		// Given
+		val innsendingsId = successfullArchiving()
+		sleep(500)
+		mockJoarkIsWorking()
+		mockSafRequest_notFound(innsendingsId = innsendingsId)
+
+		val mockJwt = null
+		`when`(azureJwtDecoder.decode(anyString())).thenReturn(mockJwt)
+
+		// When
+		val response = webTestClient
+			.mutate()
+			.responseTimeout(Duration.ofMinutes(2))
+			.build()
+
+			.post()
+			.uri { uriBuilder -> uriBuilder.path("/admin/rerun/$innsendingsId").build() }
+			.headers { it.addAll(createHeaders(issuer = null)) }
+
+			.exchange()
+			.returnResult()
+
+
+		// Then
+		assert(response.status == HttpStatus.UNAUTHORIZED)
+
+	}
+
+
+	@Test
+	fun `fail case - call with wrong issuer failes`() {
+
+		// Given
+		val innsendingsId = successfullArchiving()
+		sleep(500)
+		mockJoarkIsWorking()
+		mockSafRequest_notFound(innsendingsId = innsendingsId)
+
+		val mockJwt = createJwtToken(issuer = "http://localhost/tokenx")
+		`when`(azureJwtDecoder.decode(anyString())).thenReturn(mockJwt.token)
+
+		// When
+		val response = webTestClient
+			.mutate()
+			.responseTimeout(Duration.ofMinutes(2))
+			.build()
+
+			.post()
+			.uri { uriBuilder -> uriBuilder.path("/admin/rerun/$innsendingsId").build() }
+			.headers { it.addAll(createHeaders(issuer = "tokenx")) }
+
+			.exchange()
+			.returnResult()
+
+
+		// Then
+		assert(response.status == HttpStatus.UNAUTHORIZED)
 
 	}
 
@@ -413,6 +490,7 @@ class ApplicationAdminTest : ContainerizedKafka() {
 		val token = when {
 			issuer == null -> null
 			issuer == "azuread" -> TokenGenerator(mockOAuth2Server).lagAzureADToken(audience_ = audience)
+			issuer == "tokenx" -> TokenGenerator(mockOAuth2Server).lagTokenxToken(audience_ = audience)
 			else -> null
 		}
 		val headers = HttpHeaders()
@@ -425,5 +503,23 @@ class ApplicationAdminTest : ContainerizedKafka() {
 	private val BEARER = "Bearer "
 
 	private infix fun <A> A.hasCount(count: Int) = this to count
+
+	private fun createJwtToken(issuer: String? = azureadIssuer): JwtAuthenticationToken {
+		val now = Instant.now()
+		val jwt = Jwt.withTokenValue("local-auth-disabled")
+			.header("alg", "none")
+			.subject("local-dev-user")
+			.issuedAt(now)
+			.expiresAt(now.plusSeconds(3600))
+			.claim("iss", issuer)
+			.claim("aud", "local-dev")
+			.claim("NAVident", "A123456")
+			.claim("preferred_username", "local-dev@example.com")
+			.claim("scp", "defaultaccess serviceklage-klassifisering")
+			.build()
+
+		return JwtAuthenticationToken(jwt)
+	}
+
 
 }

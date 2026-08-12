@@ -1,11 +1,10 @@
-package no.nav.soknad.arkivering.soknadsarkiverer.config
+package no.nav.soknad.arkivering.soknadsarkiverer.config.security
 
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.core.Authentication
-import org.springframework.stereotype.Component
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
-
+import org.springframework.stereotype.Component
 
 @Component("issuerChecker")
 class IssuerChecker(
@@ -14,7 +13,7 @@ class IssuerChecker(
 
 	private val log = LoggerFactory.getLogger(javaClass)
 
-	fun hasIssuer(authentication: Authentication, allowedIssuers: Collection<String>): Boolean {
+	fun hasIssuer(authentication: Authentication): Boolean {
 		if (authentication !is JwtAuthenticationToken) {
 			log.warn("Ingen JwtAuthenticationToken funnet, authentication er ${authentication::class.java.simpleName}")
 			return false

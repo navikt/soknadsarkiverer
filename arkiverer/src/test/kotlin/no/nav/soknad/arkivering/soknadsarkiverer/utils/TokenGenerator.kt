@@ -32,5 +32,21 @@ class TokenGenerator(
 		).serialize()
 	}
 
+	fun lagTokenxToken(fnr: String? = null, audience_: String?): String {
+		val pid = fnr ?: subject
+		val aud = audience_ ?: audience
+		return mockOAuth2Server.issueToken(
+			issuerId = "tokenx",
+			clientId = "application",
+			tokenCallback = DefaultOAuth2TokenCallback(
+				issuerId = "tokenx",
+				subject = pid,
+				typeHeader = JOSEObjectType.JWT.type,
+				claims = mapOf("aud" to listOf(aud), "pid" to pid),
+				expiry = expiry
+			)
+		).serialize()
+	}
+
 }
 

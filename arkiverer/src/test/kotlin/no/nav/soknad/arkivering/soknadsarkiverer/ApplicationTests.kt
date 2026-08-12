@@ -42,6 +42,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import org.junit.jupiter.api.extension.RegisterExtension
+import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.lang.Thread.sleep
 import java.time.format.DateTimeFormatter
