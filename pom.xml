@@ -160,6 +160,11 @@
 
 	<repositories>
 		<repository>
+			<id>github</id>
+			<name>GitHub felles Maven Packagesfor Navikt</name>
+			<url>https://github-package-registry-mirror.gc.nav.no/cached/maven-release</url>
+		</repository>
+		<repository>
 			<id>central</id>
 			<url>https://repo1.maven.org/maven2</url>
 		</repository>

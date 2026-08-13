@@ -85,11 +85,42 @@
 			<version>${jackson-databind-nullable.version}</version>
 		</dependency>
 
+		<dependency>
+			<groupId>no.nav.soknad.arkivering</groupId>
+			<artifactId>soknadsmottaker</artifactId>
+			<version>5056142-prod</version>
+			<classifier>openapi-spec</classifier>
+			<type>zip</type>
+		</dependency>
 	</dependencies>
 
 	<build>
 		<finalName>${project.artifactId}</finalName>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>unpack-soknadsmottaker-openapi-spec</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>unpack</goal>
+						</goals>
+						<configuration>
+							<artifactItems>
+								<artifactItem>
+									<groupId>no.nav.soknad.arkivering</groupId>
+									<artifactId>soknadsmottaker</artifactId>
+									<classifier>openapi-spec</classifier>
+									<type>zip</type>
+									<outputDirectory>${project.build.directory}/soknadsmottaker-spec</outputDirectory>
+								</artifactItem>
+							</artifactItems>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.openapitools</groupId>
 				<artifactId>openapi-generator-maven-plugin</artifactId>
@@ -102,20 +133,22 @@
 							<goal>generate</goal>
 						</goals>
 						<configuration>
-							<inputSpec>${project.basedir}/src/main/resources/soknadsmottaker-api.yml</inputSpec>
-							<generatorName>kotlin-spring</generatorName>
+							<inputSpec>${project.build.directory}/soknadsmottaker-spec/soknadsmottaker-api.yml</inputSpec>
+							<generatorName>kotlin</generatorName>
+							<additionalProperties>useSpringBoot3</additionalProperties>
+							<library>jvm-spring-restclient</library>
 							<apiPackage>no.nav.soknad.arkivering.soknadsmottaker.api</apiPackage>
 							<modelPackage>no.nav.soknad.arkivering.soknadsmottaker.model</modelPackage>
 							<configOptions>
-								<useSpringBoot3>true</useSpringBoot3>
-								<gradleBuildFile>true</gradleBuildFile>
-								<enumPropertyNaming>original</enumPropertyNaming>
 								<serializationLibrary>jackson</serializationLibrary>
-								<omitNullableQuestionMarks>true</omitNullableQuestionMarks>
+								<omitGradlePluginVersions>true</omitGradlePluginVersions>
+								<useSpringBoot3>true</useSpringBoot3>
+								<groupId>no.nav.soknad.arkivering</groupId>
+								<artifactId>soknadsmottaker-client</artifactId>
+								<packageName>no.nav.soknad.arkivering.soknadsmottaker</packageName>
 							</configOptions>
 						</configuration>
 					</execution>
-
 				</executions>
 			</plugin>
 

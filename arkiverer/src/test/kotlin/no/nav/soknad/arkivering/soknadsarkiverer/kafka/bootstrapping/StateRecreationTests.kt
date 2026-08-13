@@ -99,7 +99,6 @@ class StateRecreationTests : ContainerizedKafka() {
 		every { it.clearLoggedTaskStates() } just Runs
 	}
 
-
 	private lateinit var kafkaSetup: KafkaSetupTest
 
 	private val loggedinSoknad = InnsendingTopicMsgBuilder().build()
@@ -211,6 +210,36 @@ class StateRecreationTests : ContainerizedKafka() {
 		recreateState()
 
 		verifyThatTaskListService().wasCalled(1).forKey(key)
+	}
+
+	@Test
+	fun `Replaying a pending v2 Avro processing event resumes archiving`() {
+		val key = UUID.randomUUID().toString()
+
+		runBootstrappedArchiveTask()
+		publishLoggedinMessage(key)
+		publishProcessingEvents(key to RECEIVED, key to STARTED)
+
+		KafkaBootstrapConsumer(replayingTaskListService(key), kafkaConfig).recreateState()
+
+		verify(exactly = 1, timeout = 2_000) { archiverService.archive(eq(key), any(), any()) }
+	}
+
+	@Test
+	fun `Replaying a finished v2 Avro processing event creates no archive work`() {
+		val key = UUID.randomUUID().toString()
+
+		runBootstrappedArchiveTask()
+		publishLoggedinMessage(key)
+		publishProcessingEvents(
+			key to RECEIVED,
+			key to STARTED,
+			key to ARCHIVED,
+			key to FINISHED
+		)
+		KafkaBootstrapConsumer(replayingTaskListService(key), kafkaConfig).recreateState()
+
+		verify(exactly = 0) { archiverService.archive(eq(key), any(), any()) }
 	}
 
 	@Test
@@ -508,6 +537,34 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	private fun recreateState() {
 		kafkaBootstrapConsumer.recreateState()
+	}
+
+	private fun replayingTaskListService(keyToReplay: String) = object : TaskListService(
+		archiverService,
+		safService,
+		0,
+		listOf(0),
+		ApplicationState(alive = true, ready = true),
+		scheduler,
+		metrics,
+		kafkaPublisher
+	) {
+		override fun addOrUpdateTask(
+			key: String,
+			soknadarkivschema: InnsendingTopicMsg,
+			state: EventTypes,
+			isBootstrappingTask: Boolean
+		) {
+			if (key == keyToReplay) {
+				super.addOrUpdateTask(key, soknadarkivschema, state, isBootstrappingTask)
+			}
+		}
+	}
+
+	private fun runBootstrappedArchiveTask() {
+		val task = slot<() -> Unit>()
+		every { safService.hentJournalpostGittInnsendingId(any()) } returns null
+		every { scheduler.scheduleSingleTask(capture(task), any()) } answers { task.captured.invoke() }
 	}
 
 

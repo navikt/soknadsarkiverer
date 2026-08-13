@@ -13,7 +13,6 @@ on:
           - none
           - preprod-q1
           - preprod-q2
-          - loadtests
           - prod
 
 permissions:
@@ -79,20 +78,6 @@ jobs:
           CLUSTER: dev-gcp
           RESOURCE: .nais/nais.yml
           VARS: .nais/config-preprod-q2.json
-          VAR: image=${{ needs.build-and-push.outputs.image }}
-
-  deploy-loadtests:
-    name: Deploy to preprod loadtests
-    needs: build-and-push
-    if: github.event.inputs.environment == 'loadtests'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: nais/deploy/actions/deploy@v2
-        env:
-          CLUSTER: dev-gcp
-          RESOURCE: .nais/nais.yml
-          VARS: .nais/config-loadtests.json
           VAR: image=${{ needs.build-and-push.outputs.image }}
 
   deploy-prod:
