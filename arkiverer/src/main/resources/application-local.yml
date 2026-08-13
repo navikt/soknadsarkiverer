@@ -36,11 +36,11 @@ spring:
           azuread:
             token-uri: http://localhost:6969/fake/token
 
-  auth:
-    issuers:
-      azuread:
-        issuer-uri: http://localhost:6969/azuread
-        jwk-set-uri: http://localhost:6969/azuread/.well-known/openid-configuration
+auth:
+  issuers:
+    azuread:
+      issuer-uri: http://localhost:6969/azuread
+      jwk-set-uri: http://localhost:6969/azuread/.well-known/openid-configuration
 
 
 failedApplications: ""

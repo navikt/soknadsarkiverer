@@ -53,6 +53,13 @@ spring:
             token-uri: ${AZURE_OPENID_CONFIG_TOKEN_ENDPOINT}
             issuer-uri: ${AZURE_OPENID_CONFIG_ISSUER}
 
+auth:
+  issuers:
+    azuread:
+      issuer-uri: ${AZURE_OPENID_CONFIG_ISSUER}
+      jwk-set-uri: ${AZURE_OPENID_CONFIG_JWKS_URI}
+
+
 joark:
   host: ${JOARK_HOST}
   sendToJoark: true
