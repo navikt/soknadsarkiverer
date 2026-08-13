@@ -9,11 +9,9 @@ import no.nav.soknad.arkivering.soknadsarkiverer.util.konverterTilDateTime
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
 
 @RestController
-//@PreAuthorize("@issuerChecker.hasIssuer(authentication)")
 class ApplicationAdminInterface(private val taskListService: TaskListService, private val safService: SafServiceInterface): AdminApi {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
