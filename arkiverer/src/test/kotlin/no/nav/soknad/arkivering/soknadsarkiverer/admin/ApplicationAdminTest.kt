@@ -1,8 +1,13 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.admin
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.github.tomakehurst.wiremock.common.ConsoleNotifier
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension
+import com.ninjasquad.springmockk.MockkSpyBean
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import no.nav.security.mock.oauth2.MockOAuth2Server
-import no.nav.security.token.support.spring.test.EnableMockOAuth2Server
-import com.ninjasquad.springmockk.SpykBean
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.ARCHIVED
@@ -32,41 +37,60 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.web.client.TestRestTemplate
-import org.springframework.cloud.contract.wiremock.AutoConfigureWireMock
-import org.springframework.http.HttpEntity
-import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.util.UUID
 import kotlin.properties.Delegates
 import java.lang.Thread.sleep
+import no.nav.security.token.support.spring.test.EnableMockOAuth2Server
+import no.nav.soknad.arkivering.soknadsarkiverer.SoknadsarkivererApplication
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.ContainerizedKafka
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.KafkaListener
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.Key
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.createHeaders
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.TokenGenerator
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.stopMockedNetworkServices
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.hasCount
-import org.junit.jupiter.api.AfterAll
+import org.apache.kafka.common.header.Headers
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.extension.RegisterExtension
+import org.mockito.ArgumentMatchers.anyString
+import org.mockito.Mockito.`when`
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
+import org.springframework.security.oauth2.jwt.Jwt
+import org.springframework.security.oauth2.jwt.JwtDecoder
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
+import org.springframework.test.web.reactive.server.WebTestClient
+import java.time.Duration
+import java.time.Instant
+import java.util.HashMap
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.forEach
 
 
 @ActiveProfiles("test")
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,)
+@SpringBootTest(
+	webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
+	properties = ["spring.main.allow-bean-definition-overriding=true"],
+	classes = [SoknadsarkivererApplication::class]
+)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @EnableMockOAuth2Server(port = 1888)
-@AutoConfigureWireMock(port = 5490)
-class ApplicationAdminTest : ContainerizedKafka() {
+@AutoConfigureWebTestClient
+class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private val azureadIssuer: String)
+	: ContainerizedKafka() {
+
+	@MockitoBean
+	protected lateinit var azureJwtDecoder: JwtDecoder
 
 	@MockitoBean
 	lateinit var prometheusRegistry: PrometheusRegistry
@@ -78,12 +102,15 @@ class ApplicationAdminTest : ContainerizedKafka() {
 	private lateinit var kafkaConfig: KafkaConfig
 
 	@Autowired
-	lateinit var restTemplate: TestRestTemplate
+	lateinit var webTestClient: WebTestClient
 
 	@Autowired
 	private lateinit var taskListService: TaskListService
 
-	@SpykBean
+	@Autowired
+	private lateinit var objectMapper: ObjectMapper
+
+	@MockkSpyBean
 	lateinit var metrics: ArchivingMetrics
 
 	@Value("\${joark.journal-post}")
@@ -104,14 +131,40 @@ class ApplicationAdminTest : ContainerizedKafka() {
 	private lateinit var kafkaNologinTopicProducer: KafkaProducer<String, String>
 	private lateinit var kafkaloggedinTopicProducer: KafkaProducer<String, String>
 
+
+	companion object {
+
+		@JvmField
+		@RegisterExtension
+		val wireMock: WireMockExtension = WireMockExtension.newInstance()
+			.configureStaticDsl(true)
+			.options(
+				wireMockConfig()
+					.port(2908)
+					.notifier(ConsoleNotifier(true))
+					.withRootDirectory("src/test/resources")
+					.asynchronousResponseEnabled(false)
+			)
+			.build()
+
+		@JvmStatic
+		@DynamicPropertySource
+		fun properties(reg: DynamicPropertyRegistry) {
+			//val base = "http://localhost:${wireMock.port}"
+			reg.add("innsendingsapi.path") { "/innsendte/v1/files/[0-9a-fA-F-]{36}" }
+			reg.add("joark.journal-post") { "/rest/journalpostapi/v1/journalpost" }
+			reg.add("saf.path") { "/graphql" }
+		}
+	}
+
 	@BeforeAll
 	fun setupKafkaProducersAndListeners() {
-		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap(kafkaConfig)
+		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap()
 			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
-		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap(kafkaConfig).also {
+		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 		})
-		kafkaloggedinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap(kafkaConfig).also {
+		kafkaloggedinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 		})
 
@@ -121,48 +174,65 @@ class ApplicationAdminTest : ContainerizedKafka() {
 	@BeforeEach
 	fun setup() {
 		setupMockedNetworkServices(
+			wireMock,
 			portToExternalServices!!,
 			journalPostUrl,
 			"/innsendte/v1/files",
 			safUrl,
 		)
+		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap()
+			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
+		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
+			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
+		})
+		kafkaloggedinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
+			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
+		})
 
 		maxNumberOfAttempts = tasklistProperties.secondsBetweenRetries.size
 	}
 
 	@AfterEach
 	fun teardown() {
-		stopMockedNetworkServices()
+		//stopMockedNetworkServices()
+		//kafkaListener.clear(MockkClear())
+		wireMock.resetAll()
+
+		kafkaProducerForBadData.close()
+		kafkaNologinTopicProducer.close()
+		kafkaloggedinTopicProducer.close()
+
 		metrics.unregister()
 		taskListService.clearLoggedTaskStates()
-	}
-
-	@AfterAll
-	fun stopKafkaConsumers() {
-		kafkaListener.close()
 	}
 
 	@Test
 	fun `happy case - application is archieved in after retry`() {
 
 		// Given
-		val token = mockOAuth2Server.issueToken("test-client-id").serialize()
-
 		val innsendingsId = failArchiving()
 		sleep(1000)
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId = innsendingsId)
 
+		val mockJwt = createJwtToken()
+		`when`(azureJwtDecoder.decode(anyString())).thenReturn(mockJwt.token)
+
 		// When
-		val response = restTemplate.exchange(
-			"http://localhost:8080/admin/rerun/$innsendingsId",
-			HttpMethod.POST,
-			HttpEntity(null, createHeaders(token, MediaType.APPLICATION_JSON )),
-			String::class.java
-		)
+		val response = webTestClient
+			.mutate()
+			.responseTimeout(Duration.ofMinutes(2))
+			.build()
+
+			.post()
+			.uri { uriBuilder -> uriBuilder.path("/admin/rerun/$innsendingsId").build() }
+			.headers { it.addAll(createHeaders()) }
+
+			.exchange()
+			.returnResult()
 
 		// Then
-		assert(response.statusCode.is2xxSuccessful())
+		assert(response.status.is2xxSuccessful())
 
 		verifyProcessingEvents(
 			innsendingsId, mapOf(
@@ -180,23 +250,30 @@ class ApplicationAdminTest : ContainerizedKafka() {
 	fun `happy case - retry on archieved application is ignored`() {
 
 		// Given
-		val token = mockOAuth2Server.issueToken("test-client-id").serialize()
-
 		val innsendingsId = successfullArchiving()
 		sleep(500)
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId = innsendingsId)
 
+		val mockJwt = createJwtToken()
+		`when`(azureJwtDecoder.decode(anyString())).thenReturn(mockJwt.token)
+
 		// When
-		val response = restTemplate.exchange(
-			"http://localhost:8080/admin/rerun/$innsendingsId",
-			HttpMethod.POST,
-			HttpEntity(null, createHeaders(token, MediaType.APPLICATION_JSON )),
-			String::class.java
-		)
+		val response = webTestClient
+			.mutate()
+			.responseTimeout(Duration.ofMinutes(2))
+			.build()
+
+			.post()
+			.uri { uriBuilder -> uriBuilder.path("/admin/rerun/$innsendingsId").build() }
+			.headers { it.addAll(createHeaders()) }
+
+			.exchange()
+			.returnResult()
+
 
 		// Then
-		assert(response.statusCode.is2xxSuccessful())
+		assert(response.status.is2xxSuccessful())
 
 		verifyProcessingEvents(
 			innsendingsId, mapOf(
@@ -207,6 +284,70 @@ class ApplicationAdminTest : ContainerizedKafka() {
 				FAILURE hasCount 0
 			)
 		)
+
+	}
+
+
+	@Test
+	fun `fail case - call without token failes`() {
+
+		// Given
+		val innsendingsId = successfullArchiving()
+		sleep(500)
+		mockJoarkIsWorking()
+		mockSafRequest_notFound(innsendingsId = innsendingsId)
+
+		val mockJwt = null
+		`when`(azureJwtDecoder.decode(anyString())).thenReturn(mockJwt)
+
+		// When
+		val response = webTestClient
+			.mutate()
+			.responseTimeout(Duration.ofMinutes(2))
+			.build()
+
+			.post()
+			.uri { uriBuilder -> uriBuilder.path("/admin/rerun/$innsendingsId").build() }
+			.headers { it.addAll(createHeaders(issuer = null)) }
+
+			.exchange()
+			.returnResult()
+
+
+		// Then
+		assert(response.status == HttpStatus.UNAUTHORIZED)
+
+	}
+
+
+	@Test
+	fun `fail case - call with wrong issuer failes`() {
+
+		// Given
+		val innsendingsId = successfullArchiving()
+		sleep(500)
+		mockJoarkIsWorking()
+		mockSafRequest_notFound(innsendingsId = innsendingsId)
+
+		val mockJwt = createJwtToken(issuer = "http://localhost/tokenx")
+		`when`(azureJwtDecoder.decode(anyString())).thenReturn(mockJwt.token)
+
+		// When
+		val response = webTestClient
+			.mutate()
+			.responseTimeout(Duration.ofMinutes(2))
+			.build()
+
+			.post()
+			.uri { uriBuilder -> uriBuilder.path("/admin/rerun/$innsendingsId").build() }
+			.headers { it.addAll(createHeaders(issuer = "tokenx")) }
+
+			.exchange()
+			.returnResult()
+
+
+		// Then
+		assert(response.status == HttpStatus.UNAUTHORIZED)
 
 	}
 
@@ -283,10 +424,6 @@ class ApplicationAdminTest : ContainerizedKafka() {
 		}
 	}
 
-	private fun putDataOnKafkaTopic(value: InnsendingTopicMsg) : RecordMetadata {
-		return putDataOnKafkaTopic(value.innsendingsId, value)
-	}
-
 
 	private fun verifyProcessingEvents(key: Key, eventTypeAndCount: Map<EventTypes, Int>) {
 		eventTypeAndCount.forEach { (expectedEventType: EventTypes, expectedCount: Int) ->
@@ -306,6 +443,82 @@ class ApplicationAdminTest : ContainerizedKafka() {
 				)
 			}
 		}
+	}
+
+	private fun putDataOnKafkaTopic(message: InnsendingTopicMsg) {
+		when (message.kanal) {
+			"NAV_NO" -> {
+				putDataOnTopic(
+					key = message.innsendingsId,
+					value = objectMapper.writeValueAsString(message),
+					headers = RecordHeaders(),
+					topic = kafkaConfig.topics.loggedinSubmissionTopic,
+					kafkaProducer = kafkaloggedinTopicProducer
+				)
+			}
+			"NAV_NO_UINNLOGGET" -> {
+				putDataOnTopic(
+					key = message.innsendingsId,
+					value = objectMapper.writeValueAsString(message),
+					headers = RecordHeaders(),
+					topic = kafkaConfig.topics.nologinSubmissionTopic,
+					kafkaProducer = kafkaNologinTopicProducer
+				)
+			}
+			else -> {
+				throw RuntimeException("Ukjent kanal: ${message.kanal}")
+			}
+		}
+	}
+
+
+	private fun putDataOnKafkaTopic(key: Key, badData: String, headers: Headers = RecordHeaders()) {
+		val topic = kafkaConfig.topics.loggedinSubmissionTopic
+		putDataOnTopic(key, badData, headers, topic, kafkaProducerForBadData)
+	}
+
+	private fun kafkaConfigMap(): MutableMap<String, Any> {
+		return HashMap<String, Any>().also {
+			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = "mock://mocked-scope"
+			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig.brokers
+			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
+			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java
+		}
+	}
+
+	private fun createHeaders(issuer: String? = "azuread", audience: String? = null, map: Map<String, String>? = mapOf()): HttpHeaders {
+		val token = when {
+			issuer == null -> null
+			issuer == "azuread" -> TokenGenerator(mockOAuth2Server).lagAzureADToken(audience_ = audience)
+			issuer == "tokenx" -> TokenGenerator(mockOAuth2Server).lagTokenxToken(audience_ = audience)
+			else -> null
+		}
+		val headers = HttpHeaders()
+		headers.contentType = MediaType.APPLICATION_JSON
+		if (token != null) 	headers.add(HttpHeaders.AUTHORIZATION, "$BEARER$token")
+		map?.forEach { (headerName, headerValue) -> headers.add(headerName, headerValue) }
+		return headers
+	}
+
+	private val BEARER = "Bearer "
+
+	private infix fun <A> A.hasCount(count: Int) = this to count
+
+	private fun createJwtToken(issuer: String? = azureadIssuer): JwtAuthenticationToken {
+		val now = Instant.now()
+		val jwt = Jwt.withTokenValue("local-auth-disabled")
+			.header("alg", "none")
+			.subject("local-dev-user")
+			.issuedAt(now)
+			.expiresAt(now.plusSeconds(3600))
+			.claim("iss", issuer)
+			.claim("aud", "local-dev")
+			.claim("NAVident", "A123456")
+			.claim("preferred_username", "local-dev@example.com")
+			.claim("scp", "defaultaccess serviceklage-klassifisering")
+			.build()
+
+		return JwtAuthenticationToken(jwt)
 	}
 
 

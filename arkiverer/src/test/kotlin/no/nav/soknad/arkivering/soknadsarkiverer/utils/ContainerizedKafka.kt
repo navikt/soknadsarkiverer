@@ -36,13 +36,13 @@ open class ContainerizedKafka {
 			factoryBean.setResources(ClassPathResource("application.yml"))
 
 			val properties = factoryBean.getObject()
+			val mutableMap = properties as MutableMap<*, *>
 
-			val propertySource = MapConfigurationPropertySource(properties)
+			val propertySource = MapConfigurationPropertySource(mutableMap)
 			val binder = Binder(propertySource)
 
 			kafkaConfig = binder.bind("kafka", KafkaConfig::class.java).get()
 		}
-
 
 		// @Container
 		val kafkaContainer: KafkaContainer = KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.9.1"))

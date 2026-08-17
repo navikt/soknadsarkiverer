@@ -1,18 +1,13 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.ninjasquad.springmockk.MockkBean
-import org.mockito.kotlin.eq
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
 import io.prometheus.metrics.model.registry.PrometheusRegistry
-import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
-import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
@@ -33,12 +28,21 @@ import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.mockito.kotlin.eq
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
+import org.springframework.test.context.bean.override.mockito.MockitoBean
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.github.tomakehurst.wiremock.common.ConsoleNotifier
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
+import org.junit.jupiter.api.extension.RegisterExtension
+import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.lang.Thread.sleep
 import java.time.format.DateTimeFormatter
@@ -46,21 +50,17 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
+
 @ActiveProfiles("test")
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class ApplicationTests : ContainerizedKafka() {
 
-	@MockBean
+	@MockitoBean
 	lateinit var prometheusRegistry: PrometheusRegistry
 
 	@Value("\${application.mocked-port-for-external-services}")
-	private val portToExternalServices: Int? = null
-
-	@Suppress("unused")
-	@MockkBean(relaxed = true)
-	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
+	private val portToExternalServices: Int? = null // 2private lateinit var ... 908
 
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
@@ -99,8 +99,52 @@ class ApplicationTests : ContainerizedKafka() {
 
 	private val fileUuid = UUID.randomUUID().toString()
 
+	companion object {
+
+		@JvmField
+		@RegisterExtension
+		val wireMock: WireMockExtension = WireMockExtension.newInstance()
+			.configureStaticDsl(true)
+			.options(
+				wireMockConfig()
+					.port(2908)
+					.notifier(ConsoleNotifier(true))
+					.withRootDirectory("src/test/resources")
+					.asynchronousResponseEnabled(false)
+			)
+			.build()
+
+		@JvmStatic
+		@DynamicPropertySource
+		fun properties(reg: DynamicPropertyRegistry) {
+			//val base = "http://localhost:${wireMock.port}"
+			reg.add("innsendingsapi.path") { "/innsendte/v1/files/[0-9a-fA-F-]{36}" }
+			reg.add("joark.journal-post") { "/rest/journalpostapi/v1/journalpost" }
+			reg.add("saf.path") { "/graphql" }
+		}
+	}
+
 	@BeforeAll
 	fun setupKafkaProducersAndListeners() {
+		kafkaListener = KafkaListener(kafkaConfig)
+	}
+
+
+	@AfterAll
+	fun teardownKafka() {
+		kafkaListener.close()
+	}
+
+	@BeforeEach
+	fun setup() {
+		wireMock.resetAll()
+		setupMockedNetworkServices(
+			wireMock,
+			portToExternalServices!!,
+			journalPostUrl,
+			"/innsendte/v1/files",
+			safUrl,
+		)
 		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap()
 			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
@@ -110,33 +154,22 @@ class ApplicationTests : ContainerizedKafka() {
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 		})
 
-		kafkaListener = KafkaListener(kafkaConfig)
-	}
-
-	@BeforeEach
-	fun setup() {
-		setupMockedNetworkServices(
-			portToExternalServices!!,
-			journalPostUrl,
-			"/innsendte/v1/files",
-			safUrl,
-		)
-
 		maxNumberOfAttempts = tasklistProperties.secondsBetweenRetries.size
 	}
 
 	@AfterEach
 	fun teardown() {
-		stopMockedNetworkServices()
+		//stopMockedNetworkServices()
+		//kafkaListener.clear(MockkClear())
+		wireMock.resetAll()
+
+		kafkaProducerForBadData.close()
+		kafkaNologinTopicProducer.close()
+		kafkaloggedinTopicProducer.close()
+
 		metrics.unregister()
 		taskListService.clearLoggedTaskStates()
 	}
-
-	@AfterAll
-	fun stopKafkaConsumers() {
-		kafkaListener.close()
-	}
-
 
 	@Test
 	fun `Happy case - Putting events on Kafka main topic will cause rest calls to Joark`() {
@@ -194,9 +227,11 @@ class ApplicationTests : ContainerizedKafka() {
 		mockFilestorageIsWorking(fileIds.map { it to filestorageContent })
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId = key)
-		doThrow(RuntimeException("Failed to send arkiveringstilbakemelding")).whenever(kafkaPublisher).putArkiveringstilbakemeldingOnTopic(any(), any(), any())
-		doNothing().whenever(kafkaPublisher).putMessageOnTopic(
-			eq(key), eq("**Archiving: OK."), any())
+		doThrow(RuntimeException("Failed to send arkiveringstilbakemelding")).whenever(kafkaPublisher)
+			.putArkiveringstilbakemeldingOnTopic(any(), any(), any())
+		doNothing().whenever(kafkaPublisher)
+			.putMessageOnTopic(eq(key), eq("**Archiving: OK."), any())
+
 		putDataOnKafkaTopic(soknadsarkivschema)
 
 		verifyProcessingEvents(
@@ -1277,6 +1312,7 @@ class ApplicationTests : ContainerizedKafka() {
 		val topic = kafkaConfig.topics.loggedinSubmissionTopic
 		putDataOnTopic(key, badData, headers, topic, kafkaProducerForBadData)
 	}
+
 
 	private fun kafkaConfigMap(): MutableMap<String, Any> {
 		return HashMap<String, Any>().also {

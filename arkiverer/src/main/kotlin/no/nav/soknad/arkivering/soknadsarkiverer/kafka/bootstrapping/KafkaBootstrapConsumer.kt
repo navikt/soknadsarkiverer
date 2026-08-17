@@ -24,6 +24,8 @@ class KafkaBootstrapConsumer(
 	private val loggedinTopic = kafkaConfig.topics.loggedinSubmissionTopic
 
 	fun recreateState() {
+		logger.info("Start recreating state")
+		
 		val (finishedKeys, unfinishedProcessingRecords) = getProcessingRecords()
 
 		val filteredUnfinishedProcessingEvents = unfinishedProcessingRecords
@@ -59,6 +61,7 @@ class KafkaBootstrapConsumer(
 
 				taskListService.addOrUpdateTask(key, deserializeMsg( soknadsarkivschema), state.type, true)
 			}
+		logger.info("Finished recreating state, total unfinished states  ${unfinishedNoLoginRecords.size + unfinishedLoggedinRecords.size} processed")
 
 	}
 

@@ -67,7 +67,7 @@ class SelfDestructConfig(private val scheduler: Scheduler,
 	 * The (ugly) solution to this bug is to shut down the pods every night (self-destruct), which will cause Kubernetes
 	 * to restart the pods, thus triggering abandoned tasks to be picked up again.
 	 */
-	@Profile("prod | dev")
+	@Profile("prod", "dev")
 	@PostConstruct
 	fun scheduleSelfDestruct() {
 		setUpSelfDestructTime()

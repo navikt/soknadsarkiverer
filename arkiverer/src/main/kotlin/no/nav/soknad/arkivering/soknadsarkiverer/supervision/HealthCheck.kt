@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.Hidden
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import no.nav.security.token.support.core.api.Unprotected
 import no.nav.soknad.arkivering.api.HealthApi
 import no.nav.soknad.arkivering.model.ApplicationStatus
 import no.nav.soknad.arkivering.model.ApplicationStatusType
@@ -16,11 +15,9 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@Unprotected
 class HealthCheck(private val applicationState: ApplicationState, private val metrics: ArchivingMetrics, @Value("\${status_log_url}") private val statusLogUrl: String): HealthApi {
 	private val logger = LoggerFactory.getLogger(javaClass)
 

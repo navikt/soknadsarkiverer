@@ -3,7 +3,6 @@ package no.nav.soknad.arkivering.soknadsarkiverer.schedule
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.net.InetAddress
 import java.net.URL

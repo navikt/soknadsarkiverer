@@ -1,10 +1,12 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka.bootstrapping
 
+import com.github.tomakehurst.wiremock.common.ConsoleNotifier
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.*
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import kotlinx.coroutines.runBlocking
-import no.nav.security.token.support.client.spring.ClientConfigurationProperties
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
@@ -28,27 +30,26 @@ import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.apache.kafka.streams.KafkaStreams
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.extension.RegisterExtension
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
-import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.test.annotation.DirtiesContext
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.util.*
 
 
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@ConfigurationPropertiesScan("no.nav.soknad.arkivering", "no.nav.security.token")
-@EnableConfigurationProperties(ClientConfigurationProperties::class, KafkaConfig::class)
+@ConfigurationPropertiesScan("no.nav.soknad.arkivering")
 class StateRecreationTests : ContainerizedKafka() {
 
-	@MockBean
+	@MockitoBean
 	lateinit var prometheusRegistry: PrometheusRegistry
 
 	@Value("\${application.mocked-port-for-external-services}")
@@ -59,11 +60,6 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	@Value("\${saf.path}")
 	private lateinit var safUrl: String
-
-	@Suppress("unused")
-	@MockkBean(relaxed = true)
-	private lateinit var clientConfigurationProperties: ClientConfigurationProperties
-
 
 	@Suppress("unused")
 	@MockkBean(relaxed = true)
@@ -100,6 +96,7 @@ class StateRecreationTests : ContainerizedKafka() {
 	}
 	private val taskListService = mockk<TaskListService>().also {
 		every { it.addOrUpdateTask(any(), any(), any(), any()) } just Runs
+		every { it.clearLoggedTaskStates() } just Runs
 	}
 
 	private lateinit var kafkaSetup: KafkaSetupTest
@@ -111,14 +108,35 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	private val applications = mutableMapOf<String, InnsendingTopicMsg>()
 
-	@AfterEach
-	fun tearDown() {
-		metrics.unregister()
+	companion object {
+
+		@JvmField
+		@RegisterExtension
+		val wireMock: WireMockExtension = WireMockExtension.newInstance()
+			.configureStaticDsl(true)
+			.options(
+				wireMockConfig()
+					.port(2902)
+					.notifier(ConsoleNotifier(true))
+					.withRootDirectory("src/test/resources")
+					.asynchronousResponseEnabled(false)
+			)
+			.build()
+
+		@JvmStatic
+		@DynamicPropertySource
+		fun properties(reg: DynamicPropertyRegistry) {
+			reg.add("innsendingsapi.path") { "/innsendte/v1/files/[0-9a-fA-F-]{36}" }
+			reg.add("joark.journal-post") { "/rest/journalpostapi/v1/journalpost" }
+			reg.add("saf.path") { "/graphql" }
+		}
 	}
 
-	@BeforeAll
+	@BeforeEach
 	fun setup() {
+		wireMock.resetAll()
 		setupMockedNetworkServices(
+			wireMock,
 			portToExternalServices!! + 1,
 			journalPostUrl,
 			"/innsendte/v1/files",
@@ -140,6 +158,17 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		kafkaBootstrapConsumer.recreateState() // Other test classes could have left Kafka events on the topics. Consume them before running the tests in this class.
 
+	}
+
+	@AfterEach
+	fun tearDown() {
+		wireMock.resetAll()
+
+		kafkaNologinTopicProducer.close()
+		kafkaProcessingEventProducer.close()
+
+		metrics.unregister()
+		taskListService.clearLoggedTaskStates()
 	}
 
 	@Test
