@@ -148,7 +148,13 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	@AfterEach
 	fun tearDown() {
+		wireMock.resetAll()
+		kafkaLoggedinTopicProducer.close()
+		kafkaNologinTopicProducer.close()
+		kafkaProcessingEventV3Producer.close()
+		kafkaProcessingEventV3PoisonProducer.close()
 		metrics.unregister()
+		taskListService.clearLoggedTaskStates()
 		// TaskListService.tryToArchive dispatches archiving via CoroutineScope(Dispatchers.Default).launch
 		// (fire-and-forget), so a test's archiving work can still be in flight when the test method
 		// returns. Since archiverService/taskListService are shared mockk instances across all tests in
@@ -188,17 +194,6 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		kafkaBootstrapConsumer.recreateState() // Other test classes could have left Kafka events on the topics. Consume them before running the tests in this class.
 
-	}
-
-	@AfterEach
-	fun tearDown() {
-		wireMock.resetAll()
-
-		kafkaNologinTopicProducer.close()
-		kafkaProcessingEventProducer.close()
-
-		metrics.unregister()
-		taskListService.clearLoggedTaskStates()
 	}
 
 	@Test

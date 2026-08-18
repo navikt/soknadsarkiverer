@@ -38,8 +38,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.test.annotation.DirtiesContext
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -65,7 +65,7 @@ import java.util.concurrent.TimeUnit
 @EnableConfigurationProperties(ClientConfigurationProperties::class, KafkaConfig::class)
 class LegacyAvroReplayTest : ContainerizedKafka() {
 
-	@MockBean
+	@MockitoBean
 	lateinit var prometheusRegistry: PrometheusRegistry
 
 	@Suppress("unused")
