@@ -193,6 +193,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		)
 
 		kafkaBootstrapConsumer.recreateState() // Other test classes could have left Kafka events on the topics. Consume them before running the tests in this class.
+		clearMocks(taskListService, answers = false)
 
 	}
 
