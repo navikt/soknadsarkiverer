@@ -79,6 +79,8 @@ class SecurityFilterChainFactory(
 			"/internal/isAlive",
 			"/internal/isReady",
 			"/internal/health/**",
+			"/internal/metrics",
+			"/internal/prometheus",
 			"/public/**",
 			"/swagger-ui",
 			"/swagger-ui.html",
