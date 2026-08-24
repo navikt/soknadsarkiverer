@@ -27,12 +27,27 @@ class KafkaSetup(
 	@PostConstruct
 	fun setupKafka() {
 		logger.debug("Setting up Kafka Bootstrapping and Kafka Streams")
-		setupMetricsAndHealth(metrics, applicationState)
+		setupMetricsAndLiveness(metrics, applicationState)
 
 		scheduleJob {
-			bootstrapKafka()
-			setupKafkaStreams(applicationState, taskListService, kafkaPublisher, kafkaConfig = kafkaConfig )
+			try {
+				initializeKafka()
+			} catch (e: Exception) {
+				logger.error("Kafka initialization failed. Application remains unready.", e)
+				throw e
+			}
 		}
+	}
+
+	internal fun initializeKafka(
+		bootstrap: () -> Unit = ::bootstrapKafka,
+		startStreams: () -> Unit = {
+			setupKafkaStreams(applicationState, taskListService, kafkaPublisher, kafkaConfig = kafkaConfig)
+		}
+	) {
+		bootstrap()
+		startStreams()
+		applicationState.ready = true
 	}
 
 	private fun bootstrapKafka() {
@@ -63,10 +78,11 @@ class KafkaSetupTest(
 	fun setupKafka() {
 		logger.debug("Setting up Kafka Streams")
 
-		setupMetricsAndHealth(metrics, applicationState)
+		setupMetricsAndLiveness(metrics, applicationState)
 
 		val groupId = kafkaConfig.applicationId + "_" + UUID.randomUUID().toString()
 		setupKafkaStreams(applicationState, taskListService, kafkaPublisher, groupId,kafkaConfig)
+		applicationState.ready = true
 	}
 }
 
@@ -81,8 +97,8 @@ private fun setupKafkaStreams(
 	KafkaStreamsSetup(applicationState, taskListService, kafkaPublisher,kafkaConfig).setupKafkaStreams(id)
 }
 
-private fun setupMetricsAndHealth( metrics: ArchivingMetrics, applicationState: ApplicationState ) {
+private fun setupMetricsAndLiveness( metrics: ArchivingMetrics, applicationState: ApplicationState ) {
 	metrics.setUpOrDown(1.0)
 	applicationState.alive = true
-	applicationState.ready = true
+	applicationState.ready = false
 }

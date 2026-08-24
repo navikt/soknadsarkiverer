@@ -72,6 +72,8 @@ kafka:
     metricsTopic: privat-soknadinnsending-metrics-v1-dev
     nologinSubmissionTopic: privat-soknadinnsending-nologin-submission-v1-dev
     loggedinSubmissionTopic: privat-soknadinnsending-loggedin-submission-v1-dev
+    processingTopicV3: privat-soknadinnsending-processingeventlog-v3-dev
+    metricsTopicV3: privat-soknadinnsending-metrics-v3-dev
 
   schemaRegistry:
     url: ${application.KAFKA_SCHEMA_REGISTRY}

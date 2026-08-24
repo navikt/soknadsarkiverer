@@ -2,10 +2,10 @@ package no.nav.soknad.arkivering.soknadsarkiverer.utils
 
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
-import no.nav.soknad.arkivering.avroschemas.InnsendingMetrics
-import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.InnsendingMetricsJsonSerde
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
-import org.apache.avro.specific.SpecificRecord
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventJson
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventJsonSerde
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.common.config.SslConfigs
 import org.apache.kafka.common.serialization.Serdes
@@ -17,16 +17,17 @@ import org.apache.kafka.streams.kstream.Consumed
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
+import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingMetrics as InnsendingMetricsJson
 
 class KafkaListener(private val kafkaConfig: KafkaConfig) {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 	private val verbose = true
 
-	private val metricsReceived          						= CopyOnWriteArrayList<Pair<Key, InnsendingMetrics>>()
+	private val metricsReceived          						= CopyOnWriteArrayList<Pair<Key, InnsendingMetricsJson>>()
 	private val messagesReceived         						= CopyOnWriteArrayList<Pair<Key, String>>()
 	private val arkiveringstilbakemeldingerReceived	= CopyOnWriteArrayList<Pair<Key, String>>()
-	private val processingEventsReceived						= CopyOnWriteArrayList<Pair<Key, ProcessingEvent>>()
+	private val processingEventsReceived						= CopyOnWriteArrayList<Pair<Key, ProcessingEventJson>>()
 
 	private val kafkaStreams: KafkaStreams
 
@@ -45,8 +46,10 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) {
 
 
 	private fun kafkaStreams(streamsBuilder: StreamsBuilder) {
-		val metricsStream              = streamsBuilder.stream(kafkaConfig.topics.metricsTopic,    Consumed.with(stringSerde, createInnsendingMetricsSerde()))
-		val processingEventTopicStream = streamsBuilder.stream(kafkaConfig.topics.processingTopic, Consumed.with(stringSerde, createProcessingEventSerde()))
+		// Both streams read the v3 JSON topics (issue #265): production only writes there now, so
+		// listening on the v2 Avro topics would no longer see anything.
+		val metricsStream              = streamsBuilder.stream(kafkaConfig.topics.metricsTopicV3,    Consumed.with(stringSerde, InnsendingMetricsJsonSerde()))
+		val processingEventTopicStream = streamsBuilder.stream(kafkaConfig.topics.processingTopicV3, Consumed.with(stringSerde, ProcessingEventJsonSerde()))
 		val messagesStream             = streamsBuilder.stream(kafkaConfig.topics.messageTopic,    Consumed.with(stringSerde, stringSerde))
 		val arkiveringstilbakemeldingerStream = streamsBuilder.stream(kafkaConfig.topics.arkiveringstilbakemeldingTopic,    Consumed.with(stringSerde, stringSerde))
 
@@ -92,16 +95,6 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) {
 			it[SslConfigs.SSL_KEY_PASSWORD_CONFIG] = kafkaConfig.security.keyStorePassword
 		}
 	}
-
-	private fun createProcessingEventSerde(): SpecificAvroSerde<ProcessingEvent> = createAvroSerde()
-	private fun createInnsendingMetricsSerde(): SpecificAvroSerde<InnsendingMetrics> = createAvroSerde()
-
-	private fun <T : SpecificRecord> createAvroSerde(): SpecificAvroSerde<T> {
-		val serdeConfig =
-			hashMapOf(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG to kafkaConfig.schemaRegistry.url)
-		return SpecificAvroSerde<T>().also { it.configure(serdeConfig, false) }
-	}
-
 
 	fun close() {
 		kafkaStreams.close()

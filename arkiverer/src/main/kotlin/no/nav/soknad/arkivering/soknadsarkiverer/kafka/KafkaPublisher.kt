@@ -17,12 +17,20 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.springframework.stereotype.Service
 import java.util.*
 import java.util.concurrent.TimeUnit
+import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingMetrics as InnsendingMetricsJson
 
 @Service
 class KafkaPublisher(private val kafkaConfig: KafkaConfig) {
 
-	private val kafkaProcessingEventProducer = KafkaProducer<String, ProcessingEvent>(kafkaConfigMap())
-	private val kafkaMetricsProducer = KafkaProducer<String, InnsendingMetrics>(kafkaConfigMap())
+	// Production writers only ever publish plain JSON to the v3 topics from here on (issue #265):
+	// processingeventlog-v2 and metrics-v2 are read-only from now on (see KafkaBootstrapConsumer,
+	// which still replays their retained history). No Schema Registry is required for these.
+	private val kafkaProcessingEventV3Producer = KafkaProducer<String, ProcessingEventJson>(kafkaConfigMap().also {
+		it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = ProcessingEventJsonSerializer::class.java
+	})
+	private val kafkaMetricsV3Producer = KafkaProducer<String, InnsendingMetricsJson>(kafkaConfigMap().also {
+		it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = InnsendingMetricsJsonSerializer::class.java
+	})
 	private val kafkaMessageProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
 		it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 	})
@@ -31,9 +39,8 @@ class KafkaPublisher(private val kafkaConfig: KafkaConfig) {
 	})
 
 	fun putProcessingEventOnTopic(key: String, value: ProcessingEvent, headers: Headers = RecordHeaders()) {
-		val topic = kafkaConfig.topics.processingTopic
-		val kafkaProducer = kafkaProcessingEventProducer
-		putDataOnTopic(key, value, headers, topic, kafkaProducer)
+		val topic = kafkaConfig.topics.processingTopicV3
+		putDataOnTopic(key, value.toProcessingEventJson(), headers, topic, kafkaProcessingEventV3Producer)
 	}
 
 	fun putMessageOnTopic(key: String?, value: String?, headers: Headers = RecordHeaders()) {
@@ -49,9 +56,8 @@ class KafkaPublisher(private val kafkaConfig: KafkaConfig) {
 	}
 
 	fun putMetricOnTopic(key: String?, value: InnsendingMetrics, headers: Headers = RecordHeaders()) {
-		val topic = kafkaConfig.topics.metricsTopic
-		val kafkaProducer = kafkaMetricsProducer
-		putDataOnTopic(key, value, headers, topic, kafkaProducer)
+		val topic = kafkaConfig.topics.metricsTopicV3
+		putDataOnTopic(key, value.toInnsendingMetricsJson(), headers, topic, kafkaMetricsV3Producer)
 	}
 
 	private fun <T> putDataOnTopic(

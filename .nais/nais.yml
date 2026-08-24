@@ -104,6 +104,10 @@ spec:
       value: {{kafka-nologin-submission-topic}}
     - name: KAFKA_LOGGEDIN_SUBMISSION_TOPIC
       value: {{kafka-loggedin-submission-topic}}
+    - name: KAFKA_PROCESSING_TOPIC_V3
+      value: {{kafka-processingeventlog-v3-topic}}
+    - name: KAFKA_METRICS_TOPIC_V3
+      value: {{kafka-metrics-v3-topic}}
     - name: INNSENDING_API_HOST
       value: {{innsending-api-host}}
     - name: JOARK_HOST

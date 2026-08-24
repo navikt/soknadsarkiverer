@@ -11,6 +11,7 @@ import org.apache.kafka.common.serialization.StringDeserializer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -26,12 +27,12 @@ class KafkaRecordConsumerTests {
 	}
 
 	@Test
-	fun `Polling throws exception - empty list is returned`() {
-		val result = consumerBuilder
-			.mockPollThrowsException()
-			.buildAndGetKafkaRecords()
-
-		assertTrue(result.isEmpty())
+	fun `Polling throws exception - exception is propagated`() {
+		assertThrows(Exception::class.java) {
+			consumerBuilder
+				.mockPollThrowsException()
+				.buildAndGetKafkaRecords()
+		}
 	}
 
 	@Test

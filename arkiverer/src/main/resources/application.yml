@@ -53,6 +53,8 @@ kafka:
     metricsTopic: ${KAFKA_METRICS_TOPIC}
     nologinSubmissionTopic: ${KAFKA_NOLOGIN_SUBMISSION_TOPIC}
     loggedinSubmissionTopic: ${KAFKA_LOGGEDIN_SUBMISSION_TOPIC}
+    processingTopicV3: ${KAFKA_PROCESSING_TOPIC_V3:privat-soknadinnsending-processingeventlog-v3}
+    metricsTopicV3: ${KAFKA_METRICS_TOPIC_V3:privat-soknadinnsending-metrics-v3}
   schemaRegistry:
     url: ${KAFKA_SCHEMA_REGISTRY}
     username: ${KAFKA_SCHEMA_REGISTRY_USER}

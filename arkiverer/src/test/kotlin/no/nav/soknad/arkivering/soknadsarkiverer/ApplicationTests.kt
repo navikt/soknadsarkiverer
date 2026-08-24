@@ -1177,7 +1177,7 @@ class ApplicationTests : ContainerizedKafka() {
 			val seenEventTypes = {
 				kafkaListener.getProcessingEvents()
 					.filter { it.key == key }
-					.filter { it.value.type == expectedEventType }
+					.filter { it.value.type.name == expectedEventType.name }
 					.size
 			}
 
