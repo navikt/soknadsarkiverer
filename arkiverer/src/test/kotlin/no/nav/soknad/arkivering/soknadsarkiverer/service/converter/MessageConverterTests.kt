@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.converter
 
+import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.converter.MAX_FILENAME_BYTES
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.converter.createOpprettJournalpostRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
@@ -279,7 +280,38 @@ class MessageConverterTests {
 		val schema2 = schema.copy(dokumenter = docs)
 
 		val arkivData = createOpprettJournalpostRequest(schema2, uploadedfiles)
-		assertEquals(190 - 5, arkivData.dokumenter[2].dokumentvarianter[0].filnavn.length)
+		assertEquals(255 - 5, arkivData.dokumenter[2].dokumentvarianter[0].filnavn.length)
+	}
+
+	@Test
+	fun `Should limit filnavn byte length without splitting multi-byte characters`() {
+		val tittel = "Apa bepa"
+		val skjemanummer = "NAV 11-13.06"
+
+		val files = mutableListOf (
+			TestDokument( skjemanummer = skjemanummer, erHovedskjema = true, tittel = tittel, uuids = listOf(UUID.randomUUID().toString(),UUID.randomUUID().toString()) ),
+			TestDokument( skjemanummer = "L7", erHovedskjema = false, tittel = "Kvittering", uuids = listOf(UUID.randomUUID().toString()) ),
+			TestDokument( skjemanummer = "W2", erHovedskjema = false, tittel = "Attachment", uuids = listOf(UUID.randomUUID().toString()) )
+		)
+
+		val uploadedfiles = files.map{vedlegg -> vedlegg.uuids}.flatten().map { uuid -> FileInfo(uuid, "apa".toByteArray(), ResponseStatus.Ok) }
+
+		val schema = InnsendingTopicMsgBuilder()
+			.withTittel(tittel)
+			.withSkjemanr(skjemanummer)
+			.withTestDokumenter(files)
+			.build()
+
+		// "æøå" is 2 bytes per character in UTF-8, so 150 repetitions is 300 bytes -- well over the limit.
+		val docs = mutableListOf<DokumentData>()
+		schema.dokumenter.forEachIndexed { index, data -> if (index < 2) docs.add(data) else docs.add(data.copy(varianter = (listOf(data.varianter.first().copy(filnavn = "æøå".repeat(150)))))) }
+		val schema2 = schema.copy(dokumenter = docs)
+
+		val arkivData = createOpprettJournalpostRequest(schema2, uploadedfiles)
+		val truncatedFilnavn = arkivData.dokumenter[2].dokumentvarianter[0].filnavn
+
+		assertTrue("Truncated filename should not exceed the byte limit", truncatedFilnavn.toByteArray(Charsets.UTF_8).size <= MAX_FILENAME_BYTES)
+		assertTrue("Truncated filename should consist of whole characters only", truncatedFilnavn.isNotEmpty() && "æøå".repeat(150).startsWith(truncatedFilnavn))
 	}
 
 
