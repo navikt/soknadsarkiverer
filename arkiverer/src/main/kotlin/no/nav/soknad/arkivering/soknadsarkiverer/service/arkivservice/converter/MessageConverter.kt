@@ -5,7 +5,11 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
 import no.nav.soknad.arkivering.soknadsmottaker.model.DokumentData
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import no.nav.soknad.arkivering.soknadsmottaker.model.Variant
+import java.nio.ByteBuffer
+import java.nio.charset.CodingErrorAction
 import java.time.format.DateTimeFormatter
+
+const val MAX_FILENAME_BYTES = 200
 
 fun createOpprettJournalpostRequest(o: InnsendingTopicMsg, attachedFiles: List<FileInfo>): OpprettJournalpostRequest {
 	val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX")
@@ -98,8 +102,24 @@ private fun createDokumentVariant(variant: Variant, attachedFiles: List<FileInfo
 
 	val filtype = if (variant.filtype.equals("PDF/A",true) ) "PDFA" else variant.filtype.uppercase()
 	return DokumentVariant(
-		filnavn = variant.filnavn.take(190 - 5), // filename + extention can be maximum 190 characters
+		filnavn = truncateToByteLength(variant.filnavn, MAX_FILENAME_BYTES),
 		filtype = filtype,
 		fysiskDokument = attachedFile[0].content!!,
 		variantformat = variant.variantFormat ?: "ARKIV")
+}
+
+/**
+ * Midlertidig endring for å sikre at filnavnet ikke overskrider maksimum antall bytes tillatt på navnet i arkivet
+ * Arkivet planlegger å endre grensen til 255 karakterer på filnavnet, men inntil da må vi sikre at vi ikke overskrider
+ * 200 bytes på filnavnet.
+ */
+private fun truncateToByteLength(value: String, maxBytes: Int): String {
+	val bytes = value.toByteArray(Charsets.UTF_8)
+	if (bytes.size <= maxBytes) return value
+
+	val decoder = Charsets.UTF_8.newDecoder()
+		.onMalformedInput(CodingErrorAction.IGNORE)
+		.onUnmappableCharacter(CodingErrorAction.IGNORE)
+
+	return decoder.decode(ByteBuffer.wrap(bytes, 0, maxBytes)).toString()
 }
