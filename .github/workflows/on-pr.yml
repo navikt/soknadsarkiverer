@@ -5,36 +5,38 @@ on:
 
 jobs:
   run-end-to-end-tests:
+    permissions:
+      contents: "read"
+      id-token: "write"
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+
       - name: Set up JDK
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: 21
-      - name: 'Build the code for arkiv-mock'
-        uses: navikt/archiving-infrastructure/.github/checkout-and-build@main
-        with:
-          component_name: arkiv-mock
 
-      - name: 'Build the code for soknadsmottaker'
-        uses: navikt/archiving-infrastructure/.github/checkout-and-build@main
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
         with:
-          component_name: soknadsmottaker
+          path: ~/.m2/repository
+          key: e2e-m2-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            e2e-m2-${{ runner.os }}-
 
-      - name: 'Build the code for innsending-api'
+      - name: 'Build the code for the components'
         uses: navikt/archiving-infrastructure/.github/checkout-and-build@main
         with:
-          component_name: innsending-api
-          skip_tests: true
+          component_names: |
+            arkiv-mock
+            soknadsmottaker
+            innsending-api
+            soknadsarkiverer@${{ github.head_ref }}
+          prepull_test_images: true
         env:
           GITHUB_NAV_TOKEN: ${{ secrets.READER_TOKEN }}
-
-      - name: 'Build the code for soknadsarkiverer (this PR)'
-        uses: navikt/archiving-infrastructure/.github/checkout-and-build@main
-        with:
-          component_name: soknadsarkiverer
-          branch: ${GITHUB_HEAD_REF} # Branch of current PR
 
       - name: 'Run the end-to-end-tests'
         uses: navikt/archiving-infrastructure/.github/checkout-and-build@main
