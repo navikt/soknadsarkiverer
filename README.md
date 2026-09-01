@@ -3,6 +3,9 @@ This application will read data from a Kafka topic, enrich it by retrieving file
 
 For a description of the whole archiving system, see [the documentation](https://github.com/navikt/archiving-infrastructure/wiki).
 
+Operational documentation:
+* [Avro retirement runbook](docs/avro-retirement-runbook.md)
+
 ## Dependencies
 This component requires the following to work:
 * [innsending-api](https://github.com/navikt/innsending-api) (REST-endpoint for retrieving files)

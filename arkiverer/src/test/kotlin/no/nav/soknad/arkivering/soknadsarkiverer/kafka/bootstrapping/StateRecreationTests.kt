@@ -193,6 +193,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		)
 
 		kafkaBootstrapConsumer.recreateState() // Other test classes could have left Kafka events on the topics. Consume them before running the tests in this class.
+		clearMocks(taskListService, answers = false)
 
 	}
 
@@ -353,7 +354,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		recreateState()
 
-		verifyThatTaskListService().wasNotCalled()
+		verifyThatTaskListService().wasNotCalledForKey(key)
 	}
 
 	@Test
@@ -391,7 +392,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		recreateState()
 
-		verifyThatTaskListService().wasNotCalled()
+		verifyThatTaskListService().wasNotCalledForKey(key)
 	}
 
 	@Test
@@ -409,7 +410,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		recreateState()
 
-		verifyThatTaskListService().wasNotCalled()
+		verifyThatTaskListService().wasNotCalledForKey(key)
 	}
 
 	@Test
@@ -469,7 +470,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		recreateState()
 
-		verifyThatTaskListService().wasNotCalled()
+		verifyThatTaskListService().wasNotCalledForKey(key)
 	}
 
 	@Test
@@ -507,7 +508,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		recreateState()
 
-		verifyThatTaskListService().wasNotCalled()
+		keyList.forEach { key -> verifyThatTaskListService().wasNotCalledForKey(key) }
 	}
 
 	@Test
@@ -528,7 +529,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 		recreateState()
 
-		verifyThatTaskListService().wasNotCalled()
+		keyList.forEach { key -> verifyThatTaskListService().wasNotCalledForKey(key) }
 	}
 
 	var countFinishedOrFailure: Int = 0
@@ -565,7 +566,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	private fun randomFailureOrFinishedOrStarted(key: String): Pair<String, ProcessingEventType> {
 		val rand = (1..1000).random()
-		if (rand > 300) countFinishedOrFailure + 1 else countFinishedOrFailure
+		if (rand > 300) countFinishedOrFailure += 1
 		return if (rand > 400)
 			key to FAILURE
 		else if (rand > 300)
@@ -659,12 +660,12 @@ class StateRecreationTests : ContainerizedKafka() {
 		}
 
 		fun wasNotCalled() {
-			verify()
+			verify(exactly = 0) { taskListService.addOrUpdateTask(any(), any(), any(), any()) }
 		}
 
 		fun wasNotCalledForKey(key: String) {
-			this.key = key
-			verify()
+			val application = applications[key] ?: loggedinSoknad
+			verify(exactly = 0) { taskListService.addOrUpdateTask(eq(key), eq(application), any(), any()) }
 		}
 
 		inner class KeyStep {
@@ -678,7 +679,7 @@ class StateRecreationTests : ContainerizedKafka() {
 			val key = this.key
 			val application = applications[key] ?: loggedinSoknad
 
-			if (key == null || timesCalled == 0)
+			if (key == null)
 				verify(atLeast = timesCalled) { taskListService.addOrUpdateTask(any(), any(), any(), any()) }
 			else
 				verify(atLeast = timesCalled) { taskListService.addOrUpdateTask(eq(key), eq(application), any(), any()) }
