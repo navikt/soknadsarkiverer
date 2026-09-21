@@ -22,7 +22,15 @@ fun createOpprettJournalpostRequest(o: InnsendingTopicMsg, attachedFiles: List<F
 	return OpprettJournalpostRequest(
 		avsenderMottaker = AvsenderMottaker(id = o.avsenderDto.id, idType = o.avsenderDto.idType?.name, navn = o.avsenderDto.navn),
 		bruker = bruker,
-		timestamp, documents, o.innsendingsId, "INNGAAENDE", o.kanal, o.arkivtema, tittel)
+		datoMottatt = timestamp,
+		dokumenter = documents,
+		eksternReferanseId = o.innsendingsId,
+		journalpostType = "INNGAAENDE",
+		kanal = o.kanal,
+		tema = o.arkivtema,
+		tittel = tittel,
+		overstyrInnsynsregler = if (o.grantUserDigitalAccess == true) "VISES_MASKINELT_GODKJENT" else null
+	)
 }
 
 private fun getTitleFromMainDocument(documents: List<Dokument>): String {
