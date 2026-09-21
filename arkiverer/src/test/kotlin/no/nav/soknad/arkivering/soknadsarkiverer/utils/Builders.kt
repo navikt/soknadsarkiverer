@@ -22,6 +22,7 @@ class InnsendingTopicMsgBuilder {
 	private var skjemanr: String = "NAV 11-12.10"
 	private var tittel: String = "Kjøreliste for godkjent bruk av egen bil"
 	private var arkivtema: String = "TSO"
+	private var grantUserDigitalAccess: Boolean? = null
 	private var dokumenter: MutableList<DokumentData> = mutableListOf(
 		DokumentData(
 			skjemanummer = skjemanr,
@@ -73,6 +74,7 @@ class InnsendingTopicMsgBuilder {
 	fun withSkjemanr(skjemanr: String) = apply { this.skjemanr = skjemanr }
 	fun withTittel(tittel: String) = apply { this.tittel = tittel }
 	fun withArkivtema(arkivtema: String) = apply { this.arkivtema = arkivtema }
+	fun withGrantUserDigitalAccess(grantUserDigitalAccess: Boolean?) = apply { this.grantUserDigitalAccess = grantUserDigitalAccess }
 	fun withDokumenter(dokumenter: List<DokumentData>) = apply { this.dokumenter.addAll(dokumenter) }
 	fun withTestDokumenter(testDokumenter: MutableList<TestDokument>) = apply { this.dokumenter = TestDokumentBuilder().withTestDokumenter(testDokumenter).build().toMutableList() }
 
@@ -91,7 +93,8 @@ class InnsendingTopicMsgBuilder {
 		skjemanr = skjemanr,
 		tittel = tittel,
 		arkivtema = arkivtema,
-		dokumenter = dokumenter
+		dokumenter = dokumenter,
+		grantUserDigitalAccess = grantUserDigitalAccess
 	)
 }
 
