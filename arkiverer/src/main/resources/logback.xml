@@ -15,20 +15,13 @@
 
 		<appender name="team-logs" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
 			<destination>team-logs.nais-system:5170</destination>
+			<keepAliveDuration>30 seconds</keepAliveDuration>
+			<writeTimeout>1 minute</writeTimeout>
+			<reconnectionDelay>1 second</reconnectionDelay>
 			<encoder class="net.logstash.logback.encoder.LogstashEncoder">
 				<customFields>{"google_cloud_project":"${GOOGLE_CLOUD_PROJECT}","nais_namespace_name":"${NAIS_NAMESPACE}","nais_pod_name":"${NAIS_POD_NAME}","nais_container_name":"${NAIS_APP_NAME}"}</customFields>
 				<includeContext>false</includeContext>
 			</encoder>
-		</appender>
-
-		<!-- Asynkron levering slik at TCP-appenderen ikke blokkerer kalletråden.
-		     Markørfilteret ligger her, slik at kun TEAM_LOGS-merkede linjer havner i køen. -->
-		<appender name="ASYNC_TEAM_LOGS" class="ch.qos.logback.classic.AsyncAppender">
-			<appender-ref ref="team-logs" />
-			<queueSize>512</queueSize>
-			<!-- 0 = kast ingenting ved full kø -->
-			<discardingThreshold>0</discardingThreshold>
-			<includeCallerData>false</includeCallerData>
 			<filter class="ch.qos.logback.core.filter.EvaluatorFilter">
 				<evaluator class="ch.qos.logback.classic.boolex.OnMarkerEvaluator">
 					<marker>TEAM_LOGS</marker>
@@ -37,9 +30,8 @@
 				<OnMismatch>DENY</OnMismatch>
 			</filter>
 		</appender>
-
 		<logger name="team-logs-logger" level="INFO" additivity="false">
-			<appender-ref ref="ASYNC_TEAM_LOGS" />
+			<appender-ref ref="team-logs" />
 		</logger>
 
 		<logger name="org.apache" level="${log.level.org.apache:-INFO}"/>
@@ -55,7 +47,7 @@
 
 		<root level="INFO">
 			<appender-ref ref="STDOUT_JSON"/>
-			<appender-ref ref="ASYNC_TEAM_LOGS" />
+			<appender-ref ref="team-logs" />
 		</root>
 	</springProfile>
 
