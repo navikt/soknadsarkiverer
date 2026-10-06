@@ -69,9 +69,9 @@ class KafkaClientLifecycleTests {
 			streams.cleanUp()
 			streams.setUncaughtExceptionHandler(any<org.apache.kafka.streams.errors.StreamsUncaughtExceptionHandler>())
 			streams.start()
-			streams.close()
+			streams.close(KafkaStreamsSetup.CLOSE_TIMEOUT)
 		}
-		verify(exactly = 1) { streams.close() }
+		verify(exactly = 1) { streams.close(KafkaStreamsSetup.CLOSE_TIMEOUT) }
 	}
 
 	@Test
@@ -80,7 +80,7 @@ class KafkaClientLifecycleTests {
 		setup.close()
 
 		verify(exactly = 0) { setup.createKafkaStreams(any(), any()) }
-		verify(exactly = 0) { streams.close() }
+		verify(exactly = 0) { streams.close(KafkaStreamsSetup.CLOSE_TIMEOUT) }
 	}
 
 	@Test
@@ -116,6 +116,6 @@ class KafkaClientLifecycleTests {
 			assertThrows(IllegalStateException::class.java) { setup.setupKafkaStreams("lifecycle-test") }
 		}
 
-		verify(exactly = 1) { streams.close() }
+		verify(exactly = 1) { streams.close(KafkaStreamsSetup.CLOSE_TIMEOUT) }
 	}
 }

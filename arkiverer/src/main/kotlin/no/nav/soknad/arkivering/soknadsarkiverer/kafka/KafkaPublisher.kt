@@ -16,6 +16,7 @@ import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.springframework.stereotype.Service
 import jakarta.annotation.PreDestroy
+import java.time.Duration
 import java.util.*
 import java.util.concurrent.TimeUnit
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingMetrics as InnsendingMetricsJson
@@ -41,10 +42,15 @@ class KafkaPublisher(private val kafkaConfig: KafkaConfig) : AutoCloseable {
 
 	@PreDestroy
 	override fun close() {
-		kafkaProcessingEventV3Producer.close()
-		kafkaMetricsV3Producer.close()
-		kafkaMessageProducer.close()
-		kafkaArkiveringstilbakemeldingProducer.close()
+		kafkaProcessingEventV3Producer.close(CLOSE_TIMEOUT)
+		kafkaMetricsV3Producer.close(CLOSE_TIMEOUT)
+		kafkaMessageProducer.close(CLOSE_TIMEOUT)
+		kafkaArkiveringstilbakemeldingProducer.close(CLOSE_TIMEOUT)
+	}
+
+	companion object {
+		// Bounded so pod shutdown stays within the Kubernetes termination grace period.
+		internal val CLOSE_TIMEOUT: Duration = Duration.ofSeconds(5)
 	}
 
 	fun putProcessingEventOnTopic(key: String, value: ProcessingEvent, headers: Headers = RecordHeaders()) {

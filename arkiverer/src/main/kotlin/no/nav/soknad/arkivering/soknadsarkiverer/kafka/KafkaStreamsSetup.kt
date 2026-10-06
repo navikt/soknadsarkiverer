@@ -28,6 +28,7 @@ import org.apache.kafka.streams.state.KeyValueStore
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import jakarta.annotation.PreDestroy
+import java.time.Duration
 import java.util.*
 
 @Component
@@ -175,8 +176,17 @@ class KafkaStreamsSetup(
 	@Synchronized
 	override fun close() {
 		closed = true
-		kafkaStreams?.close()
+		kafkaStreams?.let {
+			if (!it.close(CLOSE_TIMEOUT)) {
+				logger.warn("Kafka Streams did not shut down within $CLOSE_TIMEOUT")
+			}
+		}
 		kafkaStreams = null
+	}
+
+	companion object {
+		// Bounded so pod shutdown stays within the Kubernetes termination grace period.
+		internal val CLOSE_TIMEOUT: Duration = Duration.ofSeconds(10)
 	}
 
 	private fun kafkaConfig(id: String) = Properties().also {
