@@ -118,4 +118,23 @@ class KafkaClientLifecycleTests {
 
 		verify(exactly = 1) { streams.close(KafkaStreamsSetup.CLOSE_TIMEOUT) }
 	}
+
+	@Test
+	fun `A failing close does not prevent the remaining Kafka clients from closing`() {
+		val closed = mutableListOf<Int>()
+
+		val failure = assertThrows(IllegalStateException::class.java) {
+			closeAll(listOf(
+				{ closed += 1 },
+				{ throw IllegalStateException("first") },
+				{ closed += 3 },
+				{ throw IllegalStateException("second") },
+				{ closed += 5 }
+			))
+		}
+
+		assertEquals(listOf(1, 3, 5), closed)
+		assertEquals("first", failure.message)
+		assertEquals(listOf("second"), failure.suppressed.map { it.message })
+	}
 }

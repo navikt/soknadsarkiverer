@@ -113,3 +113,12 @@ class KafkaPublisher(private val kafkaConfig: KafkaConfig) : AutoCloseable {
 		}
 	}
 }
+
+// Runs every closer even if an earlier one fails, then rethrows the first failure with the rest suppressed.
+internal fun closeAll(closers: List<() -> Unit>) {
+	val failures = closers.mapNotNull { runCatching(it).exceptionOrNull() }
+	failures.firstOrNull()?.let { first ->
+		failures.drop(1).forEach(first::addSuppressed)
+		throw first
+	}
+}
