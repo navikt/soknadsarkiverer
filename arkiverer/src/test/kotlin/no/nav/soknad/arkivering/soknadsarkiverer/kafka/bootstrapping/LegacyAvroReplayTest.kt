@@ -168,13 +168,13 @@ class LegacyAvroReplayTest : ContainerizedKafka() {
 			finishedMergedKey to ProcessingEventType.FINISHED
 		)
 
-		val replayingTaskListService = replayingTaskListService(pendingV2Key, pendingMergedKey)
-		KafkaBootstrapConsumer(replayingTaskListService, kafkaConfig).recreateState()
-
-		assertTrue(
-			archived.await(10, TimeUnit.SECONDS),
-			"Expected archiverService.archive(...) for both pendingV2Key=$pendingV2Key and pendingMergedKey=$pendingMergedKey within 10s"
-		)
+		replayingTaskListService(pendingV2Key, pendingMergedKey).use { replayingTaskListService ->
+			KafkaBootstrapConsumer(replayingTaskListService, kafkaConfig).recreateState()
+			assertTrue(
+				archived.await(10, TimeUnit.SECONDS),
+				"Expected archiverService.archive(...) for both pendingV2Key=$pendingV2Key and pendingMergedKey=$pendingMergedKey within 10s"
+			)
+		}
 		verify(exactly = 1) { archiverService.archive(eq(pendingV2Key), any(), any()) }
 		verify(exactly = 0) { archiverService.archive(eq(finishedV2Key), any(), any()) }
 		verify(exactly = 1) { archiverService.archive(eq(pendingMergedKey), any(), any()) }

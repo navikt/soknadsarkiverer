@@ -1,8 +1,11 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service
 
+import jakarta.annotation.PreDestroy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
@@ -27,8 +30,12 @@ open class TaskListService(
 	private val scheduler: Scheduler,
 	private val metrics: ArchivingMetrics,
 	private val kafkaPublisher: KafkaPublisher
-) {
+) : AutoCloseable {
 	private val logger = LoggerFactory.getLogger(javaClass)
+	private val taskJob = SupervisorJob()
+	private val taskScope = CoroutineScope(Dispatchers.Default + taskJob)
+	private val lifecycleLock = Any()
+	private var closing = false
 
 	private val tasks = hashMapOf<String, Task>()
 	private val loggedTaskStates = hashMapOf<String, EventTypes>()
@@ -41,6 +48,28 @@ open class TaskListService(
 
 	init {
 		logger.info("startUpEndTime=$startUpEndTime")
+	}
+
+	private fun launchTask(key: String, task: suspend () -> Unit) {
+		synchronized(lifecycleLock) {
+			if (closing || !busyInc(applicationState)) {
+				logger.info("$key: Will not start task - application is shutting down.")
+				return
+			}
+			taskScope.launch { task() }.invokeOnCompletion { busyDec(applicationState) }
+		}
+	}
+
+	@PreDestroy
+	override fun close() {
+		synchronized(lifecycleLock) {
+			closing = true
+			stop(applicationState)
+			taskJob.complete()
+		}
+		// Do not close downstream clients while jobs can still publish feedback or final states.
+		logger.info("Waiting for in-flight archiving and feedback tasks to finish")
+		runBlocking { taskJob.join() }
 	}
 
 	fun clearLoggedTaskStates() {
@@ -267,7 +296,7 @@ open class TaskListService(
 	}
 
 	private fun tryToArchive(key: String, soknadarkivschema: InnsendingTopicMsg, attempt: Int) {
-		CoroutineScope(Dispatchers.Default).launch {
+		launchTask(key) {
 			MDC.put(MDC_INNSENDINGS_ID, key)
 			var nextState: EventTypes? = null
 			val timer = metrics.archivingLatencyStart()
@@ -353,7 +382,7 @@ open class TaskListService(
 	}
 
 	private fun sendOkFeedbackToInnsendingApi(key: String, soknadarkivschema: InnsendingTopicMsg, attempt: Int) {
-		CoroutineScope(Dispatchers.Default).launch {
+		launchTask(key) {
 			MDC.put(MDC_INNSENDINGS_ID, key)
 			var nextState: EventTypes? = null
 			try {
@@ -382,7 +411,7 @@ open class TaskListService(
 	}
 
 	private fun sendNotOkFeedbackToInnsendingApi(key: String, soknadarkivschema: InnsendingTopicMsg, attempt: Int) {
-		CoroutineScope(Dispatchers.Default).launch {
+		launchTask(key) {
 			MDC.put(MDC_INNSENDINGS_ID, key)
 			var nextState: EventTypes? = null
 			try {

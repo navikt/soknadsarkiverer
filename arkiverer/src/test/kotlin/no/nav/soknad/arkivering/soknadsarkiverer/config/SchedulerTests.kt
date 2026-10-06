@@ -17,11 +17,17 @@ class SchedulerTests {
 	fun `shutdown stops both task schedulers`() {
 		val scheduler = Scheduler()
 		scheduler.setup()
+		val delayedTask = CountDownLatch(1)
+		scheduler.schedule({ delayedTask.countDown() }, Instant.now().plusSeconds(3600))
+		scheduler.scheduleSingleTask({ delayedTask.countDown() }, Instant.now().plusSeconds(3600))
 
 		scheduler.shutdown()
 
 		assertTrue(schedulerField(scheduler, "normalTaskScheduler").scheduledExecutor.isShutdown)
 		assertTrue(schedulerField(scheduler, "singleTaskScheduler").scheduledExecutor.isShutdown)
+		assertTrue(schedulerField(scheduler, "normalTaskScheduler").scheduledExecutor.isTerminated)
+		assertTrue(schedulerField(scheduler, "singleTaskScheduler").scheduledExecutor.isTerminated)
+		assertEquals(1L, delayedTask.count)
 	}
 
 	@Test

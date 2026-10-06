@@ -7,6 +7,8 @@ import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.ProcessingEvent
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
+import no.nav.soknad.arkivering.soknadsarkiverer.config.isBusy
+import no.nav.soknad.arkivering.soknadsarkiverer.config.stop
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.ResponseStatus
@@ -18,11 +20,14 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.util.*
 
 class TaskListServiceTests {
 
 	private lateinit var metrics: ArchivingMetrics
+	private val applicationState = ApplicationState()
 
 	private val scheduler = mockk<Scheduler>().also {
 		every { it.schedule(any(), any()) } just Runs
@@ -58,7 +63,7 @@ class TaskListServiceTests {
 			safService,
 			0,
 			secondsBetweenRetries,
-			ApplicationState(),
+			applicationState,
 			scheduler,
 			metrics,
 			kafkaPublisher
@@ -67,7 +72,26 @@ class TaskListServiceTests {
 
 	@AfterEach
 	fun tearDown() {
+		taskListService.close()
+		assertFalse(isBusy(applicationState))
 		metrics.unregister()
+	}
+
+	@ParameterizedTest
+	@EnumSource(value = EventTypes::class, names = ["STARTED", "ARCHIVED", "FAILURE"])
+	fun `preStop prevents queued callbacks from launching new coroutine work`(state: EventTypes) {
+		val scheduledTask = slot<() -> Unit>()
+		every { scheduler.schedule(capture(scheduledTask), any()) } just Runs
+		taskListService.addOrUpdateTask(UUID.randomUUID().toString(), soknadarkivschema, state)
+
+		stop(applicationState)
+		scheduledTask.captured.invoke()
+		taskListService.close()
+
+		coVerify(exactly = 0) { archiverService.fetchFiles(any(), any()) }
+		verify(exactly = 0) { archiverService.archive(any(), any(), any()) }
+		verify(exactly = 0) { archiverService.createArkiveringstilbakemelding(any(), any()) }
+		verify(exactly = 0) { kafkaPublisher.putProcessingEventOnTopic(any(), any(), any()) }
 	}
 
 	@Test

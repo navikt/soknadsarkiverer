@@ -118,6 +118,7 @@ class StateRecreationTests : ContainerizedKafka() {
 	private val fileUuid = UUID.randomUUID().toString()
 
 	private val applications = mutableMapOf<String, InnsendingTopicMsg>()
+	private val replayTaskLists = mutableListOf<TaskListService>()
 
 	companion object {
 
@@ -145,6 +146,8 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	@AfterEach
 	fun tearDown() {
+		replayTaskLists.forEach { it.close() }
+		replayTaskLists.clear()
 		wireMock.resetAll()
 		kafkaLoggedinTopicProducer.close()
 		kafkaNologinTopicProducer.close()
@@ -152,13 +155,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		kafkaProcessingEventV3PoisonProducer.close()
 		metrics.unregister()
 		taskListService.clearLoggedTaskStates()
-		// TaskListService.tryToArchive dispatches archiving via CoroutineScope(Dispatchers.Default).launch
-		// (fire-and-forget), so a test's archiving work can still be in flight when the test method
-		// returns. Since archiverService/taskListService are shared mockk instances across all tests in
-		// this class (@TestInstance(PER_CLASS)), clear their recorded call history (but keep the
-		// `every { ... }` stubs, hence answers = false) between tests so a straggling call from one test
-		// can't be mistaken for - or otherwise pollute the diagnostics of - a subsequent test's
-		// verify(...) on the same mocks.
+		// Clear shared mock history only after the test-owned coroutine work has finished.
 		clearMocks(archiverService, taskListService, answers = false)
 	}
 
@@ -611,7 +608,7 @@ class StateRecreationTests : ContainerizedKafka() {
 				super.addOrUpdateTask(key, soknadarkivschema, state, isBootstrappingTask)
 			}
 		}
-	}
+	}.also { replayTaskLists.add(it) }
 
 	private fun runBootstrappedArchiveTask() {
 		val task = slot<() -> Unit>()
@@ -619,8 +616,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		every { scheduler.scheduleSingleTask(capture(task), any()) } answers { task.captured.invoke() }
 	}
 
-	// archiverService.archive(...) runs on TaskListService's fire-and-forget
-	// CoroutineScope(Dispatchers.Default).launch { ... } (see TaskListService.tryToArchive), so tests
+	// archiverService.archive(...) runs on TaskListService's owned coroutine scope, so tests
 	// can't assert on it synchronously right after recreateState() returns. Rather than polling for it
 	// with MockK's verify(timeout = ...) - which races against, and can itself add CPU pressure that
 	// competes with, that same coroutine, making failures worse the longer the timeout is set to - each

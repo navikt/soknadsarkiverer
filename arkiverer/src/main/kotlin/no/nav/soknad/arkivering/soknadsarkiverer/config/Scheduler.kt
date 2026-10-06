@@ -20,6 +20,7 @@ class Scheduler {
 	private fun threadPoolTaskScheduler(poolSize: Int) = ThreadPoolTaskScheduler().also {
 		it.poolSize = poolSize
 		it.setThreadNamePrefix("ThreadPoolTaskSchedulerOfSize${poolSize}_")
+		it.setExecuteExistingDelayedTasksAfterShutdownPolicy(false)
 		it.setWaitForTasksToCompleteOnShutdown(true)
 		it.setAwaitTerminationSeconds(30)
 	}
