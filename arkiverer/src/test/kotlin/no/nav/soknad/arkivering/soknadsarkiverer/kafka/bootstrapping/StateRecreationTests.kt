@@ -12,7 +12,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaSetupTest
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaStreamsSetup
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventJson
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventJsonSerializer
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventType
@@ -30,7 +30,6 @@ import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
-import org.apache.kafka.streams.KafkaStreams
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -76,7 +75,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	@Suppress("unused")
 	@MockkBean(relaxed = true)
-	private lateinit var kafkaStreams: KafkaStreams // Mock this so that the real chain isn't run by the tests
+	private lateinit var kafkaStreamsSetup: KafkaStreamsSetup
 
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
@@ -112,8 +111,6 @@ class StateRecreationTests : ContainerizedKafka() {
 		every { it.addOrUpdateTask(any(), any(), any(), any()) } just Runs
 		every { it.clearLoggedTaskStates() } just Runs
 	}
-
-	private lateinit var kafkaSetup: KafkaSetupTest
 
 	private val loggedinSoknad = InnsendingTopicMsgBuilder().build()
 	private val notLoggedinSoknad = InnsendingTopicMsgBuilder().withKanal("NAV_NO_UINNLOGGET").build()
@@ -184,14 +181,6 @@ class StateRecreationTests : ContainerizedKafka() {
 		kafkaProcessingEventV3PoisonProducer = KafkaProducer<String, String>(kafkaConfigMap(kafkaConfig)
 			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 		kafkaBootstrapConsumer = KafkaBootstrapConsumer(taskListService, kafkaConfig)
-		kafkaSetup = KafkaSetupTest(
-			applicationState = ApplicationState(alive = true, ready = true),
-			taskListService = taskListService,
-			kafkaPublisher = kafkaPublisher,
-			metrics = metrics,
-			kafkaConfig = kafkaConfig
-		)
-
 		kafkaBootstrapConsumer.recreateState() // Other test classes could have left Kafka events on the topics. Consume them before running the tests in this class.
 		clearMocks(taskListService, answers = false)
 

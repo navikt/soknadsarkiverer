@@ -27,3 +27,12 @@ Questions regarding the code or the project can be asked to the team by [raising
 
 ### For NAV employees
 NAV employees can reach the team by Slack in the channel #teamsoknad
+
+## Running tests
+Use the Java and Maven versions in `mise.toml`: `mise exec -- mvn install`.
+Kafka integration tests require Docker. `ContainerizedKafka` closes the Spring context
+after each test class before stopping its Kafka container, so Kafka Streams clients
+cannot keep reconnecting to a stopped broker. Tests that do not need the live stream
+topology mock `KafkaStreamsSetup`, not `KafkaStreams`, since the setup component owns
+and closes the stream instance. `KafkaPublisher` also closes its producers with the
+Spring context; context-only tests mock both components to avoid broker connections.

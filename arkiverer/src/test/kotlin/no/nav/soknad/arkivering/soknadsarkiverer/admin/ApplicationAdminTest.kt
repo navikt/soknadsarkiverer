@@ -54,6 +54,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.TokenGenerator
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
 import org.apache.kafka.common.header.Headers
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
@@ -158,17 +159,13 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 	}
 
 	@BeforeAll
-	fun setupKafkaProducersAndListeners() {
-		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap()
-			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
-		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
-			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
-		})
-		kafkaloggedinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
-			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
-		})
-
+	fun setupKafkaListener() {
 		kafkaListener = KafkaListener(kafkaConfig)
+	}
+
+	@AfterAll
+	fun teardownKafkaListener() {
+		kafkaListener.close()
 	}
 
 	@BeforeEach

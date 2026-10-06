@@ -12,6 +12,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaStreamsSetup
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventJson
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventJsonSerializer
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventType
@@ -29,8 +30,8 @@ import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
-import org.apache.kafka.streams.KafkaStreams
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -74,7 +75,7 @@ class LegacyAvroReplayTest : ContainerizedKafka() {
 
 	@Suppress("unused")
 	@MockkBean(relaxed = true)
-	private lateinit var kafkaStreams: KafkaStreams // Mock this so that the real chain isn't run by the tests
+	private lateinit var kafkaStreamsSetup: KafkaStreamsSetup
 
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
@@ -121,6 +122,13 @@ class LegacyAvroReplayTest : ContainerizedKafka() {
 		// Other test classes could have left Kafka events on the topics. Consume them before running
 		// the test in this class.
 		KafkaBootstrapConsumer(mockk<TaskListService>(relaxed = true), kafkaConfig).recreateState()
+	}
+
+	@AfterAll
+	fun tearDown() {
+		kafkaLoggedinTopicProducer.close()
+		kafkaProcessingEventProducer.close()
+		kafkaProcessingEventV3Producer.close()
 	}
 
 	@Test

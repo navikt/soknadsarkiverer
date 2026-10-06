@@ -19,7 +19,7 @@ import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingMetrics as InnsendingMetricsJson
 
-class KafkaListener(private val kafkaConfig: KafkaConfig) {
+class KafkaListener(private val kafkaConfig: KafkaConfig) : AutoCloseable {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 	private val verbose = true
@@ -41,7 +41,6 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) {
 		val kafkaConfig = kafkaConfig()
 		kafkaStreams = KafkaStreams(topology, kafkaConfig)
 		kafkaStreams.start()
-		Runtime.getRuntime().addShutdownHook(Thread(kafkaStreams::close))
 	}
 
 
@@ -96,7 +95,7 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) {
 		}
 	}
 
-	fun close() {
+	override fun close() {
 		kafkaStreams.close()
 		kafkaStreams.cleanUp()
 	}
