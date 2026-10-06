@@ -12,7 +12,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaSetupTest
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaStreamsSetup
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventJson
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventJsonSerializer
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventType
@@ -30,7 +30,6 @@ import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
-import org.apache.kafka.streams.KafkaStreams
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -76,7 +75,7 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	@Suppress("unused")
 	@MockkBean(relaxed = true)
-	private lateinit var kafkaStreams: KafkaStreams // Mock this so that the real chain isn't run by the tests
+	private lateinit var kafkaStreamsSetup: KafkaStreamsSetup
 
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
@@ -113,14 +112,13 @@ class StateRecreationTests : ContainerizedKafka() {
 		every { it.clearLoggedTaskStates() } just Runs
 	}
 
-	private lateinit var kafkaSetup: KafkaSetupTest
-
 	private val loggedinSoknad = InnsendingTopicMsgBuilder().build()
 	private val notLoggedinSoknad = InnsendingTopicMsgBuilder().withKanal("NAV_NO_UINNLOGGET").build()
 
 	private val fileUuid = UUID.randomUUID().toString()
 
 	private val applications = mutableMapOf<String, InnsendingTopicMsg>()
+	private val replayTaskLists = mutableListOf<TaskListService>()
 
 	companion object {
 
@@ -148,6 +146,8 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	@AfterEach
 	fun tearDown() {
+		replayTaskLists.forEach { it.close() }
+		replayTaskLists.clear()
 		wireMock.resetAll()
 		kafkaLoggedinTopicProducer.close()
 		kafkaNologinTopicProducer.close()
@@ -155,13 +155,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		kafkaProcessingEventV3PoisonProducer.close()
 		metrics.unregister()
 		taskListService.clearLoggedTaskStates()
-		// TaskListService.tryToArchive dispatches archiving via CoroutineScope(Dispatchers.Default).launch
-		// (fire-and-forget), so a test's archiving work can still be in flight when the test method
-		// returns. Since archiverService/taskListService are shared mockk instances across all tests in
-		// this class (@TestInstance(PER_CLASS)), clear their recorded call history (but keep the
-		// `every { ... }` stubs, hence answers = false) between tests so a straggling call from one test
-		// can't be mistaken for - or otherwise pollute the diagnostics of - a subsequent test's
-		// verify(...) on the same mocks.
+		// Clear shared mock history only after the test-owned coroutine work has finished.
 		clearMocks(archiverService, taskListService, answers = false)
 	}
 
@@ -184,14 +178,6 @@ class StateRecreationTests : ContainerizedKafka() {
 		kafkaProcessingEventV3PoisonProducer = KafkaProducer<String, String>(kafkaConfigMap(kafkaConfig)
 			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 		kafkaBootstrapConsumer = KafkaBootstrapConsumer(taskListService, kafkaConfig)
-		kafkaSetup = KafkaSetupTest(
-			applicationState = ApplicationState(alive = true, ready = true),
-			taskListService = taskListService,
-			kafkaPublisher = kafkaPublisher,
-			metrics = metrics,
-			kafkaConfig = kafkaConfig
-		)
-
 		kafkaBootstrapConsumer.recreateState() // Other test classes could have left Kafka events on the topics. Consume them before running the tests in this class.
 		clearMocks(taskListService, answers = false)
 
@@ -622,7 +608,7 @@ class StateRecreationTests : ContainerizedKafka() {
 				super.addOrUpdateTask(key, soknadarkivschema, state, isBootstrappingTask)
 			}
 		}
-	}
+	}.also { replayTaskLists.add(it) }
 
 	private fun runBootstrappedArchiveTask() {
 		val task = slot<() -> Unit>()
@@ -630,8 +616,7 @@ class StateRecreationTests : ContainerizedKafka() {
 		every { scheduler.scheduleSingleTask(capture(task), any()) } answers { task.captured.invoke() }
 	}
 
-	// archiverService.archive(...) runs on TaskListService's fire-and-forget
-	// CoroutineScope(Dispatchers.Default).launch { ... } (see TaskListService.tryToArchive), so tests
+	// archiverService.archive(...) runs on TaskListService's owned coroutine scope, so tests
 	// can't assert on it synchronously right after recreateState() returns. Rather than polling for it
 	// with MockK's verify(timeout = ...) - which races against, and can itself add CPU pressure that
 	// competes with, that same coroutine, making failures worse the longer the timeout is set to - each

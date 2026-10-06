@@ -10,14 +10,18 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.serialization.StringSerializer
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.fail
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean
 import org.springframework.boot.context.properties.bind.Binder
 import org.springframework.boot.context.properties.source.MapConfigurationPropertySource
 import org.springframework.core.io.ClassPathResource
+import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
+import org.springframework.test.context.TestContext
+import org.springframework.test.context.TestExecutionListeners
+import org.springframework.test.context.support.AbstractTestExecutionListener
+import org.springframework.test.context.support.DirtiesContextTestExecutionListener
 import org.testcontainers.containers.KafkaContainer
 import org.testcontainers.utility.DockerImageName
 import java.util.HashMap
@@ -25,6 +29,11 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@TestExecutionListeners(
+	listeners = [KafkaContainerCleanupListener::class],
+	mergeMode = TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS
+)
 open class ContainerizedKafka {
 
 
@@ -74,12 +83,10 @@ open class ContainerizedKafka {
 		}
 
 		@JvmStatic
-		@AfterAll
 		fun close() {
 			println("Stopping Kafka Container")
 			kafkaContainer.stop()
 		}
-
 
 		private fun createTopic(topic: String) {
 			val topicCommand =
@@ -126,3 +133,11 @@ open class ContainerizedKafka {
 
 }
 
+class KafkaContainerCleanupListener : AbstractTestExecutionListener() {
+	// afterTestClass callbacks run in reverse order: close Spring's Kafka clients before the broker.
+	override fun getOrder() = DirtiesContextTestExecutionListener().order - 1
+
+	override fun afterTestClass(testContext: TestContext) {
+		ContainerizedKafka.close()
+	}
+}

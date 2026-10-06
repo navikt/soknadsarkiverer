@@ -4,6 +4,7 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.verify
 import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
@@ -52,18 +53,46 @@ class KafkaSetupTests {
 		assertTrue(applicationState.ready)
 	}
 
-	private fun kafkaSetup(applicationState: ApplicationState): KafkaSetup {
+	@Test
+	fun `Failed Kafka Streams startup leaves application unready`() {
+		val applicationState = ApplicationState(alive = true, ready = false)
+		val streamsSetup = mockk<KafkaStreamsSetup>()
+		every { streamsSetup.setupKafkaStreams("test-application_v2") } throws IllegalStateException("Startup failed")
+
+		assertThrows(IllegalStateException::class.java) {
+			kafkaSetup(applicationState, streamsSetup).initializeKafka(bootstrap = {})
+		}
+
+		assertFalse(applicationState.ready)
+	}
+
+	@Test
+	fun `Production initializes the managed Kafka Streams with the existing application id`() {
+		val applicationState = ApplicationState(alive = true, ready = false)
+		val streamsSetup = mockk<KafkaStreamsSetup>(relaxed = true)
+
+		kafkaSetup(applicationState, streamsSetup).initializeKafka(bootstrap = {})
+
+		verify(exactly = 1) { streamsSetup.setupKafkaStreams("test-application_v2") }
+		assertTrue(applicationState.ready)
+	}
+
+	private fun kafkaSetup(
+		applicationState: ApplicationState,
+		streamsSetup: KafkaStreamsSetup = mockk(relaxed = true)
+	): KafkaSetup {
 		val scheduler = mockk<Scheduler>().also {
 			every { it.scheduleSingleTask(any(), any()) } just Runs
 		}
 		val kafkaConfig = mockk<KafkaConfig>().also {
 			every { it.delayBeforeKafkaInitialization } returns "0"
+			every { it.applicationId } returns "test-application"
 		}
 
 		return KafkaSetup(
 			applicationState = applicationState,
 			taskListService = mockk<TaskListService>(relaxed = true),
-			kafkaPublisher = mockk<KafkaPublisher>(relaxed = true),
+			kafkaStreamsSetup = streamsSetup,
 			scheduler = scheduler,
 			metrics = mockk<ArchivingMetrics>(relaxed = true),
 			kafkaConfig = kafkaConfig

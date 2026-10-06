@@ -1,12 +1,15 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.config
 
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.DependsOn
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
 import java.time.Instant
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 
+// Scheduled tasks publish to Kafka, so the publisher must be closed only after running tasks finish.
+@DependsOn("kafkaPublisher")
 @EnableScheduling
 @Configuration
 class Scheduler {
@@ -17,6 +20,7 @@ class Scheduler {
 	private fun threadPoolTaskScheduler(poolSize: Int) = ThreadPoolTaskScheduler().also {
 		it.poolSize = poolSize
 		it.setThreadNamePrefix("ThreadPoolTaskSchedulerOfSize${poolSize}_")
+		it.setExecuteExistingDelayedTasksAfterShutdownPolicy(false)
 		it.setWaitForTasksToCompleteOnShutdown(true)
 		it.setAwaitTerminationSeconds(30)
 	}

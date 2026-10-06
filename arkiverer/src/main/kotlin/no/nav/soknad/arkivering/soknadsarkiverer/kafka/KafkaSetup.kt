@@ -17,7 +17,7 @@ import jakarta.annotation.PostConstruct
 class KafkaSetup(
 	private val applicationState: ApplicationState,
 	private val taskListService: TaskListService,
-	private val kafkaPublisher: KafkaPublisher,
+	private val kafkaStreamsSetup: KafkaStreamsSetup,
 	private val scheduler: Scheduler,
 	private val metrics: ArchivingMetrics,
 	private val kafkaConfig: KafkaConfig
@@ -42,7 +42,7 @@ class KafkaSetup(
 	internal fun initializeKafka(
 		bootstrap: () -> Unit = ::bootstrapKafka,
 		startStreams: () -> Unit = {
-			setupKafkaStreams(applicationState, taskListService, kafkaPublisher, kafkaConfig = kafkaConfig)
+			kafkaStreamsSetup.setupKafkaStreams(kafkaConfig.applicationId + "_v2")
 		}
 	) {
 		bootstrap()
@@ -67,8 +67,7 @@ class KafkaSetup(
 @Profile("test")
 class KafkaSetupTest(
 	private val applicationState: ApplicationState,
-	private val taskListService: TaskListService,
-	private val kafkaPublisher: KafkaPublisher,
+	private val kafkaStreamsSetup: KafkaStreamsSetup,
 	private val metrics: ArchivingMetrics,
 	private val kafkaConfig : KafkaConfig
 ) {
@@ -81,20 +80,9 @@ class KafkaSetupTest(
 		setupMetricsAndLiveness(metrics, applicationState)
 
 		val groupId = kafkaConfig.applicationId + "_" + UUID.randomUUID().toString()
-		setupKafkaStreams(applicationState, taskListService, kafkaPublisher, groupId,kafkaConfig)
+		kafkaStreamsSetup.setupKafkaStreams(groupId)
 		applicationState.ready = true
 	}
-}
-
-private fun setupKafkaStreams(
-	applicationState: ApplicationState,
-	taskListService: TaskListService,
-	kafkaPublisher: KafkaPublisher,
-	groupId: String? = null,
-	kafkaConfig : KafkaConfig
-) {
-	val id = groupId ?: (kafkaConfig.applicationId + "_v2")
-	KafkaStreamsSetup(applicationState, taskListService, kafkaPublisher,kafkaConfig).setupKafkaStreams(id)
 }
 
 private fun setupMetricsAndLiveness( metrics: ArchivingMetrics, applicationState: ApplicationState ) {

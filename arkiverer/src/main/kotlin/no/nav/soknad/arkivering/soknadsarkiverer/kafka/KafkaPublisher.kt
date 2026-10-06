@@ -15,12 +15,14 @@ import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.springframework.stereotype.Service
+import jakarta.annotation.PreDestroy
+import java.time.Duration
 import java.util.*
 import java.util.concurrent.TimeUnit
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingMetrics as InnsendingMetricsJson
 
 @Service
-class KafkaPublisher(private val kafkaConfig: KafkaConfig) {
+class KafkaPublisher(private val kafkaConfig: KafkaConfig) : AutoCloseable {
 
 	// Production writers only ever publish plain JSON to the v3 topics from here on (issue #265):
 	// processingeventlog-v2 and metrics-v2 are read-only from now on (see KafkaBootstrapConsumer,
@@ -37,6 +39,23 @@ class KafkaPublisher(private val kafkaConfig: KafkaConfig) {
 	private val kafkaArkiveringstilbakemeldingProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
 		it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 	})
+
+	@PreDestroy
+	override fun close() {
+		closeAll(
+			listOf(
+				kafkaProcessingEventV3Producer,
+				kafkaMetricsV3Producer,
+				kafkaMessageProducer,
+				kafkaArkiveringstilbakemeldingProducer
+			).map { producer -> { producer.close(CLOSE_TIMEOUT) } }
+		)
+	}
+
+	companion object {
+		// Bounded so pod shutdown stays within the Kubernetes termination grace period.
+		internal val CLOSE_TIMEOUT: Duration = Duration.ofSeconds(5)
+	}
 
 	fun putProcessingEventOnTopic(key: String, value: ProcessingEvent, headers: Headers = RecordHeaders()) {
 		val topic = kafkaConfig.topics.processingTopicV3
@@ -92,5 +111,14 @@ class KafkaPublisher(private val kafkaConfig: KafkaConfig) {
 				it[SslConfigs.SSL_KEY_PASSWORD_CONFIG] = kafkaConfig.security.keyStorePassword
 			}
 		}
+	}
+}
+
+// Runs every closer even if an earlier one fails, then rethrows the first failure with the rest suppressed.
+internal fun closeAll(closers: List<() -> Unit>) {
+	val failures = closers.mapNotNull { runCatching(it).exceptionOrNull() }
+	failures.firstOrNull()?.let { first ->
+		failures.drop(1).forEach(first::addSuppressed)
+		throw first
 	}
 }

@@ -19,22 +19,29 @@ import org.apache.kafka.common.utils.Bytes
 import org.apache.kafka.streams.KafkaStreams
 import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.StreamsConfig
+import org.apache.kafka.streams.Topology
 import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler
 import org.apache.kafka.streams.kstream.Consumed
 import org.apache.kafka.streams.kstream.Joined
 import org.apache.kafka.streams.kstream.Materialized
 import org.apache.kafka.streams.state.KeyValueStore
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
+import jakarta.annotation.PreDestroy
+import java.time.Duration
 import java.util.*
 
+@Component
 class KafkaStreamsSetup(
 	private val applicationState: ApplicationState,
 	private val taskListService: TaskListService,
 	private val kafkaPublisher: KafkaPublisher,
 	private val kafkaConfig: KafkaConfig
-) {
+) : AutoCloseable {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
+	private var kafkaStreams: KafkaStreams? = null
+	private var closed = false
 
 	private val stringSerde = Serdes.StringSerde()
 	// Used to read the v3 JSON processing-event topic (issue #265's production cutover); no Schema
@@ -142,22 +149,44 @@ class KafkaStreamsSetup(
 		.toString()
 	}
 
+	@Synchronized
 	fun setupKafkaStreams(id: String): KafkaStreams {
+		check(!closed) { "Kafka Streams setup has been closed" }
+		check(kafkaStreams == null) { "Kafka Streams has already been initialized" }
 		logger.info("Setting up KafkaStreams")
 
 		val streamsBuilder = StreamsBuilder()
 		kafkaStreams(streamsBuilder)
 		val topology = streamsBuilder.build()
 
-		val kafkaStreams = KafkaStreams(topology, kafkaConfig(id))
+		val kafkaStreams = createKafkaStreams(topology, kafkaConfig(id))
+		this.kafkaStreams = kafkaStreams
 
 		kafkaStreams.cleanUp()
 		kafkaStreams.setUncaughtExceptionHandler(kafkaExceptionHandler())
 		kafkaStreams.start()
-		Runtime.getRuntime().addShutdownHook(Thread(kafkaStreams::close))
 
 		logger.info("Finished setting up KafkaStreams")
 		return kafkaStreams
+	}
+
+	internal fun createKafkaStreams(topology: Topology, properties: Properties) = KafkaStreams(topology, properties)
+
+	@PreDestroy
+	@Synchronized
+	override fun close() {
+		closed = true
+		kafkaStreams?.let {
+			if (!it.close(CLOSE_TIMEOUT)) {
+				logger.warn("Kafka Streams did not shut down within $CLOSE_TIMEOUT")
+			}
+		}
+		kafkaStreams = null
+	}
+
+	companion object {
+		// Bounded so pod shutdown stays within the Kubernetes termination grace period.
+		internal val CLOSE_TIMEOUT: Duration = Duration.ofSeconds(10)
 	}
 
 	private fun kafkaConfig(id: String) = Properties().also {

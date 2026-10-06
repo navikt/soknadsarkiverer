@@ -12,6 +12,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.config.ApplicationState
 import no.nav.soknad.arkivering.soknadsarkiverer.config.Scheduler
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaStreamsSetup
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventJson
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventJsonSerializer
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventType
@@ -29,8 +30,8 @@ import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
-import org.apache.kafka.streams.KafkaStreams
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -74,7 +75,7 @@ class LegacyAvroReplayTest : ContainerizedKafka() {
 
 	@Suppress("unused")
 	@MockkBean(relaxed = true)
-	private lateinit var kafkaStreams: KafkaStreams // Mock this so that the real chain isn't run by the tests
+	private lateinit var kafkaStreamsSetup: KafkaStreamsSetup
 
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
@@ -123,6 +124,13 @@ class LegacyAvroReplayTest : ContainerizedKafka() {
 		KafkaBootstrapConsumer(mockk<TaskListService>(relaxed = true), kafkaConfig).recreateState()
 	}
 
+	@AfterAll
+	fun tearDown() {
+		kafkaLoggedinTopicProducer.close()
+		kafkaProcessingEventProducer.close()
+		kafkaProcessingEventV3Producer.close()
+	}
+
 	@Test
 	fun `Replaying retained v2 Avro processing-event history resumes pending work, skips finished work, and merges correctly with v3 JSON history`() {
 		val pendingV2Key = UUID.randomUUID().toString()
@@ -160,13 +168,13 @@ class LegacyAvroReplayTest : ContainerizedKafka() {
 			finishedMergedKey to ProcessingEventType.FINISHED
 		)
 
-		val replayingTaskListService = replayingTaskListService(pendingV2Key, pendingMergedKey)
-		KafkaBootstrapConsumer(replayingTaskListService, kafkaConfig).recreateState()
-
-		assertTrue(
-			archived.await(10, TimeUnit.SECONDS),
-			"Expected archiverService.archive(...) for both pendingV2Key=$pendingV2Key and pendingMergedKey=$pendingMergedKey within 10s"
-		)
+		replayingTaskListService(pendingV2Key, pendingMergedKey).use { replayingTaskListService ->
+			KafkaBootstrapConsumer(replayingTaskListService, kafkaConfig).recreateState()
+			assertTrue(
+				archived.await(10, TimeUnit.SECONDS),
+				"Expected archiverService.archive(...) for both pendingV2Key=$pendingV2Key and pendingMergedKey=$pendingMergedKey within 10s"
+			)
+		}
 		verify(exactly = 1) { archiverService.archive(eq(pendingV2Key), any(), any()) }
 		verify(exactly = 0) { archiverService.archive(eq(finishedV2Key), any(), any()) }
 		verify(exactly = 1) { archiverService.archive(eq(pendingMergedKey), any(), any()) }

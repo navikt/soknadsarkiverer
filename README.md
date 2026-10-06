@@ -6,6 +6,17 @@ For a description of the whole archiving system, see [the documentation](https:/
 Operational documentation:
 * [Avro retirement runbook](docs/avro-retirement-runbook.md)
 
+## Shutdown
+`/internal/stop` stops admission of new coroutine work and waits for in-flight file retrieval,
+archiving, feedback, and final processing-event publication. Spring context shutdown also drains
+the jobs owned by `TaskListService` before closing their Kafka publisher. Scheduled tasks that
+have not started are cancelled; unfinished applications are recovered by Kafka replay.
+
+Task draining waits for the actual work to finish, not just the scheduler callbacks that launched
+it. The Kafka client close timeouts do not bound this drain. Kubernetes can still terminate the
+pod when its termination grace period expires, so the grace period must accommodate in-flight
+requests as well as client cleanup.
+
 ## Dependencies
 This component requires the following to work:
 * [innsending-api](https://github.com/navikt/innsending-api) (REST-endpoint for retrieving files)
