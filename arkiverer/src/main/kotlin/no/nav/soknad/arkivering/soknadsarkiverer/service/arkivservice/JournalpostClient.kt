@@ -52,7 +52,7 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 				metrics.incNoLoginJoarkSuccesses()
 			}
 
-			loggArkivertInnsending(journalpostId, key, soknadarkivschema)
+			loggArkivertInnsending(journalpostId, key, soknadarkivschema, request)
 
 			return journalpostId
 
@@ -72,12 +72,18 @@ class JournalpostClient(@Value("\${joark.host}") private val joarkHost: String,
 		}
 	}
 
-	private fun loggArkivertInnsending(journalpostId: String, key: String, soknadarkivschema: InnsendingTopicMsg) {
+	private fun loggArkivertInnsending(
+		journalpostId: String,
+		key: String,
+		soknadarkivschema: InnsendingTopicMsg,
+		request: OpprettJournalpostRequest
+	) {
 
 		val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS XXX")
 		val message = "journalpostId:$journalpostId, innsendingsId:$key, skjemaNr:${soknadarkivschema.skjemanr}, " +
 			"tema:${soknadarkivschema.arkivtema}, kanal:${soknadarkivschema.kanal}, " +
 			"ettersendelsetilId:${soknadarkivschema.ettersendelseTilId}, " +
+			"overstyrInnsynsregler:${request.overstyrInnsynsregler}, " +
 			"innsendtDato:${formatter.format(soknadarkivschema.innsendtDato)}"
 
 		logger.info(message)

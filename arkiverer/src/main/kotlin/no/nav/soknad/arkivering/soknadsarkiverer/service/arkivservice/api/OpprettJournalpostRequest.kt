@@ -1,5 +1,7 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api
 
+import com.fasterxml.jackson.annotation.JsonInclude
+
 data class OpprettJournalpostRequest(
 	val avsenderMottaker: AvsenderMottaker,
 	val bruker: Bruker?,
@@ -9,7 +11,9 @@ data class OpprettJournalpostRequest(
 	val journalpostType: String,
 	val kanal: String,
 	val tema: String,
-	val tittel: String
+	val tittel: String,
+	@get:JsonInclude(JsonInclude.Include.NON_NULL)
+	val overstyrInnsynsregler: String? = null
 )
 
 data class Bruker(val id: String, val idType: String)

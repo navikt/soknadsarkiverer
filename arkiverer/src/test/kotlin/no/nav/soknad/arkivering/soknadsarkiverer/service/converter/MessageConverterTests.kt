@@ -1,5 +1,6 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.service.converter
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.converter.MAX_FILENAME_BYTES
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.converter.createOpprettJournalpostRequest
 import no.nav.soknad.arkivering.soknadsarkiverer.service.fileservice.FileInfo
@@ -16,6 +17,33 @@ import java.time.ZoneOffset
 import java.util.*
 
 class MessageConverterTests {
+
+	@Test
+	fun `grants digital access only when requested`() {
+		listOf(true to "VISES_MASKINELT_GODKJENT", false to null, null to null).forEachIndexed { index, (grantUserDigitalAccess, expected) ->
+			val message = InnsendingTopicMsgBuilder()
+				.withGrantUserDigitalAccess(grantUserDigitalAccess)
+				.withBrukerId(if (index == 0) null else "12345678901")
+				.build()
+			val messageFiles = message.dokumenter.flatMap { it.varianter }
+				.map { FileInfo(it.uuid, "content".toByteArray(), ResponseStatus.Ok) }
+
+			assertEquals(expected, createOpprettJournalpostRequest(message, messageFiles).overstyrInnsynsregler)
+		}
+	}
+
+	@Test
+	fun `omits override when digital access is not granted`() {
+		val message = InnsendingTopicMsgBuilder().withGrantUserDigitalAccess(false).build()
+		val files = message.dokumenter.flatMap { it.varianter }
+			.map { FileInfo(it.uuid, "content".toByteArray(), ResponseStatus.Ok) }
+
+		val request = createOpprettJournalpostRequest(message, files)
+
+		assertTrue("Expected overstyrInnsynsregler to be absent", !ObjectMapper()
+			.writeValueAsString(request)
+			.contains("overstyrInnsynsregler"))
+	}
 
 	@Test
 	fun `Happy case - Soknad - should convert correctly`() {
