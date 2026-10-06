@@ -42,10 +42,14 @@ class KafkaPublisher(private val kafkaConfig: KafkaConfig) : AutoCloseable {
 
 	@PreDestroy
 	override fun close() {
-		kafkaProcessingEventV3Producer.close(CLOSE_TIMEOUT)
-		kafkaMetricsV3Producer.close(CLOSE_TIMEOUT)
-		kafkaMessageProducer.close(CLOSE_TIMEOUT)
-		kafkaArkiveringstilbakemeldingProducer.close(CLOSE_TIMEOUT)
+		closeAll(
+			listOf(
+				kafkaProcessingEventV3Producer,
+				kafkaMetricsV3Producer,
+				kafkaMessageProducer,
+				kafkaArkiveringstilbakemeldingProducer
+			).map { producer -> { producer.close(CLOSE_TIMEOUT) } }
+		)
 	}
 
 	companion object {
