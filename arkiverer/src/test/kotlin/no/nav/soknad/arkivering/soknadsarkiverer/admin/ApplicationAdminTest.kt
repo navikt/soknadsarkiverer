@@ -55,6 +55,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
 import org.apache.kafka.common.header.Headers
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.extension.RegisterExtension
@@ -204,6 +205,28 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 
 		metrics.unregister()
 		taskListService.clearLoggedTaskStates()
+	}
+
+	@Test
+	fun `OpenAPI documents the admin API and Swagger UI is available`() {
+		webTestClient.get()
+			.uri("/v3/api-docs")
+			.exchange()
+			.expectStatus().isOk
+			.expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
+			.expectBody()
+			.jsonPath("$.openapi").exists()
+			.jsonPath("$.paths['/admin/rerun/{key}']").exists()
+			.jsonPath("$.components.schemas.ArchivingStatus.properties.key").exists()
+			.jsonPath("$.components.schemas.ArchivingStatus.properties.key.default").doesNotExist()
+
+		webTestClient.get()
+			.uri("/swagger-ui/index.html")
+			.exchange()
+			.expectStatus().isOk
+			.expectHeader().contentTypeCompatibleWith(MediaType.TEXT_HTML)
+			.expectBody(String::class.java)
+			.value { body -> assertTrue(body != null && body.contains("Swagger UI")) }
 	}
 
 	@Test
