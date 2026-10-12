@@ -10,7 +10,7 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.serialization.StringSerializer
-import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.fail
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean
 import org.springframework.boot.context.properties.bind.Binder
@@ -18,18 +18,30 @@ import org.springframework.boot.context.properties.source.MapConfigurationProper
 import org.springframework.core.io.ClassPathResource
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
+import org.springframework.test.context.ContextConfiguration
+import org.springframework.test.annotation.DirtiesContext
 import org.testcontainers.containers.KafkaContainer
-import org.testcontainers.utility.DockerImageName
 import java.util.HashMap
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@ContextConfiguration(initializers = [CaptureKafkaTestContext::class])
+@ExtendWith(KafkaContainerTeardown::class)
 open class ContainerizedKafka {
 
+	protected fun closeAfterClass(listener: KafkaListener): KafkaListener {
+		currentResources.listener = listener
+		currentResources.captureClientIds(listener.kafkaStreams)
+		return listener
+	}
 
 	companion object {
 		private val kafkaConfig: KafkaConfig
+		internal var resources: KafkaTestResources? = null
+		internal val currentResources: KafkaTestResources
+			get() = resources ?: KafkaTestResources().also { resources = it }
 
 		init {
 			val factoryBean = YamlPropertiesFactoryBean()
@@ -44,9 +56,8 @@ open class ContainerizedKafka {
 			kafkaConfig = binder.bind("kafka", KafkaConfig::class.java).get()
 		}
 
-		// @Container
-		val kafkaContainer: KafkaContainer = KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.9.1"))
-			.withNetworkAliases("kafka-broker")
+		val kafkaContainer: KafkaContainer
+			get() = currentResources.broker
 
 		@JvmStatic
 		@DynamicPropertySource
@@ -72,14 +83,6 @@ open class ContainerizedKafka {
 			)
 				.forEach { createTopic(it) }
 		}
-
-		@JvmStatic
-		@AfterAll
-		fun close() {
-			println("Stopping Kafka Container")
-			kafkaContainer.stop()
-		}
-
 
 		private fun createTopic(topic: String) {
 			val topicCommand =
@@ -125,4 +128,3 @@ open class ContainerizedKafka {
 
 
 }
-

@@ -31,6 +31,8 @@ import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.apache.kafka.streams.KafkaStreams
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertAll
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -41,6 +43,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.util.*
+import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -121,6 +124,15 @@ class LegacyAvroReplayTest : ContainerizedKafka() {
 		// Other test classes could have left Kafka events on the topics. Consume them before running
 		// the test in this class.
 		KafkaBootstrapConsumer(mockk<TaskListService>(relaxed = true), kafkaConfig).recreateState()
+	}
+
+	@AfterAll
+	fun closeProducers() {
+		assertAll(
+			{ if (::kafkaLoggedinTopicProducer.isInitialized) kafkaLoggedinTopicProducer.close(Duration.ofSeconds(30)) },
+			{ if (::kafkaProcessingEventProducer.isInitialized) kafkaProcessingEventProducer.close(Duration.ofSeconds(30)) },
+			{ if (::kafkaProcessingEventV3Producer.isInitialized) kafkaProcessingEventV3Producer.close(Duration.ofSeconds(30)) }
+		)
 	}
 
 	@Test

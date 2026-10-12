@@ -55,6 +55,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
 import org.apache.kafka.common.header.Headers
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.extension.RegisterExtension
@@ -159,16 +160,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 
 	@BeforeAll
 	fun setupKafkaProducersAndListeners() {
-		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap()
-			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
-		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
-			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
-		})
-		kafkaloggedinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
-			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
-		})
-
-		kafkaListener = KafkaListener(kafkaConfig)
+		kafkaListener = closeAfterClass(KafkaListener(kafkaConfig))
 	}
 
 	@BeforeEach
@@ -194,16 +186,14 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 
 	@AfterEach
 	fun teardown() {
-		//stopMockedNetworkServices()
-		//kafkaListener.clear(MockkClear())
-		wireMock.resetAll()
-
-		kafkaProducerForBadData.close()
-		kafkaNologinTopicProducer.close()
-		kafkaloggedinTopicProducer.close()
-
-		metrics.unregister()
-		taskListService.clearLoggedTaskStates()
+		assertAll(
+			{ wireMock.resetAll() },
+			{ if (::kafkaProducerForBadData.isInitialized) kafkaProducerForBadData.close(Duration.ofSeconds(30)) },
+			{ if (::kafkaNologinTopicProducer.isInitialized) kafkaNologinTopicProducer.close(Duration.ofSeconds(30)) },
+			{ if (::kafkaloggedinTopicProducer.isInitialized) kafkaloggedinTopicProducer.close(Duration.ofSeconds(30)) },
+			{ metrics.unregister() },
+			{ taskListService.clearLoggedTaskStates() }
+		)
 	}
 
 	@Test

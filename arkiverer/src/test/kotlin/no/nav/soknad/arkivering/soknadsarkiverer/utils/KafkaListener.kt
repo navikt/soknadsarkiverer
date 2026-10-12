@@ -15,11 +15,12 @@ import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler
 import org.apache.kafka.streams.kstream.Consumed
 import org.slf4j.LoggerFactory
+import java.time.Duration
 import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingMetrics as InnsendingMetricsJson
 
-class KafkaListener(private val kafkaConfig: KafkaConfig) {
+class KafkaListener(private val kafkaConfig: KafkaConfig) : AutoCloseable {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 	private val verbose = true
@@ -29,7 +30,7 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) {
 	private val arkiveringstilbakemeldingerReceived	= CopyOnWriteArrayList<Pair<Key, String>>()
 	private val processingEventsReceived						= CopyOnWriteArrayList<Pair<Key, ProcessingEventJson>>()
 
-	private val kafkaStreams: KafkaStreams
+	internal val kafkaStreams: KafkaStreams
 
 	private val stringSerde = Serdes.StringSerde()
 
@@ -40,8 +41,12 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) {
 
 		val kafkaConfig = kafkaConfig()
 		kafkaStreams = KafkaStreams(topology, kafkaConfig)
-		kafkaStreams.start()
-		Runtime.getRuntime().addShutdownHook(Thread(kafkaStreams::close))
+		try {
+			kafkaStreams.start()
+		} catch (e: Exception) {
+			runCatching { close() }.exceptionOrNull()?.let(e::addSuppressed)
+			throw e
+		}
 	}
 
 
@@ -96,8 +101,12 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) {
 		}
 	}
 
-	fun close() {
-		kafkaStreams.close()
+	override fun close() = close(Duration.ofSeconds(30))
+
+	internal fun close(timeout: Duration) {
+		check(kafkaStreams.close(timeout)) {
+			"Test Kafka listener did not close within $timeout"
+		}
 		kafkaStreams.cleanUp()
 	}
 
