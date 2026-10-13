@@ -126,13 +126,13 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@BeforeAll
 	fun setupKafkaProducersAndListeners() {
-		kafkaListener = KafkaListener(kafkaConfig)
+		kafkaListener = closeAfterClass(KafkaListener(kafkaConfig))
 	}
 
 
 	@AfterAll
 	fun teardownKafka() {
-		kafkaListener.close()
+		if (::kafkaListener.isInitialized) kafkaListener.close()
 	}
 
 	@BeforeEach

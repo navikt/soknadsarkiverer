@@ -11,6 +11,9 @@ import org.springframework.stereotype.Service
 import java.time.Instant
 import java.util.*
 import jakarta.annotation.PostConstruct
+import jakarta.annotation.PreDestroy
+import org.apache.kafka.streams.KafkaStreams
+import java.time.Duration
 
 @Service
 @Profile("!test")
@@ -74,6 +77,12 @@ class KafkaSetupTest(
 ) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 
+	internal final var kafkaStreams: KafkaStreams? = null
+		private set
+
+	internal final var shutdownFailure: Exception? = null
+		private set
+
 	@PostConstruct
 	fun setupKafka() {
 		logger.debug("Setting up Kafka Streams")
@@ -81,8 +90,20 @@ class KafkaSetupTest(
 		setupMetricsAndLiveness(metrics, applicationState)
 
 		val groupId = kafkaConfig.applicationId + "_" + UUID.randomUUID().toString()
-		setupKafkaStreams(applicationState, taskListService, kafkaPublisher, groupId,kafkaConfig)
+		kafkaStreams = setupKafkaStreams(applicationState, taskListService, kafkaPublisher, groupId,kafkaConfig)
 		applicationState.ready = true
+	}
+
+	@PreDestroy
+	fun closeKafkaStreams() {
+		try {
+			check(kafkaStreams?.close(Duration.ofSeconds(30)) != false) {
+				"Test-profile Kafka Streams did not close within 30 seconds"
+			}
+		} catch (e: Exception) {
+			shutdownFailure = e
+			throw e
+		}
 	}
 }
 
@@ -92,9 +113,9 @@ private fun setupKafkaStreams(
 	kafkaPublisher: KafkaPublisher,
 	groupId: String? = null,
 	kafkaConfig : KafkaConfig
-) {
+): KafkaStreams {
 	val id = groupId ?: (kafkaConfig.applicationId + "_v2")
-	KafkaStreamsSetup(applicationState, taskListService, kafkaPublisher,kafkaConfig).setupKafkaStreams(id)
+	return KafkaStreamsSetup(applicationState, taskListService, kafkaPublisher,kafkaConfig).setupKafkaStreams(id)
 }
 
 private fun setupMetricsAndLiveness( metrics: ArchivingMetrics, applicationState: ApplicationState ) {
