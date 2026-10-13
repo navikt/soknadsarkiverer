@@ -80,9 +80,6 @@ class KafkaSetupTest(
 	internal final var kafkaStreams: KafkaStreams? = null
 		private set
 
-	internal final var shutdownFailure: Exception? = null
-		private set
-
 	@PostConstruct
 	fun setupKafka() {
 		logger.debug("Setting up Kafka Streams")
@@ -96,13 +93,8 @@ class KafkaSetupTest(
 
 	@PreDestroy
 	fun closeKafkaStreams() {
-		try {
-			check(kafkaStreams?.close(Duration.ofSeconds(30)) != false) {
-				"Test-profile Kafka Streams did not close within 30 seconds"
-			}
-		} catch (e: Exception) {
-			shutdownFailure = e
-			throw e
+		check(kafkaStreams?.close(Duration.ofSeconds(30)) != false) {
+			"Test-profile Kafka Streams did not close within 30 seconds"
 		}
 	}
 }

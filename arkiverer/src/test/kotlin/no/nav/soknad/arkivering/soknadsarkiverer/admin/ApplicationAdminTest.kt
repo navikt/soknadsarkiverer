@@ -53,6 +53,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.Key
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.TokenGenerator
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
 import org.apache.kafka.common.header.Headers
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertAll
@@ -161,7 +162,12 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 
 	@BeforeAll
 	fun setupKafkaProducersAndListeners() {
-		kafkaListener = closeAfterClass(KafkaListener(kafkaConfig))
+		kafkaListener = KafkaListener(kafkaConfig)
+	}
+
+	@AfterAll
+	fun teardownKafka() {
+		if (::kafkaListener.isInitialized) kafkaListener.close()
 	}
 
 	@BeforeEach
