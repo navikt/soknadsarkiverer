@@ -56,7 +56,6 @@
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-oauth2-client</artifactId>
-			<version>${spring-security-client.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>no.nav.soknad.arkivering</groupId>
@@ -193,7 +192,6 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-web-server-test</artifactId>
-			<version>4.1.0</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

@@ -530,11 +530,11 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 			.subject("local-dev-user")
 			.issuedAt(now)
 			.expiresAt(now.plusSeconds(3600))
-			.claim("iss", issuer)
 			.claim("aud", "local-dev")
 			.claim("NAVident", "A123456")
 			.claim("preferred_username", "local-dev@example.com")
 			.claim("scp", "defaultaccess serviceklage-klassifisering")
+			.apply { issuer?.let { claim("iss", it) } }
 			.build()
 
 		return JwtAuthenticationToken(jwt)
