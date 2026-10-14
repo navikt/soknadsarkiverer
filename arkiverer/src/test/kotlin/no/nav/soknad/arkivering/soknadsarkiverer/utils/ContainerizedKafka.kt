@@ -10,97 +10,20 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.serialization.StringSerializer
-import org.junit.jupiter.api.extension.ExtendWith
-import org.junit.jupiter.api.fail
-import org.springframework.beans.factory.config.YamlPropertiesFactoryBean
-import org.springframework.boot.context.properties.bind.Binder
-import org.springframework.boot.context.properties.source.MapConfigurationPropertySource
-import org.springframework.core.io.ClassPathResource
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
-import org.springframework.test.context.ContextConfiguration
+import org.springframework.context.annotation.Import
 import org.springframework.test.annotation.DirtiesContext
-import org.testcontainers.containers.KafkaContainer
 import java.util.HashMap
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-
+/**
+ * Base class for tests that need a real Kafka broker. The broker is a bean in the test's Spring context
+ * (see [KafkaTestContainerConfiguration]), so it is stopped when the context closes, after the
+ * application's Kafka clients. Clients created by a test class must be closed in its own @AfterAll.
+ */
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@ContextConfiguration(initializers = [CaptureKafkaTestContext::class])
-@ExtendWith(KafkaContainerTeardown::class)
+@Import(KafkaTestContainerConfiguration::class)
 open class ContainerizedKafka {
-
-	protected fun closeAfterClass(listener: KafkaListener): KafkaListener {
-		currentResources.listener = listener
-		currentResources.captureClientIds(listener.kafkaStreams)
-		return listener
-	}
-
-	companion object {
-		private val kafkaConfig: KafkaConfig
-		internal var resources: KafkaTestResources? = null
-		internal val currentResources: KafkaTestResources
-			get() = resources ?: KafkaTestResources().also { resources = it }
-
-		init {
-			val factoryBean = YamlPropertiesFactoryBean()
-			factoryBean.setResources(ClassPathResource("application.yml"))
-
-			val properties = factoryBean.getObject()
-			val mutableMap = properties as MutableMap<*, *>
-
-			val propertySource = MapConfigurationPropertySource(mutableMap)
-			val binder = Binder(propertySource)
-
-			kafkaConfig = binder.bind("kafka", KafkaConfig::class.java).get()
-		}
-
-		val kafkaContainer: KafkaContainer
-			get() = currentResources.broker
-
-		@JvmStatic
-		@DynamicPropertySource
-		fun properties(registry: DynamicPropertyRegistry) {
-			start()
-			registry.add(
-				"kafka.brokers", kafkaContainer::getBootstrapServers
-			)
-		}
-
-		private fun start() {
-			kafkaContainer.start()
-
-			listOf(
-				kafkaConfig.topics.processingTopic,
-				kafkaConfig.topics.messageTopic,
-				kafkaConfig.topics.arkiveringstilbakemeldingTopic,
-				kafkaConfig.topics.metricsTopic,
-				kafkaConfig.topics.nologinSubmissionTopic,
-				kafkaConfig.topics.loggedinSubmissionTopic,
-				kafkaConfig.topics.processingTopicV3,
-				kafkaConfig.topics.metricsTopicV3
-			)
-				.forEach { createTopic(it) }
-		}
-
-		private fun createTopic(topic: String) {
-			val topicCommand =
-				"/usr/bin/kafka-topics --create --bootstrap-server=localhost:9092 --replication-factor 1 --partitions 1 --topic $topic"
-
-			try {
-				val result = kafkaContainer.execInContainer("/bin/sh", "-c", topicCommand)
-				if (result.exitCode != 0) {
-					println("Kafka Container logs:\n${kafkaContainer.logs}")
-					fail("Failed to create topic '$topic'. Error:\n${result.stderr}")
-				}
-			} catch (e: Exception) {
-				e.printStackTrace()
-				fail("Failed to create topic '$topic'")
-			}
-		}
-	}
-
 
 	fun <T> putDataOnTopic(
 		key: String, value: T, headers: Headers, topic: String,

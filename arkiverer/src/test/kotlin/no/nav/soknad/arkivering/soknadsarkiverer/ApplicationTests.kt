@@ -126,7 +126,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@BeforeAll
 	fun setupKafkaProducersAndListeners() {
-		kafkaListener = closeAfterClass(KafkaListener(kafkaConfig))
+		kafkaListener = KafkaListener(kafkaConfig)
 	}
 
 
