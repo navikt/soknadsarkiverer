@@ -24,7 +24,7 @@
 		<maven.version>3.8.8</maven.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-		<token-support.version>6.0.8</token-support.version>
+		<token-support.version>6.0.13</token-support.version>
 		<jackson-2-bom.version>2.22.3</jackson-2-bom.version>
 		<jackson-coreutils.version>2.0</jackson-coreutils.version>
 		<jackson-databind-nullable.version>0.2.12</jackson-databind-nullable.version>
@@ -32,7 +32,7 @@
 		<jakarta-servlet-api.version>6.1.0</jakarta-servlet-api.version>
 		<jakarta-validation-api.version>4.0.0-M1</jakarta-validation-api.version>
 		<jakarta-annotation.version>3.0.0</jakarta-annotation.version>
-		<graphql-kotlin.version>9.2.0</graphql-kotlin.version>
+		<graphql-kotlin.version>10.2.2</graphql-kotlin.version>
 		<commons-codec.version>1.23.0</commons-codec.version>
 
 		<!-- OpenAPI -->
@@ -50,7 +50,7 @@
 		<arkivering-schemas.version>1.4.4-bf301c4492e2</arkivering-schemas.version>
 
 		<!--Logging-->
-		<logstash.version>8.1</logstash.version>
+		<logstash.version>9.0</logstash.version>
 		<prometheus.version>1.9.0</prometheus.version>
 
 		<!--Test-->
@@ -60,7 +60,7 @@
 		<wiremock.version>4.0.0-beta.30</wiremock.version>
 		<wiremock-junit5.version>4.0.0-beta.30</wiremock-junit5.version>
 		<kotlintest.version>3.4.2</kotlintest.version>
-		<mock-oauth2-server.version>4.0.0</mock-oauth2-server.version>
+		<mock-oauth2-server.version>6.0.4</mock-oauth2-server.version>
 
 		<!--Plugins-->
 		<versions-maven-plugin.version>2.22.0</versions-maven-plugin.version>
