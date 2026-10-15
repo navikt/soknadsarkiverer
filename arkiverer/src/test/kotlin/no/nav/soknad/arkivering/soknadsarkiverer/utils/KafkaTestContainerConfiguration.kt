@@ -22,7 +22,7 @@ class KafkaTestContainerConfiguration {
 
 	@Bean
 	fun kafkaContainer(environment: Environment): KafkaContainer =
-		KafkaContainer("apache/kafka-native:4.2.0").also {
+		KafkaContainer("apache/kafka-native:4.3.1").also {
 			// Kafka Streams does not create its source topics, so they must exist before the application starts.
 			it.start()
 			createTopics(it.bootstrapServers, Binder.get(environment).bind("kafka.topics", Topics::class.java).get())
