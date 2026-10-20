@@ -53,10 +53,14 @@ spec:
       tenant: {{AZURE_TENANT}}
       allowAllUsers: {{AZURE_ALLOW_ALL_USERS}}
       claims:
+        {{#if AZURE_ALLOWED_GROUPS}}
         groups:
         {{#each AZURE_ALLOWED_GROUPS}}
           - id: "{{this}}"
         {{/each}}
+        {{else}}
+        groups: []
+        {{/if}}
 
   accessPolicy:
     inbound:
