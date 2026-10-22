@@ -57,11 +57,13 @@ jobs:
     needs: build-and-push
     if: github.event.inputs.environment == 'preprod-q1'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: nais/deploy/actions/deploy@v3
         env:
           CLUSTER: dev-gcp
+          TIMEOUT: 20m
           RESOURCE: .nais/nais.yml
           VARS: .nais/config-preprod.json
           VAR: image=${{ needs.build-and-push.outputs.image }}
@@ -71,11 +73,13 @@ jobs:
     needs: build-and-push
     if: github.event.inputs.environment == 'preprod-q2'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: nais/deploy/actions/deploy@v3
         env:
           CLUSTER: dev-gcp
+          TIMEOUT: 20m
           RESOURCE: .nais/nais.yml
           VARS: .nais/config-preprod-q2.json
           VAR: image=${{ needs.build-and-push.outputs.image }}
