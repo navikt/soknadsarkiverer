@@ -85,11 +85,13 @@ jobs:
     needs: build-and-push
     if: github.event.inputs.environment == 'prod'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: nais/deploy/actions/deploy@v3
         env:
           CLUSTER: prod-gcp
+          TIMEOUT: 20m
           RESOURCE: .nais/nais.yml
           VARS: .nais/config-prod.json
           VAR: image=${{ needs.build-and-push.outputs.image }}
