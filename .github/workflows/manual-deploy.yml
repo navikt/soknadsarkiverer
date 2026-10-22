@@ -13,7 +13,6 @@ on:
           - none
           - preprod-q1
           - preprod-q2
-          - prod
 
 permissions:
   contents: "read"
@@ -57,11 +56,13 @@ jobs:
     needs: build-and-push
     if: github.event.inputs.environment == 'preprod-q1'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: nais/deploy/actions/deploy@v3
         env:
           CLUSTER: dev-gcp
+          TIMEOUT: 20m
           RESOURCE: .nais/nais.yml
           VARS: .nais/config-preprod.json
           VAR: image=${{ needs.build-and-push.outputs.image }}
@@ -71,25 +72,13 @@ jobs:
     needs: build-and-push
     if: github.event.inputs.environment == 'preprod-q2'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: nais/deploy/actions/deploy@v3
         env:
           CLUSTER: dev-gcp
+          TIMEOUT: 20m
           RESOURCE: .nais/nais.yml
           VARS: .nais/config-preprod-q2.json
-          VAR: image=${{ needs.build-and-push.outputs.image }}
-
-  deploy-prod:
-    name: Deploy to prod
-    needs: build-and-push
-    if: github.event.inputs.environment == 'prod'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: nais/deploy/actions/deploy@v3
-        env:
-          CLUSTER: prod-gcp
-          RESOURCE: .nais/nais.yml
-          VARS: .nais/config-prod.json
           VAR: image=${{ needs.build-and-push.outputs.image }}
