@@ -107,6 +107,13 @@
 			<artifactId>kafka-clients</artifactId>
 			<version>${kafka.version}</version>
 		</dependency>
+		<!-- Override Kafka's vulnerable LZ4 version until kafka-clients uses 1.11.4 or newer. -->
+		<dependency>
+			<groupId>at.yawk.lz4</groupId>
+			<artifactId>lz4-java</artifactId>
+			<version>1.11.4</version>
+			<scope>runtime</scope>
+		</dependency>
 		<dependency>
 			<groupId>commons-codec</groupId>
 			<artifactId>commons-codec</artifactId>
