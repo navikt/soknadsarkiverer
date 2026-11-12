@@ -68,6 +68,8 @@ joark:
   journal-post: /rest/journalpostapi/v1/journalpost
 innsendingapi:
   host: ${INNSENDING_API_HOST}
+  # Send M2M-token til innsending-api, slik som i prod. Slås på av e2e-testene i archiving-infrastructure
+  send-token: ${INNSENDING_API_SEND_TOKEN:false}
 saf:
   url: ${SAF_URL}
   path: /graphql

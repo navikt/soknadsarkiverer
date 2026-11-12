@@ -7,6 +7,7 @@ import no.nav.soknad.innsending.api.HentInnsendteFilerApi
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
@@ -76,6 +77,15 @@ class RestClientConfig {
 		authorizedClientManager: OAuth2AuthorizedClientManager,
 		clientRegistrationRepository: ClientRegistrationRepository,
 		fileFetchTimeoutProperties: FileFetchTimeoutProperties
+	): RestClient = oauthInnsendingApiClient(
+		innsendingApiProperties, authorizedClientManager, clientRegistrationRepository, fileFetchTimeoutProperties
+	)
+
+	private fun oauthInnsendingApiClient(
+		innsendingApiProperties: InnsendingApiProperties,
+		authorizedClientManager: OAuth2AuthorizedClientManager,
+		clientRegistrationRepository: ClientRegistrationRepository,
+		fileFetchTimeoutProperties: FileFetchTimeoutProperties
 	): RestClient {
 
 		val oauth2Interceptor = createOauth2Interceptor(authorizedClientManager, "innsendingApi", clientRegistrationRepository)
@@ -90,6 +100,7 @@ class RestClientConfig {
 
 	@Bean
 	@Profile("!prod & !dev")
+	@ConditionalOnProperty("innsendingapi.send-token", havingValue = "false", matchIfMissing = true)
 	@Qualifier("innsendingApiRestClient")
 	fun innsendingApiClientWithoutOAuth(
 		innsendingApiProperties: InnsendingApiProperties, fileFetchTimeoutProperties: FileFetchTimeoutProperties
@@ -99,6 +110,23 @@ class RestClientConfig {
 			connectTimeoutSeconds = fileFetchTimeoutProperties.connectTimeout.toLong()
 		)
 	).build()
+
+	/**
+	 * Samme M2M-token som i prod, men utenfor prod og dev. Brukes av e2e-testene i archiving-infrastructure
+	 * når innsending-api validerer token der.
+	 */
+	@Bean
+	@Profile("!prod & !dev")
+	@ConditionalOnProperty("innsendingapi.send-token", havingValue = "true")
+	@Qualifier("innsendingApiRestClient")
+	fun innsendingApiClientWithOAuthOutsideProd(
+		innsendingApiProperties: InnsendingApiProperties,
+		authorizedClientManager: OAuth2AuthorizedClientManager,
+		clientRegistrationRepository: ClientRegistrationRepository,
+		fileFetchTimeoutProperties: FileFetchTimeoutProperties
+	): RestClient = oauthInnsendingApiClient(
+		innsendingApiProperties, authorizedClientManager, clientRegistrationRepository, fileFetchTimeoutProperties
+	)
 
 	@Bean
 	fun hentInnsendteFilerApi(
