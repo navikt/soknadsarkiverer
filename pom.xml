@@ -63,11 +63,11 @@
 		<mock-oauth2-server.version>6.1.5</mock-oauth2-server.version>
 
 		<!--Plugins-->
-		<versions-maven-plugin.version>2.22.0</versions-maven-plugin.version>
-		<openapi-generator-maven-plugin.version>7.26.0</openapi-generator-maven-plugin.version>
+		<versions-maven-plugin.version>2.25.1</versions-maven-plugin.version>
+		<openapi-generator-maven-plugin.version>7.27.0</openapi-generator-maven-plugin.version>
 		<cyclonedx-maven-plugin.version>2.9.3</cyclonedx-maven-plugin.version>
-		<maven-enforcer.version>3.6.3</maven-enforcer.version>
-		<maven-surefire.version>3.6.0</maven-surefire.version>
+		<maven-enforcer.version>3.7.0</maven-enforcer.version>
+		<maven-surefire.version>3.6.1</maven-surefire.version>
 		<junit-platform.version>1.3.2</junit-platform.version>
 	</properties>
 
