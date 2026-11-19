@@ -107,11 +107,11 @@
 			<artifactId>kafka-clients</artifactId>
 			<version>${kafka.version}</version>
 		</dependency>
-		<!-- Override Kafka's vulnerable LZ4 version until kafka-clients uses 1.11.4 or newer. -->
+		<!-- Override Kafka's vulnerable LZ4 version. kafka-clients 4.4.0 still declares 1.11.2; 1.12.1 or newer is required. -->
 		<dependency>
 			<groupId>at.yawk.lz4</groupId>
 			<artifactId>lz4-java</artifactId>
-			<version>1.11.4</version>
+			<version>1.14.0</version>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
