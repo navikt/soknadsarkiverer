@@ -142,6 +142,16 @@
 			<artifactId>avro-schemas</artifactId>
 			<version>${arkivering-schemas.version}</version>
 		</dependency>
+		<!--
+			The Confluent serde needs Guava at runtime. Without this pin, Maven takes the version from the test-scoped
+			WireMock dependency. 33.7.2-jre fixes CVE-2026-102554.
+		-->
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>33.7.2-jre</version>
+			<scope>runtime</scope>
+		</dependency>
 
 		<dependency>
 			<groupId>org.jetbrains.kotlinx</groupId>
