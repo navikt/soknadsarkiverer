@@ -114,6 +114,13 @@
 			<version>1.14.0</version>
 			<scope>runtime</scope>
 		</dependency>
+		<!-- Override Kafka's vulnerable Snappy version. kafka-clients 4.4.0 still declares 1.1.10.7; 1.1.10.10 or newer is required. -->
+		<dependency>
+			<groupId>org.xerial.snappy</groupId>
+			<artifactId>snappy-java</artifactId>
+			<version>1.1.10.12</version>
+			<scope>runtime</scope>
+		</dependency>
 		<dependency>
 			<groupId>commons-codec</groupId>
 			<artifactId>commons-codec</artifactId>
