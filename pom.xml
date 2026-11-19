@@ -20,7 +20,7 @@
 		<java.version>21</java.version>
 		<spring-boot.version>4.1.2</spring-boot.version>
 
-		<kotlin.version>2.4.20</kotlin.version>
+		<kotlin.version>2.4.21</kotlin.version>
 		<maven.version>3.8.8</maven.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
@@ -41,7 +41,7 @@
 		<okhttp3.version>5.5.0</okhttp3.version>
 
 		<!--Kotlin-->
-		<kotlin-serialization.version>1.11.0</kotlin-serialization.version>
+		<kotlin-serialization.version>1.13.0</kotlin-serialization.version>
 		<coroutines.version>1.11.0</coroutines.version>
 
 		<!--Kafka-->
