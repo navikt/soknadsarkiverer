@@ -11,6 +11,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 @Configuration
+@Profile("prod", "dev")
 class SelfDestructConfig(private val scheduler: Scheduler,
 												 private val appState: ApplicationState,
 												 private val leaderSelectionUtility: LeaderSelectionUtility,
@@ -67,7 +68,6 @@ class SelfDestructConfig(private val scheduler: Scheduler,
 	 * The (ugly) solution to this bug is to shut down the pods every night (self-destruct), which will cause Kubernetes
 	 * to restart the pods, thus triggering abandoned tasks to be picked up again.
 	 */
-	@Profile("prod", "dev")
 	@PostConstruct
 	fun scheduleSelfDestruct() {
 		setUpSelfDestructTime()
