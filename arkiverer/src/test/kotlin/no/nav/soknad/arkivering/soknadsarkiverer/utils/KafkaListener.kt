@@ -48,6 +48,10 @@ class KafkaListener(
 		listOf(metricsTopicV3, processingTopicV3, messageTopic, arkiveringstilbakemeldingTopic)
 	}
 
+	// One client for the listener's lifetime. Kafka logs the whole client configuration each time a client is created.
+	private val adminDelegate = lazy { Admin.create(mapOf<String, Any>(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaConfig.brokers)) }
+	private val admin: Admin by adminDelegate
+
 	internal val kafkaStreams: KafkaStreams
 
 	private val stringSerde = Serdes.StringSerde()
@@ -136,7 +140,7 @@ class KafkaListener(
 	 * Call it after a completion barrier, before asserting exact counts or absence.
 	 */
 	fun awaitCaughtUp(timeout: Duration = Duration.ofSeconds(30)) {
-		val endOffsets = admin().use { endOffsets(it, listenedTopics) }
+		val endOffsets = endOffsets(listenedTopics)
 		awaitCondition(timeout, { "Kafka listener did not catch up within $timeout. End offsets: $endOffsets, read: $nextOffsets" }) {
 			endOffsets.all { (partition, endOffset) -> (nextOffsets[partition] ?: 0L) >= endOffset }
 		}
@@ -150,18 +154,14 @@ class KafkaListener(
 	 */
 	fun awaitApplicationCaughtUp(timeout: Duration = Duration.ofSeconds(30)) {
 		val groupId = checkNotNull(applicationGroupId) { "Create the listener with the application's consumer group" }
-		admin().use { admin ->
-			val endOffsets = endOffsets(admin, listOf(kafkaConfig.topics.processingTopicV3))
-			awaitCondition(timeout, { "The application did not handle the processing events within $timeout" }) {
-				val committed = admin.listConsumerGroupOffsets(groupId).partitionsToOffsetAndMetadata().get(10, TimeUnit.SECONDS)
-				endOffsets.all { (partition, endOffset) -> (committed[partition]?.offset() ?: 0L) >= endOffset }
-			}
+		val endOffsets = endOffsets(listOf(kafkaConfig.topics.processingTopicV3))
+		awaitCondition(timeout, { "The application did not handle the processing events within $timeout" }) {
+			val committed = admin.listConsumerGroupOffsets(groupId).partitionsToOffsetAndMetadata().get(10, TimeUnit.SECONDS)
+			endOffsets.all { (partition, endOffset) -> (committed[partition]?.offset() ?: 0L) >= endOffset }
 		}
 	}
 
-	private fun admin() = Admin.create(mapOf<String, Any>(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaConfig.brokers))
-
-	private fun endOffsets(admin: Admin, topics: List<String>): Map<TopicPartition, Long> {
+	private fun endOffsets(topics: List<String>): Map<TopicPartition, Long> {
 		val partitions = admin.describeTopics(topics).allTopicNames().get(10, TimeUnit.SECONDS).values
 			.flatMap { topic -> topic.partitions().map { TopicPartition(topic.name(), it.partition()) } }
 		return admin.listOffsets(partitions.associateWith { OffsetSpec.latest() }).all().get(10, TimeUnit.SECONDS)
@@ -186,6 +186,7 @@ class KafkaListener(
 	override fun close() = close(Duration.ofSeconds(30))
 
 	internal fun close(timeout: Duration) {
+		if (adminDelegate.isInitialized()) admin.close(timeout)
 		check(kafkaStreams.close(timeout)) {
 			"Test Kafka listener did not close within $timeout"
 		}

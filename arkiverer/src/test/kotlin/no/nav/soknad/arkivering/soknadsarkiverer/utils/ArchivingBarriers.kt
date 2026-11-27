@@ -17,6 +17,13 @@ fun KafkaListener.awaitFinished(key: Key, times: Int = 1) {
 	awaitApplicationCaughtUp()
 }
 
+/** Same as [awaitFinished] for several keys, with one shared catch-up check at the end. */
+fun KafkaListener.awaitAllFinished(keys: Collection<Key>) {
+	keys.forEach { awaitProcessingEvent(it, EventTypes.FINISHED.name) }
+	awaitCaughtUp()
+	awaitApplicationCaughtUp()
+}
+
 /**
  * Waits until the application has given up on [key], and the listener has read everything
  * published until then. The first FAILURE event comes before the failure feedback and its retries.

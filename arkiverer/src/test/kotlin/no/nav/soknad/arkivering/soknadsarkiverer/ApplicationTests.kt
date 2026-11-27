@@ -392,7 +392,7 @@ class ApplicationTests : ContainerizedKafka() {
 				putDataOnKafkaTopic(loggedInMsg)
 			}
 		}
-		keys.forEach { kafkaListener.awaitFinished(it) }
+		kafkaListener.awaitAllFinished(keys)
 		verifyMockedPostRequests(noOfRepeates, safUrl)
 		verifyMockedPostRequests(noOfRepeates, journalPostUrl)
 		val requests = verifyPostRequest(journalPostUrl)
