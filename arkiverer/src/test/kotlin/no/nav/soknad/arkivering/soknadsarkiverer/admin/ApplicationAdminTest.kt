@@ -144,7 +144,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 			.options(
 				wireMockConfig()
 					.port(2908)
-					.notifier(ConsoleNotifier(true))
+					.notifier(ConsoleNotifier(false))
 					.withRootDirectory("src/test/resources")
 					.asynchronousResponseEnabled(false)
 			)

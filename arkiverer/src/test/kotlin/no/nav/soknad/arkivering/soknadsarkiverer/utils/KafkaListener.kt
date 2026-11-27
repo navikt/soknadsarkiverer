@@ -23,7 +23,6 @@ import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingMetrics as Innse
 class KafkaListener(private val kafkaConfig: KafkaConfig) : AutoCloseable {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
-	private val verbose = true
 
 	private val metricsReceived          						= CopyOnWriteArrayList<Pair<Key, InnsendingMetricsJson>>()
 	private val messagesReceived         						= CopyOnWriteArrayList<Pair<Key, String>>()
@@ -77,8 +76,7 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) : AutoCloseable {
 	}
 
 	private fun log(message: String) {
-		if (verbose)
-			logger.info(message)
+		logger.debug(message)
 	}
 
 	private fun kafkaConfig() = Properties().also {
