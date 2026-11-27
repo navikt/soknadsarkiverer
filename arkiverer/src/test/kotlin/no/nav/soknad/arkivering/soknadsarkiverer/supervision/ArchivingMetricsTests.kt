@@ -134,6 +134,7 @@ class ArchivingMetricsTests {
 		assertEquals(listOf(0.5, 0.9, 0.99), observations.quantiles.map { it.quantile })
 		// Every timer ran inside the measured interval, so a value in milliseconds or nanoseconds would exceed it.
 		assertTrue(observations.quantiles.all { it.value in 0.0..elapsedSeconds })
-		assertTrue(observations.sum in 0.0..numberOfCalls * elapsedSeconds)
+		assertTrue(observations.sum > 0.0, "Expected the timers to record a duration")
+		assertTrue(observations.sum <= numberOfCalls * elapsedSeconds)
 	}
 }
