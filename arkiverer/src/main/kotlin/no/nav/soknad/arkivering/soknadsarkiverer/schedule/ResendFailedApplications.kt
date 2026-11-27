@@ -15,7 +15,8 @@ Denne klassen er brukt for å kunne trigge nytt forsøk på å arkivere søknade
 hente filer eller kall for å arkivere har feilet.
 Klassen leser inn en Json fil gitt miljøparameter FAILED_APPLICATIONS lest inn fra secret archiving-failed. Denne inneholder en liste av feilede søknader.
 Dette er en Base64encoded streng. Merk at etter vellykket kjøring må denne tømmes.
-Lag verdien med for eksempel: echo -n '{"innsendingIds":["<innsendingsId>"]}' | base64
+Lag verdien med for eksempel: echo -n '{"innsendingIds":["<innsendingsId>"]}' | base64 | tr -d '\n'
+Verdien må være én linje. GNU base64 bryter linjen etter 76 tegn, og Base64.getDecoder() avviser linjeskift.
  */
 @Configuration
 @EnableScheduling
