@@ -52,7 +52,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.Key
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.TokenGenerator
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.awaitFailureHandled
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.awaitFinished
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.awaitTaskRemoved
 import org.apache.kafka.common.header.Headers
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
@@ -252,7 +251,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 
 		// Then
 		assert(response.status.is2xxSuccessful())
-		kafkaListener.awaitFinished(innsendingsId)
+		kafkaListener.awaitFinished(innsendingsId, taskListService)
 
 		verifyProcessingEvents(
 			innsendingsId, mapOf(
@@ -271,7 +270,6 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 
 		// Given
 		val innsendingsId = successfullArchiving()
-		taskListService.awaitTaskRemoved(innsendingsId)
 
 		val mockJwt = createJwtToken()
 		`when`(azureJwtDecoder.decode(anyString())).thenReturn(mockJwt.token)
@@ -418,7 +416,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 		mockSafRequest_notFound(innsendingsId = key)
 
 		putDataOnKafkaTopic(loggedInMsg)
-		kafkaListener.awaitFinished(key)
+		kafkaListener.awaitFinished(key, taskListService)
 
 		verifyProcessingEvents(
 			loggedInMsg.innsendingsId, mapOf(

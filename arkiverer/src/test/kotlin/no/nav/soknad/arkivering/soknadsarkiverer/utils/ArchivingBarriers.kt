@@ -7,10 +7,12 @@ import org.junit.jupiter.api.Assertions.assertTrue
 /**
  * Waits until archiving of [key] has ended with FINISHED [times] times, and the listener has read
  * everything published until then. FINISHED is the last record the application publishes for a
- * successful application, so exact counts and absence can be asserted afterwards.
+ * successful application, so exact counts and absence can be asserted afterwards. Also waits until
+ * the application has handled FINISHED and removed the task, so the task gauge is settled.
  */
-fun KafkaListener.awaitFinished(key: Key, times: Int = 1) {
+fun KafkaListener.awaitFinished(key: Key, taskListService: TaskListService, times: Int = 1) {
 	awaitProcessingEvent(key, EventTypes.FINISHED.name, times)
+	taskListService.awaitTaskRemoved(key)
 	awaitCaughtUp()
 }
 
