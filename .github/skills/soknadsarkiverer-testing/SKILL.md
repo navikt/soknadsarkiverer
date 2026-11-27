@@ -60,6 +60,7 @@ Archiving runs on scheduled tasks and fire-and-forget coroutines, so most effect
 
 - Each distinct set of `@MockitoBean`, `@MockitoSpyBean`, `@MockkBean`, properties or `webEnvironment` starts a new Spring context and a new Kafka container. Flow and admin API tests extend `ArchivingFlowTest` and get the same configuration. Do not add bean overrides or properties in a subclass. Add them to the base class if every flow test can live with them, and explain any new combination in the PR.
 - Do not hardcode ports. WireMock, the mock OAuth2 server and the web server get free ports at runtime, and `ArchivingFlowTest` passes the WireMock address to the application.
+- Surefire runs the test classes in two JVMs at the same time (`forkCount` in `arkiverer/pom.xml`). Each JVM has its own Spring contexts, brokers, WireMock server and `PrometheusRegistry`, so classes in different JVMs share no state in memory. They share the host's ports, the Docker runtime and the working directory, so a fixed port or a fixed file path can make two classes collide.
 - `ContainerizedKafka` marks the context dirty after each class. Do not add `@DirtiesContext` to individual tests unless the test closes the context on purpose, as `KafkaTeardownTests` does.
 - Kafka Streams does not create its source topics. Add a new topic to `KafkaTestContainerConfiguration` so it exists before Spring starts.
 - `ArchivingMetrics` registers in `PrometheusRegistry.defaultRegistry`, which all tests in the JVM share. Unregister in `@AfterEach`, as the existing classes do, and do not let assertions depend on what earlier tests left behind.
@@ -108,7 +109,7 @@ mise exec -- mvn clean install
 
 Tests that extend `ContainerizedKafka` start `apache/kafka-native` through Testcontainers and need a running Docker-compatible runtime. If the Docker socket is unavailable in a sandbox, ask the user to start Docker or Colima outside the sandbox. The native image fails with GraalVM error 24 on ARM64 hosts with 16 KiB pages, so run those tests on a supported host.
 
-Check `arkiverer/target/surefire-reports/` to confirm that the intended tests ran. The same files give the time per class and per test. Each test class with its own Spring context adds its startup and shutdown to the total, so look at the class time as well as the test times.
+Check `arkiverer/target/surefire-reports/` to confirm that the intended tests ran. The same files give the time per class and per test. Each test class with its own Spring context adds its startup and shutdown to the total, so look at the class time as well as the test times. The classes run in two JVMs, so the wall-clock time of the test phase is shorter than the sum of the class times. Read it from the Maven reactor summary or the CI log.
 
 ## Report
 
