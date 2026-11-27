@@ -234,7 +234,9 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 	fun `happy case - application is archieved in after retry`() {
 
 		// Given
+		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
 		val innsendingsId = failArchiving()
+		assertEquals(tasksGivenUpOnBefore + 1, metrics.getTasksGivenUpOn(), "Expected the task to be given up on")
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId = innsendingsId)
 
@@ -267,6 +269,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 				FAILURE hasCount 1
 			)
 		)
+		assertEquals(tasksGivenUpOnBefore, metrics.getTasksGivenUpOn(), "Expected the rerun to clear the given-up task")
 
 	}
 
