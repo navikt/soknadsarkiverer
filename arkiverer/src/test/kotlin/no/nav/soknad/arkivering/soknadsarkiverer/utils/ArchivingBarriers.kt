@@ -30,8 +30,16 @@ fun KafkaListener.awaitAllFinished(keys: Collection<Key>) {
  * [TaskListService.isFailureStateFinished] becomes true when that work has ended.
  */
 fun KafkaListener.awaitFailureHandled(key: Key, taskListService: TaskListService) {
-	loopAndVerify(1, { if (taskListService.isFailureStateFinished(key)) 1 else 0 }) {
-		assertTrue(taskListService.isFailureStateFinished(key), "Expected the application to give up on $key")
+	val isFinished = { taskListService.readUnderLock { isFailureStateFinished(key) } }
+	loopAndVerify(1, { if (isFinished()) 1 else 0 }) {
+		assertTrue(isFinished(), "Expected the application to give up on $key")
 	}
 	awaitCaughtUp()
 }
+
+/**
+ * Reads [TaskListService] state from the test thread. Its maps are plain HashMaps that the stream
+ * thread and coroutines change. The final count is written in a method synchronized on the service,
+ * after the state, so reading under the same lock makes both visible.
+ */
+fun <T> TaskListService.readUnderLock(read: TaskListService.() -> T): T = synchronized(this) { read() }

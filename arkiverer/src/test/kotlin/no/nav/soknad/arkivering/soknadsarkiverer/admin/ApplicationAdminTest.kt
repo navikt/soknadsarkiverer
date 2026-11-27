@@ -53,6 +53,7 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.Key
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.TokenGenerator
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.awaitFailureHandled
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.awaitFinished
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.readUnderLock
 import org.apache.kafka.common.header.Headers
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
@@ -298,7 +299,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 		// stream thread handles processing events in order, so when a later application is FINISHED,
 		// the application has handled that STARTED. Had it accepted the rerun, it would have created a task.
 		successfullArchiving()
-		assertTrue(taskListService.listTasks(innsendingsId).isEmpty(), "Expected no task for the ignored rerun")
+		assertEquals(null, taskListService.readUnderLock { getNumberOfAttempts(innsendingsId) }, "Expected no task for the ignored rerun")
 
 		verifyProcessingEvents(
 			innsendingsId, mapOf(
