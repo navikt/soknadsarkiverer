@@ -32,7 +32,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.time.OffsetDateTime
 import java.time.ZoneOffset.UTC
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 @ActiveProfiles("test")
 @SpringBootTest
@@ -238,17 +237,6 @@ class IntegrationTests : ContainerizedKafka() {
 
 		// Expect
 		verifyMockedPostRequests(initialRequests + 5, journalPostUrl)
-	}
-
-	@Test
-	fun `Sending in invalid data will not cause processing`() {
-		mockFilestorageIsWorking(fileId)
-		mockJoarkIsWorking()
-
-		putDataOnKafkaTopic("this string is not deserializable")
-
-		TimeUnit.SECONDS.sleep(1)
-		verifyMockedPostRequests(0, journalPostUrl)
 	}
 
 	@Test

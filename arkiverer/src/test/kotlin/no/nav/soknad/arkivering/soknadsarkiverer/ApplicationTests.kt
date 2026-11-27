@@ -44,10 +44,8 @@ import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
-import java.lang.Thread.sleep
 import java.time.format.DateTimeFormatter
 import java.util.*
-import java.util.concurrent.TimeUnit
 import kotlin.properties.Delegates
 
 
@@ -189,6 +187,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockSafRequest_notFound(innsendingsId = key)
 
 		putDataOnKafkaTopic(soknadsarkivschema)
+		kafkaListener.awaitFinished(key)
 
 		verifyProcessingEvents(
 			key, mapOf(
@@ -233,6 +232,7 @@ class ApplicationTests : ContainerizedKafka() {
 			.putMessageOnTopic(eq(key), eq("**Archiving: OK."), any())
 
 		putDataOnKafkaTopic(soknadsarkivschema)
+		kafkaListener.awaitFinished(key)
 
 		verifyProcessingEvents(
 			key, mapOf(
@@ -271,13 +271,12 @@ class ApplicationTests : ContainerizedKafka() {
 		mockSafRequest_notFound(innsendingsId = key)
 
 		putDataOnKafkaTopic(soknadsarkivschema)
+		kafkaListener.awaitFailureHandled(key, taskListService)
 		verifyProcessingEvents(
 			key, mapOf(
 				RECEIVED hasCount 1, STARTED hasCount maxNumberOfAttempts, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 1
 			)
 		)
-
-		sleep(1000)
 
 		val updatedSchema = InnsendingTopicMsgBuilder()
 			.withInnsendingsId(key)
@@ -290,6 +289,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId = key)
 		putDataOnKafkaTopic(updatedSchema)
+		kafkaListener.awaitFinished(key)
 
 		verifyProcessingEvents(
 			key, mapOf(
@@ -321,6 +321,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockSafRequest_notFound(innsendingsId = key)
 
 		putDataOnKafkaTopic(soknadsarkivschema)
+		kafkaListener.awaitFinished(key)
 		verifyProcessingEvents(
 			key, mapOf(
 				RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
@@ -330,8 +331,7 @@ class ApplicationTests : ContainerizedKafka() {
 		assertEquals(1, requests.size)
 		val request = objectMapper.readValue<OpprettJournalpostRequest>(requests[0].body)
 		verifyRequestDataToJoark(soknadsarkivschema, request)
-
-		sleep(1000)
+		taskListService.awaitTaskRemoved(key)
 
 		val updatedFileId = UUID.randomUUID().toString()
 		val dokument = soknadsarkivschema.dokumenter.first()
@@ -344,6 +344,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockSafRequest_found(innsendingsId = key)
 
 		putDataOnKafkaTopic(updatedSchema)
+		awaitLaterApplicationArchived(updatedSchema.kanal)
 		verifyProcessingEvents(
 			key, mapOf(
 				RECEIVED hasCount 2, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
@@ -356,9 +357,11 @@ class ApplicationTests : ContainerizedKafka() {
 	fun `Happy case - Several loggedIn and noLogin Events on Kafka will cause rest calls to Joark`() {
 		mockJoarkIsWorking()
 		val noOfRepeates = 333
+		val keys = mutableListOf<String>()
 		repeat(noOfRepeates) { index ->
 
 			val key = UUID.randomUUID().toString()
+			keys.add(key)
 			// Given loggedInMsg, noLoggInMsg or soknadsarkivschema
 			val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
 
@@ -386,6 +389,7 @@ class ApplicationTests : ContainerizedKafka() {
 				putDataOnKafkaTopic(loggedInMsg)
 			}
 		}
+		keys.forEach { kafkaListener.awaitFinished(it) }
 		verifyMockedPostRequests(noOfRepeates, safUrl)
 		verifyMockedPostRequests(noOfRepeates, journalPostUrl)
 		val requests = verifyPostRequest(journalPostUrl)
@@ -412,6 +416,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockSafRequest_notFound(innsendingsId = loggedInMsg.innsendingsId)
 
 		putDataOnKafkaTopic(loggedInMsg)
+		kafkaListener.awaitFinished(key)
 
 		verifyProcessingEvents(
 			key, mapOf(
@@ -440,15 +445,14 @@ class ApplicationTests : ContainerizedKafka() {
 		val invalidData = "this string is not deserializable"
 
 		putDataOnKafkaTopic(key, invalidData, RecordHeaders())
-		mockSafRequest_notFound(innsendingsId = key)
+		awaitLaterApplicationArchived("NAV_NO")
 
-		TimeUnit.MILLISECONDS.sleep(500)
 		verifyProcessingEvents(
 			key, mapOf(
 				RECEIVED hasCount 0, STARTED hasCount 0, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 0
 			)
 		)
-		verifyMockedPostRequests(0, journalPostUrl)
+		verifyMockedPostRequests(1, journalPostUrl) // Only the later application
 		verifyKafkaMetric(
 			key, mapOf(
 				"get files from filestorage" hasCount 0,
@@ -478,6 +482,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		// When
 		putDataOnKafkaTopic(loggedInMsg)
+		kafkaListener.awaitFailureHandled(key, taskListService)
 
 		// Expect
 		verifyProcessingEvents(
@@ -525,6 +530,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		// When
 		putDataOnKafkaTopic(loggedInMsg)
+		kafkaListener.awaitFailureHandled(key, taskListService)
 
 		// Expect
 		verifyProcessingEvents(
@@ -545,6 +551,7 @@ class ApplicationTests : ContainerizedKafka() {
 		// When
 		mockJoarkIsWorking()
 		taskListService.startPaNytt(key)
+		kafkaListener.awaitFinished(key)
 
 		// Expect
 		verifyProcessingEvents(key, mapOf(FINISHED hasCount 1))
@@ -572,10 +579,16 @@ class ApplicationTests : ContainerizedKafka() {
 		putDataOnTopic(keyForPoisonPill, "this is not deserializable", RecordHeaders(), topic= kafkaConfig.topics.loggedinSubmissionTopic,
 			kafkaProducer = kafkaloggedinTopicProducer)
 		putDataOnKafkaTopic(loggedInMsg)
+		kafkaListener.awaitFinished(key)
 
 		verifyProcessingEvents(
 			key, mapOf(
 				RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
+			)
+		)
+		verifyProcessingEvents(
+			keyForPoisonPill, mapOf(
+				RECEIVED hasCount 0, STARTED hasCount 0, ARCHIVED hasCount 0, FINISHED hasCount 0, FAILURE hasCount 0
 			)
 		)
 		verifyMockedPostRequests(1, safUrl)
@@ -617,6 +630,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		// When
 		putDataOnKafkaTopic(loggedInMsg)
+		kafkaListener.awaitFinished(key)
 
 		// Expect
 		verifyProcessingEvents(
@@ -673,6 +687,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		// When
 		putDataOnKafkaTopic(loggedInMsg)
+		kafkaListener.awaitFinished(key)
 
 		// Expect
 		verifyProcessingEvents(
@@ -718,6 +733,7 @@ class ApplicationTests : ContainerizedKafka() {
 			.build()
 
 		putDataOnKafkaTopic(loggedInMsg)
+		kafkaListener.awaitFailureHandled(key, taskListService)
 
 		verifyProcessingEvents(
 			key, mapOf(
@@ -740,7 +756,6 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@Test
 	fun `Joark fails until the last attempt, which succeeds`() {
-		sleep(1000) // Får av og til feil i telling av metrics når alle testene kjøres da metrics endringer i andre tester kan påvirke denne
 		// Given
 		val key = UUID.randomUUID().toString()
 		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
@@ -761,6 +776,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		// When
 		putDataOnKafkaTopic(loggedInMsg)
+		kafkaListener.awaitFinished(key)
 
 		// Expect
 		verifyProcessingEvents(
@@ -816,6 +832,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		// When
 		putDataOnKafkaTopic(loggedInMsg)
+		kafkaListener.awaitFinished(key)
 
 		// Expect
 		verifyProcessingEvents(
@@ -867,6 +884,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		// When
 		putDataOnKafkaTopic(loggedInMsg)
+		kafkaListener.awaitFinished(key)
 
 		// Expect
 		verifyProcessingEvents(
@@ -917,6 +935,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		// When
 		putDataOnKafkaTopic(loggedInMsg)
+		kafkaListener.awaitFailureHandled(key, taskListService)
 
 		// Expect
 		verifyProcessingEvents(
@@ -947,7 +966,6 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@Test
 	fun `Not all files fetched from Filestorage will cause failure`() {
-		sleep(1000) // Får av og til feil i telling av metrics når alle testene kjøres da metrics endringer i andre tester kan påvirke denne
 		// Given
 		val key = UUID.randomUUID().toString()
 		val fileIds = listOf(UUID.randomUUID().toString(), UUID.randomUUID().toString())
@@ -974,6 +992,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		// When
 		putDataOnKafkaTopic(loggedInMsg)
+		kafkaListener.awaitFailureHandled(key, taskListService)
 
 		// Expect
 		verifyProcessingEvents(
@@ -1033,6 +1052,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		// When
 		putDataOnKafkaTopic(loggedInMsg)
+		kafkaListener.awaitFailureHandled(key, taskListService)
 
 		// Expect
 		verifyProcessingEvents(
@@ -1041,14 +1061,36 @@ class ApplicationTests : ContainerizedKafka() {
 				STARTED hasCount  maxNumberOfAttempts,
 				ARCHIVED hasCount 0,
 				FINISHED hasCount 0,
-				FAILURE hasCount 1
+				// Each new attempt to send the failure feedback publishes FAILURE again
+				FAILURE hasCount maxNumberOfAttempts
 			)
 		)
-		sleep(8000)
 		verify(archiverService, times(maxNumberOfAttempts)).createArkiveringstilbakemelding(eq(key), any())
+		verifyMessageStartsWith(key, mapOf("**Feedback to innsending-api: FAILED" hasCount 1))
 
 	}
 
+
+
+	/**
+	 * Archives another application on the same submission topic and waits for it to finish.
+	 * Every test topic has one partition, and one stream thread handles the submissions and the
+	 * processing events in order. When the later application is FINISHED, the application has
+	 * handled the records published before it. If it had accepted one of them, it would already
+	 * have published STARTED for that key.
+	 */
+	private fun awaitLaterApplicationArchived(kanal: String) {
+		val fileId = UUID.randomUUID().toString()
+		val laterApplication = InnsendingTopicMsgBuilder()
+			.withKanal(kanal)
+			.withTestDokumenter(mutableListOf(TestDokument("NAV 11-12.12", true, "Test dokument", listOf(fileId))))
+			.build()
+		mockFilestorageIsWorking(fileId)
+		mockJoarkIsWorking()
+		mockSafRequest_notFound(innsendingsId = laterApplication.innsendingsId)
+		putDataOnKafkaTopic(laterApplication)
+		kafkaListener.awaitFinished(laterApplication.innsendingsId)
+	}
 
 	private fun verifyProcessingEvents(key: Key, eventTypeAndCount: Map<EventTypes, Int>) {
 		eventTypeAndCount.forEach { (expectedEventType: EventTypes, expectedCount: Int) ->
@@ -1060,13 +1102,7 @@ class ApplicationTests : ContainerizedKafka() {
 					.size
 			}
 
-			loopAndVerify(expectedCount, seenEventTypes)
-			{
-				assertEquals(
-					expectedCount, seenEventTypes.invoke(),
-					"Expected to see $expectedCount $expectedEventType"
-				)
-			}
+			assertEquals(expectedCount, seenEventTypes.invoke(), "Expected to see $expectedCount $expectedEventType")
 		}
 	}
 
@@ -1080,13 +1116,10 @@ class ApplicationTests : ContainerizedKafka() {
 					.size
 			}
 
-			loopAndVerify(expectedCount, seenMessages)
-			{
-				assertEquals(
-					expectedCount, seenMessages.invoke(),
-					"Expected to see $expectedCount messages starting with '$expectedMessage'"
-				)
-			}
+			assertEquals(
+				expectedCount, seenMessages.invoke(),
+				"Expected to see $expectedCount messages starting with '$expectedMessage'"
+			)
 		}
 	}
 
@@ -1100,13 +1133,10 @@ class ApplicationTests : ContainerizedKafka() {
 					.size
 			}
 
-			loopAndVerify(expectedCount, seenArkiveringstilbakemeldinger)
-			{
-				assertEquals(
-					expectedCount, seenArkiveringstilbakemeldinger.invoke(),
-					"Expected to see $expectedCount arkiveringstilbakemeldinger starting with '$expectedMessage'"
-				)
-			}
+			assertEquals(
+				expectedCount, seenArkiveringstilbakemeldinger.invoke(),
+				"Expected to see $expectedCount arkiveringstilbakemeldinger starting with '$expectedMessage'"
+			)
 		}
 	}
 
@@ -1120,8 +1150,7 @@ class ApplicationTests : ContainerizedKafka() {
 					.size
 			}
 
-			loopAndVerify(expectedCount, seenMetrics)
-			{ assertEquals(expectedCount, seenMetrics.invoke(), "Expected to see $expectedCount '$expectedMetric'") }
+			assertEquals(expectedCount, seenMetrics.invoke(), "Expected to see $expectedCount '$expectedMetric'")
 		}
 	}
 

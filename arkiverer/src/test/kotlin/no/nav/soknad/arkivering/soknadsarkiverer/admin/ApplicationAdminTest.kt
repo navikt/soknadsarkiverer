@@ -42,7 +42,6 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.util.UUID
 import kotlin.properties.Delegates
-import java.lang.Thread.sleep
 import no.nav.security.token.support.spring.test.EnableMockOAuth2Server
 import no.nav.soknad.arkivering.soknadsarkiverer.SoknadsarkivererApplication
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
@@ -51,7 +50,9 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.ContainerizedKafka
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.KafkaListener
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.Key
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.TokenGenerator
-import no.nav.soknad.arkivering.soknadsarkiverer.utils.loopAndVerify
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.awaitFailureHandled
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.awaitFinished
+import no.nav.soknad.arkivering.soknadsarkiverer.utils.awaitTaskRemoved
 import org.apache.kafka.common.header.Headers
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
@@ -230,7 +231,6 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 
 		// Given
 		val innsendingsId = failArchiving()
-		sleep(1000)
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId = innsendingsId)
 
@@ -252,6 +252,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 
 		// Then
 		assert(response.status.is2xxSuccessful())
+		kafkaListener.awaitFinished(innsendingsId)
 
 		verifyProcessingEvents(
 			innsendingsId, mapOf(
@@ -270,9 +271,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 
 		// Given
 		val innsendingsId = successfullArchiving()
-		sleep(500)
-		mockJoarkIsWorking()
-		mockSafRequest_notFound(innsendingsId = innsendingsId)
+		taskListService.awaitTaskRemoved(innsendingsId)
 
 		val mockJwt = createJwtToken()
 		`when`(azureJwtDecoder.decode(anyString())).thenReturn(mockJwt.token)
@@ -293,6 +292,11 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 
 		// Then
 		assert(response.status.is2xxSuccessful())
+		// The rerun publishes STARTED before it responds. All test topics have one partition, and one
+		// stream thread handles processing events in order, so when a later application is FINISHED,
+		// the application has handled that STARTED. Had it accepted the rerun, it would have created a task.
+		successfullArchiving()
+		assertTrue(taskListService.listTasks(innsendingsId).isEmpty(), "Expected no task for the ignored rerun")
 
 		verifyProcessingEvents(
 			innsendingsId, mapOf(
@@ -311,10 +315,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 	fun `fail case - call without token failes`() {
 
 		// Given
-		val innsendingsId = successfullArchiving()
-		sleep(500)
-		mockJoarkIsWorking()
-		mockSafRequest_notFound(innsendingsId = innsendingsId)
+		val innsendingsId = UUID.randomUUID().toString()
 
 		val mockJwt = null
 		`when`(azureJwtDecoder.decode(anyString())).thenReturn(mockJwt)
@@ -343,10 +344,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 	fun `fail case - call with wrong issuer failes`() {
 
 		// Given
-		val innsendingsId = successfullArchiving()
-		sleep(500)
-		mockJoarkIsWorking()
-		mockSafRequest_notFound(innsendingsId = innsendingsId)
+		val innsendingsId = UUID.randomUUID().toString()
 
 		val mockJwt = createJwtToken(issuer = "http://localhost/tokenx")
 		`when`(azureJwtDecoder.decode(anyString())).thenReturn(mockJwt.token)
@@ -387,6 +385,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 		mockSafRequest_notFound(innsendingsId = key)
 
 		putDataOnKafkaTopic(loggedInMsg)
+		kafkaListener.awaitFailureHandled(key, taskListService)
 
 		verifyProcessingEvents(
 			loggedInMsg.innsendingsId, mapOf(
@@ -419,6 +418,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 		mockSafRequest_notFound(innsendingsId = key)
 
 		putDataOnKafkaTopic(loggedInMsg)
+		kafkaListener.awaitFinished(key)
 
 		verifyProcessingEvents(
 			loggedInMsg.innsendingsId, mapOf(
@@ -454,13 +454,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 					.size
 			}
 
-			loopAndVerify(expectedCount, seenEventTypes)
-			{
-				assertEquals(
-					expectedCount, seenEventTypes.invoke(),
-					"Expected to see $expectedCount $expectedEventType"
-				)
-			}
+			assertEquals(expectedCount, seenEventTypes.invoke(), "Expected to see $expectedCount $expectedEventType")
 		}
 	}
 
