@@ -251,7 +251,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 
 		// Then
 		assert(response.status.is2xxSuccessful())
-		kafkaListener.awaitFinished(innsendingsId, taskListService)
+		kafkaListener.awaitFinished(innsendingsId)
 
 		verifyProcessingEvents(
 			innsendingsId, mapOf(
@@ -416,7 +416,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 		mockSafRequest_notFound(innsendingsId = key)
 
 		putDataOnKafkaTopic(loggedInMsg)
-		kafkaListener.awaitFinished(key, taskListService)
+		kafkaListener.awaitFinished(key)
 
 		verifyProcessingEvents(
 			loggedInMsg.innsendingsId, mapOf(
