@@ -36,7 +36,7 @@ spring:
 
 token:
   server:
-    port: 1888
+    port: ${mock-oauth2-server.port}
 
 auth:
   issuers:
@@ -54,7 +54,6 @@ application:
   schema-registry-scope: mocked-scope
   KAFKA_SCHEMA_REGISTRY: mock://mocked-scope
   KAFKA_STREAMS_APPLICATION_ID: testApplicationId
-  mocked-port-for-external-services: 2908
   BOOTSTRAPPING_TIMEOUT: 1
   DELAY_BEFORE_KAFKA_INITIALIZATION: 0
 kafka:

@@ -1,24 +1,11 @@
 package no.nav.soknad.arkivering.soknadsarkiverer
 
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.fasterxml.jackson.module.kotlin.readValue
-import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig
-import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerializer
-import io.prometheus.metrics.model.registry.PrometheusRegistry
-import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaSetupTest
-import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
-import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
-import no.nav.soknad.arkivering.soknadsarkiverer.supervision.ArchivingMetrics
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
-import org.apache.kafka.clients.producer.KafkaProducer
-import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.header.internals.RecordHeaders
-import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -31,142 +18,10 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.mockito.kotlin.eq
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
-import org.springframework.test.context.bean.override.mockito.MockitoBean
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.github.tomakehurst.wiremock.common.ConsoleNotifier
-import com.github.tomakehurst.wiremock.junit5.WireMockExtension
-import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaPublisher
-import no.nav.soknad.arkivering.soknadsarkiverer.service.ArchiverService
-import org.junit.jupiter.api.extension.RegisterExtension
-import org.springframework.security.oauth2.jwt.JwtDecoder
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.time.format.DateTimeFormatter
 import java.util.*
-import kotlin.properties.Delegates
 
-
-@ActiveProfiles("test")
-@SpringBootTest
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class ApplicationTests : ContainerizedKafka() {
-
-	@MockitoBean
-	lateinit var prometheusRegistry: PrometheusRegistry
-
-	@Value("\${application.mocked-port-for-external-services}")
-	private val portToExternalServices: Int? = null // 2private lateinit var ... 908
-
-	@Autowired
-	private lateinit var kafkaConfig: KafkaConfig
-
-	@Autowired
-	private lateinit var kafkaSetup: KafkaSetupTest
-
-	@Autowired
-	private lateinit var taskListService: TaskListService
-
-	@Autowired
-	private lateinit var objectMapper: ObjectMapper
-
-	@Autowired
-	private lateinit var metrics: ArchivingMetrics
-
-	@Autowired
-	private lateinit var tasklistProperties: TaskListProperties
-
-	@MockitoSpyBean
-	private lateinit var kafkaPublisher: KafkaPublisher
-
-	@MockitoSpyBean
-	private lateinit var archiverService: ArchiverService
-
-	@Value("\${joark.journal-post}")
-	private lateinit var journalPostUrl: String
-
-	@Value("\${saf.path}")
-	private lateinit var safUrl: String
-
-	private lateinit var kafkaListener: KafkaListener
-	private lateinit var kafkaNologinTopicProducer: KafkaProducer<String, String>
-	private lateinit var kafkaloggedinTopicProducer: KafkaProducer<String, String>
-
-
-	private var maxNumberOfAttempts by Delegates.notNull<Int>()
-
-	companion object {
-
-		@JvmField
-		@RegisterExtension
-		val wireMock: WireMockExtension = WireMockExtension.newInstance()
-			.configureStaticDsl(true)
-			.options(
-				wireMockConfig()
-					.port(2908)
-					.notifier(ConsoleNotifier(false))
-					.withRootDirectory("src/test/resources")
-					.asynchronousResponseEnabled(false)
-			)
-			.build()
-
-		@JvmStatic
-		@DynamicPropertySource
-		fun properties(reg: DynamicPropertyRegistry) {
-			//val base = "http://localhost:${wireMock.port}"
-			reg.add("innsendingsapi.path") { "/innsendte/v1/files/[0-9a-fA-F-]{36}" }
-			reg.add("joark.journal-post") { "/rest/journalpostapi/v1/journalpost" }
-			reg.add("saf.path") { "/graphql" }
-		}
-	}
-
-	@BeforeAll
-	fun setupKafkaProducersAndListeners() {
-		kafkaListener = KafkaListener(kafkaConfig, kafkaSetup.groupId)
-	}
-
-
-	@AfterAll
-	fun teardownKafka() {
-		if (::kafkaListener.isInitialized) kafkaListener.close()
-	}
-
-	@BeforeEach
-	fun setup() {
-		wireMock.resetAll()
-		setupMockedNetworkServices(
-			wireMock,
-			portToExternalServices!!,
-			journalPostUrl,
-			"/innsendte/v1/files",
-			safUrl,
-		)
-		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
-			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
-		})
-		kafkaloggedinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
-			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
-		})
-
-		maxNumberOfAttempts = tasklistProperties.secondsBetweenRetries.size
-	}
-
-	@AfterEach
-	fun teardown() {
-		//stopMockedNetworkServices()
-		//kafkaListener.clear(MockkClear())
-		wireMock.resetAll()
-
-		kafkaNologinTopicProducer.close()
-		kafkaloggedinTopicProducer.close()
-
-		metrics.unregister()
-		taskListService.clearLoggedTaskStates()
-	}
+class ApplicationTests : ArchivingFlowTest() {
 
 	@ParameterizedTest
 	@ValueSource(strings = ["NAV_NO", "NAV_NO_UINNLOGGET"])
@@ -304,7 +159,6 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyRequestDataToJoark(updatedSchema, request)
 	}
 
-
 	@Test
 	fun `Reject updated application on kafka when already archived`() {
 		val fileId = UUID.randomUUID().toString()
@@ -419,7 +273,7 @@ class ApplicationTests : ContainerizedKafka() {
 			.build()
 
 		putDataOnTopic(keyForPoisonPill, "this is not deserializable", RecordHeaders(), topic= kafkaConfig.topics.loggedinSubmissionTopic,
-			kafkaProducer = kafkaloggedinTopicProducer)
+			kafkaProducer = loggedinTopicProducer)
 		putDataOnKafkaTopic(loggedInMsg)
 		kafkaListener.awaitFinished(key)
 
@@ -507,7 +361,6 @@ class ApplicationTests : ContainerizedKafka() {
 		)
 	}
 
-
 	@Test
 	fun `First attempt to Joark fails, later found in archive`() {
 		// Given
@@ -557,7 +410,6 @@ class ApplicationTests : ContainerizedKafka() {
 			"Should not have given up on any task"
 		)
 	}
-
 
 	@Test
 	fun `Joark responds with status OK but invalid body -- will retry`() {
@@ -699,7 +551,6 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyArchivingMetrics(tasksBefore, { metrics.getTasks() })
 		verifyArchivingMetrics(tasksGivenUpOnBefore, { metrics.getTasksGivenUpOn() })
 	}
-
 
 	@Test
 	fun `Application is archived when the SAF check fails`() {
@@ -844,13 +695,6 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyArchivingMetrics(tasksGivenUpOnBefore + 1, { metrics.getTasksGivenUpOn() })
 	}
 
-
-	private fun verifyArchivingMetrics(expected: Double, actual: () -> Double, message: String? = null) {
-		loopAndVerify(expected.toInt(), { actual.invoke().toInt() },
-			{ assertEquals(expected.toInt(), actual.invoke().toInt(), message) })
-	}
-
-
 	@Test
 	fun `Failing to archive and failing to send feedback to innsender`() {
 		// Given
@@ -892,8 +736,6 @@ class ApplicationTests : ContainerizedKafka() {
 
 	}
 
-
-
 	/**
 	 * Archives another application on the same submission topic and waits for it to finish.
 	 * Every test topic has one partition, and one stream thread handles the submissions and the
@@ -913,69 +755,6 @@ class ApplicationTests : ContainerizedKafka() {
 		putDataOnKafkaTopic(laterApplication)
 		kafkaListener.awaitFinished(laterApplication.innsendingsId)
 	}
-
-	private fun verifyProcessingEvents(key: Key, eventTypeAndCount: Map<EventTypes, Int>) {
-		eventTypeAndCount.forEach { (expectedEventType: EventTypes, expectedCount: Int) ->
-
-			val seenEventTypes = {
-				kafkaListener.getProcessingEvents()
-					.filter { it.key == key }
-					.filter { it.value.type.name == expectedEventType.name }
-					.size
-			}
-
-			assertEquals(expectedCount, seenEventTypes.invoke(), "Expected to see $expectedCount $expectedEventType")
-		}
-	}
-
-	private fun verifyMessageStartsWith(key: Key, messageAndCount: Map<String, Int>) {
-		messageAndCount.forEach { (expectedMessage: String, expectedCount: Int) ->
-
-			val seenMessages = {
-				kafkaListener.getMessages()
-					.filter { it.key == key }
-					.filter { it.value.startsWith(expectedMessage) }
-					.size
-			}
-
-			assertEquals(
-				expectedCount, seenMessages.invoke(),
-				"Expected to see $expectedCount messages starting with '$expectedMessage'"
-			)
-		}
-	}
-
-	private fun verifyArkiveringstilbakemeldingStartsWith(key: Key, messageAndCount: Map<String, Int>) {
-		messageAndCount.forEach { (expectedMessage: String, expectedCount: Int) ->
-
-			val seenArkiveringstilbakemeldinger = {
-				kafkaListener.getArkiveringstilbakemeldinger()
-					.filter { it.key == key }
-					.filter { it.value.startsWith(expectedMessage) }
-					.size
-			}
-
-			assertEquals(
-				expectedCount, seenArkiveringstilbakemeldinger.invoke(),
-				"Expected to see $expectedCount arkiveringstilbakemeldinger starting with '$expectedMessage'"
-			)
-		}
-	}
-
-	private fun verifyKafkaMetric(key: Key, metricAndCount: Map<String, Int>) {
-		metricAndCount.forEach { (expectedMetric: String, expectedCount: Int) ->
-
-			val seenMetrics = {
-				kafkaListener.getMetrics()
-					.filter { it.key == key }
-					.filter { it.value.action == expectedMetric }
-					.size
-			}
-
-			assertEquals(expectedCount, seenMetrics.invoke(), "Expected to see $expectedCount '$expectedMetric'")
-		}
-	}
-
 
 	private fun verifyRequestDataToJoark(soknadsarkivschema: InnsendingTopicMsg, requestData: OpprettJournalpostRequest) {
 		val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX")
@@ -1011,42 +790,4 @@ class ApplicationTests : ContainerizedKafka() {
 		}
 	}
 
-	private fun putDataOnKafkaTopic(message: InnsendingTopicMsg) {
-		when (message.kanal) {
-				"NAV_NO" -> {
-					putDataOnTopic(
-						key = message.innsendingsId,
-						value = objectMapper.writeValueAsString(message),
-						headers = RecordHeaders(),
-						topic = kafkaConfig.topics.loggedinSubmissionTopic,
-						kafkaProducer = kafkaloggedinTopicProducer
-					)
-				}
-				"NAV_NO_UINNLOGGET" -> {
-					putDataOnTopic(
-						key = message.innsendingsId,
-						value = objectMapper.writeValueAsString(message),
-						headers = RecordHeaders(),
-						topic = kafkaConfig.topics.nologinSubmissionTopic,
-						kafkaProducer = kafkaNologinTopicProducer
-					)
-				}
-				else -> {
-					throw RuntimeException("Ukjent kanal: ${message.kanal}")
-				}
-		}
-	}
-
-
-
-	private fun kafkaConfigMap(): MutableMap<String, Any> {
-		return HashMap<String, Any>().also {
-			it[AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG] = "mock://mocked-scope"
-			it[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafkaConfig.brokers
-			it[ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
-			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = SpecificAvroSerializer::class.java
-		}
-	}
-
-	private infix fun <A> A.hasCount(count: Int) = this to count
 }

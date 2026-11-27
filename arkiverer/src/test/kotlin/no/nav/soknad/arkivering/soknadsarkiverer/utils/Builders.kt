@@ -133,21 +133,3 @@ class TestDokumentBuilder {
 	}
 
 }
-
-fun createInnsendingTopicMsg(fileId: String = UUID.randomUUID().toString(), behandlingsId: String = UUID.randomUUID().toString(), tema: String = "AAP") =
-	InnsendingTopicMsgBuilder()
-		.withSkjemanr("NAV 11-12.10")
-		.withTittel("Kjøreliste for godkjent bruk av egen bil")
-		.withInnsendingsId(behandlingsId)
-		.withArkivtema(tema)
-		.withTestDokumenter(
-			mutableListOf(
-				TestDokument(
-					skjemanummer = "NAV 11-12.10",
-					erHovedskjema = true,
-					tittel = "Kjøreliste for godkjent bruk av egen bil",
-					uuids = listOf(fileId)
-				)
-			)
-		)
-		.build()

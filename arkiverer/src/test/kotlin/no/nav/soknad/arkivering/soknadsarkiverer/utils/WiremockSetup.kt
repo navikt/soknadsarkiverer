@@ -9,7 +9,7 @@ import com.github.tomakehurst.wiremock.http.RequestMethod
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import com.github.tomakehurst.wiremock.stubbing.Scenario
 import com.github.tomakehurst.wiremock.verification.LoggedRequest
-import com.github.tomakehurst.wiremock.junit5.WireMockExtension
+import com.github.tomakehurst.wiremock.WireMockServer
 
 import no.nav.soknad.arkiverer.saf.generated.HentJournalpostGittEksternReferanseId
 import no.nav.soknad.arkiverer.saf.generated.enums.*
@@ -29,12 +29,12 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 
 const val filestorageContent = "filestoragecontent"
-private lateinit var wiremockServer: WireMockExtension
+private lateinit var wiremockServer: WireMockServer
 private lateinit var joarkUrl: String
 private lateinit var innsendingApiPath: String
 private lateinit var safUrl: String
 
-fun setupMockedNetworkServices(wireMock: WireMockExtension,  port: Int, urlJoark: String, pathInnsendingApi: String, urlSaf: String) {
+fun setupMockedNetworkServices(wireMock: WireMockServer, urlJoark: String, pathInnsendingApi: String, urlSaf: String) {
 	joarkUrl = urlJoark
 	innsendingApiPath = pathInnsendingApi
 	safUrl = urlSaf
@@ -43,14 +43,7 @@ fun setupMockedNetworkServices(wireMock: WireMockExtension,  port: Int, urlJoark
 }
 
 
-fun verifyMockedGetRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.GET)
 fun verifyMockedPostRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.POST)
-fun verifyMockedDeleteRequests(expectedCount: Int, url: String) = verifyMockedRequests(expectedCount, url, RequestMethod.DELETE)
-
-fun countRequests(url: String, requestMethod: RequestMethod): Int {
-	val requestPattern = RequestPatternBuilder.newRequestPattern(requestMethod, urlMatching(url)).build()
-	return wiremockServer.countRequestsMatching(requestPattern).count
-}
 
 private fun verifyMockedRequests(expectedCount: Int, url: String, requestMethod: RequestMethod) {
 
