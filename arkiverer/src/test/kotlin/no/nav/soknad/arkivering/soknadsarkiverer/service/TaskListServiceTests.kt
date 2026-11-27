@@ -230,15 +230,6 @@ class TaskListServiceTests {
 		verify(exactly = 1) { archiverService.archive(eq(key), any(), any()) }
 	}
 
-	private fun verifyTaskIsRunning(key: String) {
-		val getCount = {
-			taskListService.listTasks()
-				.filter { it.key == key && it.value.second.availablePermits() == 0 }
-				.size
-		}
-		loopAndVerify(1, getCount)
-	}
-
 	private fun runScheduledTaskOnScheduling() {
 		val captor = slot<() -> Unit>()
 		// Run scheduled task on first invocation of scheduler.schedule(), do nothing on subsequent invocations
@@ -261,6 +252,5 @@ class TaskListServiceTests {
 
 
 	private fun getTaskListCount(key: String) = getTaskListPair(key).first
-	private fun getTaskListLock(key: String) = getTaskListPair(key).second
 	private fun getTaskListPair(key: String) = taskListService.listTasks()[key] ?: error("Expected to find $key in map")
 }

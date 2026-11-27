@@ -21,9 +21,9 @@ The naming in the table applies to new test classes. Existing class names vary, 
 | --- | --- | --- | --- |
 | Unit test | Conversion to a journalpost request, serde, filtering, the replay rules, the record consumer's stop logic | Call the code directly without Spring, Kafka or WireMock. Use `<Subject>Test`. | `MessageConverterTests`, `KafkaRecordConsumerTests` |
 | Service unit test | `TaskListService` or `ArchiverService` behaviour, such as state transitions and retry counting | Construct the service with MockK dependencies. Run scheduled tasks synchronously by capturing them from a mocked `Scheduler`. Use `<Service>UnitTest`. | `TaskListServiceTests` |
-| Archiving flow test | An application on a submission topic leads to calls to innsending-api, SAF and Joark, and to events on the output topics | Shared Spring context, real Kafka from `KafkaTestContainerConfiguration`, WireMock for the HTTP services. Use `<Feature>FlowTest`. | `ApplicationTests` |
+| Archiving flow test | An application on a submission topic leads to calls to innsending-api, SAF and Joark, and to events on the output topics | Extend `utils/ArchivingFlowTest`: real Kafka from `KafkaTestContainerConfiguration`, WireMock for the HTTP services. Use `<Feature>FlowTest`. | `ApplicationTests` |
 | Replay test | What `KafkaBootstrapConsumer.recreateState()` reads from real topics on startup | Real Kafka, `TaskListService` mocked or a test subclass. Use `<Feature>ReplayTest`. | `StateRecreationTests`, `LegacyAvroReplayTest` |
-| Admin API test | Endpoints under `/admin` and their authentication | HTTP through `WebTestClient` and the real security filter chain. Use `<Api>RestApiTest`. | `ApplicationAdminTest` |
+| Admin API test | Endpoints under `/admin` and their authentication | Extend `utils/ArchivingFlowTest`. HTTP through `WebTestClient` and the real security filter chain. Use `<Api>RestApiTest`. | `ApplicationAdminTest` |
 | Lifecycle test | Startup, readiness and the order in which Kafka clients and the broker close | The smallest Spring context that shows the behaviour. Use `<Subject>Test`. | `KafkaTeardownTests`, `KafkaSetupTests` |
 
 Default tests use the JSON v3 processing-event contract. Keep Avro producers and the mocked Schema Registry confined to `LegacyAvroReplayTest`.
@@ -58,7 +58,8 @@ Archiving runs on scheduled tasks and fire-and-forget coroutines, so most effect
 
 ## Keep tests isolated
 
-- Each distinct set of `@MockitoBean`, `@MockitoSpyBean`, `@MockkBean`, properties or `webEnvironment` starts a new Spring context and a new Kafka container. Reuse the configuration of an existing test class where you can. Explain any new combination in the PR.
+- Each distinct set of `@MockitoBean`, `@MockitoSpyBean`, `@MockkBean`, properties or `webEnvironment` starts a new Spring context and a new Kafka container. Flow and admin API tests extend `ArchivingFlowTest` and get the same configuration. Do not add bean overrides or properties in a subclass. Add them to the base class if every flow test can live with them, and explain any new combination in the PR.
+- Do not hardcode ports. WireMock, the mock OAuth2 server and the web server get free ports at runtime, and `ArchivingFlowTest` passes the WireMock address to the application.
 - `ContainerizedKafka` marks the context dirty after each class. Do not add `@DirtiesContext` to individual tests unless the test closes the context on purpose, as `KafkaTeardownTests` does.
 - Kafka Streams does not create its source topics. Add a new topic to `KafkaTestContainerConfiguration` so it exists before Spring starts.
 - `ArchivingMetrics` registers in `PrometheusRegistry.defaultRegistry`, which all tests in the JVM share. Unregister in `@AfterEach`, as the existing classes do, and do not let assertions depend on what earlier tests left behind.
@@ -72,7 +73,9 @@ Paths are relative to `arkiverer/src/test/kotlin/no/nav/soknad/arkivering/soknad
 
 - `utils/Builders.kt` builds `InnsendingTopicMsg` with `InnsendingTopicMsgBuilder` and `TestDokument`. Start there for new applications.
 - `utils/WiremockSetup.kt` stubs Joark, SAF and innsending-api for the common success, failure and retry scenarios, and counts recorded requests.
-- `utils/KafkaListener.kt` collects records from the output topics.
+- `utils/KafkaListener.kt` collects records from the output topics. `awaitCaughtUp` waits until it has read everything on them, and `awaitApplicationCaughtUp` waits until the application has handled every processing event.
+- `utils/ArchivingBarriers.kt` has the completion barriers for flow tests: `awaitFinished` and `awaitFailureHandled`.
+- `utils/ArchivingFlowTest.kt` owns the Spring configuration, WireMock, the Kafka listener and producers, and the helpers that assert on processing events, messages, arkiveringstilbakemeldinger and metrics.
 - `utils/ContainerizedKafka.kt` and `utils/KafkaTestContainerConfiguration.kt` own the Kafka broker for a Spring test context.
 - `utils/TokenGenerator.kt` issues tokens from `MockOAuth2Server` for admin API tests.
 - `ApplicationTests.verifyRequestDataToJoark` shows how to check the whole Joark request against the input message.
