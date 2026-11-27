@@ -86,8 +86,8 @@ kafka:
 services:
   tasklist:
     scheduling:
-      startUpSeconds: 4
-      secondsBetweenRetries: [0,1,0,0,0,0]
+      startUpSeconds: 0
+      secondsBetweenRetries: [0,0,0]
 
 no.nav.security:
   jwt:

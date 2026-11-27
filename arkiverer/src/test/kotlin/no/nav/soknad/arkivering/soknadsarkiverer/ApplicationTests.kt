@@ -108,7 +108,7 @@ class ApplicationTests : ContainerizedKafka() {
 			.options(
 				wireMockConfig()
 					.port(2908)
-					.notifier(ConsoleNotifier(true))
+					.notifier(ConsoleNotifier(false))
 					.withRootDirectory("src/test/resources")
 					.asynchronousResponseEnabled(false)
 			)
@@ -739,7 +739,7 @@ class ApplicationTests : ContainerizedKafka() {
 	}
 
 	@Test
-	fun `First attempt to Joark fails, the fourth succeeds`() {
+	fun `Joark fails until the last attempt, which succeeds`() {
 		sleep(1000) // Får av og til feil i telling av metrics når alle testene kjøres da metrics endringer i andre tester kan påvirke denne
 		// Given
 		val key = UUID.randomUUID().toString()
@@ -753,7 +753,7 @@ class ApplicationTests : ContainerizedKafka() {
 			))
 			.build()
 
-		val attemptsToFail = 3
+		val attemptsToFail = maxNumberOfAttempts - 1
 		mockFilestorageIsWorking(fileIds.map{it to filestorageContent})
 		mockJoarkRespondsAfterAttempts(attemptsToFail)
 		mockSafRequest_notFound(innsendingsId = key)
@@ -979,13 +979,13 @@ class ApplicationTests : ContainerizedKafka() {
 		verifyProcessingEvents(
 			key, mapOf(
 				RECEIVED hasCount 1,
-				STARTED hasCount tasksBefore.toInt() + 1,
+				STARTED hasCount maxNumberOfAttempts,
 				ARCHIVED hasCount 0,
 				FINISHED hasCount 0,
 				FAILURE hasCount 1
 			)
 		)
-		verifyMessageStartsWith(key, mapOf("ok" hasCount 0, "Exception" hasCount 6))
+		verifyMessageStartsWith(key, mapOf("ok" hasCount 0, "Exception" hasCount maxNumberOfAttempts))
 
 		verifyKafkaMetric(
 			key, mapOf(
@@ -994,7 +994,7 @@ class ApplicationTests : ContainerizedKafka() {
 			)
 		)
 
-		verifyArchivingMetrics(getFilestorageErrorsBefore + 6, { metrics.getGetFilestorageErrors() })
+		verifyArchivingMetrics(getFilestorageErrorsBefore + maxNumberOfAttempts, { metrics.getGetFilestorageErrors() })
 		verifyArchivingMetrics(getFilestorageSuccessesBefore + 0, { metrics.getGetFilestorageSuccesses() })
 		verifyArchivingMetrics(delFilestorageSuccessesBefore + 0, { metrics.getDelFilestorageSuccesses() })
 		verifyArchivingMetrics(joarkErrorsBefore + 0, { metrics.getJoarkErrors() })

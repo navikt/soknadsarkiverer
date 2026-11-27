@@ -72,7 +72,7 @@ class IntegrationTests : ContainerizedKafka() {
 			.options(
 				wireMockConfig()
 					.port(2908)
-					.notifier(ConsoleNotifier(true))
+					.notifier(ConsoleNotifier(false))
 					.withRootDirectory("src/test/resources")
 					.asynchronousResponseEnabled(false)
 			)
