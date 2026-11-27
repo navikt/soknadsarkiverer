@@ -8,6 +8,7 @@ import io.prometheus.metrics.model.registry.PrometheusRegistry
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaSetupTest
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
@@ -16,7 +17,6 @@ import no.nav.soknad.arkivering.soknadsarkiverer.utils.*
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingTopicMsg
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
-import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.*
@@ -24,7 +24,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.doThrow
@@ -67,6 +66,9 @@ class ApplicationTests : ContainerizedKafka() {
 	private lateinit var kafkaConfig: KafkaConfig
 
 	@Autowired
+	private lateinit var kafkaSetup: KafkaSetupTest
+
+	@Autowired
 	private lateinit var taskListService: TaskListService
 
 	@Autowired
@@ -90,7 +92,6 @@ class ApplicationTests : ContainerizedKafka() {
 	@Value("\${saf.path}")
 	private lateinit var safUrl: String
 
-	private lateinit var kafkaProducerForBadData: KafkaProducer<String, String>
 	private lateinit var kafkaListener: KafkaListener
 	private lateinit var kafkaNologinTopicProducer: KafkaProducer<String, String>
 	private lateinit var kafkaloggedinTopicProducer: KafkaProducer<String, String>
@@ -125,7 +126,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@BeforeAll
 	fun setupKafkaProducersAndListeners() {
-		kafkaListener = KafkaListener(kafkaConfig)
+		kafkaListener = KafkaListener(kafkaConfig, kafkaSetup.groupId)
 	}
 
 
@@ -144,8 +145,6 @@ class ApplicationTests : ContainerizedKafka() {
 			"/innsendte/v1/files",
 			safUrl,
 		)
-		kafkaProducerForBadData = KafkaProducer(kafkaConfigMap()
-			.also { it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java })
 		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap().also {
 			it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java
 		})
@@ -162,7 +161,6 @@ class ApplicationTests : ContainerizedKafka() {
 		//kafkaListener.clear(MockkClear())
 		wireMock.resetAll()
 
-		kafkaProducerForBadData.close()
 		kafkaNologinTopicProducer.close()
 		kafkaloggedinTopicProducer.close()
 
@@ -190,7 +188,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockSafRequest_notFound(innsendingsId = key)
 
 		putDataOnKafkaTopic(soknadsarkivschema)
-		kafkaListener.awaitFinished(key, taskListService)
+		kafkaListener.awaitFinished(key)
 
 		verifyProcessingEvents(
 			key, mapOf(
@@ -235,7 +233,7 @@ class ApplicationTests : ContainerizedKafka() {
 			.putMessageOnTopic(eq(key), eq("**Archiving: OK."), any())
 
 		putDataOnKafkaTopic(soknadsarkivschema)
-		kafkaListener.awaitFinished(key, taskListService)
+		kafkaListener.awaitFinished(key)
 
 		verifyProcessingEvents(
 			key, mapOf(
@@ -292,7 +290,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId = key)
 		putDataOnKafkaTopic(updatedSchema)
-		kafkaListener.awaitFinished(key, taskListService)
+		kafkaListener.awaitFinished(key)
 
 		verifyProcessingEvents(
 			key, mapOf(
@@ -324,7 +322,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockSafRequest_notFound(innsendingsId = key)
 
 		putDataOnKafkaTopic(soknadsarkivschema)
-		kafkaListener.awaitFinished(key, taskListService)
+		kafkaListener.awaitFinished(key)
 		verifyProcessingEvents(
 			key, mapOf(
 				RECEIVED hasCount 1, STARTED hasCount 1, ARCHIVED hasCount 1, FINISHED hasCount 1, FAILURE hasCount 0
@@ -423,7 +421,7 @@ class ApplicationTests : ContainerizedKafka() {
 		putDataOnTopic(keyForPoisonPill, "this is not deserializable", RecordHeaders(), topic= kafkaConfig.topics.loggedinSubmissionTopic,
 			kafkaProducer = kafkaloggedinTopicProducer)
 		putDataOnKafkaTopic(loggedInMsg)
-		kafkaListener.awaitFinished(key, taskListService)
+		kafkaListener.awaitFinished(key)
 
 		verifyProcessingEvents(
 			key, mapOf(
@@ -476,7 +474,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		// When
 		putDataOnKafkaTopic(loggedInMsg)
-		kafkaListener.awaitFinished(key, taskListService)
+		kafkaListener.awaitFinished(key)
 
 		// Expect
 		verifyProcessingEvents(
@@ -533,7 +531,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		// When
 		putDataOnKafkaTopic(loggedInMsg)
-		kafkaListener.awaitFinished(key, taskListService)
+		kafkaListener.awaitFinished(key)
 
 		// Expect
 		verifyProcessingEvents(
@@ -627,7 +625,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		// When
 		putDataOnKafkaTopic(loggedInMsg)
-		kafkaListener.awaitFinished(key, taskListService)
+		kafkaListener.awaitFinished(key)
 
 		// Expect
 		verifyProcessingEvents(
@@ -679,7 +677,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 		// When
 		putDataOnKafkaTopic(loggedInMsg)
-		kafkaListener.awaitFinished(key, taskListService)
+		kafkaListener.awaitFinished(key)
 
 		// Expect
 		verifyProcessingEvents(
@@ -721,7 +719,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockSafRequest_error(innsendingsId = key)
 
 		putDataOnKafkaTopic(loggedInMsg)
-		kafkaListener.awaitFinished(key, taskListService)
+		kafkaListener.awaitFinished(key)
 
 		verifyProcessingEvents(
 			key, mapOf(
@@ -913,7 +911,7 @@ class ApplicationTests : ContainerizedKafka() {
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId = laterApplication.innsendingsId)
 		putDataOnKafkaTopic(laterApplication)
-		kafkaListener.awaitFinished(laterApplication.innsendingsId, taskListService)
+		kafkaListener.awaitFinished(laterApplication.innsendingsId)
 	}
 
 	private fun verifyProcessingEvents(key: Key, eventTypeAndCount: Map<EventTypes, Int>) {
@@ -1039,11 +1037,6 @@ class ApplicationTests : ContainerizedKafka() {
 		}
 	}
 
-
-	private fun putDataOnKafkaTopic(key: Key, badData: String, headers: Headers = RecordHeaders()) {
-		val topic = kafkaConfig.topics.loggedinSubmissionTopic
-		putDataOnTopic(key, badData, headers, topic, kafkaProducerForBadData)
-	}
 
 
 	private fun kafkaConfigMap(): MutableMap<String, Any> {

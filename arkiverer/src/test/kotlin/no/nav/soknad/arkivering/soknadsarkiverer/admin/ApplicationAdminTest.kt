@@ -45,6 +45,7 @@ import kotlin.properties.Delegates
 import no.nav.security.token.support.spring.test.EnableMockOAuth2Server
 import no.nav.soknad.arkivering.soknadsarkiverer.SoknadsarkivererApplication
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaSetupTest
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.ContainerizedKafka
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.KafkaListener
@@ -105,6 +106,9 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 	private lateinit var kafkaConfig: KafkaConfig
 
 	@Autowired
+	private lateinit var kafkaSetup: KafkaSetupTest
+
+	@Autowired
 	lateinit var webTestClient: WebTestClient
 
 	@Autowired
@@ -162,7 +166,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 
 	@BeforeAll
 	fun setupKafkaProducersAndListeners() {
-		kafkaListener = KafkaListener(kafkaConfig)
+		kafkaListener = KafkaListener(kafkaConfig, kafkaSetup.groupId)
 	}
 
 	@AfterAll
@@ -229,7 +233,9 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 	fun `happy case - application is archieved in after retry`() {
 
 		// Given
+		val tasksGivenUpOnBefore = metrics.getTasksGivenUpOn()
 		val innsendingsId = failArchiving()
+		assertEquals(tasksGivenUpOnBefore + 1, metrics.getTasksGivenUpOn(), "Expected the task to be given up on")
 		mockJoarkIsWorking()
 		mockSafRequest_notFound(innsendingsId = innsendingsId)
 
@@ -251,7 +257,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 
 		// Then
 		assert(response.status.is2xxSuccessful())
-		kafkaListener.awaitFinished(innsendingsId, taskListService)
+		kafkaListener.awaitFinished(innsendingsId)
 
 		verifyProcessingEvents(
 			innsendingsId, mapOf(
@@ -262,6 +268,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 				FAILURE hasCount 1
 			)
 		)
+		assertEquals(tasksGivenUpOnBefore, metrics.getTasksGivenUpOn(), "Expected the rerun to clear the given-up task")
 
 	}
 
@@ -416,7 +423,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 		mockSafRequest_notFound(innsendingsId = key)
 
 		putDataOnKafkaTopic(loggedInMsg)
-		kafkaListener.awaitFinished(key, taskListService)
+		kafkaListener.awaitFinished(key)
 
 		verifyProcessingEvents(
 			loggedInMsg.innsendingsId, mapOf(

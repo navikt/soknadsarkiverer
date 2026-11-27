@@ -30,7 +30,10 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingMetrics as InnsendingMetricsJson
 
-class KafkaListener(private val kafkaConfig: KafkaConfig) : AutoCloseable {
+class KafkaListener(
+	private val kafkaConfig: KafkaConfig,
+	private val applicationGroupId: String? = null
+) : AutoCloseable {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -133,15 +136,36 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) : AutoCloseable {
 	 * Call it after a completion barrier, before asserting exact counts or absence.
 	 */
 	fun awaitCaughtUp(timeout: Duration = Duration.ofSeconds(30)) {
-		val endOffsets = Admin.create(mapOf<String, Any>(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaConfig.brokers)).use { admin ->
-			val partitions = admin.describeTopics(listenedTopics).allTopicNames().get(10, TimeUnit.SECONDS).values
-				.flatMap { topic -> topic.partitions().map { TopicPartition(topic.name(), it.partition()) } }
-			admin.listOffsets(partitions.associateWith { OffsetSpec.latest() }).all().get(10, TimeUnit.SECONDS)
-				.mapValues { it.value.offset() }
-		}
+		val endOffsets = admin().use { endOffsets(it, listenedTopics) }
 		awaitCondition(timeout, { "Kafka listener did not catch up within $timeout. End offsets: $endOffsets, read: $nextOffsets" }) {
 			endOffsets.all { (partition, endOffset) -> (nextOffsets[partition] ?: 0L) >= endOffset }
 		}
+	}
+
+	/**
+	 * Waits until the application under test has handled every processing event that is on the topic
+	 * now. Kafka Streams commits an offset after it has handled the record, including the work done
+	 * synchronously in the stream thread, such as finishing a task and lowering the task gauge.
+	 * Requires the consumer group of the application, `KafkaSetupTest.groupId`, in the constructor.
+	 */
+	fun awaitApplicationCaughtUp(timeout: Duration = Duration.ofSeconds(30)) {
+		val groupId = checkNotNull(applicationGroupId) { "Create the listener with the application's consumer group" }
+		admin().use { admin ->
+			val endOffsets = endOffsets(admin, listOf(kafkaConfig.topics.processingTopicV3))
+			awaitCondition(timeout, { "The application did not handle the processing events within $timeout" }) {
+				val committed = admin.listConsumerGroupOffsets(groupId).partitionsToOffsetAndMetadata().get(10, TimeUnit.SECONDS)
+				endOffsets.all { (partition, endOffset) -> (committed[partition]?.offset() ?: 0L) >= endOffset }
+			}
+		}
+	}
+
+	private fun admin() = Admin.create(mapOf<String, Any>(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaConfig.brokers))
+
+	private fun endOffsets(admin: Admin, topics: List<String>): Map<TopicPartition, Long> {
+		val partitions = admin.describeTopics(topics).allTopicNames().get(10, TimeUnit.SECONDS).values
+			.flatMap { topic -> topic.partitions().map { TopicPartition(topic.name(), it.partition()) } }
+		return admin.listOffsets(partitions.associateWith { OffsetSpec.latest() }).all().get(10, TimeUnit.SECONDS)
+			.mapValues { it.value.offset() }
 	}
 
 	/** Waits until at least [count] processing events of [type] have been seen for [key]. */
