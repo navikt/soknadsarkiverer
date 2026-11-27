@@ -1,6 +1,5 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.supervision
 
-import io.prometheus.metrics.core.datapoints.Timer
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import io.prometheus.metrics.model.snapshots.HistogramSnapshot
 import org.junit.jupiter.api.AfterEach
@@ -123,80 +122,18 @@ class ArchivingMetricsTests {
 	}
 
 	@Test
-	fun `test av joarkLatencySummary`() {
-		val latencies = mapOf(
-			10L to 1,   // 1
-			100L to 10, // 10
-			500L to 3,  // 5
-			1000L to 2, // 3
-			10000L to 1 // 1
-		)
-		val timers = mutableListOf<Timer>()
-		latencies.keys.forEach { repeat(latencies[it]!!) { timers.add(metrics.startJoarkLatency()) } }
+	fun `Joark latency is recorded in seconds with the configured quantiles`() {
+		val numberOfCalls = 17
+		val before = System.nanoTime()
+		val timers = List(numberOfCalls) { metrics.startJoarkLatency() }
+		timers.forEach { metrics.endTimer(it) }
+		val elapsedSeconds = (System.nanoTime() - before) / 1_000_000_000.0
 
-		var nextTimer = 0
-		var sleepTime = 10L
-		nextTimer = sleepAndSetEndTimer(
-			sleepTime = sleepTime,
-			startIndex = nextTimer,
-			latencyIndex = 10L,
-			latencies = latencies,
-			timers = timers
-		)
-		sleepTime = 100L - sleepTime
-		nextTimer = sleepAndSetEndTimer(
-			sleepTime = sleepTime,
-			startIndex = nextTimer,
-			latencyIndex = 100L,
-			latencies = latencies,
-			timers = timers
-		)
-		sleepTime = 500L - sleepTime
-		nextTimer = sleepAndSetEndTimer(
-			sleepTime = sleepTime,
-			startIndex = nextTimer,
-			latencyIndex = 500L,
-			latencies = latencies,
-			timers = timers
-		)
-		sleepTime = 1000L - sleepTime
-		nextTimer = sleepAndSetEndTimer(
-			sleepTime = sleepTime,
-			startIndex = nextTimer,
-			latencyIndex = 1000L,
-			latencies = latencies,
-			timers = timers
-		)
-		sleepTime = 10000L - sleepTime
-		nextTimer = sleepAndSetEndTimer(
-			sleepTime = sleepTime,
-			startIndex = nextTimer,
-			latencyIndex = 10000L,
-			latencies = latencies,
-			timers = timers
-		)
-
-		val observations = metrics.getJoarkLatency()
-		assertEquals(latencies.values.sum().toDouble(), observations.sumOf { it.count }.toDouble())
-		assertTrue(observations[0].quantiles[0]!!.value > 0.1)
-		assertTrue(observations[0].quantiles[1]!!.value > 1.0)
-		assertTrue(observations[0].quantiles[2]!!.value > 10.0)
-
-	}
-
-	private fun sleepAndSetEndTimer(
-		sleepTime: Long,
-		startIndex: Int,
-		latencyIndex: Long,
-		latencies: Map<Long, Int>,
-		timers: List<Timer>
-	): Int {
-		Thread.sleep(sleepTime)
-		var nextTimer = startIndex
-		repeat(latencies[latencyIndex]!!) {
-			metrics.endTimer(timers[nextTimer])
-			nextTimer++
-		}
-		return nextTimer
+		val observations = metrics.getJoarkLatency().single()
+		assertEquals(numberOfCalls.toLong(), observations.count)
+		assertEquals(listOf(0.5, 0.9, 0.99), observations.quantiles.map { it.quantile })
+		// Every timer ran inside the measured interval, so a value in milliseconds or nanoseconds would exceed it.
+		assertTrue(observations.quantiles.all { it.value in 0.0..elapsedSeconds })
+		assertTrue(observations.sum in 0.0..numberOfCalls * elapsedSeconds)
 	}
 }

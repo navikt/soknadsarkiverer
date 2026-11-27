@@ -143,7 +143,7 @@ class TaskListServiceTests {
 
 		taskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.STARTED)
 
-		verify(exactly = 1, timeout = 2_000) { archiverService.archive(eq(key), any(), any()) }
+		// ARCHIVED is published after archive() returns, so no further archive() calls can follow.
 		verify(atLeast = 1, timeout = 2_000) {
 			kafkaPublisher.putProcessingEventOnTopic(
 				eq(key),
@@ -151,7 +151,7 @@ class TaskListServiceTests {
 				any()
 			)
 		}
-
+		verify(exactly = 1) { archiverService.archive(eq(key), any(), any()) }
 	}
 
 	@Test
@@ -193,7 +193,7 @@ class TaskListServiceTests {
 				any()
 			)
 		}
-		verify(exactly = 1, timeout = 2_000) { archiverService.archive(eq(key), any(), any()) }
+		// ARCHIVED is published after archive() returns, so no further archive() calls can follow.
 		verify(atLeast = 1, timeout = 2_000) {
 			kafkaPublisher.putProcessingEventOnTopic(
 				eq(key),
@@ -201,7 +201,7 @@ class TaskListServiceTests {
 				any()
 			)
 		}
-
+		verify(exactly = 1) { archiverService.archive(eq(key), any(), any()) }
 	}
 
 	private fun verifyTaskIsRunning(key: String) {
