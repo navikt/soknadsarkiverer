@@ -1,8 +1,5 @@
 package no.nav.soknad.arkivering.soknadsarkiverer.kafka.bootstrapping
 
-import com.github.tomakehurst.wiremock.common.ConsoleNotifier
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
-import com.github.tomakehurst.wiremock.junit5.WireMockExtension
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.*
 import io.prometheus.metrics.model.registry.PrometheusRegistry
@@ -36,13 +33,9 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.extension.RegisterExtension
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -64,15 +57,6 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	@MockitoBean
 	lateinit var prometheusRegistry: PrometheusRegistry
-
-	@Value("\${application.mocked-port-for-external-services}")
-	private val portToExternalServices: Int? = null
-
-	@Value("\${joark.journal-post}")
-	private lateinit var journalPostUrl: String
-
-	@Value("\${saf.path}")
-	private lateinit var safUrl: String
 
 	@Suppress("unused")
 	@MockkBean(relaxed = true)
@@ -118,37 +102,10 @@ class StateRecreationTests : ContainerizedKafka() {
 	private val loggedinSoknad = InnsendingTopicMsgBuilder().build()
 	private val notLoggedinSoknad = InnsendingTopicMsgBuilder().withKanal("NAV_NO_UINNLOGGET").build()
 
-	private val fileUuid = UUID.randomUUID().toString()
-
 	private val applications = mutableMapOf<String, InnsendingTopicMsg>()
-
-	companion object {
-
-		@JvmField
-		@RegisterExtension
-		val wireMock: WireMockExtension = WireMockExtension.newInstance()
-			.configureStaticDsl(true)
-			.options(
-				wireMockConfig()
-					.port(2902)
-					.notifier(ConsoleNotifier(true))
-					.withRootDirectory("src/test/resources")
-					.asynchronousResponseEnabled(false)
-			)
-			.build()
-
-		@JvmStatic
-		@DynamicPropertySource
-		fun properties(reg: DynamicPropertyRegistry) {
-			reg.add("innsendingsapi.path") { "/innsendte/v1/files/[0-9a-fA-F-]{36}" }
-			reg.add("joark.journal-post") { "/rest/journalpostapi/v1/journalpost" }
-			reg.add("saf.path") { "/graphql" }
-		}
-	}
 
 	@AfterEach
 	fun tearDown() {
-		wireMock.resetAll()
 		kafkaLoggedinTopicProducer.close()
 		kafkaNologinTopicProducer.close()
 		kafkaProcessingEventV3Producer.close()
@@ -167,14 +124,6 @@ class StateRecreationTests : ContainerizedKafka() {
 
 	@BeforeEach
 	fun setup() {
-		wireMock.resetAll()
-		setupMockedNetworkServices(
-			wireMock,
-			portToExternalServices!! + 1,
-			journalPostUrl,
-			"/innsendte/v1/files",
-			safUrl
-		)
 		kafkaLoggedinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap(kafkaConfig)
 			.also {it[ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG] = StringSerializer::class.java})
 		kafkaNologinTopicProducer = KafkaProducer<String, String>(kafkaConfigMap(kafkaConfig)
@@ -191,14 +140,15 @@ class StateRecreationTests : ContainerizedKafka() {
 			metrics = metrics,
 			kafkaConfig = kafkaConfig
 		)
-
-		kafkaBootstrapConsumer.recreateState() // Other test classes could have left Kafka events on the topics. Consume them before running the tests in this class.
-		clearMocks(taskListService, answers = false)
-
 	}
 
 	@Test
 	fun `Can read empty Event Log`() {
+		// Earlier tests in this class have published to the same topics. The first read moves this consumer's
+		// committed offsets past those records, so the second read finds an empty log.
+		recreateState()
+		clearMocks(taskListService, answers = false)
+
 		recreateState()
 
 		verifyThatTaskListService().wasNotCalled()
@@ -207,10 +157,6 @@ class StateRecreationTests : ContainerizedKafka() {
 	@Test
 	fun `Can read Event Log with Event that was never started`() {
 		val key = UUID.randomUUID().toString()
-
-		mockFilestorageIsWorking(fileUuid)
-		mockJoarkIsWorking()
-		mockSafRequest_notFound(innsendingsId = key)
 
 		publishLoggedinMessage(key)
 		publishProcessingEventsV3(key to RECEIVED)
@@ -224,10 +170,6 @@ class StateRecreationTests : ContainerizedKafka() {
 	@Test
 	fun `Can read new Msg from not logged in user that was never started`() {
 		val key = UUID.randomUUID().toString()
-
-		mockFilestorageIsWorking(fileUuid)
-		mockJoarkIsWorking()
-		mockSafRequest_notFound(innsendingsId = key)
 
 		publishNoLoginMessage(key)
 
