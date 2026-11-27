@@ -7,6 +7,10 @@ import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventJson
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.ProcessingEventJsonSerde
 import org.apache.kafka.clients.CommonClientConfigs
+import org.apache.kafka.clients.admin.Admin
+import org.apache.kafka.clients.admin.AdminClientConfig
+import org.apache.kafka.clients.admin.OffsetSpec
+import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.config.SslConfigs
 import org.apache.kafka.common.serialization.Serdes
 import org.apache.kafka.streams.KafkaStreams
@@ -14,13 +18,22 @@ import org.apache.kafka.streams.StreamsBuilder
 import org.apache.kafka.streams.StreamsConfig
 import org.apache.kafka.streams.errors.LogAndContinueExceptionHandler
 import org.apache.kafka.streams.kstream.Consumed
+import org.apache.kafka.streams.kstream.KStream
+import org.apache.kafka.streams.processor.api.ContextualFixedKeyProcessor
+import org.apache.kafka.streams.processor.api.FixedKeyProcessorSupplier
+import org.apache.kafka.streams.processor.api.FixedKeyRecord
 import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.TimeUnit
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingMetrics as InnsendingMetricsJson
 
-class KafkaListener(private val kafkaConfig: KafkaConfig) : AutoCloseable {
+class KafkaListener(
+	private val kafkaConfig: KafkaConfig,
+	private val applicationGroupId: String? = null
+) : AutoCloseable {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -28,6 +41,16 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) : AutoCloseable {
 	private val messagesReceived         						= CopyOnWriteArrayList<Pair<Key, String>>()
 	private val arkiveringstilbakemeldingerReceived	= CopyOnWriteArrayList<Pair<Key, String>>()
 	private val processingEventsReceived						= CopyOnWriteArrayList<Pair<Key, ProcessingEventJson>>()
+
+	// Next offset to read per partition, recorded after a record has been stored in the lists above.
+	private val nextOffsets = ConcurrentHashMap<TopicPartition, Long>()
+	private val listenedTopics = with(kafkaConfig.topics) {
+		listOf(metricsTopicV3, processingTopicV3, messageTopic, arkiveringstilbakemeldingTopic)
+	}
+
+	// One client for the listener's lifetime. Kafka logs the whole client configuration each time a client is created.
+	private val adminDelegate = lazy { Admin.create(mapOf<String, Any>(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG to kafkaConfig.brokers)) }
+	private val admin: Admin by adminDelegate
 
 	internal val kafkaStreams: KafkaStreams
 
@@ -60,19 +83,32 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) : AutoCloseable {
 
 		metricsStream
 			.peek { key, metrics -> log("$key: Metrics received  - $metrics") }
-			.foreach { key, metrics -> metricsReceived.add(key to metrics) }
+			.collectInto(metricsReceived)
 
 		messagesStream
 			.peek { key, message -> log("$key: Message received  - $message") }
-			.foreach { key, message -> messagesReceived.add(key to message) }
+			.collectInto(messagesReceived)
 
 		arkiveringstilbakemeldingerStream
 			.peek { key, arkiveringstilbakemelding -> log("$key: Arkiveringstilbakemelding received  - $arkiveringstilbakemelding") }
-			.foreach { key, arkiveringstilbakemelding -> arkiveringstilbakemeldingerReceived.add(key to arkiveringstilbakemelding) }
+			.collectInto(arkiveringstilbakemeldingerReceived)
 
 		processingEventTopicStream
 			.peek { key, entity -> log("$key: Processing Events - $entity") }
-			.foreach { key, entity -> processingEventsReceived.add(key to entity) }
+			.collectInto(processingEventsReceived)
+	}
+
+	private fun <V : Any> KStream<String, V>.collectInto(received: MutableList<Pair<Key, V>>) {
+		processValues(FixedKeyProcessorSupplier<String, V, V> {
+			object : ContextualFixedKeyProcessor<String, V, V>() {
+				override fun process(record: FixedKeyRecord<String, V>) {
+					received.add(record.key() to record.value())
+					context().recordMetadata().ifPresent {
+						nextOffsets.merge(TopicPartition(it.topic(), it.partition()), it.offset() + 1, ::maxOf)
+					}
+				}
+			}
+		})
 	}
 
 	private fun log(message: String) {
@@ -99,9 +135,58 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) : AutoCloseable {
 		}
 	}
 
+	/**
+	 * Waits until this listener has stored every record that is on the listened topics now.
+	 * Call it after a completion barrier, before asserting exact counts or absence.
+	 */
+	fun awaitCaughtUp(timeout: Duration = Duration.ofSeconds(30)) {
+		val endOffsets = endOffsets(listenedTopics)
+		awaitCondition(timeout, { "Kafka listener did not catch up within $timeout. End offsets: $endOffsets, read: $nextOffsets" }) {
+			endOffsets.all { (partition, endOffset) -> (nextOffsets[partition] ?: 0L) >= endOffset }
+		}
+	}
+
+	/**
+	 * Waits until the application under test has handled every processing event that is on the topic
+	 * now. Kafka Streams commits an offset after it has handled the record, including the work done
+	 * synchronously in the stream thread, such as finishing a task and lowering the task gauge.
+	 * Requires the consumer group of the application, `KafkaSetupTest.groupId`, in the constructor.
+	 */
+	fun awaitApplicationCaughtUp(timeout: Duration = Duration.ofSeconds(30)) {
+		val groupId = checkNotNull(applicationGroupId) { "Create the listener with the application's consumer group" }
+		val endOffsets = endOffsets(listOf(kafkaConfig.topics.processingTopicV3))
+		awaitCondition(timeout, { "The application did not handle the processing events within $timeout" }) {
+			val committed = admin.listConsumerGroupOffsets(groupId).partitionsToOffsetAndMetadata().get(10, TimeUnit.SECONDS)
+			endOffsets.all { (partition, endOffset) -> (committed[partition]?.offset() ?: 0L) >= endOffset }
+		}
+	}
+
+	private fun endOffsets(topics: List<String>): Map<TopicPartition, Long> {
+		val partitions = admin.describeTopics(topics).allTopicNames().get(10, TimeUnit.SECONDS).values
+			.flatMap { topic -> topic.partitions().map { TopicPartition(topic.name(), it.partition()) } }
+		return admin.listOffsets(partitions.associateWith { OffsetSpec.latest() }).all().get(10, TimeUnit.SECONDS)
+			.mapValues { it.value.offset() }
+	}
+
+	/** Waits until at least [count] processing events of [type] have been seen for [key]. */
+	fun awaitProcessingEvent(key: Key, type: String, count: Int = 1, timeout: Duration = Duration.ofSeconds(30)) {
+		awaitCondition(timeout, { "Expected at least $count $type for $key within $timeout" }) {
+			processingEventsReceived.count { it.first == key && it.second.type.name == type } >= count
+		}
+	}
+
+	private fun awaitCondition(timeout: Duration, message: () -> String, condition: () -> Boolean) {
+		val deadline = System.nanoTime() + timeout.toNanos()
+		while (!condition()) {
+			check(System.nanoTime() < deadline, message)
+			TimeUnit.MILLISECONDS.sleep(20)
+		}
+	}
+
 	override fun close() = close(Duration.ofSeconds(30))
 
 	internal fun close(timeout: Duration) {
+		if (adminDelegate.isInitialized()) admin.close(timeout)
 		check(kafkaStreams.close(timeout)) {
 			"Test Kafka listener did not close within $timeout"
 		}
