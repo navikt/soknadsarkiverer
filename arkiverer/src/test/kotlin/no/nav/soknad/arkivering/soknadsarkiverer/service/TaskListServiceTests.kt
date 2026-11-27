@@ -18,6 +18,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.time.Instant
 import java.util.*
 
 class TaskListServiceTests {
@@ -134,6 +135,31 @@ class TaskListServiceTests {
 		taskListService.finishTask(UUID.randomUUID().toString())
 
 		assertTrue(taskListService.listTasks().isEmpty())
+	}
+
+	@Test
+	fun `During startup, a received task waits before it is started`() {
+		val startUpSeconds = 60L
+		val startingTaskListService = TaskListService(
+			archiverService,
+			safService,
+			startUpSeconds,
+			listOf(0L),
+			ApplicationState(),
+			scheduler,
+			metrics,
+			kafkaPublisher
+		)
+		val key = UUID.randomUUID().toString()
+		val scheduledAt = slot<Instant>()
+		every { scheduler.scheduleSingleTask(any(), capture(scheduledAt)) } just Runs
+
+		val before = Instant.now()
+		startingTaskListService.addOrUpdateTask(key, soknadarkivschema, EventTypes.RECEIVED)
+
+		verify(exactly = 1) { scheduler.scheduleSingleTask(any(), any()) }
+		assertFalse(scheduledAt.captured.isBefore(before.plusSeconds(startUpSeconds)))
+		verify(exactly = 0) { kafkaPublisher.putProcessingEventOnTopic(eq(key), any(), any()) }
 	}
 
 	@Test
