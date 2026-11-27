@@ -8,6 +8,7 @@ import io.prometheus.metrics.model.registry.PrometheusRegistry
 import no.nav.soknad.arkivering.avroschemas.EventTypes
 import no.nav.soknad.arkivering.avroschemas.EventTypes.*
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaSetupTest
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListProperties
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.service.arkivservice.api.*
@@ -62,6 +63,9 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@Autowired
 	private lateinit var kafkaConfig: KafkaConfig
+
+	@Autowired
+	private lateinit var kafkaSetup: KafkaSetupTest
 
 	@Autowired
 	private lateinit var taskListService: TaskListService
@@ -124,7 +128,7 @@ class ApplicationTests : ContainerizedKafka() {
 
 	@BeforeAll
 	fun setupKafkaProducersAndListeners() {
-		kafkaListener = KafkaListener(kafkaConfig)
+		kafkaListener = KafkaListener(kafkaConfig, kafkaSetup.groupId)
 	}
 
 

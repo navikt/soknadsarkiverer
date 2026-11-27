@@ -45,6 +45,7 @@ import kotlin.properties.Delegates
 import no.nav.security.token.support.spring.test.EnableMockOAuth2Server
 import no.nav.soknad.arkivering.soknadsarkiverer.SoknadsarkivererApplication
 import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaConfig
+import no.nav.soknad.arkivering.soknadsarkiverer.kafka.KafkaSetupTest
 import no.nav.soknad.arkivering.soknadsarkiverer.service.TaskListService
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.ContainerizedKafka
 import no.nav.soknad.arkivering.soknadsarkiverer.utils.KafkaListener
@@ -105,6 +106,9 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 	private lateinit var kafkaConfig: KafkaConfig
 
 	@Autowired
+	private lateinit var kafkaSetup: KafkaSetupTest
+
+	@Autowired
 	lateinit var webTestClient: WebTestClient
 
 	@Autowired
@@ -162,7 +166,7 @@ class ApplicationAdminTest(@Value("\${auth.issuers.azuread.issuer-uri}") private
 
 	@BeforeAll
 	fun setupKafkaProducersAndListeners() {
-		kafkaListener = KafkaListener(kafkaConfig)
+		kafkaListener = KafkaListener(kafkaConfig, kafkaSetup.groupId)
 	}
 
 	@AfterAll

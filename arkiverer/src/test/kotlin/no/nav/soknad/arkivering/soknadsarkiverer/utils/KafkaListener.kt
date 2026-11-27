@@ -30,7 +30,10 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import no.nav.soknad.arkivering.soknadsmottaker.model.InnsendingMetrics as InnsendingMetricsJson
 
-class KafkaListener(private val kafkaConfig: KafkaConfig) : AutoCloseable {
+class KafkaListener(
+	private val kafkaConfig: KafkaConfig,
+	private val applicationGroupId: String? = null
+) : AutoCloseable {
 
 	private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -143,14 +146,11 @@ class KafkaListener(private val kafkaConfig: KafkaConfig) : AutoCloseable {
 	 * Waits until the application under test has handled every processing event that is on the topic
 	 * now. Kafka Streams commits an offset after it has handled the record, including the work done
 	 * synchronously in the stream thread, such as finishing a task and lowering the task gauge.
-	 * The test profile gives the application the consumer group `<applicationId>_<uuid>`, and every
-	 * test class has its own broker, so there is one such group.
+	 * Requires the consumer group of the application, `KafkaSetupTest.groupId`, in the constructor.
 	 */
 	fun awaitApplicationCaughtUp(timeout: Duration = Duration.ofSeconds(30)) {
+		val groupId = checkNotNull(applicationGroupId) { "Create the listener with the application's consumer group" }
 		admin().use { admin ->
-			val groupId = admin.listConsumerGroups().all().get(10, TimeUnit.SECONDS)
-				.map { it.groupId() }
-				.single { it.startsWith(kafkaConfig.applicationId + "_") }
 			val endOffsets = endOffsets(admin, listOf(kafkaConfig.topics.processingTopicV3))
 			awaitCondition(timeout, { "The application did not handle the processing events within $timeout" }) {
 				val committed = admin.listConsumerGroupOffsets(groupId).partitionsToOffsetAndMetadata().get(10, TimeUnit.SECONDS)

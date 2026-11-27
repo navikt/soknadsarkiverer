@@ -80,13 +80,15 @@ class KafkaSetupTest(
 	internal final var kafkaStreams: KafkaStreams? = null
 		private set
 
+	/** Consumer group of the Kafka Streams application. Tests use it to see what the application has handled. */
+	internal val groupId = kafkaConfig.applicationId + "_" + UUID.randomUUID().toString()
+
 	@PostConstruct
 	fun setupKafka() {
 		logger.debug("Setting up Kafka Streams")
 
 		setupMetricsAndLiveness(metrics, applicationState)
 
-		val groupId = kafkaConfig.applicationId + "_" + UUID.randomUUID().toString()
 		kafkaStreams = setupKafkaStreams(applicationState, taskListService, kafkaPublisher, groupId,kafkaConfig)
 		applicationState.ready = true
 	}
